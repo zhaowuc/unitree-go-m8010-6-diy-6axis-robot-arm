@@ -1,0 +1,14 @@
+{
+  "schema": "go-m8010-arm-v15.13-gui-default-zero/1.2",
+  "saved_at_utc": "2026-08-10T19:32:42.593477+00:00",
+  "semantics": "Geometrically calibrated GUI startup posture and slider-relative zero only; CAD/MJCF/URDF/hardware encoder zeros are unchanged.",
+  "calibration_qa": "QA_MUJOCO_V15_13_GUI零位几何校准.json",
+  "cad_absolute_deg": {
+    "J1": -135.0,
+    "J2": 150.0,
+    "J3": -74.40207091282407,
+    "J4": -90.0,
+    "J5": 45.0,
+    "J6": 0.7134917101830321
+  }
+}

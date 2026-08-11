@@ -1,0 +1,72 @@
+<mujoco model="go_m8010_arm_v15_13">
+  <compiler angle="radian" meshdir="../ros2_ws/src/go_m8010_arm_description/meshes" inertiafromgeom="false"/>
+  <option gravity="0 0 -9.81"/>
+  <default>
+    <geom density="0" friction="__SLIDE_FRICTION__ __TORSIONAL_FRICTION__ __ROLLING_FRICTION__"/>
+  </default>
+  <asset>
+    <mesh name="base_link_visual" file="visual/base_link.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="base_link_collision" file="collision/base_link.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link1_visual" file="visual/link1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link1_collision" file="collision/link1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link2_visual" file="visual/link2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link2_collision" file="collision/link2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link3_visual" file="visual/link3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link3_collision" file="collision/link3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link4_visual" file="visual/link4.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link4_collision" file="collision/link4.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link5_visual" file="visual/link5.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link5_collision" file="collision/link5.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link6_visual" file="visual/link6.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="link6_collision" file="collision/link6.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="gripper_visual" file="visual/gripper.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="gripper_collision" file="collision/gripper.stl" scale="0.001 0.001 0.001"/>
+  </asset>
+  <worldbody>
+    <body name="base_link" pos="0 0 0" quat="1 0 0 0">
+      <geom name="base_link_visual" type="mesh" mesh="base_link_visual" contype="0" conaffinity="0" group="1" rgba="0.45 0.14 0.18 1"/>
+      <geom name="base_link_collision" type="mesh" mesh="base_link_collision" contype="1" conaffinity="1" group="3" rgba="0.1 0.7 0.8 0.25"/>
+      <body name="link1" pos="0 0 0" quat="1 0 0 0">
+        <inertial pos="__LINK1_COM_X__ __LINK1_COM_Y__ __LINK1_COM_Z__" mass="__LINK1_MASS_KG__" fullinertia="__LINK1_IXX__ __LINK1_IYY__ __LINK1_IZZ__ __LINK1_IXY__ __LINK1_IXZ__ __LINK1_IYZ__"/>
+        <joint name="J1" type="hinge" pos="0 0 0" axis="0 -2.77555756156289e-17 1" ref="0" limited="false"/>
+        <geom name="link1_visual" type="mesh" mesh="link1_visual" contype="0" conaffinity="0" group="1" rgba="0.45 0.14 0.18 1"/>
+        <geom name="link1_collision" type="mesh" mesh="link1_collision" contype="1" conaffinity="1" group="3" rgba="0.1 0.7 0.8 0.25"/>
+        <body name="link2" pos="-1.19529999999846e-06 -0.000348645100000006 0.092639782" quat="1 0 0 0">
+          <inertial pos="__LINK2_COM_X__ __LINK2_COM_Y__ __LINK2_COM_Z__" mass="__LINK2_MASS_KG__" fullinertia="__LINK2_IXX__ __LINK2_IYY__ __LINK2_IZZ__ __LINK2_IXY__ __LINK2_IXZ__ __LINK2_IYZ__"/>
+          <joint name="J2" type="hinge" pos="0 0 0" axis="0 1 -2.77555756156289e-17" ref="0" limited="true" range="-2.96705972839036 2.96705972839036"/>
+          <geom name="link2_visual" type="mesh" mesh="link2_visual" contype="0" conaffinity="0" group="1" rgba="0.45 0.14 0.18 1"/>
+          <geom name="link2_collision" type="mesh" mesh="link2_collision" contype="1" conaffinity="1" group="3" rgba="0.1 0.7 0.8 0.25"/>
+          <body name="link3" pos="-0.248601759363284 -0.0360000000000005 1.67815400527331e-05" quat="1 0 0 0">
+            <inertial pos="__LINK3_COM_X__ __LINK3_COM_Y__ __LINK3_COM_Z__" mass="__LINK3_MASS_KG__" fullinertia="__LINK3_IXX__ __LINK3_IYY__ __LINK3_IZZ__ __LINK3_IXY__ __LINK3_IXZ__ __LINK3_IYZ__"/>
+            <joint name="J3" type="hinge" pos="0 0 0" axis="0 1 -2.77555756156289e-17" ref="0" limited="true" range="-2.96705972839036 2.96705972839036"/>
+            <geom name="link3_visual" type="mesh" mesh="link3_visual" contype="0" conaffinity="0" group="1" rgba="0.45 0.14 0.18 1"/>
+            <geom name="link3_collision" type="mesh" mesh="link3_collision" contype="1" conaffinity="1" group="3" rgba="0.1 0.7 0.8 0.25"/>
+            <body name="link4" pos="-0.202346021849608 -3.6969356019974e-17 0.0519614239654557" quat="0.713339230184703 -9.55511142539512e-18 -0.70081890862012 1.33415802272334e-13">
+              <inertial pos="__LINK4_COM_X__ __LINK4_COM_Y__ __LINK4_COM_Z__" mass="__LINK4_MASS_KG__" fullinertia="__LINK4_IXX__ __LINK4_IYY__ __LINK4_IZZ__ __LINK4_IXY__ __LINK4_IXZ__ __LINK4_IYZ__"/>
+              <joint name="J4" type="hinge" pos="0 0 0" axis="3.80682902749686e-13 1 -4.91432301547264e-19" ref="0" limited="true" range="-2.02458193231342 2.77507351067098"/>
+              <geom name="link4_visual" type="mesh" mesh="link4_visual" contype="0" conaffinity="0" group="1" rgba="0.45 0.14 0.18 1"/>
+              <geom name="link4_collision" type="mesh" mesh="link4_collision" contype="1" conaffinity="1" group="3" rgba="0.1 0.7 0.8 0.25"/>
+              <body name="link5" pos="0.00930000012983338 0.0320000209058991 0.097898948000751" quat="0.913547809067383 -0.406731361648183 -4.35751695212161e-14 1.04177060842146e-13">
+                <inertial pos="__LINK5_COM_X__ __LINK5_COM_Y__ __LINK5_COM_Z__" mass="__LINK5_MASS_KG__" fullinertia="__LINK5_IXX__ __LINK5_IYY__ __LINK5_IZZ__ __LINK5_IXY__ __LINK5_IXZ__ __LINK5_IYZ__"/>
+                <joint name="J5" type="hinge" pos="0 0 0" axis="1 0 -1.59232002583387e-13" ref="0" limited="true" range="-1.232202451908 2.63893782901543"/>
+                <geom name="link5_visual" type="mesh" mesh="link5_visual" contype="0" conaffinity="0" group="1" rgba="0.45 0.14 0.18 1"/>
+                <geom name="link5_collision" type="mesh" mesh="link5_collision" contype="1" conaffinity="1" group="3" rgba="0.1 0.7 0.8 0.25"/>
+                <body name="link6" pos="-0.0109991955299831 -0.000147148457748934 0.0995275274114727" quat="5.55111512312578e-17 0 -5.55111512312578e-17 1">
+                  <inertial pos="__LINK6_COM_X__ __LINK6_COM_Y__ __LINK6_COM_Z__" mass="__LINK6_MASS_KG__" fullinertia="__LINK6_IXX__ __LINK6_IYY__ __LINK6_IZZ__ __LINK6_IXY__ __LINK6_IXZ__ __LINK6_IYZ__"/>
+                  <joint name="J6" type="hinge" pos="0 0 0" axis="-1.59232002583387e-13 6.09321620936853e-17 1" ref="0" limited="true" range="-3.14159265358979 3.14159265358979"/>
+                  <geom name="link6_visual" type="mesh" mesh="link6_visual" contype="0" conaffinity="0" group="1" rgba="0.45 0.14 0.18 1"/>
+                  <geom name="link6_collision" type="mesh" mesh="link6_collision" contype="1" conaffinity="1" group="3" rgba="0.1 0.7 0.8 0.25"/>
+                  <body name="gripper" pos="0 0 0" quat="1 0 0 0">
+                    <inertial pos="__GRIPPER_COM_X__ __GRIPPER_COM_Y__ __GRIPPER_COM_Z__" mass="__GRIPPER_MASS_KG__" fullinertia="__GRIPPER_IXX__ __GRIPPER_IYY__ __GRIPPER_IZZ__ __GRIPPER_IXY__ __GRIPPER_IXZ__ __GRIPPER_IYZ__"/>
+                    <geom name="gripper_visual" type="mesh" mesh="gripper_visual" contype="0" conaffinity="0" group="1" rgba="0.45 0.14 0.18 1"/>
+                    <geom name="gripper_collision" type="mesh" mesh="gripper_collision" contype="1" conaffinity="1" group="3" rgba="0.1 0.7 0.8 0.25"/>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>

@@ -1,0 +1,139 @@
+{
+  "schema": "go-m8010-arm-v15.13-joint-limit-contract/1.0",
+  "revision": "V15.13-deep-geometry-collision-limit-audit",
+  "position_limits_deg": {
+    "J1": null,
+    "J2": [
+      -170.0,
+      170.0
+    ],
+    "J3": [
+      -170.0,
+      170.0
+    ],
+    "J4": [
+      -116.0,
+      159.0
+    ],
+    "J5": [
+      -70.6,
+      151.2
+    ],
+    "J6": [
+      -180.0,
+      180.0
+    ]
+  },
+  "position_limits_rad": {
+    "J1": null,
+    "J2": [
+      -2.9670597283903604,
+      2.9670597283903604
+    ],
+    "J3": [
+      -2.9670597283903604,
+      2.9670597283903604
+    ],
+    "J4": [
+      -2.0245819323134224,
+      2.775073510670984
+    ],
+    "J5": [
+      -1.2322024519079966,
+      2.638937829015426
+    ],
+    "J6": [
+      -3.141592653589793,
+      3.141592653589793
+    ]
+  },
+  "j1": {
+    "ros2_joint_type": "continuous",
+    "geometry_scan_representative_deg": [
+      -180.0,
+      180.0
+    ],
+    "real_cable_accumulated_turn_limit": null,
+    "deployment_status": "REQUIRES_MEASURED_CABLE_OR_SLIP_RING_LIMIT"
+  },
+  "j6": {
+    "ros2_joint_type": "revolute",
+    "mujoco_joint_type": "hinge",
+    "camera_up_mechanical_zero_deg": 0.0,
+    "range_deg": [
+      -180.0,
+      180.0
+    ],
+    "range_rad": [
+      -3.141592653589793,
+      3.141592653589793
+    ]
+  },
+  "velocity_limits_rad_s": {
+    "J1": null,
+    "J2": null,
+    "J3": null,
+    "J4": null,
+    "J5": null,
+    "J6": null
+  },
+  "effort_limits_nm": {
+    "J1": null,
+    "J2": null,
+    "J3": null,
+    "J4": null,
+    "J5": null,
+    "J6": null
+  },
+  "velocity_effort_status": "PENDING VERIFIED MOTOR/REDUCER/THERMAL DATA; DO NOT GUESS",
+  "independent_joint_scan": {
+    "independent_J1_representative_full_turn": {
+      "pose_count": 37,
+      "narrow_phase_pair_tests": 634,
+      "collision_pose_count_recorded": 0,
+      "collision_free": true,
+      "collisions": []
+    },
+    "independent_J2": {
+      "pose_count": 35,
+      "narrow_phase_pair_tests": 1231,
+      "collision_pose_count_recorded": 0,
+      "collision_free": true,
+      "collisions": []
+    },
+    "independent_J3": {
+      "pose_count": 35,
+      "narrow_phase_pair_tests": 1231,
+      "collision_pose_count_recorded": 0,
+      "collision_free": true,
+      "collisions": []
+    },
+    "independent_J4": {
+      "pose_count": 56,
+      "narrow_phase_pair_tests": 2072,
+      "collision_pose_count_recorded": 0,
+      "collision_free": true,
+      "collisions": []
+    },
+    "independent_J5": {
+      "pose_count": 46,
+      "narrow_phase_pair_tests": 884,
+      "collision_pose_count_recorded": 0,
+      "collision_free": true,
+      "collisions": []
+    },
+    "independent_J6": {
+      "pose_count": 73,
+      "narrow_phase_pair_tests": 1950,
+      "collision_pose_count_recorded": 0,
+      "collision_free": true,
+      "collisions": []
+    }
+  },
+  "coupled_collision_policy": {
+    "runtime_guard_required": true,
+    "freecad_guard": "j123456_camera_physical_collision_guard_v15_13.py",
+    "moveit": "enable self-collision matrix and continuous trajectory validation",
+    "mujoco": "use exported collision meshes/proxies and enforce joint ranges"
+  }
+}

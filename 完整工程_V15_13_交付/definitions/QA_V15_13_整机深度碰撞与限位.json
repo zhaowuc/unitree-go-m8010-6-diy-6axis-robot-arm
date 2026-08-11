@@ -1,0 +1,448 @@
+{
+  "status": "PASS_WITH_COUPLED_COLLISION_GUARD_REQUIRED",
+  "revision": "V15.13-deep-geometry-collision-limit-audit",
+  "generated_at_utc": "2026-08-10T15:20:59.463487+00:00",
+  "input_fcstd": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+  "input_fcstd_sha256": "6CF00B0EDD1895BF74466018311589F59F51320895788E22314E8965FE2771BE",
+  "joint_geometry_and_limits": {
+    "J1_Revolute": {
+      "center_error_mm": 0.0,
+      "axis_error_deg": 0.0,
+      "saved_angle_deg": 0.0,
+      "limit_enabled": false,
+      "limit_deg": [
+        0.0,
+        0.0
+      ],
+      "pass": true
+    },
+    "J2_Revolute": {
+      "center_error_mm": 0.0,
+      "axis_error_deg": 0.0,
+      "saved_angle_deg": 0.0,
+      "limit_enabled": true,
+      "limit_deg": [
+        -170.0,
+        170.0
+      ],
+      "pass": true
+    },
+    "J3_Revolute": {
+      "center_error_mm": 0.0,
+      "axis_error_deg": 0.0,
+      "saved_angle_deg": 0.0,
+      "limit_enabled": true,
+      "limit_deg": [
+        -170.0,
+        170.0
+      ],
+      "pass": true
+    },
+    "J4_Revolute": {
+      "center_error_mm": 0.0,
+      "axis_error_deg": 0.0,
+      "saved_angle_deg": 0.0,
+      "limit_enabled": true,
+      "limit_deg": [
+        -116.0,
+        159.0
+      ],
+      "pass": true
+    },
+    "J5_Revolute": {
+      "center_error_mm": 0.0,
+      "axis_error_deg": 0.0,
+      "saved_angle_deg": 0.0,
+      "limit_enabled": true,
+      "limit_deg": [
+        -70.6,
+        151.2
+      ],
+      "pass": true
+    },
+    "J6_Revolute": {
+      "center_error_mm": 0.0,
+      "axis_error_deg": 0.0,
+      "saved_angle_deg": 0.0,
+      "limit_enabled": true,
+      "limit_deg": [
+        -180.0,
+        180.0
+      ],
+      "pass": true
+    }
+  },
+  "collision_proxy_geometry": {
+    "J1_Fixed_Collision_Proxy": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 79708.09610779857,
+      "solid_count": 1,
+      "pass": true
+    },
+    "J1_Moving_Collision_Proxy": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 1051713.4540164853,
+      "solid_count": 8,
+      "pass": true
+    },
+    "UpperArm_Full_Collision_Proxy": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 509997.39127438754,
+      "solid_count": 3,
+      "pass": true
+    },
+    "J3_Output_Flange_Proxy": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 17705.51039921469,
+      "solid_count": 1,
+      "pass": true
+    },
+    "J3_Motor_Stator_Collision_Proxy": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 261103.51848139457,
+      "solid_count": 1,
+      "pass": true
+    },
+    "Forearm_Collision_Proxy": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 398136.89767473476,
+      "solid_count": 1,
+      "pass": true
+    },
+    "J4_Motor_Stator_Collision_Proxy": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 261103.51848139454,
+      "solid_count": 1,
+      "pass": true
+    },
+    "J4_Output_Flange_Collision_Proxy": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 17705.510399214687,
+      "solid_count": 1,
+      "pass": true
+    },
+    "Wrist_Prelink_Collision_Proxy": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 146252.58789680467,
+      "solid_count": 2,
+      "pass": true
+    },
+    "J5_Motor_Stator_Collision_Proxy": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 261103.5184813951,
+      "solid_count": 1,
+      "pass": true
+    },
+    "J5_Output_Flange_Collision_Proxy": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 17705.51039921484,
+      "solid_count": 1,
+      "pass": true
+    },
+    "J5_to_Damiao_J6_Adapter_Collision_Proxy": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 56137.45758362235,
+      "solid_count": 1,
+      "pass": true
+    },
+    "J6_DM_G6220_Stator_Collision_Proxy": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 118757.6225646947,
+      "solid_count": 1,
+      "pass": true
+    },
+    "J6_DM_G6220_Output_Rotor_Collision_Proxy": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 708.0013943395234,
+      "solid_count": 1,
+      "pass": true
+    },
+    "J6_Gripper_Connector_Collision_Proxy": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 20266.24531577707,
+      "solid_count": 1,
+      "pass": true
+    },
+    "Gripper_Fixed_Frame_Collision_Proxy": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 7254.373570756194,
+      "solid_count": 1,
+      "pass": true
+    },
+    "Gripper_Servo_Collision_Proxy": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 32044.394518981913,
+      "solid_count": 1,
+      "pass": true
+    },
+    "Gripper_Left_Outer_Link": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 1288.896559993767,
+      "solid_count": 1,
+      "pass": true
+    },
+    "Gripper_Right_Outer_Link": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 1288.8965599937676,
+      "solid_count": 1,
+      "pass": true
+    },
+    "Gripper_Left_Drive_Link": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 2204.797311643811,
+      "solid_count": 1,
+      "pass": true
+    },
+    "Gripper_Right_Drive_Link": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 3084.793070512109,
+      "solid_count": 1,
+      "pass": true
+    },
+    "Gripper_Left_Finger": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 12618.375263614298,
+      "solid_count": 3,
+      "pass": true
+    },
+    "Gripper_Right_Finger": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 12618.375263614287,
+      "solid_count": 3,
+      "pass": true
+    },
+    "Gemini_Pro_Camera_Collision_Proxy": {
+      "present": true,
+      "valid": true,
+      "volume_mm3": 124254.13631910106,
+      "solid_count": 2,
+      "pass": true
+    }
+  },
+  "saved_zero_pose": {
+    "collision": false,
+    "pair_count": 231,
+    "active_pairs": [],
+    "scope": "same runtime pair matrix as V15.13 continuous guard, evaluated by VTK first-contact"
+  },
+  "sampled_collision_audit": {
+    "categories": {
+      "independent_J1_representative_full_turn": {
+        "pose_count": 37,
+        "narrow_phase_pair_tests": 634,
+        "collision_pose_count_recorded": 0,
+        "collision_free": true,
+        "collisions": []
+      },
+      "independent_J2": {
+        "pose_count": 35,
+        "narrow_phase_pair_tests": 1231,
+        "collision_pose_count_recorded": 0,
+        "collision_free": true,
+        "collisions": []
+      },
+      "independent_J3": {
+        "pose_count": 35,
+        "narrow_phase_pair_tests": 1231,
+        "collision_pose_count_recorded": 0,
+        "collision_free": true,
+        "collisions": []
+      },
+      "independent_J4": {
+        "pose_count": 56,
+        "narrow_phase_pair_tests": 2072,
+        "collision_pose_count_recorded": 0,
+        "collision_free": true,
+        "collisions": []
+      },
+      "independent_J5": {
+        "pose_count": 46,
+        "narrow_phase_pair_tests": 884,
+        "collision_pose_count_recorded": 0,
+        "collision_free": true,
+        "collisions": []
+      },
+      "independent_J6": {
+        "pose_count": 73,
+        "narrow_phase_pair_tests": 1950,
+        "collision_pose_count_recorded": 0,
+        "collision_free": true,
+        "collisions": []
+      },
+      "coupled_J5_J6_grid": {
+        "pose_count": 39,
+        "narrow_phase_pair_tests": 1063,
+        "collision_pose_count_recorded": 0,
+        "collision_free": true,
+        "collisions": []
+      },
+      "coupled_limit_corners": {
+        "pose_count": 32,
+        "narrow_phase_pair_tests": 916,
+        "collision_pose_count_recorded": 0,
+        "collision_free": true,
+        "collisions": []
+      },
+      "coupled_random_seed_1513": {
+        "pose_count": 150,
+        "narrow_phase_pair_tests": 4879,
+        "collision_pose_count_recorded": 5,
+        "collision_free": false,
+        "collisions": [
+          {
+            "pose_index": 43,
+            "angles_deg": {
+              "j1_deg": -154.94495639092506,
+              "j2_deg": 132.46266433747172,
+              "j3_deg": 113.92879039879477,
+              "j4_deg": 95.1733793699789,
+              "j5_deg": -10.827731077963897,
+              "j6_deg": -16.535034120250117
+            },
+            "active_pairs": [
+              "Gemini_Pro_Camera_Collision_Proxy vs J1_Moving_Collision_Proxy"
+            ]
+          },
+          {
+            "pose_index": 73,
+            "angles_deg": {
+              "j1_deg": -154.54515718096178,
+              "j2_deg": -82.25814258326899,
+              "j3_deg": 127.73451082575394,
+              "j4_deg": 125.16160940549906,
+              "j5_deg": 8.623633142297692,
+              "j6_deg": -29.49066882911191
+            },
+            "active_pairs": [
+              "J6_DM_G6220_Output_Rotor_Collision_Proxy vs J1_Moving_Collision_Proxy",
+              "J6_DM_G6220_Output_Rotor_Collision_Proxy vs UpperArm_Full_Collision_Proxy",
+              "J6_Gripper_Connector_Collision_Proxy vs J1_Moving_Collision_Proxy",
+              "J6_Gripper_Connector_Collision_Proxy vs UpperArm_Full_Collision_Proxy"
+            ]
+          },
+          {
+            "pose_index": 75,
+            "angles_deg": {
+              "j1_deg": -38.520944689677265,
+              "j2_deg": 68.29986453292875,
+              "j3_deg": 136.90173334237585,
+              "j4_deg": 109.15494777789286,
+              "j5_deg": 3.0517404147249607,
+              "j6_deg": -153.19305702627727
+            },
+            "active_pairs": [
+              "Gemini_Pro_Camera_Collision_Proxy vs J1_Fixed_Collision_Proxy",
+              "Gemini_Pro_Camera_Collision_Proxy vs J1_Moving_Collision_Proxy"
+            ]
+          },
+          {
+            "pose_index": 83,
+            "angles_deg": {
+              "j1_deg": 21.238583508438722,
+              "j2_deg": -23.522319394240554,
+              "j3_deg": -123.18386376748208,
+              "j4_deg": -102.77904461086868,
+              "j5_deg": 26.356774508928595,
+              "j6_deg": -166.02610339296712
+            },
+            "active_pairs": [
+              "J6_DM_G6220_Output_Rotor_Collision_Proxy vs J1_Fixed_Collision_Proxy",
+              "J6_DM_G6220_Output_Rotor_Collision_Proxy vs J1_Moving_Collision_Proxy",
+              "J6_Gripper_Connector_Collision_Proxy vs J1_Fixed_Collision_Proxy",
+              "J6_Gripper_Connector_Collision_Proxy vs J1_Moving_Collision_Proxy",
+              "J6_Gripper_Connector_Collision_Proxy vs UpperArm_Full_Collision_Proxy",
+              "Gripper_Fixed_Frame_Collision_Proxy vs J1_Moving_Collision_Proxy",
+              "Gripper_Fixed_Frame_Collision_Proxy vs UpperArm_Full_Collision_Proxy",
+              "Gripper_Servo_Collision_Proxy vs J1_Moving_Collision_Proxy",
+              "Gripper_Servo_Collision_Proxy vs UpperArm_Full_Collision_Proxy",
+              "Gripper_Right_Outer_Link vs J1_Moving_Collision_Proxy",
+              "Gripper_Right_Outer_Link vs UpperArm_Full_Collision_Proxy",
+              "Gripper_Left_Drive_Link vs J1_Moving_Collision_Proxy",
+              "Gripper_Left_Drive_Link vs UpperArm_Full_Collision_Proxy",
+              "Gripper_Right_Drive_Link vs J1_Moving_Collision_Proxy",
+              "Gripper_Right_Drive_Link vs UpperArm_Full_Collision_Proxy",
+              "Gripper_Right_Finger vs J1_Moving_Collision_Proxy",
+              "Gemini_Pro_Camera_Collision_Proxy vs J1_Moving_Collision_Proxy",
+              "Gemini_Pro_Camera_Collision_Proxy vs UpperArm_Full_Collision_Proxy"
+            ]
+          },
+          {
+            "pose_index": 87,
+            "angles_deg": {
+              "j1_deg": -51.14461674959139,
+              "j2_deg": 23.24680829234228,
+              "j3_deg": 124.74063875290119,
+              "j4_deg": 116.07705186386622,
+              "j5_deg": 39.876752474338616,
+              "j6_deg": -28.748586746622664
+            },
+            "active_pairs": [
+              "J6_DM_G6220_Output_Rotor_Collision_Proxy vs J1_Moving_Collision_Proxy",
+              "J6_Gripper_Connector_Collision_Proxy vs J1_Moving_Collision_Proxy",
+              "J6_Gripper_Connector_Collision_Proxy vs UpperArm_Full_Collision_Proxy",
+              "Gripper_Fixed_Frame_Collision_Proxy vs J1_Moving_Collision_Proxy",
+              "Gripper_Fixed_Frame_Collision_Proxy vs UpperArm_Full_Collision_Proxy",
+              "Gripper_Servo_Collision_Proxy vs J1_Moving_Collision_Proxy",
+              "Gripper_Servo_Collision_Proxy vs UpperArm_Full_Collision_Proxy",
+              "Gripper_Left_Outer_Link vs J1_Fixed_Collision_Proxy",
+              "Gripper_Left_Outer_Link vs J1_Moving_Collision_Proxy",
+              "Gripper_Right_Outer_Link vs J1_Moving_Collision_Proxy",
+              "Gripper_Right_Outer_Link vs UpperArm_Full_Collision_Proxy",
+              "Gripper_Left_Drive_Link vs J1_Moving_Collision_Proxy",
+              "Gripper_Left_Drive_Link vs UpperArm_Full_Collision_Proxy",
+              "Gripper_Right_Drive_Link vs J1_Fixed_Collision_Proxy",
+              "Gripper_Right_Drive_Link vs J1_Moving_Collision_Proxy",
+              "Gripper_Right_Drive_Link vs UpperArm_Full_Collision_Proxy",
+              "Gripper_Left_Finger vs J1_Fixed_Collision_Proxy",
+              "Gripper_Left_Finger vs J1_Moving_Collision_Proxy",
+              "Gripper_Right_Finger vs J1_Fixed_Collision_Proxy",
+              "Gripper_Right_Finger vs J1_Moving_Collision_Proxy",
+              "Gemini_Pro_Camera_Collision_Proxy vs J1_Moving_Collision_Proxy",
+              "Gemini_Pro_Camera_Collision_Proxy vs UpperArm_Full_Collision_Proxy"
+            ]
+          }
+        ]
+      }
+    },
+    "total_pose_count": 503,
+    "total_narrow_phase_pair_tests": 14860,
+    "pair_matrix_size": 169
+  },
+  "independent_joint_ranges_clear": true,
+  "interpretation": {
+    "independent_limits": "must be clear in one-joint-at-a-time reference-pose scans",
+    "coupled_limits": "non-rectangular collision-free subset enforced by runtime guard / MoveIt self-collision",
+    "sampling_limit": "deterministic sampled audit is not a mathematical proof over continuous 6D configuration space",
+    "incremental_validation": "saved zero checks full matrix; motion scan repeats all pairs involving changed J6 output/gripper/camera bodies; unchanged upstream dynamic pairs inherit immutable V15.12/V15 source QA",
+    "runtime_guard_step_deg": 0.25
+  },
+  "unverified_physics": {
+    "mass_com_inertia": null,
+    "velocity_limits": null,
+    "effort_limits": null,
+    "cables_and_soft_hoses": "not geometrically modeled"
+  }
+}

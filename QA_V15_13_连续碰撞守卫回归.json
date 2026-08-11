@@ -1,0 +1,114 @@
+{
+  "schema": "go-m8010-arm-v15.13-collision-guard-regression/1.0",
+  "source_fcstd": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+  "guard": "D:\\AI_JIXIEBI\\go_m8010_arm_gui\\j123456_camera_physical_collision_guard_v15_13.py",
+  "document_saved": false,
+  "checks": {
+    "install": {
+      "passed": true,
+      "underlying_install_return_collision": true,
+      "acceptance_note": "The inherited cold-start return still includes designed-contact candidates; the authoritative post-install V15.13 matrix is the zero_pose check below."
+    },
+    "zero_pose": {
+      "passed": true,
+      "pair_count": null,
+      "collision": false
+    },
+    "j6_small_swept_roundtrip": {
+      "passed": true,
+      "forward": {
+        "status": "APPLIED_CLEAR",
+        "kinematic_mode": "explicit R5->R6 / no MbD recompute",
+        "document_recompute_performed": false,
+        "start_deg": 0.0,
+        "target_deg": 1.0,
+        "samples": 4,
+        "actual_max_step_deg": 0.25,
+        "runtime_relevant_pair_count": 141,
+        "endpoint_verification": {
+          "pass": true,
+          "requested_deg": 1.0,
+          "actual_deg": 0.9999999999999998,
+          "canonical_angle_error_deg": 0.0,
+          "joint_angle_property_error_deg": 0.0,
+          "placement_error": {
+            "translation_mm": 0.0,
+            "rotation_deg": 0.0
+          }
+        },
+        "start_seed_verification": {
+          "pass": true,
+          "source": "V13 observer last_clear_r6 / last_clear_j6",
+          "placement_error": {
+            "translation_mm": 0.0,
+            "rotation_deg": 0.0
+          },
+          "joint_angle_property_error_deg": 0.0,
+          "actual_angle_error_deg": 0.0
+        },
+        "collision": false,
+        "state_v14": {
+          "j1_deg": 0.0,
+          "j2_deg": 0.0,
+          "j3_deg": 0.0,
+          "j4_deg": 0.0,
+          "j5_deg": 0.0,
+          "j6_deg": 0.9999999999999998,
+          "gripper_q_deg": 0.0,
+          "closure_deg": 0.0
+        }
+      },
+      "back": {
+        "status": "APPLIED_CLEAR",
+        "kinematic_mode": "explicit R5->R6 / no MbD recompute",
+        "document_recompute_performed": false,
+        "start_deg": 0.9999999999999998,
+        "target_deg": 0.0,
+        "samples": 4,
+        "actual_max_step_deg": 0.24999999999999994,
+        "runtime_relevant_pair_count": 141,
+        "endpoint_verification": {
+          "pass": true,
+          "requested_deg": 0.0,
+          "actual_deg": 0.0,
+          "canonical_angle_error_deg": 0.0,
+          "joint_angle_property_error_deg": 0.0,
+          "placement_error": {
+            "translation_mm": 0.0,
+            "rotation_deg": 0.0
+          }
+        },
+        "start_seed_verification": {
+          "pass": true,
+          "source": "V13 observer last_clear_r6 / last_clear_j6",
+          "placement_error": {
+            "translation_mm": 0.0,
+            "rotation_deg": 0.0
+          },
+          "joint_angle_property_error_deg": 0.0,
+          "actual_angle_error_deg": 0.0
+        },
+        "collision": false,
+        "state_v14": {
+          "j1_deg": 0.0,
+          "j2_deg": 0.0,
+          "j3_deg": 0.0,
+          "j4_deg": 0.0,
+          "j5_deg": 0.0,
+          "j6_deg": 0.0,
+          "gripper_q_deg": 0.0,
+          "closure_deg": 0.0
+        }
+      }
+    },
+    "j6_plus_181_rejected": {
+      "passed": true,
+      "message": "J6目标角 181.000° 超出 -180.0..180.0°"
+    },
+    "returned_to_zero": {
+      "passed": true,
+      "collision": false
+    }
+  },
+  "passed": true
+}

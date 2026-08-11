@@ -1,0 +1,510 @@
+{
+  "schema": "go-m8010-arm-v15.13-complete-delivery/1.0",
+  "revision": "V15.13-camera-up-mechanical-zero-deep-audited",
+  "main_fcstd": "cad/机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+  "main_fcstd_sha256": "B4A02A97AFAFF88E246A46340DAD4CACD3C645A7456FDD087A69552E14D3DDC0",
+  "file_count_excluding_manifest": 100,
+  "total_bytes_excluding_manifest": 312499560,
+  "files": [
+    {
+      "path": "cad/J6末端_相机上置机械零位_v15_13.step",
+      "bytes": 5189005,
+      "sha256": "5D7C97D2B4119B7F50B435488738542D90E2CC77A1E50D74491CCEA776AD6BB9"
+    },
+    {
+      "path": "cad/J6末端_相机上置机械零位_v15_13.stl",
+      "bytes": 11934184,
+      "sha256": "499026082E076B70418AAAC54D945672BDC6A4CD83CEABCB4BDEA67E6E9AAE58"
+    },
+    {
+      "path": "cad/机械臂完整装配_六轴_刚性Link拆分_v15_13.FCStd",
+      "bytes": 58620691,
+      "sha256": "2AE05FAB2A15C5C75BB05DB8B456F149DA20F79CEDBA2FC8D47F1624BCEC34C7"
+    },
+    {
+      "path": "cad/机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.20260810-223408.FCBak",
+      "bytes": 28041503,
+      "sha256": "6CF00B0EDD1895BF74466018311589F59F51320895788E22314E8965FE2771BE"
+    },
+    {
+      "path": "cad/机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+      "bytes": 28042341,
+      "sha256": "B4A02A97AFAFF88E246A46340DAD4CACD3C645A7456FDD087A69552E14D3DDC0"
+    },
+    {
+      "path": "definitions/mujoco/rigid_body_tree_staging.json",
+      "bytes": 10284,
+      "sha256": "B0D3A2D3585CD7A64E2842D668AAAE8CD5956DDE0E529CBFDB7FB650969DE5B0"
+    },
+    {
+      "path": "definitions/QA_V15_13_整机深度碰撞与限位.json",
+      "bytes": 15227,
+      "sha256": "508296D75F33DBD8E0E703780CB95EB2FD064062C9AD641A56BB25D7C49A5C65"
+    },
+    {
+      "path": "definitions/QA_V15_13_整机深度碰撞与限位.md",
+      "bytes": 1354,
+      "sha256": "628787498F30026C6D0F459CE64BC945DF523960C4C489533F13628A9E38D182"
+    },
+    {
+      "path": "definitions/QA_V15_13_相机上置机械零位_几何复核.json",
+      "bytes": 6413,
+      "sha256": "B09D6AB9B2CD862578791F09CEF7CA8331631C32AEE85FF0F43EAF1D6256C23C"
+    },
+    {
+      "path": "definitions/QA_V15_13_连续碰撞守卫回归.json",
+      "bytes": 3803,
+      "sha256": "E0DB11F566A09E1890CABD13328C073133F6A676C6B3617A27322DA2D33D26CE"
+    },
+    {
+      "path": "definitions/README_V15_13_相机上置机械零位.md",
+      "bytes": 909,
+      "sha256": "FE21B13CBC43E385A4B289F36FF7852BAE97B751911EDE6BC789E1FF6E8E1430"
+    },
+    {
+      "path": "definitions/rigid_links/qa_rigid_link_export.json",
+      "bytes": 1985,
+      "sha256": "E7062F0C9FA253967B860DD63952CE549162598C5741A2A515586A29B61CDE85"
+    },
+    {
+      "path": "definitions/rigid_links/README.md",
+      "bytes": 1203,
+      "sha256": "552FB519F36D22AF88A1211309B59F1F3C033A95F3627ECE176FAF8C0A85BF4E"
+    },
+    {
+      "path": "definitions/rigid_links/rigid_link_manifest.json",
+      "bytes": 56202,
+      "sha256": "8DB76F9228F7A60BD017276239E3669DE3CFD443C8CD36D0DD555E184606384F"
+    },
+    {
+      "path": "definitions/rigid_links/rigid_link_membership.csv",
+      "bytes": 14200,
+      "sha256": "3D2A4D52D679EB97917410C6E60BEC22C0C269F91ED31B35FD53FF94167E1B8C"
+    },
+    {
+      "path": "definitions/ros2/rigid_link_tree_staging.json",
+      "bytes": 10222,
+      "sha256": "D5151C3AEA71ECCB0202B133295F21215C1D45FB1FC1E1A4E4536AB70C8FADB4"
+    },
+    {
+      "path": "definitions/V15_13_ROS2_MoveIt_MuJoCo_关节限位契约.json",
+      "bytes": 3270,
+      "sha256": "F2DC89F79D6D344B17182D0F3A2C369B6D224F2F9F4B7F71BE30FCF73402C344"
+    },
+    {
+      "path": "definitions/V15_13_真实关节轴与相机上置零位.json",
+      "bytes": 84426,
+      "sha256": "9B46C1FD816530235E80C453587E58E62A1DCCF1828C72C3867CC8DF720EE5A9"
+    },
+    {
+      "path": "evidence/20954c166d1bc421cfe79299d02cfc75.mp4",
+      "bytes": 4874392,
+      "sha256": "9716C03D6DE3D36FB3A2E4E7BF8B6AB124A95F1610298C351F7DC6334CA774FD"
+    },
+    {
+      "path": "evidence/contact_sheet_2s.png",
+      "bytes": 2769381,
+      "sha256": "EC5D546163932AD135AF24584842CB04164F520DD098F2EF4DE3A8D5C0A45831"
+    },
+    {
+      "path": "mujoco/go_m8010_arm_v15_13.template.xml",
+      "bytes": 7488,
+      "sha256": "0C7513587AC8BC0F1A3039C24096B51EB4697BB72FD47078C9D451009933D64C"
+    },
+    {
+      "path": "mujoco/README.md",
+      "bytes": 527,
+      "sha256": "91407CE71556321901467F27EC20E5BF755B6E7CEBBF9A4BEC9144418B39878B"
+    },
+    {
+      "path": "previews/README_装配预览.md",
+      "bytes": 318,
+      "sha256": "C57B64E6DC9A8D3B58B5F892900D8A914EE5310B4CFE8777160309FEAF34C738"
+    },
+    {
+      "path": "previews/V15_13_整机三视图.png",
+      "bytes": 4118432,
+      "sha256": "29368D93F5A0C2A95B8CC3E183F930CC586FF201682454ACEAFAD10246753CCA"
+    },
+    {
+      "path": "previews/V15_13_整机等轴测.png",
+      "bytes": 2527226,
+      "sha256": "9FDF6FBAB1130E3F2D1AB210E27342FFB7FA1EE98C086346574D738ACC211C1B"
+    },
+    {
+      "path": "previews/V15_13_相机上置末端四视图.png",
+      "bytes": 3543241,
+      "sha256": "5CEB0012B0DDEA44E7399DBBF640665D8A1A8F4D16527098DCE340176B2247F6"
+    },
+    {
+      "path": "README_完整工程_V15_13.md",
+      "bytes": 1499,
+      "sha256": "A10B3AFE22201BA79ED6228498F6E8BDB537C3BAB64D26EB1A0EB2342C33A362"
+    },
+    {
+      "path": "references/gripper_internal_zero_reference/gripper_complete_zero_reference.stl",
+      "bytes": 4974384,
+      "sha256": "EC46F58D445EC700E26D4E060F92FE725684B2BEC65DC1BE63447C0C73AE945F"
+    },
+    {
+      "path": "references/gripper_internal_zero_reference/left_drive_collision.stl",
+      "bytes": 76484,
+      "sha256": "86F370B090E13FB13A1F494E4302F5878D9B74FC23C58E49DA297E7FED201776"
+    },
+    {
+      "path": "references/gripper_internal_zero_reference/left_drive_visual.stl",
+      "bytes": 76484,
+      "sha256": "86F370B090E13FB13A1F494E4302F5878D9B74FC23C58E49DA297E7FED201776"
+    },
+    {
+      "path": "references/gripper_internal_zero_reference/left_finger_collision.stl",
+      "bytes": 313084,
+      "sha256": "5BEA8A85FE3901BD70D1CAF5B07995760F155DC212DEC6F2316BC62C7062643B"
+    },
+    {
+      "path": "references/gripper_internal_zero_reference/left_finger_visual.stl",
+      "bytes": 687684,
+      "sha256": "D3F0EAB7DFE9B4D374D8F4B3B72B25AECCFF24DA0C7893A0F5217D3B6CE71A09"
+    },
+    {
+      "path": "references/gripper_internal_zero_reference/left_outer_collision.stl",
+      "bytes": 94884,
+      "sha256": "62217A24F2D666D98F5BBEA8572A6E99EC7C8CC8C05B78C2C574227B849CB824"
+    },
+    {
+      "path": "references/gripper_internal_zero_reference/left_outer_visual.stl",
+      "bytes": 94884,
+      "sha256": "62217A24F2D666D98F5BBEA8572A6E99EC7C8CC8C05B78C2C574227B849CB824"
+    },
+    {
+      "path": "references/gripper_internal_zero_reference/right_drive_collision.stl",
+      "bytes": 260884,
+      "sha256": "BA90C6661297438D9BFEFFAEC5CEDF78303313CA03AD218CBBB487FB005B2116"
+    },
+    {
+      "path": "references/gripper_internal_zero_reference/right_drive_visual.stl",
+      "bytes": 260884,
+      "sha256": "BA90C6661297438D9BFEFFAEC5CEDF78303313CA03AD218CBBB487FB005B2116"
+    },
+    {
+      "path": "references/gripper_internal_zero_reference/right_finger_collision.stl",
+      "bytes": 313084,
+      "sha256": "348AF9C16B9752D431F0ABCEA9F9F199270FD539E4DA0B67C1B63B6C91E02D6A"
+    },
+    {
+      "path": "references/gripper_internal_zero_reference/right_finger_visual.stl",
+      "bytes": 816884,
+      "sha256": "C2ED338D04A013C39A39BD103867B414C1179B4925572954F45F26F999CA6A5E"
+    },
+    {
+      "path": "references/gripper_internal_zero_reference/right_outer_collision.stl",
+      "bytes": 94884,
+      "sha256": "B173EA480257E1F698AEA5218C9C9CC063D85910CEA4D494AA64591C615BF17A"
+    },
+    {
+      "path": "references/gripper_internal_zero_reference/right_outer_visual.stl",
+      "bytes": 94884,
+      "sha256": "B173EA480257E1F698AEA5218C9C9CC063D85910CEA4D494AA64591C615BF17A"
+    },
+    {
+      "path": "references/world_preview_assets/01_连接件_world.stl",
+      "bytes": 121184,
+      "sha256": "7FF62733FCFCC132631ADB1EAF326B234994E4FB2893E36476CB0ABB5FD6A0F3"
+    },
+    {
+      "path": "references/world_preview_assets/02_夹爪固定框架与舵机_world.stl",
+      "bytes": 2718784,
+      "sha256": "9C2D3F3391605F9B120ACCDCC2F30A9C0A47896D4F8250CDC18575F78B3A3578"
+    },
+    {
+      "path": "references/world_preview_assets/03_夹爪四连杆_world.stl",
+      "bytes": 1011284,
+      "sha256": "8483EA5A6AAE1AAD3664E6C532A5F870E87DB3ABEDF0A7BA59DC3225EA5A49D8"
+    },
+    {
+      "path": "references/world_preview_assets/04_夹爪手指与随动紧固件_world.stl",
+      "bytes": 3958884,
+      "sha256": "DD5FDC05C930FD598CE657A0739271ACDFAE04F1ECF96CB8910F54D59863C470"
+    },
+    {
+      "path": "references/world_preview_assets/05_DM连接六颗M4x14_world.stl",
+      "bytes": 602484,
+      "sha256": "90B21FEEB49B4FC194A728E8CFD656C6406355FECD0485571093271718998427"
+    },
+    {
+      "path": "references/world_preview_assets/06_夹爪两颗打印M3x25_world.stl",
+      "bytes": 100084,
+      "sha256": "727F9530A0D69896576E55636ABA8EED6A078105C1A16D2E970EB7147B4AB70C"
+    },
+    {
+      "path": "references/world_preview_assets/07_Gemini相机自带铰链耳_world.stl",
+      "bytes": 3421984,
+      "sha256": "89AB60D57372977283A146E6B33E648DB340CD6F4B065BDA4F9C1E02895FC3A6"
+    },
+    {
+      "path": "references/world_preview_assets/08_J6输出刚体相机上置机械零位完整_world.stl",
+      "bytes": 11934184,
+      "sha256": "1B560BA2D018FBB384C789421C9FA7F9511334953CD2585408EC300EBC40DE74"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/CMakeLists.txt",
+      "bytes": 191,
+      "sha256": "F51918825058184DF8B024FA3EFC1036063A55E1A4216A3BC2B34B38F345219C"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/collision/base_link.step",
+      "bytes": 11681753,
+      "sha256": "5725CA2E4463E5A89231A6211435DD2D6C08A71B1D22A07DCFC79A503E620766"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/collision/base_link.stl",
+      "bytes": 9037334,
+      "sha256": "0DF404E4111D6821073E38BCAA9A8055AC983C0AAEBAB664C56C2938AA701C12"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/collision/gripper.step",
+      "bytes": 1682865,
+      "sha256": "1D3FE51AE0155FE18E2C97D6DBBE86FB0123760B2B6DB1D40E332C4CF9DE8E18"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/collision/gripper.stl",
+      "bytes": 684084,
+      "sha256": "09C71B1636B3C4792924E09BD5E82E7BBF140249AB1CFA49CEC71D31B05DAC37"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/collision/link1.step",
+      "bytes": 42557,
+      "sha256": "B88048E59A8AC875F9CFD7F803750C50762D97C0A588FABD409D50F992BA6373"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/collision/link1.stl",
+      "bytes": 153084,
+      "sha256": "FE7501B93B10A6AAD4F9980DC7D0FE9C7E2F92FCACB3A418295837741076DA1E"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/collision/link2.step",
+      "bytes": 1091138,
+      "sha256": "9D1B69FF3F7F04728901A6539EFE32BEC1CA157ACE5CAD9E38F574C16180CE2E"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/collision/link2.stl",
+      "bytes": 3751284,
+      "sha256": "4F950D14F3DCA5E05A9E2AB6D87BD44C85D69DAA03C2845C094CE84CB644E3F0"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/collision/link3.step",
+      "bytes": 15458,
+      "sha256": "6A66D152A17F4BC3DC0617181552311AB4CC4D73D368EAD8C4F9E2A98C73EC63"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/collision/link3.stl",
+      "bytes": 46684,
+      "sha256": "8D8516F651D9F87B8529E4EA5105CB24055A104E1AFC011A37A16421C31B08BB"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/collision/link4.step",
+      "bytes": 378481,
+      "sha256": "771370E9C22AD21A64F134E2EFAE42878E6D663BA1C98E5896ED4AD92BE9188B"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/collision/link4.stl",
+      "bytes": 126684,
+      "sha256": "A5C1A7639FB7DB263666B0A7B4D04C319DDDCE9A51C890B018BCEE0FFE606D8D"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/collision/link5.step",
+      "bytes": 5601031,
+      "sha256": "C21C741779C8FBBEDDA2AADB6C0C11953931BB33D8D30D27C20A42A94C5D597F"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/collision/link5.stl",
+      "bytes": 3930784,
+      "sha256": "2D32508DBB1B22F006D009FCC6FE82737970DB576EC7EC94377E45CF03297E6B"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/collision/link6.step",
+      "bytes": 39807,
+      "sha256": "4286ADD75B5E1A79142BFB4D95DF8DD21CC67C077C18A4E85BB26792A01F0FA2"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/collision/link6.stl",
+      "bytes": 139584,
+      "sha256": "82015FA88D1D494DEA94EA310EA5D7C2D67C53C9DBE20A25531C34578B2FBF6E"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/visual/base_link.stl",
+      "bytes": 9323984,
+      "sha256": "39B7E73E1E0FC4A7DC12147B15B525F8B5999581B474BC057BAE3C1D119BF3AF"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/visual/gripper.stl",
+      "bytes": 2943184,
+      "sha256": "DA5152BCAD9C22F497FC070A5289BE19F9767F70F6F448AA6D45285F024BFDC6"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/visual/link1.stl",
+      "bytes": 23631184,
+      "sha256": "AB2015EEB370988D253BA62415B5D4AE30DE0215024051F5CAFD2279CCDD5AF5"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/visual/link2.stl",
+      "bytes": 13173234,
+      "sha256": "5D71AF866E541AA9AC373F7DFF23EE2579AB17F4656C4C1CC4A23938D3E55B26"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/visual/link3.stl",
+      "bytes": 19159584,
+      "sha256": "91AB8967764815E826C45715A095EB699CA4A927A371E68EA81E9D49C57A916F"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/visual/link4.stl",
+      "bytes": 14169484,
+      "sha256": "29CFB06BC2A4FEFE950CFF4EF1245E576D560D94C5EBEFA920B542E33650F958"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/visual/link5.stl",
+      "bytes": 8434584,
+      "sha256": "484451EA55F1DE4C65C9C02E77CCD22D78D4F2C49E95694491D5128828801200"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/meshes/visual/link6.stl",
+      "bytes": 125334,
+      "sha256": "BD41B94B015362E97142D4C3BE41241A4017421D3C5DD42909632E742583FE3C"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/package.xml",
+      "bytes": 498,
+      "sha256": "B5AFCE1044CBB4E003BCD1EEF869F542F4D49F6A1D991399BAB7EDA0DB768343"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/README.md",
+      "bytes": 474,
+      "sha256": "0C83A84F5B611AD5B8E69B5812936F30077F09AAFA12B0634DC2F89362D3C450"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/urdf/go_m8010_arm_v15_13.urdf.xacro",
+      "bytes": 7773,
+      "sha256": "9CCA587A153E63AF0EBBCFFD205770CE158386E5D3E4FF2DD8BAFDD844B88127"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_moveit_config/CMakeLists.txt",
+      "bytes": 188,
+      "sha256": "A5E0A5450C381198F729A0669657B29C18247D2FF836CA9764469660CCCFAA30"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_moveit_config/config/go_m8010_arm_v15_13.srdf.template",
+      "bytes": 505,
+      "sha256": "AB16BF3B4CAE9BE48150377D73CF2658857C21EDCE99C4928D75E6618D1C8237"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_moveit_config/config/joint_limits.yaml",
+      "bytes": 1183,
+      "sha256": "8347CEF0070F93BFFA9D7DD29EDD3B76C22D554786F463BF86CB1329EE597FE7"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_moveit_config/config/self_collision_policy.yaml",
+      "bytes": 536,
+      "sha256": "52FD2A71B5B45F00FD8D7A52448CF4626D7035952659EC59E74A8986C9F01965"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_moveit_config/package.xml",
+      "bytes": 506,
+      "sha256": "DCBC40DA73A1C78E109AE4406C0DC5DC8A8DD93A1831BC8BB491CF85571B837F"
+    },
+    {
+      "path": "source_models/夹爪改版.stl",
+      "bytes": 68084,
+      "sha256": "6D69A7FBF6E6E5375AEE4B949861F5E9DEB2DE1968EACDD3442E6FCD8552E875"
+    },
+    {
+      "path": "source_models/相机_Gemini+pro相机_带支架铰链.stp",
+      "bytes": 789928,
+      "sha256": "BA4A86AF13938D9B40FB91CD60E34A8A72037E990C7817F3AC0FAB6C4D3CC971"
+    },
+    {
+      "path": "tools/audit_robot_arm_v15_13_deep.py",
+      "bytes": 25255,
+      "sha256": "FB9FBBD85C3E75DB47BA4763555D9CC0021EE71F34E2166339071CF742240310"
+    },
+    {
+      "path": "tools/build_robot_arm_rigid_links_v15.py",
+      "bytes": 42703,
+      "sha256": "E9B66986377EB2A30D464C6B9CA9C1371BC2E83F4E7D180F23E0DA08CF8FB944"
+    },
+    {
+      "path": "tools/build_robot_arm_v15_13_camera_up_zero.py",
+      "bytes": 26735,
+      "sha256": "531956F7B265C216747C4C107AE4A6ECEC2F8A3B167F06ACE6F244BCAFBD7D22"
+    },
+    {
+      "path": "tools/export_robot_arm_v15_13_complete_project.py",
+      "bytes": 2356,
+      "sha256": "870FA6DB48C6959336990840D4E5452B962E671582C1BEF47F01043F35EB8B86"
+    },
+    {
+      "path": "tools/export_v15_13_world_preview_assets.py",
+      "bytes": 3163,
+      "sha256": "8E362626AF22B1BD96CEE698BAAE716D1A03C6941254663A0DBA0A37486BB448"
+    },
+    {
+      "path": "tools/j123456_camera_physical_collision_guard_v15_13.py",
+      "bytes": 9273,
+      "sha256": "6B3FCA3A0596E811F8BCF1D5D93D9EEF4EDA2DDCE3277039B1EEF561ABED8CAB"
+    },
+    {
+      "path": "tools/j123456_gripper_physical_collision_guard_v14.py",
+      "bytes": 77488,
+      "sha256": "C2575D8371462BBB958379844270D6F72DA990C25AFACCCCDE26369A369514AF"
+    },
+    {
+      "path": "tools/j123456_physical_collision_guard_v13.py",
+      "bytes": 20203,
+      "sha256": "C6A2AB2B841F37B20436B52FFE1877BB45316F2EC2C63FDEB8B415D61DFCC2EE"
+    },
+    {
+      "path": "tools/j12345_physical_collision_guard_v12.py",
+      "bytes": 49493,
+      "sha256": "7587729978E6CFADE25B9EF0440BF9651021537A4E16B456F5FC822AF88B6192"
+    },
+    {
+      "path": "tools/j1234_physical_collision_guard_v10.py",
+      "bytes": 3531,
+      "sha256": "1A733ABBA1EF839F3F09B567F484441D0056BF6CC77275623B74650CADB5D18D"
+    },
+    {
+      "path": "tools/j1234_wrist_180_inward_collision_monitor_v9.py",
+      "bytes": 17192,
+      "sha256": "33E9253304204F9CD169E7236885E3910CC06DD6F27755181C8B1254224B92AF"
+    },
+    {
+      "path": "tools/j234_collision_monitor_v6.py",
+      "bytes": 28706,
+      "sha256": "618415F50C049D5FD09CB6B6CEF9AE5FE6E22D7ED310023C8706295B2F1CB980"
+    },
+    {
+      "path": "tools/j234_wrist_collision_monitor_v7.py",
+      "bytes": 12252,
+      "sha256": "15D8F06FDA243B454FEF89574E0827FB02EB2107BDA5B7328CC57610C26CE784"
+    },
+    {
+      "path": "tools/j234_wrist_horizontal_collision_monitor_v8.py",
+      "bytes": 5820,
+      "sha256": "F38AF9120A33EB411BECF345704FF754D0D4BFE244DFF1632C78EB69972069D9"
+    },
+    {
+      "path": "tools/package_robot_arm_v15_13_delivery.py",
+      "bytes": 23083,
+      "sha256": "C17A8D1A616CDD5746547893BFD3B3E8F7E25E24287D75B6731C212FDCDC12BC"
+    },
+    {
+      "path": "tools/regression_v15_13_collision_guard.py",
+      "bytes": 3575,
+      "sha256": "F4D46C32DB7C8391769D9E71083A864D86CED5FE8F2F8C9729C4C7A9E62B0133"
+    },
+    {
+      "path": "tools/render_v15_13_verified_world_previews.py",
+      "bytes": 7692,
+      "sha256": "19233D174EA78120BF17FC94FA0CBEAAA68EC3F479019584F28121984B5CECF4"
+    }
+  ]
+}

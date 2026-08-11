@@ -1,0 +1,427 @@
+{
+  "schema": "go-m8010-arm-ros2-rigid-link-staging/1.0",
+  "mesh_unit": "millimetre (STL is unitless)",
+  "mesh_scale_xyz_to_m": [
+    0.001,
+    0.001,
+    0.001
+  ],
+  "links": [
+    "base_link",
+    "link1",
+    "link2",
+    "link3",
+    "link4",
+    "link5",
+    "link6",
+    "gripper"
+  ],
+  "joints": [
+    {
+      "name": "J1",
+      "physical_actuators": [
+        "J1"
+      ],
+      "parent_link": "base_link",
+      "child_link": "link1",
+      "joint_type_ros2": "continuous",
+      "axis_xyz_in_joint_frame": [
+        0.0,
+        -2.7755575615628914e-17,
+        1.0
+      ],
+      "origin_xyz_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "origin_rpy_rad": [
+        -2.7755575615628914e-17,
+        -0.0,
+        0.0
+      ],
+      "position_limit_rad": null,
+      "mechanical_zero_deg": 0.0,
+      "velocity_limit_rad_s": null,
+      "effort_limit_nm": null,
+      "mujoco": {
+        "body_pos_m_in_parent": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "body_quat_wxyz_in_parent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          0.0,
+          -2.7755575615628914e-17,
+          1.0
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": false,
+        "joint_range_rad": null
+      }
+    },
+    {
+      "name": "J2",
+      "physical_actuators": [
+        "J2A",
+        "J2B"
+      ],
+      "parent_link": "link1",
+      "child_link": "link2",
+      "joint_type_ros2": "revolute",
+      "axis_xyz_in_joint_frame": [
+        0.0,
+        1.0,
+        -2.7755575615628914e-17
+      ],
+      "origin_xyz_m": [
+        -1.1952999999984559e-06,
+        -0.000348645100000006,
+        0.09263978199999999
+      ],
+      "origin_rpy_rad": [
+        -2.7755575615628914e-17,
+        -0.0,
+        0.0
+      ],
+      "position_limit_rad": {
+        "lower": -2.9670597283903604,
+        "upper": 2.9670597283903604
+      },
+      "mechanical_zero_deg": 0.0,
+      "velocity_limit_rad_s": null,
+      "effort_limit_nm": null,
+      "mujoco": {
+        "body_pos_m_in_parent": [
+          -1.1952999999984559e-06,
+          -0.000348645100000006,
+          0.09263978199999999
+        ],
+        "body_quat_wxyz_in_parent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          0.0,
+          1.0,
+          -2.7755575615628914e-17
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": true,
+        "joint_range_rad": [
+          -2.9670597283903604,
+          2.9670597283903604
+        ]
+      }
+    },
+    {
+      "name": "J3",
+      "physical_actuators": [
+        "J3"
+      ],
+      "parent_link": "link2",
+      "child_link": "link3",
+      "joint_type_ros2": "revolute",
+      "axis_xyz_in_joint_frame": [
+        0.0,
+        1.0,
+        -2.7755575615628914e-17
+      ],
+      "origin_xyz_m": [
+        -0.2486017593632837,
+        -0.03600000000000054,
+        1.6781540052733135e-05
+      ],
+      "origin_rpy_rad": [
+        -2.7755575615628914e-17,
+        -0.0,
+        0.0
+      ],
+      "position_limit_rad": {
+        "lower": -2.9670597283903604,
+        "upper": 2.9670597283903604
+      },
+      "mechanical_zero_deg": 0.0,
+      "velocity_limit_rad_s": null,
+      "effort_limit_nm": null,
+      "mujoco": {
+        "body_pos_m_in_parent": [
+          -0.2486017593632837,
+          -0.03600000000000054,
+          1.6781540052733135e-05
+        ],
+        "body_quat_wxyz_in_parent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          0.0,
+          1.0,
+          -2.7755575615628914e-17
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": true,
+        "joint_range_rad": [
+          -2.9670597283903604,
+          2.9670597283903604
+        ]
+      }
+    },
+    {
+      "name": "J4",
+      "physical_actuators": [
+        "J4"
+      ],
+      "parent_link": "link3",
+      "child_link": "link4",
+      "joint_type_ros2": "revolute",
+      "axis_xyz_in_joint_frame": [
+        3.806829027496864e-13,
+        1.0,
+        -4.914323015472638e-19
+      ],
+      "origin_xyz_m": [
+        -0.2023460218496078,
+        -3.6969356019973964e-17,
+        0.05196142396545565
+      ],
+      "origin_rpy_rad": [
+        -1.5676054979076366e-15,
+        -1.5530896869224016,
+        2.1500566933795315e-11
+      ],
+      "position_limit_rad": {
+        "lower": -2.0245819323134224,
+        "upper": 2.775073510670984
+      },
+      "mechanical_zero_deg": 0.0,
+      "velocity_limit_rad_s": null,
+      "effort_limit_nm": null,
+      "mujoco": {
+        "body_pos_m_in_parent": [
+          -0.2023460218496078,
+          -3.6969356019973964e-17,
+          0.05196142396545565
+        ],
+        "body_quat_wxyz_in_parent": [
+          0.7133392301847028,
+          -9.555111425395118e-18,
+          -0.7008189086201196,
+          1.3341580227233449e-13
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          3.806829027496864e-13,
+          1.0,
+          -4.914323015472638e-19
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": true,
+        "joint_range_rad": [
+          -2.0245819323134224,
+          2.775073510670984
+        ]
+      }
+    },
+    {
+      "name": "J5",
+      "physical_actuators": [
+        "J5"
+      ],
+      "parent_link": "link4",
+      "child_link": "link5",
+      "joint_type_ros2": "revolute",
+      "axis_xyz_in_joint_frame": [
+        1.0000000000000002,
+        0.0,
+        -1.592320025833871e-13
+      ],
+      "origin_xyz_m": [
+        0.009300000129833381,
+        0.03200002090589914,
+        0.09789894800075104
+      ],
+      "origin_rpy_rad": [
+        -0.8377464784876136,
+        -0.0,
+        3.806829027496863e-13
+      ],
+      "position_limit_rad": {
+        "lower": -1.2322024519079966,
+        "upper": 2.638937829015426
+      },
+      "mechanical_zero_deg": 0.0,
+      "velocity_limit_rad_s": null,
+      "effort_limit_nm": null,
+      "mujoco": {
+        "body_pos_m_in_parent": [
+          0.009300000129833381,
+          0.03200002090589914,
+          0.09789894800075104
+        ],
+        "body_quat_wxyz_in_parent": [
+          0.913547809067383,
+          -0.4067313616481825,
+          -4.35751695212161e-14,
+          1.0417706084214564e-13
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          1.0000000000000002,
+          0.0,
+          -1.592320025833871e-13
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": true,
+        "joint_range_rad": [
+          -1.2322024519079966,
+          2.638937829015426
+        ]
+      }
+    },
+    {
+      "name": "J6",
+      "physical_actuators": [
+        "J6"
+      ],
+      "parent_link": "link5",
+      "child_link": "link6",
+      "joint_type_ros2": "revolute",
+      "axis_xyz_in_joint_frame": [
+        -1.592320025833871e-13,
+        6.093216209368535e-17,
+        1.0000000000000002
+      ],
+      "origin_xyz_m": [
+        -0.010999195529983094,
+        -0.00014714845774893432,
+        0.09952752741147268
+      ],
+      "origin_rpy_rad": [
+        -1.1102230246251563e-16,
+        -6.162975822039152e-33,
+        3.141592653589793
+      ],
+      "position_limit_rad": {
+        "lower": -3.141592653589793,
+        "upper": 3.141592653589793
+      },
+      "mechanical_zero_deg": 0.0,
+      "velocity_limit_rad_s": null,
+      "effort_limit_nm": null,
+      "mujoco": {
+        "body_pos_m_in_parent": [
+          -0.010999195529983094,
+          -0.00014714845774893432,
+          0.09952752741147268
+        ],
+        "body_quat_wxyz_in_parent": [
+          5.5511151231257815e-17,
+          0.0,
+          -5.5511151231257815e-17,
+          1.0
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          -1.592320025833871e-13,
+          6.093216209368535e-17,
+          1.0000000000000002
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": true,
+        "joint_range_rad": [
+          -3.141592653589793,
+          3.141592653589793
+        ]
+      }
+    },
+    {
+      "name": "J6_to_gripper",
+      "physical_actuators": [],
+      "parent_link": "link6",
+      "child_link": "gripper",
+      "joint_type_ros2": "fixed",
+      "axis_xyz_in_joint_frame": null,
+      "origin_xyz_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "origin_rpy_rad": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "position_limit_rad": null,
+      "mechanical_zero_deg": 0.0,
+      "velocity_limit_rad_s": null,
+      "effort_limit_nm": null,
+      "mujoco": {
+        "body_pos_m_in_parent": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "body_quat_wxyz_in_parent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_type": "fixed_body_nesting"
+      }
+    }
+  ],
+  "status": "KINEMATIC_AND_MESH_FRAMES_READY; FINAL URDF BLOCKED ONLY BY VERIFIED EFFORT/VELOCITY/INERTIAL DATA",
+  "do_not_guess": [
+    "effort limits",
+    "velocity limits",
+    "mass",
+    "center of mass",
+    "inertia tensor",
+    "tool0/TCP"
+  ]
+}

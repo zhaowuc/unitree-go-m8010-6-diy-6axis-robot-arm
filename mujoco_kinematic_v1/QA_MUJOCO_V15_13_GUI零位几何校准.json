@@ -1,0 +1,566 @@
+{
+  "schema": "go-m8010-arm-v15.13-gui-zero-geometric-calibration/1.0",
+  "generated_at_utc": "2026-08-10T19:32:42.592859+00:00",
+  "status": "PASS",
+  "policy": "Operational GUI zero only; measured CAD/MJCF/URDF joint references and hardware encoder zeros remain unchanged.",
+  "camera_proxy_geometry": {
+    "token": "Gemini_Pro_Camera_Collision_Proxy",
+    "source": "meshes/collision_raw_mm/gripper/04_Gemini_Pro_Camera_Collision_Proxy.stl",
+    "source_bounds_m": [
+      [
+        -0.06543637847900391,
+        -0.05138676452636719,
+        0.0005910887122154236
+      ],
+      [
+        -0.02316703224182129,
+        0.051508777618408205,
+        0.028807947158813477
+      ]
+    ],
+    "local_axis_interpretation": "+Y is the 102.896 mm housing long axis used for level; existing +X/+Z pitch branch is preserved"
+  },
+  "targets": {
+    "fixed_nominal_deg": {
+      "J1": -135.0,
+      "J2": 150.0,
+      "J4": -90.0,
+      "J5": 45.0
+    },
+    "forearm_J3_to_J4_elevation_deg": 90.0,
+    "camera_long_plus_y_elevation_deg": 0.0,
+    "preserve_camera_pitch_and_view_branch": true
+  },
+  "before_recovered_user_zero": {
+    "angles_deg": {
+      "J1": -134.9,
+      "J2": 148.7,
+      "J3": -76.6,
+      "J4": -88.7,
+      "J5": 47.1,
+      "J6": 0.9
+    },
+    "upper_arm_J2_to_J3_elevation_deg": 30.93725599285674,
+    "forearm_J3_to_J4_vector_mm": [
+      8.997172193935448,
+      9.028633191310323,
+      208.52202956543786
+    ],
+    "forearm_J3_to_J4_horizontal_offset_mm": 12.746188637806819,
+    "forearm_J3_to_J4_elevation_deg": 86.50207091282398,
+    "camera": {
+      "camera_local_plus_x_world_vector": [
+        -0.20058433276884596,
+        -0.17903609747458027,
+        -0.9631780734883619
+      ],
+      "camera_long_plus_y_world_vector": [
+        -0.6945158053623669,
+        0.7193946745202762,
+        0.010913220135766455
+      ],
+      "camera_long_plus_y_elevation_deg": 0.6252938670092426,
+      "camera_long_plus_y_yaw_deg": 133.9919396334152
+    }
+  },
+  "rounded_candidate_not_used_as_final": {
+    "angles_deg": {
+      "J1": -135.0,
+      "J2": 150.0,
+      "J3": -75.0,
+      "J4": -90.0,
+      "J5": 45.0,
+      "J6": 0.0
+    },
+    "upper_arm_J2_to_J3_elevation_deg": 29.655290509620226,
+    "forearm_J3_to_J4_vector_mm": [
+      1.5415795990257608,
+      1.5415795990258163,
+      208.899854484295
+    ],
+    "forearm_J3_to_J4_horizontal_offset_mm": 2.180122776419948,
+    "forearm_J3_to_J4_elevation_deg": 89.40207091282427,
+    "camera": {
+      "camera_local_plus_x_world_vector": [
+        -0.1708907851087232,
+        -0.17089078510828554,
+        -0.9703569854079485
+      ],
+      "camera_long_plus_y_world_vector": [
+        -0.6702359591658427,
+        0.7420403283631574,
+        -0.012645557470668645
+      ],
+      "camera_long_plus_y_elevation_deg": -0.7245563841846137,
+      "camera_long_plus_y_yaw_deg": 132.08941667930873
+    }
+  },
+  "after_calibrated_gui_zero": {
+    "angles_deg": {
+      "J1": -135.0,
+      "J2": 150.0,
+      "J3": -74.40207091282407,
+      "J4": -90.0,
+      "J5": 45.0,
+      "J6": 0.7134917101830321
+    },
+    "upper_arm_J2_to_J3_elevation_deg": 29.655290509620226,
+    "forearm_J3_to_J4_vector_mm": [
+      2.7755575615628914e-14,
+      8.326672684688674e-14,
+      208.91123028425224
+    ],
+    "forearm_J3_to_J4_horizontal_offset_mm": 8.777083671441753e-14,
+    "forearm_J3_to_J4_elevation_deg": 90.0,
+    "camera": {
+      "camera_local_plus_x_world_vector": [
+        -0.17205335886820053,
+        -0.15446704815746548,
+        -0.9729016254152796
+      ],
+      "camera_long_plus_y_world_vector": [
+        -0.6680539114347063,
+        0.7441128754542506,
+        -1.3322676295501878e-15
+      ],
+      "camera_long_plus_y_elevation_deg": -7.63333123551244e-14,
+      "camera_long_plus_y_yaw_deg": 131.91704186280393
+    }
+  },
+  "point_collision_check": {
+    "safe": true,
+    "reason": "clear",
+    "angles_deg": {
+      "J1": -135.0,
+      "J2": 150.0,
+      "J3": -74.40207091282407,
+      "J4": -90.0,
+      "J5": 45.0,
+      "J6": 0.7134917101830321
+    },
+    "violations": [],
+    "contacts": []
+  },
+  "swept_from_previous_zero_check": {
+    "safe": true,
+    "swept_safe": true,
+    "reason": "clear",
+    "start_deg": {
+      "J1": -134.9,
+      "J2": 148.7,
+      "J3": -76.6,
+      "J4": -88.7,
+      "J5": 47.1,
+      "J6": 0.9
+    },
+    "target_deg": {
+      "J1": -135.0,
+      "J2": 150.0,
+      "J3": -74.40207091282407,
+      "J4": -90.0,
+      "J5": 45.0,
+      "J6": 0.7134917101830321
+    },
+    "step_count": 9,
+    "max_step_deg": 0.25
+  },
+  "swept_from_cad_mechanical_zero_check": {
+    "safe": true,
+    "swept_safe": true,
+    "reason": "clear",
+    "start_deg": {
+      "J1": 0.0,
+      "J2": 0.0,
+      "J3": 0.0,
+      "J4": 0.0,
+      "J5": 0.0,
+      "J6": 0.0
+    },
+    "target_deg": {
+      "J1": -135.0,
+      "J2": 150.0,
+      "J3": -74.40207091282407,
+      "J4": -90.0,
+      "J5": 45.0,
+      "J6": 0.7134917101830321
+    },
+    "step_count": 600,
+    "max_step_deg": 0.25
+  },
+  "swept_from_rounded_candidate_check": {
+    "safe": true,
+    "swept_safe": true,
+    "reason": "clear",
+    "start_deg": {
+      "J1": -135.0,
+      "J2": 150.0,
+      "J3": -75.0,
+      "J4": -90.0,
+      "J5": 45.0,
+      "J6": 0.0
+    },
+    "target_deg": {
+      "J1": -135.0,
+      "J2": 150.0,
+      "J3": -74.40207091282407,
+      "J4": -90.0,
+      "J5": 45.0,
+      "J6": 0.7134917101830321
+    },
+    "step_count": 3,
+    "max_step_deg": 0.25
+  },
+  "single_axis_plus_minus_2deg_neighborhood_check": {
+    "safe": true,
+    "sample_count": 48,
+    "samples": [
+      {
+        "joint": "J1",
+        "delta_deg": -0.25,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J1",
+        "delta_deg": 0.25,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J1",
+        "delta_deg": -0.5,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J1",
+        "delta_deg": 0.5,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J1",
+        "delta_deg": -1.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J1",
+        "delta_deg": 1.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J1",
+        "delta_deg": -2.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J1",
+        "delta_deg": 2.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J2",
+        "delta_deg": -0.25,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J2",
+        "delta_deg": 0.25,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J2",
+        "delta_deg": -0.5,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J2",
+        "delta_deg": 0.5,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J2",
+        "delta_deg": -1.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J2",
+        "delta_deg": 1.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J2",
+        "delta_deg": -2.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J2",
+        "delta_deg": 2.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J3",
+        "delta_deg": -0.25,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J3",
+        "delta_deg": 0.25,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J3",
+        "delta_deg": -0.5,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J3",
+        "delta_deg": 0.5,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J3",
+        "delta_deg": -1.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J3",
+        "delta_deg": 1.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J3",
+        "delta_deg": -2.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J3",
+        "delta_deg": 2.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J4",
+        "delta_deg": -0.25,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J4",
+        "delta_deg": 0.25,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J4",
+        "delta_deg": -0.5,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J4",
+        "delta_deg": 0.5,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J4",
+        "delta_deg": -1.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J4",
+        "delta_deg": 1.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J4",
+        "delta_deg": -2.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J4",
+        "delta_deg": 2.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J5",
+        "delta_deg": -0.25,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J5",
+        "delta_deg": 0.25,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J5",
+        "delta_deg": -0.5,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J5",
+        "delta_deg": 0.5,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J5",
+        "delta_deg": -1.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J5",
+        "delta_deg": 1.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J5",
+        "delta_deg": -2.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J5",
+        "delta_deg": 2.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J6",
+        "delta_deg": -0.25,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J6",
+        "delta_deg": 0.25,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J6",
+        "delta_deg": -0.5,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J6",
+        "delta_deg": 0.5,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J6",
+        "delta_deg": -1.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J6",
+        "delta_deg": 1.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J6",
+        "delta_deg": -2.0,
+        "safe": true,
+        "reason": "clear"
+      },
+      {
+        "joint": "J6",
+        "delta_deg": 2.0,
+        "safe": true,
+        "reason": "clear"
+      }
+    ]
+  },
+  "joint_limit_margins_deg": {
+    "J1": {
+      "limited": false,
+      "allowed_deg": null,
+      "lower_margin_deg": null,
+      "upper_margin_deg": null,
+      "nearest_margin_deg": null
+    },
+    "J2": {
+      "limited": true,
+      "allowed_deg": [
+        -169.99999999999997,
+        169.99999999999997
+      ],
+      "lower_margin_deg": 320.0,
+      "upper_margin_deg": 19.99999999999997,
+      "nearest_margin_deg": 19.99999999999997
+    },
+    "J3": {
+      "limited": true,
+      "allowed_deg": [
+        -169.99999999999997,
+        169.99999999999997
+      ],
+      "lower_margin_deg": 95.5979290871759,
+      "upper_margin_deg": 244.40207091282406,
+      "nearest_margin_deg": 95.5979290871759
+    },
+    "J4": {
+      "limited": true,
+      "allowed_deg": [
+        -115.99999999999989,
+        158.99999999999977
+      ],
+      "lower_margin_deg": 25.999999999999886,
+      "upper_margin_deg": 248.99999999999977,
+      "nearest_margin_deg": 25.999999999999886
+    },
+    "J5": {
+      "limited": true,
+      "allowed_deg": [
+        -70.6000000000002,
+        151.20000000000022
+      ],
+      "lower_margin_deg": 115.6000000000002,
+      "upper_margin_deg": 106.20000000000022,
+      "nearest_margin_deg": 106.20000000000022
+    },
+    "J6": {
+      "limited": true,
+      "allowed_deg": [
+        -179.99999999999983,
+        179.99999999999983
+      ],
+      "lower_margin_deg": 180.71349171018286,
+      "upper_margin_deg": 179.2865082898168,
+      "nearest_margin_deg": 179.2865082898168
+    }
+  }
+}

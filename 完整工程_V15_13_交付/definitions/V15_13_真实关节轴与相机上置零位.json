@@ -1,0 +1,2838 @@
+{
+  "schema": "go-m8010-arm-v15-measured-joint-axes/1.3",
+  "revision": "V15.13-camera-up-j6-mechanical-zero-full-range",
+  "generated_at_utc": "2026-08-10T14:33:42.363839+00:00",
+  "source_v14": "D:\\AI_JIXIEBI\\备份\\机械臂完整工程_V14_交接备份_20260807_164438\\V14_正式工程\\机械臂完整装配_六轴_舵机柔性二指夹爪_v14.FCStd",
+  "source_v14_sha256": "9156F6EC5C402ECA00FE0388E7795C4CB293481C6716997E866289C97FE5CE6A",
+  "output_v15_fcstd": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\机械臂完整装配_六轴_真实关节轴_v15.FCStd",
+  "output_v15_fcstd_sha256": "EE661CABABD597B130BA76DB2656B86C35F0227241EF628D99A08E04722F1E84",
+  "measurement_policy": "NO_VISUAL_GUESSING: coincident joint centers + coaxial BRep cylinders + finite driven-rigid rotation",
+  "frames_at_mechanical_zero": {
+    "base_link": {
+      "name": "base_link",
+      "origin_world_mm": [
+        0.0,
+        0.0,
+        90.0
+      ],
+      "x_axis_world_at_zero": [
+        -0.20169035804441449,
+        -0.9794493348162099,
+        0.0
+      ],
+      "y_axis_world_at_zero": [
+        0.9794493348162099,
+        -0.20169035804441449,
+        -2.7755575615628914e-17
+      ],
+      "z_axis_world_at_zero": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "right_handed_determinant": 1.0,
+      "maximum_orthogonality_error": 2.7755575615628914e-17,
+      "maximum_unit_norm_error": 0.0
+    },
+    "link1": {
+      "name": "link1",
+      "origin_world_mm": [
+        0.0,
+        0.0,
+        90.0
+      ],
+      "x_axis_world_at_zero": [
+        -0.20169035804441449,
+        -0.9794493348162099,
+        0.0
+      ],
+      "y_axis_world_at_zero": [
+        0.9794493348162099,
+        -0.20169035804441449,
+        -2.7755575615628914e-17
+      ],
+      "z_axis_world_at_zero": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "right_handed_determinant": 1.0,
+      "maximum_orthogonality_error": 2.7755575615628914e-17,
+      "maximum_unit_norm_error": 0.0
+    },
+    "link2": {
+      "name": "link2",
+      "origin_world_mm": [
+        -0.3412391307969642,
+        0.0714890908393357,
+        182.639782
+      ],
+      "x_axis_world_at_zero": [
+        -0.20169035804441449,
+        -0.9794493348162099,
+        0.0
+      ],
+      "y_axis_world_at_zero": [
+        0.9794493348162099,
+        -0.20169035804441449,
+        -2.7755575615628914e-17
+      ],
+      "z_axis_world_at_zero": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "right_handed_determinant": 1.0,
+      "maximum_orthogonality_error": 2.7755575615628914e-17,
+      "maximum_unit_norm_error": 0.0
+    },
+    "link3": {
+      "name": "link3",
+      "origin_world_mm": [
+        14.539162672271004,
+        250.825169822946,
+        182.65656354005273
+      ],
+      "x_axis_world_at_zero": [
+        -0.20169035804441449,
+        -0.9794493348162099,
+        0.0
+      ],
+      "y_axis_world_at_zero": [
+        0.9794493348162099,
+        -0.20169035804441449,
+        -2.7755575615628914e-17
+      ],
+      "z_axis_world_at_zero": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "right_handed_determinant": 1.0,
+      "maximum_orthogonality_error": 2.7755575615628914e-17,
+      "maximum_unit_norm_error": 0.0
+    },
+    "link4": {
+      "name": "link4",
+      "origin_world_mm": [
+        55.350404267981276,
+        449.0128463262506,
+        234.61798750550838
+      ],
+      "x_axis_world_at_zero": [
+        -0.0035710719250043816,
+        -0.017341850427658345,
+        0.9998432415479195
+      ],
+      "y_axis_world_at_zero": [
+        0.9794493348162099,
+        -0.20169035804441449,
+        -2.7755575615628914e-17
+      ],
+      "z_axis_world_at_zero": [
+        0.20165874137608789,
+        0.9792957978545928,
+        0.01770571464100866
+      ],
+      "right_handed_determinant": 1.0000000000000002,
+      "maximum_orthogonality_error": 3.806829027496864e-13,
+      "maximum_unit_norm_error": 0.0
+    },
+    "link5": {
+      "name": "link5",
+      "origin_world_mm": [
+        106.4017711248739,
+        538.269499832604,
+        245.64990061866112
+      ],
+      "x_axis_world_at_zero": [
+        -0.0035710719250043816,
+        -0.017341850427658345,
+        0.9998432415479195
+      ],
+      "y_axis_world_at_zero": [
+        0.5055278533035291,
+        -0.8627099527291532,
+        -0.013157773230605666
+      ],
+      "z_axis_world_at_zero": [
+        0.8628028957876956,
+        0.505401620185185,
+        0.01184758771045874
+      ],
+      "right_handed_determinant": 1.0000000000000002,
+      "maximum_orthogonality_error": 1.592320025833871e-13,
+      "maximum_unit_norm_error": 0.0
+    },
+    "link6": {
+      "name": "link6",
+      "origin_world_mm": [
+        192.2393012604722,
+        588.8885662821208,
+        235.8335265622101
+      ],
+      "x_axis_world_at_zero": [
+        0.0035710719250040546,
+        0.017341850427658206,
+        -0.9998432415479197
+      ],
+      "y_axis_world_at_zero": [
+        -0.5055278533035291,
+        0.8627099527291531,
+        0.013157773230605602
+      ],
+      "z_axis_world_at_zero": [
+        0.8628028957876952,
+        0.5054016201851823,
+        0.011847587710617558
+      ],
+      "right_handed_determinant": 1.0000000000000002,
+      "maximum_orthogonality_error": 1.592320025833871e-13,
+      "maximum_unit_norm_error": 0.0,
+      "zero_note": "V15.13 camera-up physical J6 output clock; J6 angle property remains 0 deg"
+    }
+  },
+  "joints": [
+    {
+      "name": "J1",
+      "parent_link": "base_link",
+      "child_link": "link1",
+      "canonical_axis": "Z",
+      "axis_vector_in_parent_frame": [
+        0.0,
+        -2.7755575615628914e-17,
+        1.0
+      ],
+      "axis_vector_in_parent_link_frame": [
+        0.0,
+        -2.7755575615628914e-17,
+        1.0
+      ],
+      "axis_vector_in_joint_child_frame": [
+        0.0,
+        -2.7755575615628914e-17,
+        1.0
+      ],
+      "axis_world_at_zero": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "joint_origin_world_mm": [
+        0.0,
+        0.0,
+        90.0
+      ],
+      "joint_origin_in_parent_frame_mm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "child_link_frame_origin_matches_joint_center_mm": 0.0,
+      "parent_to_child_at_mechanical_zero": {
+        "semantics": "pose of child link frame in parent link frame at CAD mechanical zero",
+        "xyz_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "xyz_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation_matrix_row_major": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            -2.7755575615628914e-17
+          ],
+          [
+            0.0,
+            -2.7755575615628914e-17,
+            1.0
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -2.7755575615628914e-17,
+          -0.0,
+          0.0
+        ],
+        "quaternion_xyzw": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "quaternion_wxyz_mujoco": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "joint_limit_definition": {
+        "source": "J1_Revolute.AngleMin/AngleMax + EnableAngleMin/EnableAngleMax",
+        "position_limited": false,
+        "position_limit_deg": null,
+        "position_limit_rad": null,
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "velocity_effort_status": "PENDING_MOTOR_AND_REDUCER_ENGINEERING_DATA; do not guess"
+      },
+      "ros2_urdf": {
+        "joint_type": "continuous",
+        "origin_xyz_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "origin_rpy_rad": [
+          -2.7755575615628914e-17,
+          -0.0,
+          0.0
+        ],
+        "axis_xyz_in_joint_frame": [
+          0.0,
+          -2.7755575615628914e-17,
+          1.0
+        ],
+        "position_limit_rad": null,
+        "effort_limit_nm": null,
+        "velocity_limit_rad_s": null,
+        "emission_status": "POSITION_SEMANTICS_READY; URDF <limit> still requires verified effort and velocity"
+      },
+      "mujoco_mjcf": {
+        "body_pos_m_in_parent": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "body_quat_wxyz_in_parent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          0.0,
+          -2.7755575615628914e-17,
+          1.0
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": false,
+        "joint_range_rad": null
+      },
+      "mechanical_zero_deg": 0.0,
+      "zero_definition": "USER_SPECIFIED_ACTUAL_MEASUREMENT + V14 saved mechanical assembly zero",
+      "hardware_encoder_zero_status": "PENDING_LOW_TORQUE_PHYSICAL_COMMISSIONING",
+      "measurement_status": "DEFINED_FROM_FREECAD_GEOMETRY_AND_FINITE_MOTION",
+      "source_joint": "J1_Revolute",
+      "kinematic_dof": "J1",
+      "motor_output_flange_witness": {
+        "face_index": 1,
+        "radius_mm": 29.5,
+        "center_world_mm": [
+          0.0,
+          0.0,
+          83.4
+        ],
+        "axis_world_undirected": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "axis_alignment_abs_dot": 1.0,
+        "axial_station_from_joint_origin_mm": -6.599999999999994,
+        "axis_line_residual_mm": 0.0,
+        "face_area_mm2": 1223.3361793078655,
+        "object": "J1_Output_Rotor_Proxy",
+        "selection_rule": "coaxial cylindrical face radius 29.500 mm"
+      }
+    },
+    {
+      "name": "J2A",
+      "parent_link": "link1",
+      "child_link": "link2",
+      "canonical_axis": "Y",
+      "axis_vector_in_parent_frame": [
+        0.0,
+        1.0,
+        -2.7755575615628914e-17
+      ],
+      "axis_vector_in_parent_link_frame": [
+        0.0,
+        1.0,
+        -2.7755575615628914e-17
+      ],
+      "axis_vector_in_joint_child_frame": [
+        0.0,
+        1.0,
+        -2.7755575615628914e-17
+      ],
+      "axis_world_at_zero": [
+        0.9794493348162099,
+        -0.20169035804441449,
+        -2.7755575615628914e-17
+      ],
+      "joint_origin_world_mm": [
+        -0.3412391307969642,
+        0.0714890908393357,
+        182.639782
+      ],
+      "joint_origin_in_parent_frame_mm": [
+        -0.001195299999998456,
+        -0.34864510000000604,
+        92.639782
+      ],
+      "child_link_frame_origin_matches_joint_center_mm": 0.0,
+      "parent_to_child_at_mechanical_zero": {
+        "semantics": "pose of child link frame in parent link frame at CAD mechanical zero",
+        "xyz_mm": [
+          -0.001195299999998456,
+          -0.34864510000000604,
+          92.639782
+        ],
+        "xyz_m": [
+          -1.1952999999984559e-06,
+          -0.000348645100000006,
+          0.09263978199999999
+        ],
+        "rotation_matrix_row_major": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            -2.7755575615628914e-17
+          ],
+          [
+            0.0,
+            -2.7755575615628914e-17,
+            1.0
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -2.7755575615628914e-17,
+          -0.0,
+          0.0
+        ],
+        "quaternion_xyzw": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "quaternion_wxyz_mujoco": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "joint_limit_definition": {
+        "source": "J2_Revolute.AngleMin/AngleMax + EnableAngleMin/EnableAngleMax",
+        "position_limited": true,
+        "position_limit_deg": {
+          "lower": -170.0,
+          "upper": 170.0
+        },
+        "position_limit_rad": {
+          "lower": -2.9670597283903604,
+          "upper": 2.9670597283903604
+        },
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "velocity_effort_status": "PENDING_MOTOR_AND_REDUCER_ENGINEERING_DATA; do not guess"
+      },
+      "ros2_urdf": {
+        "joint_type": "revolute",
+        "origin_xyz_m": [
+          -1.1952999999984559e-06,
+          -0.000348645100000006,
+          0.09263978199999999
+        ],
+        "origin_rpy_rad": [
+          -2.7755575615628914e-17,
+          -0.0,
+          0.0
+        ],
+        "axis_xyz_in_joint_frame": [
+          0.0,
+          1.0,
+          -2.7755575615628914e-17
+        ],
+        "position_limit_rad": {
+          "lower": -2.9670597283903604,
+          "upper": 2.9670597283903604
+        },
+        "effort_limit_nm": null,
+        "velocity_limit_rad_s": null,
+        "emission_status": "POSITION_SEMANTICS_READY; URDF <limit> still requires verified effort and velocity"
+      },
+      "mujoco_mjcf": {
+        "body_pos_m_in_parent": [
+          -1.1952999999984559e-06,
+          -0.000348645100000006,
+          0.09263978199999999
+        ],
+        "body_quat_wxyz_in_parent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          0.0,
+          1.0,
+          -2.7755575615628914e-17
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": true,
+        "joint_range_rad": [
+          -2.9670597283903604,
+          2.9670597283903604
+        ]
+      },
+      "mechanical_zero_deg": 0.0,
+      "zero_definition": "USER_SPECIFIED_ACTUAL_MEASUREMENT + V14 saved mechanical assembly zero",
+      "hardware_encoder_zero_status": "PENDING_LOW_TORQUE_PHYSICAL_COMMISSIONING",
+      "measurement_status": "DEFINED_FROM_FREECAD_GEOMETRY_AND_FINITE_MOTION",
+      "source_joint": "J2_Revolute",
+      "kinematic_dof": "J2",
+      "motor_output_flange_witness": {
+        "face_index": 2737,
+        "radius_mm": 29.0,
+        "center_world_mm": [
+          -41.08633144740238,
+          8.461807957237994,
+          182.6397819625522
+        ],
+        "axis_world_undirected": [
+          0.97944933481621,
+          -0.201690358044414,
+          0.0
+        ],
+        "axis_alignment_abs_dot": 1.0,
+        "axial_station_from_joint_origin_mm": -41.599999982794984,
+        "axis_line_residual_mm": 4.519255178543745e-08,
+        "face_area_mm2": 45.553093477052045,
+        "object": "J2_Left_Joint_Motor_GO_M8010_6",
+        "selection_rule": "outermost coaxial output-face cylinder radius 29.000 mm"
+      },
+      "dual_motor_note": "J2A/J2B are coaxial synchronized actuators for one J2 revolute DOF; physical motor command signs require commissioning."
+    },
+    {
+      "name": "J2B",
+      "parent_link": "link1",
+      "child_link": "link2",
+      "canonical_axis": "Y",
+      "axis_vector_in_parent_frame": [
+        0.0,
+        1.0,
+        -2.7755575615628914e-17
+      ],
+      "axis_vector_in_parent_link_frame": [
+        0.0,
+        1.0,
+        -2.7755575615628914e-17
+      ],
+      "axis_vector_in_joint_child_frame": [
+        0.0,
+        1.0,
+        -2.7755575615628914e-17
+      ],
+      "axis_world_at_zero": [
+        0.9794493348162099,
+        -0.20169035804441449,
+        -2.7755575615628914e-17
+      ],
+      "joint_origin_world_mm": [
+        -0.3412391307969642,
+        0.0714890908393357,
+        182.639782
+      ],
+      "joint_origin_in_parent_frame_mm": [
+        -0.001195299999998456,
+        -0.34864510000000604,
+        92.639782
+      ],
+      "child_link_frame_origin_matches_joint_center_mm": 0.0,
+      "parent_to_child_at_mechanical_zero": {
+        "semantics": "pose of child link frame in parent link frame at CAD mechanical zero",
+        "xyz_mm": [
+          -0.001195299999998456,
+          -0.34864510000000604,
+          92.639782
+        ],
+        "xyz_m": [
+          -1.1952999999984559e-06,
+          -0.000348645100000006,
+          0.09263978199999999
+        ],
+        "rotation_matrix_row_major": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            -2.7755575615628914e-17
+          ],
+          [
+            0.0,
+            -2.7755575615628914e-17,
+            1.0
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -2.7755575615628914e-17,
+          -0.0,
+          0.0
+        ],
+        "quaternion_xyzw": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "quaternion_wxyz_mujoco": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "joint_limit_definition": {
+        "source": "J2_Revolute.AngleMin/AngleMax + EnableAngleMin/EnableAngleMax",
+        "position_limited": true,
+        "position_limit_deg": {
+          "lower": -170.0,
+          "upper": 170.0
+        },
+        "position_limit_rad": {
+          "lower": -2.9670597283903604,
+          "upper": 2.9670597283903604
+        },
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "velocity_effort_status": "PENDING_MOTOR_AND_REDUCER_ENGINEERING_DATA; do not guess"
+      },
+      "ros2_urdf": {
+        "joint_type": "revolute",
+        "origin_xyz_m": [
+          -1.1952999999984559e-06,
+          -0.000348645100000006,
+          0.09263978199999999
+        ],
+        "origin_rpy_rad": [
+          -2.7755575615628914e-17,
+          -0.0,
+          0.0
+        ],
+        "axis_xyz_in_joint_frame": [
+          0.0,
+          1.0,
+          -2.7755575615628914e-17
+        ],
+        "position_limit_rad": {
+          "lower": -2.9670597283903604,
+          "upper": 2.9670597283903604
+        },
+        "effort_limit_nm": null,
+        "velocity_limit_rad_s": null,
+        "emission_status": "POSITION_SEMANTICS_READY; URDF <limit> still requires verified effort and velocity"
+      },
+      "mujoco_mjcf": {
+        "body_pos_m_in_parent": [
+          -1.1952999999984559e-06,
+          -0.000348645100000006,
+          0.09263978199999999
+        ],
+        "body_quat_wxyz_in_parent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          0.0,
+          1.0,
+          -2.7755575615628914e-17
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": true,
+        "joint_range_rad": [
+          -2.9670597283903604,
+          2.9670597283903604
+        ]
+      },
+      "mechanical_zero_deg": 0.0,
+      "zero_definition": "USER_SPECIFIED_ACTUAL_MEASUREMENT + V14 saved mechanical assembly zero",
+      "hardware_encoder_zero_status": "PENDING_LOW_TORQUE_PHYSICAL_COMMISSIONING",
+      "measurement_status": "DEFINED_FROM_FREECAD_GEOMETRY_AND_FINITE_MOTION",
+      "source_joint": "J2_Revolute",
+      "kinematic_dof": "J2",
+      "motor_output_flange_witness": {
+        "face_index": 2737,
+        "radius_mm": 29.0,
+        "center_world_mm": [
+          40.40385318580847,
+          -8.318829775559351,
+          182.63978196255215
+        ],
+        "axis_world_undirected": [
+          -0.97944933481621,
+          0.201690358044414,
+          0.0
+        ],
+        "axis_alignment_abs_dot": 1.0,
+        "axial_station_from_joint_origin_mm": 41.59999998279501,
+        "axis_line_residual_mm": 4.519258351011534e-08,
+        "face_area_mm2": 45.553093477052045,
+        "object": "J2_Right_Joint_Motor_GO_M8010_6",
+        "selection_rule": "outermost coaxial output-face cylinder radius 29.000 mm"
+      },
+      "dual_motor_note": "J2A/J2B are coaxial synchronized actuators for one J2 revolute DOF; physical motor command signs require commissioning."
+    },
+    {
+      "name": "J3",
+      "parent_link": "link2",
+      "child_link": "link3",
+      "canonical_axis": "Y",
+      "axis_vector_in_parent_frame": [
+        0.0,
+        1.0,
+        -2.7755575615628914e-17
+      ],
+      "axis_vector_in_parent_link_frame": [
+        0.0,
+        1.0,
+        -2.7755575615628914e-17
+      ],
+      "axis_vector_in_joint_child_frame": [
+        0.0,
+        1.0,
+        -2.7755575615628914e-17
+      ],
+      "axis_world_at_zero": [
+        0.9794493348162099,
+        -0.20169035804441449,
+        -2.7755575615628914e-17
+      ],
+      "joint_origin_world_mm": [
+        14.539162672271004,
+        250.825169822946,
+        182.65656354005273
+      ],
+      "joint_origin_in_parent_frame_mm": [
+        -248.6017593632837,
+        -36.00000000000054,
+        0.016781540052733135
+      ],
+      "child_link_frame_origin_matches_joint_center_mm": 0.0,
+      "parent_to_child_at_mechanical_zero": {
+        "semantics": "pose of child link frame in parent link frame at CAD mechanical zero",
+        "xyz_mm": [
+          -248.6017593632837,
+          -36.00000000000054,
+          0.016781540052733135
+        ],
+        "xyz_m": [
+          -0.2486017593632837,
+          -0.03600000000000054,
+          1.6781540052733135e-05
+        ],
+        "rotation_matrix_row_major": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            -2.7755575615628914e-17
+          ],
+          [
+            0.0,
+            -2.7755575615628914e-17,
+            1.0
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -2.7755575615628914e-17,
+          -0.0,
+          0.0
+        ],
+        "quaternion_xyzw": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "quaternion_wxyz_mujoco": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "joint_limit_definition": {
+        "source": "J3_Revolute.AngleMin/AngleMax + EnableAngleMin/EnableAngleMax",
+        "position_limited": true,
+        "position_limit_deg": {
+          "lower": -170.0,
+          "upper": 170.0
+        },
+        "position_limit_rad": {
+          "lower": -2.9670597283903604,
+          "upper": 2.9670597283903604
+        },
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "velocity_effort_status": "PENDING_MOTOR_AND_REDUCER_ENGINEERING_DATA; do not guess"
+      },
+      "ros2_urdf": {
+        "joint_type": "revolute",
+        "origin_xyz_m": [
+          -0.2486017593632837,
+          -0.03600000000000054,
+          1.6781540052733135e-05
+        ],
+        "origin_rpy_rad": [
+          -2.7755575615628914e-17,
+          -0.0,
+          0.0
+        ],
+        "axis_xyz_in_joint_frame": [
+          0.0,
+          1.0,
+          -2.7755575615628914e-17
+        ],
+        "position_limit_rad": {
+          "lower": -2.9670597283903604,
+          "upper": 2.9670597283903604
+        },
+        "effort_limit_nm": null,
+        "velocity_limit_rad_s": null,
+        "emission_status": "POSITION_SEMANTICS_READY; URDF <limit> still requires verified effort and velocity"
+      },
+      "mujoco_mjcf": {
+        "body_pos_m_in_parent": [
+          -0.2486017593632837,
+          -0.03600000000000054,
+          1.6781540052733135e-05
+        ],
+        "body_quat_wxyz_in_parent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          0.0,
+          1.0,
+          -2.7755575615628914e-17
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": true,
+        "joint_range_rad": [
+          -2.9670597283903604,
+          2.9670597283903604
+        ]
+      },
+      "mechanical_zero_deg": 0.0,
+      "zero_definition": "USER_SPECIFIED_ACTUAL_MEASUREMENT + V14 saved mechanical assembly zero",
+      "hardware_encoder_zero_status": "PENDING_LOW_TORQUE_PHYSICAL_COMMISSIONING",
+      "measurement_status": "DEFINED_FROM_FREECAD_GEOMETRY_AND_FINITE_MOTION",
+      "source_joint": "J3_Revolute",
+      "kinematic_dof": "J3",
+      "motor_output_flange_witness": {
+        "face_index": 1,
+        "radius_mm": 29.499999999999996,
+        "center_world_mm": [
+          24.333656020432386,
+          248.8082662425022,
+          182.65656354005114
+        ],
+        "axis_world_undirected": [
+          0.97944933481621,
+          -0.20169035804441407,
+          3.3981475092710945e-17
+        ],
+        "axis_alignment_abs_dot": 1.0,
+        "axial_station_from_joint_origin_mm": 9.999999999999227,
+        "axis_line_residual_mm": 1.603550510317411e-12,
+        "face_area_mm2": 1223.3361793078655,
+        "object": "J3_Output_Flange_Proxy",
+        "selection_rule": "coaxial cylindrical face radius 29.500 mm"
+      }
+    },
+    {
+      "name": "J4",
+      "parent_link": "link3",
+      "child_link": "link4",
+      "canonical_axis": "Y",
+      "axis_vector_in_parent_frame": [
+        0.0,
+        1.0,
+        -2.7755575615628914e-17
+      ],
+      "axis_vector_in_parent_link_frame": [
+        0.0,
+        1.0,
+        -2.7755575615628914e-17
+      ],
+      "axis_vector_in_joint_child_frame": [
+        3.806829027496864e-13,
+        1.0,
+        -4.914323015472638e-19
+      ],
+      "axis_world_at_zero": [
+        0.9794493348162099,
+        -0.20169035804441449,
+        -2.7755575615628914e-17
+      ],
+      "joint_origin_world_mm": [
+        55.350404267981276,
+        449.0128463262506,
+        234.61798750550838
+      ],
+      "joint_origin_in_parent_frame_mm": [
+        -202.34602184960778,
+        -3.6969356019973966e-14,
+        51.96142396545565
+      ],
+      "child_link_frame_origin_matches_joint_center_mm": 0.0,
+      "parent_to_child_at_mechanical_zero": {
+        "semantics": "pose of child link frame in parent link frame at CAD mechanical zero",
+        "xyz_mm": [
+          -202.34602184960778,
+          -3.6969356019973966e-14,
+          51.96142396545565
+        ],
+        "xyz_m": [
+          -0.2023460218496078,
+          -3.6969356019973964e-17,
+          0.05196142396545565
+        ],
+        "rotation_matrix_row_major": [
+          [
+            0.01770571464100866,
+            0.0,
+            -0.9998432415479196
+          ],
+          [
+            3.806829027496864e-13,
+            1.0,
+            -4.914323015472638e-19
+          ],
+          [
+            0.9998432415479195,
+            -2.7755575615628914e-17,
+            0.01770571464100866
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -1.5676054979076366e-15,
+          -1.5530896869224016,
+          2.1500566933795315e-11
+        ],
+        "quaternion_xyzw": [
+          -9.555111425395118e-18,
+          -0.7008189086201196,
+          1.3341580227233449e-13,
+          0.7133392301847028
+        ],
+        "quaternion_wxyz_mujoco": [
+          0.7133392301847028,
+          -9.555111425395118e-18,
+          -0.7008189086201196,
+          1.3341580227233449e-13
+        ]
+      },
+      "joint_limit_definition": {
+        "source": "J4_Revolute.AngleMin/AngleMax + EnableAngleMin/EnableAngleMax",
+        "position_limited": true,
+        "position_limit_deg": {
+          "lower": -116.0,
+          "upper": 159.0
+        },
+        "position_limit_rad": {
+          "lower": -2.0245819323134224,
+          "upper": 2.775073510670984
+        },
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "velocity_effort_status": "PENDING_MOTOR_AND_REDUCER_ENGINEERING_DATA; do not guess"
+      },
+      "ros2_urdf": {
+        "joint_type": "revolute",
+        "origin_xyz_m": [
+          -0.2023460218496078,
+          -3.6969356019973964e-17,
+          0.05196142396545565
+        ],
+        "origin_rpy_rad": [
+          -1.5676054979076366e-15,
+          -1.5530896869224016,
+          2.1500566933795315e-11
+        ],
+        "axis_xyz_in_joint_frame": [
+          3.806829027496864e-13,
+          1.0,
+          -4.914323015472638e-19
+        ],
+        "position_limit_rad": {
+          "lower": -2.0245819323134224,
+          "upper": 2.775073510670984
+        },
+        "effort_limit_nm": null,
+        "velocity_limit_rad_s": null,
+        "emission_status": "POSITION_SEMANTICS_READY; URDF <limit> still requires verified effort and velocity"
+      },
+      "mujoco_mjcf": {
+        "body_pos_m_in_parent": [
+          -0.2023460218496078,
+          -3.6969356019973964e-17,
+          0.05196142396545565
+        ],
+        "body_quat_wxyz_in_parent": [
+          0.7133392301847028,
+          -9.555111425395118e-18,
+          -0.7008189086201196,
+          1.3341580227233449e-13
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          3.806829027496864e-13,
+          1.0,
+          -4.914323015472638e-19
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": true,
+        "joint_range_rad": [
+          -2.0245819323134224,
+          2.775073510670984
+        ]
+      },
+      "mechanical_zero_deg": 0.0,
+      "zero_definition": "USER_SPECIFIED_ACTUAL_MEASUREMENT + V14 saved mechanical assembly zero",
+      "hardware_encoder_zero_status": "PENDING_LOW_TORQUE_PHYSICAL_COMMISSIONING",
+      "measurement_status": "DEFINED_FROM_FREECAD_GEOMETRY_AND_FINITE_MOTION",
+      "source_joint": "J4_Revolute",
+      "kinematic_dof": "J4",
+      "motor_output_flange_witness": {
+        "face_index": 1,
+        "radius_mm": 29.499999999999996,
+        "center_world_mm": [
+          65.14489761614266,
+          446.99594274580704,
+          234.6179875055068
+        ],
+        "axis_world_undirected": [
+          0.97944933481621,
+          -0.20169035804441407,
+          3.3981475092710945e-17
+        ],
+        "axis_alignment_abs_dot": 1.0,
+        "axial_station_from_joint_origin_mm": 9.999999999999181,
+        "axis_line_residual_mm": 1.6459344106236983e-12,
+        "face_area_mm2": 1223.3361793078655,
+        "object": "J4_Output_Flange_Collision_Proxy",
+        "selection_rule": "coaxial cylindrical face radius 29.500 mm"
+      }
+    },
+    {
+      "name": "J5",
+      "parent_link": "link4",
+      "child_link": "link5",
+      "canonical_axis": "X",
+      "axis_vector_in_parent_frame": [
+        1.0000000000000002,
+        3.806829027496864e-13,
+        0.0
+      ],
+      "axis_vector_in_parent_link_frame": [
+        1.0000000000000002,
+        3.806829027496864e-13,
+        0.0
+      ],
+      "axis_vector_in_joint_child_frame": [
+        1.0000000000000002,
+        0.0,
+        -1.592320025833871e-13
+      ],
+      "axis_world_at_zero": [
+        -0.0035710719250043816,
+        -0.017341850427658345,
+        0.9998432415479195
+      ],
+      "joint_origin_world_mm": [
+        106.4017711248739,
+        538.269499832604,
+        245.64990061866112
+      ],
+      "joint_origin_in_parent_frame_mm": [
+        9.30000012983338,
+        32.000020905899135,
+        97.89894800075103
+      ],
+      "child_link_frame_origin_matches_joint_center_mm": 0.0,
+      "parent_to_child_at_mechanical_zero": {
+        "semantics": "pose of child link frame in parent link frame at CAD mechanical zero",
+        "xyz_mm": [
+          9.30000012983338,
+          32.000020905899135,
+          97.89894800075103
+        ],
+        "xyz_m": [
+          0.009300000129833381,
+          0.03200002090589914,
+          0.09789894800075104
+        ],
+        "rotation_matrix_row_major": [
+          [
+            1.0000000000000002,
+            0.0,
+            -1.592320025833871e-13
+          ],
+          [
+            3.806829027496864e-13,
+            0.6691391989036309,
+            0.7431370886253811
+          ],
+          [
+            0.0,
+            -0.7431370886253811,
+            0.6691391989036308
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -0.8377464784876136,
+          -0.0,
+          3.806829027496863e-13
+        ],
+        "quaternion_xyzw": [
+          -0.4067313616481825,
+          -4.35751695212161e-14,
+          1.0417706084214564e-13,
+          0.913547809067383
+        ],
+        "quaternion_wxyz_mujoco": [
+          0.913547809067383,
+          -0.4067313616481825,
+          -4.35751695212161e-14,
+          1.0417706084214564e-13
+        ]
+      },
+      "joint_limit_definition": {
+        "source": "J5_Revolute.AngleMin/AngleMax + EnableAngleMin/EnableAngleMax",
+        "position_limited": true,
+        "position_limit_deg": {
+          "lower": -70.6,
+          "upper": 151.2
+        },
+        "position_limit_rad": {
+          "lower": -1.2322024519079966,
+          "upper": 2.638937829015426
+        },
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "velocity_effort_status": "PENDING_MOTOR_AND_REDUCER_ENGINEERING_DATA; do not guess"
+      },
+      "ros2_urdf": {
+        "joint_type": "revolute",
+        "origin_xyz_m": [
+          0.009300000129833381,
+          0.03200002090589914,
+          0.09789894800075104
+        ],
+        "origin_rpy_rad": [
+          -0.8377464784876136,
+          -0.0,
+          3.806829027496863e-13
+        ],
+        "axis_xyz_in_joint_frame": [
+          1.0000000000000002,
+          0.0,
+          -1.592320025833871e-13
+        ],
+        "position_limit_rad": {
+          "lower": -1.2322024519079966,
+          "upper": 2.638937829015426
+        },
+        "effort_limit_nm": null,
+        "velocity_limit_rad_s": null,
+        "emission_status": "POSITION_SEMANTICS_READY; URDF <limit> still requires verified effort and velocity"
+      },
+      "mujoco_mjcf": {
+        "body_pos_m_in_parent": [
+          0.009300000129833381,
+          0.03200002090589914,
+          0.09789894800075104
+        ],
+        "body_quat_wxyz_in_parent": [
+          0.913547809067383,
+          -0.4067313616481825,
+          -4.35751695212161e-14,
+          1.0417706084214564e-13
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          1.0000000000000002,
+          0.0,
+          -1.592320025833871e-13
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": true,
+        "joint_range_rad": [
+          -1.2322024519079966,
+          2.638937829015426
+        ]
+      },
+      "mechanical_zero_deg": 0.0,
+      "zero_definition": "USER_SPECIFIED_ACTUAL_MEASUREMENT + V14 saved mechanical assembly zero",
+      "hardware_encoder_zero_status": "PENDING_LOW_TORQUE_PHYSICAL_COMMISSIONING",
+      "measurement_status": "DEFINED_FROM_FREECAD_GEOMETRY_AND_FINITE_MOTION",
+      "source_joint": "J5_Revolute",
+      "kinematic_dof": "J5",
+      "motor_output_flange_witness": {
+        "face_index": 1,
+        "radius_mm": 29.499999999999993,
+        "center_world_mm": [
+          106.36606043312918,
+          538.0960813638321,
+          255.64833305206366
+        ],
+        "axis_world_undirected": [
+          0.0035710719250035493,
+          0.01734185042765757,
+          -0.9998432415479195
+        ],
+        "axis_alignment_abs_dot": 1.0000000000000002,
+        "axial_station_from_joint_origin_mm": 10.000000017206597,
+        "axis_line_residual_mm": 4.519190846756052e-08,
+        "face_area_mm2": 1223.336179307865,
+        "object": "J5_Output_Flange_Collision_Proxy",
+        "selection_rule": "coaxial cylindrical face radius 29.500 mm"
+      }
+    },
+    {
+      "name": "J6",
+      "parent_link": "link5",
+      "child_link": "link6",
+      "canonical_axis": "Z",
+      "axis_vector_in_parent_frame": [
+        -1.592320025833871e-13,
+        6.093216209368535e-17,
+        1.0000000000000002
+      ],
+      "axis_vector_in_parent_link_frame": [
+        -1.592320025833871e-13,
+        6.093216209368535e-17,
+        1.0000000000000002
+      ],
+      "axis_vector_in_joint_child_frame": [
+        -1.592320025833871e-13,
+        6.093216209368535e-17,
+        1.0000000000000002
+      ],
+      "axis_world_at_zero": [
+        0.8628028957876956,
+        0.505401620185185,
+        0.01184758771045874
+      ],
+      "joint_origin_world_mm": [
+        192.23930126047222,
+        588.8885662821208,
+        235.83352656221007
+      ],
+      "joint_origin_in_parent_frame_mm": [
+        -10.999195529983094,
+        -0.1471484577489343,
+        99.52752741147268
+      ],
+      "child_link_frame_origin_matches_joint_center_mm": 0.0,
+      "parent_to_child_at_mechanical_zero": {
+        "semantics": "pose of camera-up link6 frame in link5 at J6 mechanical zero",
+        "xyz_mm": [
+          -10.999195529983094,
+          -0.1471484577489343,
+          99.52752741147268
+        ],
+        "xyz_m": [
+          -0.010999195529983094,
+          -0.00014714845774893432,
+          0.09952752741147268
+        ],
+        "rotation_matrix_row_major": [
+          [
+            -1.0,
+            -1.1102230246251563e-16,
+            -6.162975822039152e-33
+          ],
+          [
+            1.1102230246251563e-16,
+            -1.0,
+            -1.1102230246251563e-16
+          ],
+          [
+            6.162975822039152e-33,
+            -1.1102230246251563e-16,
+            1.0
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -1.1102230246251563e-16,
+          -6.162975822039152e-33,
+          3.141592653589793
+        ],
+        "quaternion_xyzw": [
+          0.0,
+          -5.5511151231257815e-17,
+          1.0,
+          5.5511151231257815e-17
+        ],
+        "quaternion_wxyz_mujoco": [
+          5.5511151231257815e-17,
+          0.0,
+          -5.5511151231257815e-17,
+          1.0
+        ]
+      },
+      "joint_limit_definition": {
+        "source": "J6_Revolute.AngleMin/AngleMax + EnableAngleMin/EnableAngleMax",
+        "position_limited": true,
+        "position_limit_deg": {
+          "lower": -180.0,
+          "upper": 180.0
+        },
+        "position_limit_rad": {
+          "lower": -3.141592653589793,
+          "upper": 3.141592653589793
+        },
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "velocity_effort_status": "PENDING_MOTOR_AND_REDUCER_ENGINEERING_DATA; do not guess"
+      },
+      "ros2_urdf": {
+        "joint_type": "revolute",
+        "origin_xyz_m": [
+          -0.010999195529983094,
+          -0.00014714845774893432,
+          0.09952752741147268
+        ],
+        "origin_rpy_rad": [
+          -1.1102230246251563e-16,
+          -6.162975822039152e-33,
+          3.141592653589793
+        ],
+        "axis_xyz_in_joint_frame": [
+          -1.592320025833871e-13,
+          6.093216209368535e-17,
+          1.0000000000000002
+        ],
+        "position_limit_rad": {
+          "lower": -3.141592653589793,
+          "upper": 3.141592653589793
+        },
+        "effort_limit_nm": null,
+        "velocity_limit_rad_s": null,
+        "emission_status": "POSITION_SEMANTICS_READY; URDF <limit> still requires verified effort and velocity"
+      },
+      "mujoco_mjcf": {
+        "body_pos_m_in_parent": [
+          -0.010999195529983094,
+          -0.00014714845774893432,
+          0.09952752741147268
+        ],
+        "body_quat_wxyz_in_parent": [
+          5.5511151231257815e-17,
+          0.0,
+          -5.5511151231257815e-17,
+          1.0
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          -1.592320025833871e-13,
+          6.093216209368535e-17,
+          1.0000000000000002
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": true,
+        "joint_range_rad": [
+          -3.141592653589793,
+          3.141592653589793
+        ]
+      },
+      "mechanical_zero_deg": 0.0,
+      "zero_definition": "USER_CONFIRMED_PHYSICAL_VIDEO: complete J6 output rigid body clocked so Gemini camera is above; this pose is software mechanical zero",
+      "hardware_encoder_zero_status": "MECHANICAL_REFERENCE_DEFINED; electrical encoder offset must be written and verified at low torque",
+      "measurement_status": "DEFINED_FROM_FREECAD_GEOMETRY_AND_FINITE_MOTION",
+      "source_joint": "J6_Revolute",
+      "kinematic_dof": "J6",
+      "motor_output_flange_witness": {
+        "face_index": 23,
+        "radius_mm": 17.500000000000004,
+        "center_world_mm": [
+          192.23930126047222,
+          588.8885662821208,
+          235.83352656221007
+        ],
+        "axis_world_undirected": [
+          0.8628028957876954,
+          0.5054016201851853,
+          0.011847587710458954
+        ],
+        "axis_alignment_abs_dot": 1.0000000000000002,
+        "axial_station_from_joint_origin_mm": 0.0,
+        "axis_line_residual_mm": 0.0,
+        "face_area_mm2": 46.731190724785364,
+        "object": "J6_DM_G6220_Output_Rotor_Collision_Proxy",
+        "selection_rule": "coaxial cylindrical face radius 17.500 mm"
+      },
+      "legacy_v15_12_clock_offset_deg": 180.0
+    }
+  ],
+  "downstream_contract": {
+    "frame_semantics": "each child-link frame origin is its incoming physical joint center at CAD mechanical zero",
+    "length_units": {
+      "cad": "mm",
+      "ros2_urdf": "m",
+      "mujoco_mjcf": "m"
+    },
+    "angle_units": {
+      "cad_report": "deg",
+      "ros2_urdf": "rad",
+      "mujoco_mjcf": "rad"
+    },
+    "moveit_axis_source": "ROS2 URDF generated from downstream_kinematic_chain; do not duplicate axes in SRDF",
+    "j2_topology": "one kinematic revolute joint J2 with physical actuators J2A and J2B",
+    "joint_type_and_position_limit_status": "DEFINED_AND_QA_CHECKED_FROM_FREECAD; J6 is revolute -180..180 deg",
+    "velocity_and_effort_limit_status": "PENDING_VERIFIED_MOTOR_AND_REDUCER_DATA; URDF emission must not guess",
+    "mujoco_collision_exclusion_status": "PENDING_TRANSFER_FROM_V14_DESIGNED_CONTACT_AUDIT"
+  },
+  "downstream_kinematic_chain": [
+    {
+      "joint_name": "J1",
+      "parent_link": "base_link",
+      "child_link": "link1",
+      "physical_actuators": [
+        "J1"
+      ],
+      "canonical_axis": "Z",
+      "axis_world_at_zero": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "joint_limit_definition": {
+        "source": "J1_Revolute.AngleMin/AngleMax + EnableAngleMin/EnableAngleMax",
+        "position_limited": false,
+        "position_limit_deg": null,
+        "position_limit_rad": null,
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "velocity_effort_status": "PENDING_MOTOR_AND_REDUCER_ENGINEERING_DATA; do not guess"
+      },
+      "parent_to_child_at_mechanical_zero": {
+        "semantics": "pose of child link frame in parent link frame at CAD mechanical zero",
+        "xyz_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "xyz_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation_matrix_row_major": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            -2.7755575615628914e-17
+          ],
+          [
+            0.0,
+            -2.7755575615628914e-17,
+            1.0
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -2.7755575615628914e-17,
+          -0.0,
+          0.0
+        ],
+        "quaternion_xyzw": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "quaternion_wxyz_mujoco": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "ros2_urdf": {
+        "joint_type": "continuous",
+        "origin_xyz_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "origin_rpy_rad": [
+          -2.7755575615628914e-17,
+          -0.0,
+          0.0
+        ],
+        "axis_xyz_in_joint_frame": [
+          0.0,
+          -2.7755575615628914e-17,
+          1.0
+        ],
+        "position_limit_rad": null,
+        "effort_limit_nm": null,
+        "velocity_limit_rad_s": null,
+        "emission_status": "POSITION_SEMANTICS_READY; URDF <limit> still requires verified effort and velocity"
+      },
+      "mujoco_mjcf": {
+        "body_pos_m_in_parent": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "body_quat_wxyz_in_parent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          0.0,
+          -2.7755575615628914e-17,
+          1.0
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": false,
+        "joint_range_rad": null
+      }
+    },
+    {
+      "joint_name": "J2",
+      "parent_link": "link1",
+      "child_link": "link2",
+      "physical_actuators": [
+        "J2A",
+        "J2B"
+      ],
+      "canonical_axis": "Y",
+      "axis_world_at_zero": [
+        0.9794493348162099,
+        -0.20169035804441449,
+        -2.7755575615628914e-17
+      ],
+      "joint_limit_definition": {
+        "source": "J2_Revolute.AngleMin/AngleMax + EnableAngleMin/EnableAngleMax",
+        "position_limited": true,
+        "position_limit_deg": {
+          "lower": -170.0,
+          "upper": 170.0
+        },
+        "position_limit_rad": {
+          "lower": -2.9670597283903604,
+          "upper": 2.9670597283903604
+        },
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "velocity_effort_status": "PENDING_MOTOR_AND_REDUCER_ENGINEERING_DATA; do not guess"
+      },
+      "parent_to_child_at_mechanical_zero": {
+        "semantics": "pose of child link frame in parent link frame at CAD mechanical zero",
+        "xyz_mm": [
+          -0.001195299999998456,
+          -0.34864510000000604,
+          92.639782
+        ],
+        "xyz_m": [
+          -1.1952999999984559e-06,
+          -0.000348645100000006,
+          0.09263978199999999
+        ],
+        "rotation_matrix_row_major": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            -2.7755575615628914e-17
+          ],
+          [
+            0.0,
+            -2.7755575615628914e-17,
+            1.0
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -2.7755575615628914e-17,
+          -0.0,
+          0.0
+        ],
+        "quaternion_xyzw": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "quaternion_wxyz_mujoco": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "ros2_urdf": {
+        "joint_type": "revolute",
+        "origin_xyz_m": [
+          -1.1952999999984559e-06,
+          -0.000348645100000006,
+          0.09263978199999999
+        ],
+        "origin_rpy_rad": [
+          -2.7755575615628914e-17,
+          -0.0,
+          0.0
+        ],
+        "axis_xyz_in_joint_frame": [
+          0.0,
+          1.0,
+          -2.7755575615628914e-17
+        ],
+        "position_limit_rad": {
+          "lower": -2.9670597283903604,
+          "upper": 2.9670597283903604
+        },
+        "effort_limit_nm": null,
+        "velocity_limit_rad_s": null,
+        "emission_status": "POSITION_SEMANTICS_READY; URDF <limit> still requires verified effort and velocity"
+      },
+      "mujoco_mjcf": {
+        "body_pos_m_in_parent": [
+          -1.1952999999984559e-06,
+          -0.000348645100000006,
+          0.09263978199999999
+        ],
+        "body_quat_wxyz_in_parent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          0.0,
+          1.0,
+          -2.7755575615628914e-17
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": true,
+        "joint_range_rad": [
+          -2.9670597283903604,
+          2.9670597283903604
+        ]
+      }
+    },
+    {
+      "joint_name": "J3",
+      "parent_link": "link2",
+      "child_link": "link3",
+      "physical_actuators": [
+        "J3"
+      ],
+      "canonical_axis": "Y",
+      "axis_world_at_zero": [
+        0.9794493348162099,
+        -0.20169035804441449,
+        -2.7755575615628914e-17
+      ],
+      "joint_limit_definition": {
+        "source": "J3_Revolute.AngleMin/AngleMax + EnableAngleMin/EnableAngleMax",
+        "position_limited": true,
+        "position_limit_deg": {
+          "lower": -170.0,
+          "upper": 170.0
+        },
+        "position_limit_rad": {
+          "lower": -2.9670597283903604,
+          "upper": 2.9670597283903604
+        },
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "velocity_effort_status": "PENDING_MOTOR_AND_REDUCER_ENGINEERING_DATA; do not guess"
+      },
+      "parent_to_child_at_mechanical_zero": {
+        "semantics": "pose of child link frame in parent link frame at CAD mechanical zero",
+        "xyz_mm": [
+          -248.6017593632837,
+          -36.00000000000054,
+          0.016781540052733135
+        ],
+        "xyz_m": [
+          -0.2486017593632837,
+          -0.03600000000000054,
+          1.6781540052733135e-05
+        ],
+        "rotation_matrix_row_major": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            -2.7755575615628914e-17
+          ],
+          [
+            0.0,
+            -2.7755575615628914e-17,
+            1.0
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -2.7755575615628914e-17,
+          -0.0,
+          0.0
+        ],
+        "quaternion_xyzw": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "quaternion_wxyz_mujoco": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "ros2_urdf": {
+        "joint_type": "revolute",
+        "origin_xyz_m": [
+          -0.2486017593632837,
+          -0.03600000000000054,
+          1.6781540052733135e-05
+        ],
+        "origin_rpy_rad": [
+          -2.7755575615628914e-17,
+          -0.0,
+          0.0
+        ],
+        "axis_xyz_in_joint_frame": [
+          0.0,
+          1.0,
+          -2.7755575615628914e-17
+        ],
+        "position_limit_rad": {
+          "lower": -2.9670597283903604,
+          "upper": 2.9670597283903604
+        },
+        "effort_limit_nm": null,
+        "velocity_limit_rad_s": null,
+        "emission_status": "POSITION_SEMANTICS_READY; URDF <limit> still requires verified effort and velocity"
+      },
+      "mujoco_mjcf": {
+        "body_pos_m_in_parent": [
+          -0.2486017593632837,
+          -0.03600000000000054,
+          1.6781540052733135e-05
+        ],
+        "body_quat_wxyz_in_parent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          0.0,
+          1.0,
+          -2.7755575615628914e-17
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": true,
+        "joint_range_rad": [
+          -2.9670597283903604,
+          2.9670597283903604
+        ]
+      }
+    },
+    {
+      "joint_name": "J4",
+      "parent_link": "link3",
+      "child_link": "link4",
+      "physical_actuators": [
+        "J4"
+      ],
+      "canonical_axis": "Y",
+      "axis_world_at_zero": [
+        0.9794493348162099,
+        -0.20169035804441449,
+        -2.7755575615628914e-17
+      ],
+      "joint_limit_definition": {
+        "source": "J4_Revolute.AngleMin/AngleMax + EnableAngleMin/EnableAngleMax",
+        "position_limited": true,
+        "position_limit_deg": {
+          "lower": -116.0,
+          "upper": 159.0
+        },
+        "position_limit_rad": {
+          "lower": -2.0245819323134224,
+          "upper": 2.775073510670984
+        },
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "velocity_effort_status": "PENDING_MOTOR_AND_REDUCER_ENGINEERING_DATA; do not guess"
+      },
+      "parent_to_child_at_mechanical_zero": {
+        "semantics": "pose of child link frame in parent link frame at CAD mechanical zero",
+        "xyz_mm": [
+          -202.34602184960778,
+          -3.6969356019973966e-14,
+          51.96142396545565
+        ],
+        "xyz_m": [
+          -0.2023460218496078,
+          -3.6969356019973964e-17,
+          0.05196142396545565
+        ],
+        "rotation_matrix_row_major": [
+          [
+            0.01770571464100866,
+            0.0,
+            -0.9998432415479196
+          ],
+          [
+            3.806829027496864e-13,
+            1.0,
+            -4.914323015472638e-19
+          ],
+          [
+            0.9998432415479195,
+            -2.7755575615628914e-17,
+            0.01770571464100866
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -1.5676054979076366e-15,
+          -1.5530896869224016,
+          2.1500566933795315e-11
+        ],
+        "quaternion_xyzw": [
+          -9.555111425395118e-18,
+          -0.7008189086201196,
+          1.3341580227233449e-13,
+          0.7133392301847028
+        ],
+        "quaternion_wxyz_mujoco": [
+          0.7133392301847028,
+          -9.555111425395118e-18,
+          -0.7008189086201196,
+          1.3341580227233449e-13
+        ]
+      },
+      "ros2_urdf": {
+        "joint_type": "revolute",
+        "origin_xyz_m": [
+          -0.2023460218496078,
+          -3.6969356019973964e-17,
+          0.05196142396545565
+        ],
+        "origin_rpy_rad": [
+          -1.5676054979076366e-15,
+          -1.5530896869224016,
+          2.1500566933795315e-11
+        ],
+        "axis_xyz_in_joint_frame": [
+          3.806829027496864e-13,
+          1.0,
+          -4.914323015472638e-19
+        ],
+        "position_limit_rad": {
+          "lower": -2.0245819323134224,
+          "upper": 2.775073510670984
+        },
+        "effort_limit_nm": null,
+        "velocity_limit_rad_s": null,
+        "emission_status": "POSITION_SEMANTICS_READY; URDF <limit> still requires verified effort and velocity"
+      },
+      "mujoco_mjcf": {
+        "body_pos_m_in_parent": [
+          -0.2023460218496078,
+          -3.6969356019973964e-17,
+          0.05196142396545565
+        ],
+        "body_quat_wxyz_in_parent": [
+          0.7133392301847028,
+          -9.555111425395118e-18,
+          -0.7008189086201196,
+          1.3341580227233449e-13
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          3.806829027496864e-13,
+          1.0,
+          -4.914323015472638e-19
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": true,
+        "joint_range_rad": [
+          -2.0245819323134224,
+          2.775073510670984
+        ]
+      }
+    },
+    {
+      "joint_name": "J5",
+      "parent_link": "link4",
+      "child_link": "link5",
+      "physical_actuators": [
+        "J5"
+      ],
+      "canonical_axis": "X",
+      "axis_world_at_zero": [
+        -0.0035710719250043816,
+        -0.017341850427658345,
+        0.9998432415479195
+      ],
+      "joint_limit_definition": {
+        "source": "J5_Revolute.AngleMin/AngleMax + EnableAngleMin/EnableAngleMax",
+        "position_limited": true,
+        "position_limit_deg": {
+          "lower": -70.6,
+          "upper": 151.2
+        },
+        "position_limit_rad": {
+          "lower": -1.2322024519079966,
+          "upper": 2.638937829015426
+        },
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "velocity_effort_status": "PENDING_MOTOR_AND_REDUCER_ENGINEERING_DATA; do not guess"
+      },
+      "parent_to_child_at_mechanical_zero": {
+        "semantics": "pose of child link frame in parent link frame at CAD mechanical zero",
+        "xyz_mm": [
+          9.30000012983338,
+          32.000020905899135,
+          97.89894800075103
+        ],
+        "xyz_m": [
+          0.009300000129833381,
+          0.03200002090589914,
+          0.09789894800075104
+        ],
+        "rotation_matrix_row_major": [
+          [
+            1.0000000000000002,
+            0.0,
+            -1.592320025833871e-13
+          ],
+          [
+            3.806829027496864e-13,
+            0.6691391989036309,
+            0.7431370886253811
+          ],
+          [
+            0.0,
+            -0.7431370886253811,
+            0.6691391989036308
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -0.8377464784876136,
+          -0.0,
+          3.806829027496863e-13
+        ],
+        "quaternion_xyzw": [
+          -0.4067313616481825,
+          -4.35751695212161e-14,
+          1.0417706084214564e-13,
+          0.913547809067383
+        ],
+        "quaternion_wxyz_mujoco": [
+          0.913547809067383,
+          -0.4067313616481825,
+          -4.35751695212161e-14,
+          1.0417706084214564e-13
+        ]
+      },
+      "ros2_urdf": {
+        "joint_type": "revolute",
+        "origin_xyz_m": [
+          0.009300000129833381,
+          0.03200002090589914,
+          0.09789894800075104
+        ],
+        "origin_rpy_rad": [
+          -0.8377464784876136,
+          -0.0,
+          3.806829027496863e-13
+        ],
+        "axis_xyz_in_joint_frame": [
+          1.0000000000000002,
+          0.0,
+          -1.592320025833871e-13
+        ],
+        "position_limit_rad": {
+          "lower": -1.2322024519079966,
+          "upper": 2.638937829015426
+        },
+        "effort_limit_nm": null,
+        "velocity_limit_rad_s": null,
+        "emission_status": "POSITION_SEMANTICS_READY; URDF <limit> still requires verified effort and velocity"
+      },
+      "mujoco_mjcf": {
+        "body_pos_m_in_parent": [
+          0.009300000129833381,
+          0.03200002090589914,
+          0.09789894800075104
+        ],
+        "body_quat_wxyz_in_parent": [
+          0.913547809067383,
+          -0.4067313616481825,
+          -4.35751695212161e-14,
+          1.0417706084214564e-13
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          1.0000000000000002,
+          0.0,
+          -1.592320025833871e-13
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": true,
+        "joint_range_rad": [
+          -1.2322024519079966,
+          2.638937829015426
+        ]
+      }
+    },
+    {
+      "joint_name": "J6",
+      "parent_link": "link5",
+      "child_link": "link6",
+      "physical_actuators": [
+        "J6"
+      ],
+      "canonical_axis": "Z",
+      "axis_world_at_zero": [
+        0.8628028957876956,
+        0.505401620185185,
+        0.01184758771045874
+      ],
+      "joint_limit_definition": {
+        "source": "J6_Revolute.AngleMin/AngleMax + EnableAngleMin/EnableAngleMax",
+        "position_limited": true,
+        "position_limit_deg": {
+          "lower": -180.0,
+          "upper": 180.0
+        },
+        "position_limit_rad": {
+          "lower": -3.141592653589793,
+          "upper": 3.141592653589793
+        },
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "velocity_effort_status": "PENDING_MOTOR_AND_REDUCER_ENGINEERING_DATA; do not guess"
+      },
+      "parent_to_child_at_mechanical_zero": {
+        "semantics": "pose of child link frame in parent link frame at CAD mechanical zero",
+        "xyz_mm": [
+          -10.999195529983094,
+          -0.1471484577489343,
+          99.52752741147268
+        ],
+        "xyz_m": [
+          -0.010999195529983094,
+          -0.00014714845774893432,
+          0.09952752741147268
+        ],
+        "rotation_matrix_row_major": [
+          [
+            1.0000000000000002,
+            0.0,
+            -1.592320025833871e-13
+          ],
+          [
+            0.0,
+            1.0000000000000002,
+            6.093216209368535e-17
+          ],
+          [
+            -1.592320025833871e-13,
+            6.093216209368535e-17,
+            1.0000000000000002
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          6.093216209368534e-17,
+          1.592320025833871e-13,
+          0.0
+        ],
+        "quaternion_xyzw": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "quaternion_wxyz_mujoco": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "ros2_urdf": {
+        "joint_type": "revolute",
+        "origin_xyz_m": [
+          -0.010999195529983094,
+          -0.00014714845774893432,
+          0.09952752741147268
+        ],
+        "origin_rpy_rad": [
+          6.093216209368534e-17,
+          1.592320025833871e-13,
+          0.0
+        ],
+        "axis_xyz_in_joint_frame": [
+          -1.592320025833871e-13,
+          6.093216209368535e-17,
+          1.0000000000000002
+        ],
+        "position_limit_rad": {
+          "lower": -3.141592653589793,
+          "upper": 3.141592653589793
+        },
+        "effort_limit_nm": null,
+        "velocity_limit_rad_s": null,
+        "emission_status": "POSITION_SEMANTICS_READY; URDF <limit> still requires verified effort and velocity"
+      },
+      "mujoco_mjcf": {
+        "body_pos_m_in_parent": [
+          -0.010999195529983094,
+          -0.00014714845774893432,
+          0.09952752741147268
+        ],
+        "body_quat_wxyz_in_parent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_type": "hinge",
+        "joint_pos_m_in_child_body": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_axis_in_child_body": [
+          -1.592320025833871e-13,
+          6.093216209368535e-17,
+          1.0000000000000002
+        ],
+        "joint_ref_rad": 0.0,
+        "joint_limited": true,
+        "joint_range_rad": [
+          -3.141592653589793,
+          3.141592653589793
+        ]
+      }
+    }
+  ],
+  "j6_end_effector_interface": {
+    "status": "DEFINED_FROM_V14_FREECAD_INTERFACE_OBJECTS_AND_CONNECTOR_BREP",
+    "j6_output_mount_frame": {
+      "frame_name": "gripper_mount",
+      "origin_world_mm": [
+        192.23930126047222,
+        588.8885662821208,
+        235.83352656221007
+      ],
+      "axis_world_outward": [
+        0.8628028957876954,
+        0.505401620185185,
+        0.011847587710458797
+      ],
+      "origin_to_j6_joint_center_error_mm": 0.0,
+      "axis_to_j6_error_deg": 0.0,
+      "interface_geometry": "Ø35 output boss / Ø16 bore / 6xM4 tapped / PCD28",
+      "dm_output_rotor_brep_witness": {
+        "face_index": 23,
+        "radius_mm": 17.500000000000004,
+        "center_world_mm": [
+          192.23930126047222,
+          588.8885662821208,
+          235.83352656221007
+        ],
+        "axis_world_undirected": [
+          0.8628028957876954,
+          0.5054016201851853,
+          0.011847587710458954
+        ],
+        "axis_alignment_abs_dot": 1.0000000000000002,
+        "axial_station_from_joint_origin_mm": 0.0,
+        "axis_line_residual_mm": 0.0,
+        "face_area_mm2": 46.731190724785364,
+        "object": "J6_DM_G6220_Output_Rotor_Collision_Proxy",
+        "selection_rule": "coaxial cylindrical face radius 17.500 mm"
+      }
+    },
+    "connector_seat": {
+      "source_object": "J6_Gripper_Connector_Collision_Proxy",
+      "contact_plane_brep_witness": {
+        "face_index": 651,
+        "axis_normal_alignment_abs_dot": 1.0000000000000002,
+        "axial_station_mm": -9.045542093133463e-13,
+        "axial_station_span_mm": 1.9195756095768957e-13,
+        "face_area_mm2": 30.111400008201606
+      },
+      "seat_gap_mm_from_v14_freecad_qa": 1.421e-13,
+      "connector_axial_extent_from_mount_mm": [
+        -1.4361081768221595e-12,
+        11.999999999999233
+      ],
+      "orientation_record": "+Z flat six-hole face against DM; -Z clevis and fingers outward; servo down"
+    },
+    "six_m4_interface": {
+      "dm_output_pattern": "6xM4 / nominal PCD28",
+      "maximum_connector_to_dm_hole_axis_error_mm": 0.1897206562832246,
+      "interpretation": "source connector clearance-hole pattern is not mathematically exact to nominal DM PCD28; preserve measured mismatch",
+      "fastener_status": "6x M4x8 and 2x M3x16 provisional; verify physical tapped depth and printed tolerance"
+    },
+    "three_m4_stator_mount": {
+      "source_object": "J6_DM_G6220_Mount_3xM4_PCD60_Axes",
+      "pattern": "3xM4 / nominal PCD60",
+      "maximum_axis_error_mm": 0.0021585046047673,
+      "interpretation": "preserved FreeCAD registration residual; do not round to zero"
+    },
+    "clevis_tongue_interface": {
+      "fit_record": "3.000 mm clevis slot / 3.000 mm tongue / full 8.000 mm insertion",
+      "maximum_cross_axis_error_mm": 0.4485390535734353,
+      "radial_clearance_remaining_mm": 0.0514609464265647,
+      "nominal_width_clearance_status": "ZERO_NOMINAL_CLEARANCE: recorded slot and tongue are both 3.000 mm",
+      "fastener_status": "6x M4x8 and 2x M3x16 provisional; verify physical tapped depth and printed tolerance"
+    },
+    "fixed_joint_contract": {
+      "joint_name": "J6_to_gripper_mount",
+      "joint_type": "fixed",
+      "parent_link": "link6",
+      "child_link": "gripper_mount",
+      "origin_xyz_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "origin_rpy_rad": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "reason": "gripper_mount is defined coincident with the measured DM-G6220 output interface, not with the raw mesh origin"
+    },
+    "source_geometry_poses_in_gripper_mount_at_zero": {
+      "connector_source": {
+        "semantics": "pose of child link frame in parent link frame at CAD mechanical zero",
+        "xyz_mm": [
+          -1446.6139561417979,
+          -2740.581803051157,
+          9.00000000000021
+        ],
+        "xyz_m": [
+          -1.4466139561417979,
+          -2.740581803051157,
+          0.00900000000000021
+        ],
+        "rotation_matrix_row_major": [
+          [
+            0.0001264071825372061,
+            0.9999999920106122,
+            1.5907761219402516e-13
+          ],
+          [
+            0.9999999920106123,
+            -0.00012640718253725987,
+            -1.6994869053710282e-16
+          ],
+          [
+            -2.1095863771136703e-16,
+            -2.203098814490545e-16,
+            -1.0000000000000002
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -3.141592653589793,
+          2.1095863771136703e-16,
+          1.5706699196120228
+        ],
+        "quaternion_xyzw": [
+          0.7071514714622806,
+          0.7070620880861394,
+          5.616429434411059e-14,
+          -1.7804244544599644e-17
+        ],
+        "quaternion_wxyz_mujoco": [
+          -1.7804244544599644e-17,
+          0.7071514714622806,
+          0.7070620880861394,
+          5.616429434411059e-14
+        ]
+      },
+      "gripper_source": {
+        "semantics": "pose of child link frame in parent link frame at CAD mechanical zero",
+        "xyz_mm": [
+          25.01006392807017,
+          -119.25432697331233,
+          -2.7983834599918813
+        ],
+        "xyz_m": [
+          0.025010063928070172,
+          -0.11925432697331233,
+          -0.002798383459991881
+        ],
+        "rotation_matrix_row_major": [
+          [
+            0.0001264071825372061,
+            0.9999999920106122,
+            1.5907761219402516e-13
+          ],
+          [
+            0.9999999920106123,
+            -0.00012640718253725987,
+            -1.6994869053710282e-16
+          ],
+          [
+            -2.1095863771136703e-16,
+            -2.203098814490545e-16,
+            -1.0000000000000002
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -3.141592653589793,
+          2.1095863771136703e-16,
+          1.5706699196120228
+        ],
+        "quaternion_xyzw": [
+          0.7071514714622806,
+          0.7070620880861394,
+          5.616429434411059e-14,
+          -1.7804244544599644e-17
+        ],
+        "quaternion_wxyz_mujoco": [
+          -1.7804244544599644e-17,
+          0.7071514714622806,
+          0.7070620880861394,
+          5.616429434411059e-14
+        ]
+      }
+    },
+    "rigid_topology": {
+      "owner": "J6_Driven_Rigid",
+      "fixed_members": [
+        "J6_DM_G6220_Output_Rotor_Collision_Proxy",
+        "J6_Gripper_Connector_Collision_Proxy",
+        "Gripper_Fixed_Frame_Collision_Proxy",
+        "Gripper_Servo_Collision_Proxy"
+      ],
+      "tool_topology_record": "bolted connector + fixed gripper frame; internal symmetric parallelogram"
+    },
+    "gripper_internal_joint": {
+      "name": "gripper_closure",
+      "cad_zero_deg": 0.0,
+      "cad_working_range_deg": [
+        -27.5,
+        56.57
+      ],
+      "positive_convention": "q > 0 closes both fingers",
+      "status": "CAD-INFERRED SAFE RANGE / servo PWM ratio and flexible contact require physical calibration"
+    },
+    "tcp_status": "NOT_DEFINED: fingertip/tool-center-point requires a separate measured task-frame decision",
+    "mujoco_collision_contract_status": "PENDING: designed bolted/seated/hinge contact exclusions must be transferred from V14 collision audit before simulation release"
+  },
+  "source_joint_measurements": {
+    "J1": {
+      "joint_key": "J1",
+      "source_joint": "J1_Revolute",
+      "source_parent_rigid": "J1_Fixed_Rigid",
+      "source_child_rigid": "J1_Moving_Rigid",
+      "origin_world_mm": [
+        0.0,
+        0.0,
+        90.0
+      ],
+      "axis_world_at_zero": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "placement1_placement2_center_error_mm": 0.0,
+      "placement1_placement2_axis_error_deg": 0.0,
+      "source_angle_deg": 0.0,
+      "source_freecad_joint_type": "Revolute",
+      "angle_limit_enabled": false,
+      "angle_min_deg": 0.0,
+      "angle_max_deg": 0.0,
+      "geometry_witness": {
+        "face_index": 1,
+        "radius_mm": 29.5,
+        "center_world_mm": [
+          0.0,
+          0.0,
+          83.4
+        ],
+        "axis_world_undirected": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "axis_alignment_abs_dot": 1.0,
+        "axial_station_from_joint_origin_mm": -6.599999999999994,
+        "axis_line_residual_mm": 0.0,
+        "face_area_mm2": 1223.3361793078655,
+        "object": "J1_Output_Rotor_Proxy",
+        "selection_rule": "coaxial cylindrical face radius 29.500 mm"
+      }
+    },
+    "J2": {
+      "joint_key": "J2",
+      "source_joint": "J2_Revolute",
+      "source_parent_rigid": "J1_Moving_Rigid",
+      "source_child_rigid": "J2_Driven_Reference_Rigid",
+      "origin_world_mm": [
+        -0.3412391307969642,
+        0.0714890908393357,
+        182.639782
+      ],
+      "axis_world_at_zero": [
+        0.9794493348162099,
+        -0.20169035804441449,
+        -2.7755575615628914e-17
+      ],
+      "placement1_placement2_center_error_mm": 0.0,
+      "placement1_placement2_axis_error_deg": 0.0,
+      "source_angle_deg": 0.0,
+      "source_freecad_joint_type": "Revolute",
+      "angle_limit_enabled": true,
+      "angle_min_deg": -170.0,
+      "angle_max_deg": 170.0
+    },
+    "J3": {
+      "joint_key": "J3",
+      "source_joint": "J3_Revolute",
+      "source_parent_rigid": "J2_Driven_Reference_Rigid",
+      "source_child_rigid": "J3_Driven_Rigid",
+      "origin_world_mm": [
+        14.539162672271004,
+        250.825169822946,
+        182.65656354005273
+      ],
+      "axis_world_at_zero": [
+        0.9794493348162099,
+        -0.20169035804441449,
+        -2.7755575615628914e-17
+      ],
+      "placement1_placement2_center_error_mm": 0.0,
+      "placement1_placement2_axis_error_deg": 0.0,
+      "source_angle_deg": 0.0,
+      "source_freecad_joint_type": "Revolute",
+      "angle_limit_enabled": true,
+      "angle_min_deg": -170.0,
+      "angle_max_deg": 170.0,
+      "geometry_witness": {
+        "face_index": 1,
+        "radius_mm": 29.499999999999996,
+        "center_world_mm": [
+          24.333656020432386,
+          248.8082662425022,
+          182.65656354005114
+        ],
+        "axis_world_undirected": [
+          0.97944933481621,
+          -0.20169035804441407,
+          3.3981475092710945e-17
+        ],
+        "axis_alignment_abs_dot": 1.0,
+        "axial_station_from_joint_origin_mm": 9.999999999999227,
+        "axis_line_residual_mm": 1.603550510317411e-12,
+        "face_area_mm2": 1223.3361793078655,
+        "object": "J3_Output_Flange_Proxy",
+        "selection_rule": "coaxial cylindrical face radius 29.500 mm"
+      }
+    },
+    "J4": {
+      "joint_key": "J4",
+      "source_joint": "J4_Revolute",
+      "source_parent_rigid": "J3_Driven_Rigid",
+      "source_child_rigid": "J4_Driven_Rigid",
+      "origin_world_mm": [
+        55.350404267981276,
+        449.0128463262506,
+        234.61798750550838
+      ],
+      "axis_world_at_zero": [
+        0.9794493348162099,
+        -0.20169035804441449,
+        -2.7755575615628914e-17
+      ],
+      "placement1_placement2_center_error_mm": 0.0,
+      "placement1_placement2_axis_error_deg": 0.0,
+      "source_angle_deg": 0.0,
+      "source_freecad_joint_type": "Revolute",
+      "angle_limit_enabled": true,
+      "angle_min_deg": -116.0,
+      "angle_max_deg": 159.0,
+      "geometry_witness": {
+        "face_index": 1,
+        "radius_mm": 29.499999999999996,
+        "center_world_mm": [
+          65.14489761614266,
+          446.99594274580704,
+          234.6179875055068
+        ],
+        "axis_world_undirected": [
+          0.97944933481621,
+          -0.20169035804441407,
+          3.3981475092710945e-17
+        ],
+        "axis_alignment_abs_dot": 1.0,
+        "axial_station_from_joint_origin_mm": 9.999999999999181,
+        "axis_line_residual_mm": 1.6459344106236983e-12,
+        "face_area_mm2": 1223.3361793078655,
+        "object": "J4_Output_Flange_Collision_Proxy",
+        "selection_rule": "coaxial cylindrical face radius 29.500 mm"
+      }
+    },
+    "J5": {
+      "joint_key": "J5",
+      "source_joint": "J5_Revolute",
+      "source_parent_rigid": "J4_Driven_Rigid",
+      "source_child_rigid": "J5_Driven_Rigid",
+      "origin_world_mm": [
+        106.4017711248739,
+        538.269499832604,
+        245.64990061866112
+      ],
+      "axis_world_at_zero": [
+        -0.0035710719250043816,
+        -0.017341850427658345,
+        0.9998432415479195
+      ],
+      "placement1_placement2_center_error_mm": 0.0,
+      "placement1_placement2_axis_error_deg": 0.0,
+      "source_angle_deg": 0.0,
+      "source_freecad_joint_type": "Revolute",
+      "angle_limit_enabled": true,
+      "angle_min_deg": -70.6,
+      "angle_max_deg": 151.2,
+      "geometry_witness": {
+        "face_index": 1,
+        "radius_mm": 29.499999999999993,
+        "center_world_mm": [
+          106.36606043312918,
+          538.0960813638321,
+          255.64833305206366
+        ],
+        "axis_world_undirected": [
+          0.0035710719250035493,
+          0.01734185042765757,
+          -0.9998432415479195
+        ],
+        "axis_alignment_abs_dot": 1.0000000000000002,
+        "axial_station_from_joint_origin_mm": 10.000000017206597,
+        "axis_line_residual_mm": 4.519190846756052e-08,
+        "face_area_mm2": 1223.336179307865,
+        "object": "J5_Output_Flange_Collision_Proxy",
+        "selection_rule": "coaxial cylindrical face radius 29.500 mm"
+      }
+    },
+    "J6": {
+      "joint_key": "J6",
+      "source_joint": "J6_Revolute",
+      "source_parent_rigid": "J5_Driven_Rigid",
+      "source_child_rigid": "J6_Driven_Rigid",
+      "origin_world_mm": [
+        192.23930126047222,
+        588.8885662821208,
+        235.83352656221007
+      ],
+      "axis_world_at_zero": [
+        0.8628028957876956,
+        0.505401620185185,
+        0.01184758771045874
+      ],
+      "placement1_placement2_center_error_mm": 0.0,
+      "placement1_placement2_axis_error_deg": 0.0,
+      "source_angle_deg": 0.0,
+      "source_freecad_joint_type": "Revolute",
+      "angle_limit_enabled": true,
+      "angle_min_deg": -180.0,
+      "angle_max_deg": 180.0,
+      "geometry_witness": {
+        "face_index": 23,
+        "radius_mm": 17.500000000000004,
+        "center_world_mm": [
+          192.23930126047222,
+          588.8885662821208,
+          235.83352656221007
+        ],
+        "axis_world_undirected": [
+          0.8628028957876954,
+          0.5054016201851853,
+          0.011847587710458954
+        ],
+        "axis_alignment_abs_dot": 1.0000000000000002,
+        "axial_station_from_joint_origin_mm": 0.0,
+        "axis_line_residual_mm": 0.0,
+        "face_area_mm2": 46.731190724785364,
+        "object": "J6_DM_G6220_Output_Rotor_Collision_Proxy",
+        "selection_rule": "coaxial cylindrical face radius 17.500 mm"
+      }
+    }
+  },
+  "j2_dual_motor": {
+    "J2A": {
+      "face_index": 2737,
+      "radius_mm": 29.0,
+      "center_world_mm": [
+        -41.08633144740238,
+        8.461807957237994,
+        182.6397819625522
+      ],
+      "axis_world_undirected": [
+        0.97944933481621,
+        -0.201690358044414,
+        0.0
+      ],
+      "axis_alignment_abs_dot": 1.0,
+      "axial_station_from_joint_origin_mm": -41.599999982794984,
+      "axis_line_residual_mm": 4.519255178543745e-08,
+      "face_area_mm2": 45.553093477052045,
+      "object": "J2_Left_Joint_Motor_GO_M8010_6",
+      "selection_rule": "outermost coaxial output-face cylinder radius 29.000 mm"
+    },
+    "J2B": {
+      "face_index": 2737,
+      "radius_mm": 29.0,
+      "center_world_mm": [
+        40.40385318580847,
+        -8.318829775559351,
+        182.63978196255215
+      ],
+      "axis_world_undirected": [
+        -0.97944933481621,
+        0.201690358044414,
+        0.0
+      ],
+      "axis_alignment_abs_dot": 1.0,
+      "axial_station_from_joint_origin_mm": 41.59999998279501,
+      "axis_line_residual_mm": 4.519258351011534e-08,
+      "face_area_mm2": 45.553093477052045,
+      "object": "J2_Right_Joint_Motor_GO_M8010_6",
+      "selection_rule": "outermost coaxial output-face cylinder radius 29.000 mm"
+    },
+    "common_axis_checks": {
+      "j2a_axis_line_residual_mm": 4.519255178543745e-08,
+      "j2b_axis_line_residual_mm": 4.519258351011534e-08,
+      "flange_midpoint_to_joint_origin_mm": 3.744781906789705e-08,
+      "flange_center_separation_mm": 83.19999996559,
+      "kinematic_dof_count": 1,
+      "drive_note": "J2A/J2B are coaxial synchronized actuators for one J2 revolute DOF; physical motor command signs require commissioning."
+    }
+  },
+  "finite_motion_checks": {
+    "J1": {
+      "requested_deg": 1.0,
+      "measured_delta_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "axis_error_deg": 0.0,
+      "expected_placement_translation_error_mm": 0.0,
+      "expected_placement_rotation_error_deg": 0.0
+    },
+    "J2": {
+      "requested_deg": 1.0,
+      "measured_delta_axis_world": [
+        0.97944933481621,
+        -0.20169035804441432,
+        -1.1102230246251565e-16
+      ],
+      "axis_error_deg": 0.0,
+      "expected_placement_translation_error_mm": 4.440892098500626e-16,
+      "expected_placement_rotation_error_deg": 0.0
+    },
+    "J3": {
+      "requested_deg": 1.0,
+      "measured_delta_axis_world": [
+        0.97944933481621,
+        -0.20169035804441432,
+        -1.1102230246251565e-16
+      ],
+      "axis_error_deg": 0.0,
+      "expected_placement_translation_error_mm": 0.0,
+      "expected_placement_rotation_error_deg": 0.0
+    },
+    "J4": {
+      "requested_deg": 1.0,
+      "measured_delta_axis_world": [
+        0.97944933481621,
+        -0.20169035804441432,
+        -1.1102230246251565e-16
+      ],
+      "axis_error_deg": 0.0,
+      "expected_placement_translation_error_mm": 0.0,
+      "expected_placement_rotation_error_deg": 0.0
+    },
+    "J5": {
+      "requested_deg": 1.0,
+      "measured_delta_axis_world": [
+        -0.0035710719250043816,
+        -0.017341850427658345,
+        0.9998432415479195
+      ],
+      "axis_error_deg": 0.0,
+      "expected_placement_translation_error_mm": 0.0,
+      "expected_placement_rotation_error_deg": 0.0
+    },
+    "J6": {
+      "requested_deg": 1.0,
+      "measured_delta_axis_world": [
+        0.8628028957876956,
+        0.505401620185185,
+        0.01184758771045874
+      ],
+      "axis_error_deg": 0.0,
+      "expected_placement_translation_error_mm": 0.0,
+      "expected_placement_rotation_error_deg": 0.0
+    }
+  },
+  "relationship_checks": {
+    "j2_j3_angle_deg": 0.0,
+    "j3_j4_angle_deg": 0.0,
+    "j4_j5_angle_deg": 89.9999999999782,
+    "j5_j6_angle_deg": 89.99999999999088
+  },
+  "limitations": [
+    "CAD mechanical zero is defined; physical encoder electrical zero still requires low-torque commissioning.",
+    "J2A/J2B motor command signs are not inferred from shaft appearance and must be commissioned on hardware.",
+    "The source gripper connector has a measured nonzero six-hole axis mismatch to nominal DM PCD28; do not replace it with an exact pattern in simulation metadata.",
+    "The J6 stator three-hole residual, gripper clevis cross-axis error and zero nominal slot/tongue clearance are preserved as interface risks.",
+    "ROS 2 position limits and MuJoCo joint ranges are defined; verified velocity/effort limits and MuJoCo designed-contact exclusions are still pending.",
+    "gripper_mount is defined, but tool0/TCP is intentionally not defined until a physical task-frame measurement exists.",
+    "STEP does not preserve joint-axis or zero-frame semantics."
+  ],
+  "derived_from_axis_revision": "V15.3-measured-axis-joint-limits-and-j6-tool-interface",
+  "j6_zero_recalibration": {
+    "policy": "camera-up physical pose is J6=0 deg",
+    "legacy_v15_12_clock_offset_deg": 180.0,
+    "position_range_deg": [
+      -180.0,
+      180.0
+    ],
+    "connector_relative_to_output_flange_changed": false,
+    "camera_relative_to_connector_changed": false,
+    "gripper_relative_to_connector_changed": false,
+    "video_sha256": "9716C03D6DE3D36FB3A2E4E7BF8B6AB124A95F1610298C351F7DC6334CA774FD"
+  }
+}

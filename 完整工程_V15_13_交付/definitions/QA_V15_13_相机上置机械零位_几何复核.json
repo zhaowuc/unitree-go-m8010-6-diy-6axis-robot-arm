@@ -1,0 +1,167 @@
+{
+  "status": "PASS",
+  "revision": "V15.13-camera-up-j6-mechanical-zero-full-range",
+  "generated_at_utc": "2026-08-10T14:33:46.221396+00:00",
+  "sources": {
+    "v15_12_fcstd": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\夹爪单独反转180_连接件不转_相机铰链耳直装_v15\\机械臂完整装配_六轴_夹爪单独反转180_连接件不转_相机铰链耳直装_v15.FCStd",
+    "v15_12_sha256_before": "0A4EFA4668B8E5FAC613FDDA8F2D0BC1D70745A40F254800ACBBEF15125B9220",
+    "physical_motion_video": "C:\\Users\\91592\\xwechat_files\\wxid_h3dw5kd9queg22_8478\\msg\\video\\2026-08\\20954c166d1bc421cfe79299d02cfc75.mp4",
+    "physical_motion_video_sha256": "9716C03D6DE3D36FB3A2E4E7BF8B6AB124A95F1610298C351F7DC6334CA774FD",
+    "v15_12_sha256_after": "0A4EFA4668B8E5FAC613FDDA8F2D0BC1D70745A40F254800ACBBEF15125B9220",
+    "source_immutable": true
+  },
+  "j6_mechanical_zero": {
+    "saved_angle_deg": 0.0,
+    "legacy_v15_12_clock_offset_deg": 180.0,
+    "camera_up_at_zero": true,
+    "range_deg": [
+      -180.0,
+      180.0
+    ],
+    "range_rad": [
+      -3.141592653589793,
+      3.141592653589793
+    ],
+    "measured_origin_world_mm": [
+      192.23930126047222,
+      588.8885662821208,
+      235.83352656221007
+    ],
+    "measured_axis_world": [
+      0.8628028957876956,
+      0.505401620185185,
+      0.01184758771045874
+    ],
+    "camera_world_bounds_before_mm": [
+      175.25534732196422,
+      550.9571188187809,
+      170.000386882314,
+      242.70275812509703,
+      648.4632786735294,
+      213.4608668583663
+    ],
+    "camera_world_bounds_after_mm": [
+      174.83579903444348,
+      549.2686431356431,
+      258.54416257310595,
+      242.56841561895712,
+      646.1647609472224,
+      301.92933740894085
+    ],
+    "camera_wholly_above_axis": true
+  },
+  "rigid_interface_invariance": {
+    "relative_placement_errors": {
+      "connector_to_output": {
+        "translation_mm": 6.355287432313019e-14,
+        "rotation_deg": 0.0
+      },
+      "camera_to_connector": {
+        "translation_mm": 5.684341886080802e-14,
+        "rotation_deg": 0.0
+      },
+      "fixed_frame_to_connector": {
+        "translation_mm": 5.684341886080802e-14,
+        "rotation_deg": 0.0
+      }
+    },
+    "connector_relative_output_changed": false,
+    "camera_relative_connector_changed": false,
+    "gripper_fixed_frame_relative_connector_changed": false,
+    "rotated_physical_object_count": 44,
+    "rotated_physical_objects": [
+      "DM_G6220_Connector_M4x14_Screw_01",
+      "DM_G6220_Connector_M4x14_Screw_02",
+      "DM_G6220_Connector_M4x14_Screw_03",
+      "DM_G6220_Connector_M4x14_Screw_04",
+      "DM_G6220_Connector_M4x14_Screw_05",
+      "DM_G6220_Connector_M4x14_Screw_06",
+      "Gemini_Pro_Camera_STEP_Display",
+      "Gripper_Clevis_3DPrinted_M3x25_Screw_01",
+      "Gripper_Clevis_3DPrinted_M3x25_Screw_02",
+      "Gripper_Fixed_Frame_Collision_Proxy",
+      "Gripper_Fixed_Frame_STEP_Display",
+      "Gripper_Hardware_01",
+      "Gripper_Hardware_02",
+      "Gripper_Hardware_03",
+      "Gripper_Hardware_04",
+      "Gripper_Hardware_05",
+      "Gripper_Hardware_06",
+      "Gripper_Hardware_07",
+      "Gripper_Hardware_08",
+      "Gripper_Hardware_09",
+      "Gripper_Hardware_10",
+      "Gripper_Hardware_11",
+      "Gripper_Hardware_12",
+      "Gripper_Hardware_13",
+      "Gripper_Hardware_14",
+      "Gripper_Hardware_15",
+      "Gripper_Hardware_16",
+      "Gripper_Hardware_17",
+      "Gripper_Hardware_18",
+      "Gripper_Hardware_19",
+      "Gripper_Left_Drive_Link",
+      "Gripper_Left_Finger",
+      "Gripper_Left_Outer_Link",
+      "Gripper_Right_Drive_Link",
+      "Gripper_Right_Finger",
+      "Gripper_Right_Outer_Link",
+      "Gripper_Servo_Collision_Proxy",
+      "Gripper_Servo_STEP_Display",
+      "J6_DM_G6220_Output_6xM4_PCD28_Axes",
+      "J6_DM_G6220_Output_Frame_Axes",
+      "J6_DM_G6220_Output_Rotor_Collision_Proxy",
+      "J6_DM_G6220_Output_Rotor_STEP_Display",
+      "J6_Gripper_Connector_Collision_Proxy",
+      "J6_Gripper_Connector_STEP_Display"
+    ]
+  },
+  "camera_collision_proxy": {
+    "object": "Gemini_Pro_Camera_Collision_Proxy",
+    "method": "two source-frame AABB boxes, one for each supplied camera STEP solid",
+    "conservative": true,
+    "source_solid_bounds": [
+      {
+        "source_solid_index": 1,
+        "source_bound_mm": [
+          -51.44775849788898,
+          -9.1725087464179,
+          -26.51932113870623,
+          51.447758086303274,
+          19.044323717653,
+          15.7500000000003
+        ]
+      },
+      {
+        "source_solid_index": 2,
+        "source_bound_mm": [
+          -30.0,
+          -9.050000000000036,
+          -20.300000000000004,
+          30.0,
+          -7.349999999999995,
+          -5.299999999999999
+        ]
+      }
+    ],
+    "display_shape_collision_disabled": true
+  },
+  "axis_contract": {
+    "j6_origin_unchanged": true,
+    "j6_axis_unchanged": true,
+    "link6_zero_frame_xy_reclock_deg": 180.0,
+    "ros2_mujoco_contract": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\V15_13_真实关节轴与相机上置零位.json"
+  },
+  "pending_separate_audits": [
+    "full-chain delta collision sampling",
+    "runtime swept guard regression",
+    "rigid-link local asset export and independent hash/bounds QA"
+  ],
+  "outputs": {
+    "fcstd": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+    "fcstd_sha256": "6CF00B0EDD1895BF74466018311589F59F51320895788E22314E8965FE2771BE",
+    "axis_contract_json": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\V15_13_真实关节轴与相机上置零位.json",
+    "tool_step": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\J6末端_相机上置机械零位_v15_13.step",
+    "tool_stl": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\J6末端_相机上置机械零位_v15_13.stl"
+  }
+}

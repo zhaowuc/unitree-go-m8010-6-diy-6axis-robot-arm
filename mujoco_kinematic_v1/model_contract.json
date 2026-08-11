@@ -1,0 +1,205 @@
+{
+  "schema": "go-m8010-arm-v15.13-mujoco-kinematic-contract/1.0",
+  "revision": "V15.13-MuJoCo-empty-load-kinematic-v1",
+  "model_xml": "go_m8010_arm_v15_13_kinematic.xml",
+  "model_purpose": "kinematics, measured axes, position limits and self-collision only",
+  "dynamics_valid": false,
+  "dummy_inertials": true,
+  "dummy_inertial_warning": "Numerical compile placeholders only; never use for dynamics or torque control.",
+  "base_frame_policy": "CAD base_link frame is mapped to MuJoCo world identity; all relative transforms are preserved.",
+  "topology": "world/base_link/J1/link1/J2/link2/J3/link3/J4/link4/J5/link5/J6/link6/fixed/gripper",
+  "joints": {
+    "J1": {
+      "source_joint": "J1",
+      "parent_link": "base_link",
+      "child_link": "link1",
+      "body_pos_m_in_parent": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "body_quat_wxyz_in_parent": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "axis_in_child_body": [
+        0.0,
+        -2.7755575615628914e-17,
+        1.0
+      ],
+      "limited": false,
+      "range_rad": null,
+      "positive_witness_local_m": [
+        0.04,
+        0.0,
+        0.0
+      ]
+    },
+    "J2": {
+      "source_joint": "J2A",
+      "parent_link": "link1",
+      "child_link": "link2",
+      "body_pos_m_in_parent": [
+        -1.1952999999984559e-06,
+        -0.000348645100000006,
+        0.09263978199999999
+      ],
+      "body_quat_wxyz_in_parent": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "axis_in_child_body": [
+        0.0,
+        1.0,
+        -2.7755575615628914e-17
+      ],
+      "limited": true,
+      "range_rad": [
+        -2.9670597283903604,
+        2.9670597283903604
+      ],
+      "positive_witness_local_m": [
+        0.04,
+        0.0,
+        0.0
+      ]
+    },
+    "J3": {
+      "source_joint": "J3",
+      "parent_link": "link2",
+      "child_link": "link3",
+      "body_pos_m_in_parent": [
+        -0.2486017593632837,
+        -0.03600000000000054,
+        1.6781540052733135e-05
+      ],
+      "body_quat_wxyz_in_parent": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "axis_in_child_body": [
+        0.0,
+        1.0,
+        -2.7755575615628914e-17
+      ],
+      "limited": true,
+      "range_rad": [
+        -2.9670597283903604,
+        2.9670597283903604
+      ],
+      "positive_witness_local_m": [
+        0.04,
+        0.0,
+        0.0
+      ]
+    },
+    "J4": {
+      "source_joint": "J4",
+      "parent_link": "link3",
+      "child_link": "link4",
+      "body_pos_m_in_parent": [
+        -0.2023460218496078,
+        -3.6969356019973964e-17,
+        0.05196142396545565
+      ],
+      "body_quat_wxyz_in_parent": [
+        0.7133392301847028,
+        -9.555111425395118e-18,
+        -0.7008189086201196,
+        1.3341580227233449e-13
+      ],
+      "axis_in_child_body": [
+        3.806829027496864e-13,
+        1.0,
+        -4.914323015472638e-19
+      ],
+      "limited": true,
+      "range_rad": [
+        -2.0245819323134224,
+        2.775073510670984
+      ],
+      "positive_witness_local_m": [
+        0.04,
+        -1.5227316109987458e-14,
+        7.483195002318863e-33
+      ]
+    },
+    "J5": {
+      "source_joint": "J5",
+      "parent_link": "link4",
+      "child_link": "link5",
+      "body_pos_m_in_parent": [
+        0.009300000129833381,
+        0.03200002090589914,
+        0.09789894800075104
+      ],
+      "body_quat_wxyz_in_parent": [
+        0.913547809067383,
+        -0.4067313616481825,
+        -4.35751695212161e-14,
+        1.0417706084214564e-13
+      ],
+      "axis_in_child_body": [
+        1.0000000000000002,
+        0.0,
+        -1.592320025833871e-13
+      ],
+      "limited": true,
+      "range_rad": [
+        -1.2322024519079966,
+        2.638937829015426
+      ],
+      "positive_witness_local_m": [
+        0.0,
+        0.04,
+        0.0
+      ]
+    },
+    "J6": {
+      "source_joint": "J6",
+      "parent_link": "link5",
+      "child_link": "link6",
+      "body_pos_m_in_parent": [
+        -0.010999195529983094,
+        -0.00014714845774893432,
+        0.09952752741147268
+      ],
+      "body_quat_wxyz_in_parent": [
+        5.5511151231257815e-17,
+        0.0,
+        -5.5511151231257815e-17,
+        1.0
+      ],
+      "axis_in_child_body": [
+        -1.592320025833871e-13,
+        6.093216209368535e-17,
+        1.0000000000000002
+      ],
+      "limited": true,
+      "range_rad": [
+        -3.141592653589793,
+        3.141592653589793
+      ],
+      "positive_witness_local_m": [
+        0.04,
+        3.880940076765226e-31,
+        6.369280103335483e-15
+      ]
+    }
+  },
+  "gripper": "frozen at verified V15.13 zero pose and fixed to link6",
+  "mesh_units": "visual STL mm with scale 0.001; convex collision STL metres",
+  "collision_filter": "MuJoCo broad/narrow phase plus V15_13_self-collision-pair contract in kinematic_guard.py; same-body/direct-parent contacts and audited designed contacts are ignored; ground uses collision bit 4 and is active for every moving link but excluded for the fixed base.",
+  "ground": {
+    "z_m": -0.09,
+    "derivation": "exact base_link visual lower Z bound from runtime_mesh_manifest.json",
+    "visual": "40x40 checker grid plus gradient skybox",
+    "collision": "physical plane; collision bit 4; fixed base excluded; moving links active"
+  }
+}

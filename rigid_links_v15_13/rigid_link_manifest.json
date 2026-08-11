@@ -1,0 +1,1718 @@
+{
+  "schema": "go-m8010-arm-v15-rigid-links/1.0",
+  "revision": "V15.4-rigid-link-export-from-V15.3-measured-axes",
+  "generated_at_utc": "2026-08-10T15:23:16.785700+00:00",
+  "source": {
+    "fcstd": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+    "fcstd_sha256": "B4A02A97AFAFF88E246A46340DAD4CACD3C645A7456FDD087A69552E14D3DDC0",
+    "measured_axes_json": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\V15_13_真实关节轴与相机上置零位.json",
+    "measured_axes_json_sha256": "9B46C1FD816530235E80C453587E58E62A1DCCF1828C72C3867CC8DF720EE5A9"
+  },
+  "derived_fcstd": {
+    "path": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\机械臂完整装配_六轴_刚性Link拆分_v15_13.FCStd",
+    "sha256": "2AE05FAB2A15C5C75BB05DB8B456F149DA20F79CEDBA2FC8D47F1624BCEC34C7",
+    "non_reparenting": true
+  },
+  "rigid_link_rule": "All parts with zero relative motion are one Link; fasteners are members, never independent links.",
+  "main_topology": {
+    "world_joint": {
+      "name": "world_to_base_link",
+      "type": "fixed",
+      "parent_link": "world",
+      "child_link": "base_link",
+      "origin_xyz_m": [
+        0.0,
+        0.0,
+        0.09
+      ],
+      "origin_rpy_rad": [
+        -2.7755575615628914e-17,
+        -0.0,
+        -1.7738797667774742
+      ]
+    },
+    "joints": [
+      {
+        "name": "J1",
+        "physical_actuators": [
+          "J1"
+        ],
+        "parent_link": "base_link",
+        "child_link": "link1",
+        "joint_type_ros2": "continuous",
+        "axis_xyz_in_joint_frame": [
+          0.0,
+          -2.7755575615628914e-17,
+          1.0
+        ],
+        "origin_xyz_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "origin_rpy_rad": [
+          -2.7755575615628914e-17,
+          -0.0,
+          0.0
+        ],
+        "position_limit_rad": null,
+        "mechanical_zero_deg": 0.0,
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "mujoco": {
+          "body_pos_m_in_parent": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "body_quat_wxyz_in_parent": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "joint_type": "hinge",
+          "joint_pos_m_in_child_body": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "joint_axis_in_child_body": [
+            0.0,
+            -2.7755575615628914e-17,
+            1.0
+          ],
+          "joint_ref_rad": 0.0,
+          "joint_limited": false,
+          "joint_range_rad": null
+        }
+      },
+      {
+        "name": "J2",
+        "physical_actuators": [
+          "J2A",
+          "J2B"
+        ],
+        "parent_link": "link1",
+        "child_link": "link2",
+        "joint_type_ros2": "revolute",
+        "axis_xyz_in_joint_frame": [
+          0.0,
+          1.0,
+          -2.7755575615628914e-17
+        ],
+        "origin_xyz_m": [
+          -1.1952999999984559e-06,
+          -0.000348645100000006,
+          0.09263978199999999
+        ],
+        "origin_rpy_rad": [
+          -2.7755575615628914e-17,
+          -0.0,
+          0.0
+        ],
+        "position_limit_rad": {
+          "lower": -2.9670597283903604,
+          "upper": 2.9670597283903604
+        },
+        "mechanical_zero_deg": 0.0,
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "mujoco": {
+          "body_pos_m_in_parent": [
+            -1.1952999999984559e-06,
+            -0.000348645100000006,
+            0.09263978199999999
+          ],
+          "body_quat_wxyz_in_parent": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "joint_type": "hinge",
+          "joint_pos_m_in_child_body": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "joint_axis_in_child_body": [
+            0.0,
+            1.0,
+            -2.7755575615628914e-17
+          ],
+          "joint_ref_rad": 0.0,
+          "joint_limited": true,
+          "joint_range_rad": [
+            -2.9670597283903604,
+            2.9670597283903604
+          ]
+        }
+      },
+      {
+        "name": "J3",
+        "physical_actuators": [
+          "J3"
+        ],
+        "parent_link": "link2",
+        "child_link": "link3",
+        "joint_type_ros2": "revolute",
+        "axis_xyz_in_joint_frame": [
+          0.0,
+          1.0,
+          -2.7755575615628914e-17
+        ],
+        "origin_xyz_m": [
+          -0.2486017593632837,
+          -0.03600000000000054,
+          1.6781540052733135e-05
+        ],
+        "origin_rpy_rad": [
+          -2.7755575615628914e-17,
+          -0.0,
+          0.0
+        ],
+        "position_limit_rad": {
+          "lower": -2.9670597283903604,
+          "upper": 2.9670597283903604
+        },
+        "mechanical_zero_deg": 0.0,
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "mujoco": {
+          "body_pos_m_in_parent": [
+            -0.2486017593632837,
+            -0.03600000000000054,
+            1.6781540052733135e-05
+          ],
+          "body_quat_wxyz_in_parent": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "joint_type": "hinge",
+          "joint_pos_m_in_child_body": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "joint_axis_in_child_body": [
+            0.0,
+            1.0,
+            -2.7755575615628914e-17
+          ],
+          "joint_ref_rad": 0.0,
+          "joint_limited": true,
+          "joint_range_rad": [
+            -2.9670597283903604,
+            2.9670597283903604
+          ]
+        }
+      },
+      {
+        "name": "J4",
+        "physical_actuators": [
+          "J4"
+        ],
+        "parent_link": "link3",
+        "child_link": "link4",
+        "joint_type_ros2": "revolute",
+        "axis_xyz_in_joint_frame": [
+          3.806829027496864e-13,
+          1.0,
+          -4.914323015472638e-19
+        ],
+        "origin_xyz_m": [
+          -0.2023460218496078,
+          -3.6969356019973964e-17,
+          0.05196142396545565
+        ],
+        "origin_rpy_rad": [
+          -1.5676054979076366e-15,
+          -1.5530896869224016,
+          2.1500566933795315e-11
+        ],
+        "position_limit_rad": {
+          "lower": -2.0245819323134224,
+          "upper": 2.775073510670984
+        },
+        "mechanical_zero_deg": 0.0,
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "mujoco": {
+          "body_pos_m_in_parent": [
+            -0.2023460218496078,
+            -3.6969356019973964e-17,
+            0.05196142396545565
+          ],
+          "body_quat_wxyz_in_parent": [
+            0.7133392301847028,
+            -9.555111425395118e-18,
+            -0.7008189086201196,
+            1.3341580227233449e-13
+          ],
+          "joint_type": "hinge",
+          "joint_pos_m_in_child_body": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "joint_axis_in_child_body": [
+            3.806829027496864e-13,
+            1.0,
+            -4.914323015472638e-19
+          ],
+          "joint_ref_rad": 0.0,
+          "joint_limited": true,
+          "joint_range_rad": [
+            -2.0245819323134224,
+            2.775073510670984
+          ]
+        }
+      },
+      {
+        "name": "J5",
+        "physical_actuators": [
+          "J5"
+        ],
+        "parent_link": "link4",
+        "child_link": "link5",
+        "joint_type_ros2": "revolute",
+        "axis_xyz_in_joint_frame": [
+          1.0000000000000002,
+          0.0,
+          -1.592320025833871e-13
+        ],
+        "origin_xyz_m": [
+          0.009300000129833381,
+          0.03200002090589914,
+          0.09789894800075104
+        ],
+        "origin_rpy_rad": [
+          -0.8377464784876136,
+          -0.0,
+          3.806829027496863e-13
+        ],
+        "position_limit_rad": {
+          "lower": -1.2322024519079966,
+          "upper": 2.638937829015426
+        },
+        "mechanical_zero_deg": 0.0,
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "mujoco": {
+          "body_pos_m_in_parent": [
+            0.009300000129833381,
+            0.03200002090589914,
+            0.09789894800075104
+          ],
+          "body_quat_wxyz_in_parent": [
+            0.913547809067383,
+            -0.4067313616481825,
+            -4.35751695212161e-14,
+            1.0417706084214564e-13
+          ],
+          "joint_type": "hinge",
+          "joint_pos_m_in_child_body": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "joint_axis_in_child_body": [
+            1.0000000000000002,
+            0.0,
+            -1.592320025833871e-13
+          ],
+          "joint_ref_rad": 0.0,
+          "joint_limited": true,
+          "joint_range_rad": [
+            -1.2322024519079966,
+            2.638937829015426
+          ]
+        }
+      },
+      {
+        "name": "J6",
+        "physical_actuators": [
+          "J6"
+        ],
+        "parent_link": "link5",
+        "child_link": "link6",
+        "joint_type_ros2": "revolute",
+        "axis_xyz_in_joint_frame": [
+          -1.592320025833871e-13,
+          6.093216209368535e-17,
+          1.0000000000000002
+        ],
+        "origin_xyz_m": [
+          -0.010999195529983094,
+          -0.00014714845774893432,
+          0.09952752741147268
+        ],
+        "origin_rpy_rad": [
+          -1.1102230246251563e-16,
+          -6.162975822039152e-33,
+          3.141592653589793
+        ],
+        "position_limit_rad": {
+          "lower": -3.141592653589793,
+          "upper": 3.141592653589793
+        },
+        "mechanical_zero_deg": 0.0,
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "mujoco": {
+          "body_pos_m_in_parent": [
+            -0.010999195529983094,
+            -0.00014714845774893432,
+            0.09952752741147268
+          ],
+          "body_quat_wxyz_in_parent": [
+            5.5511151231257815e-17,
+            0.0,
+            -5.5511151231257815e-17,
+            1.0
+          ],
+          "joint_type": "hinge",
+          "joint_pos_m_in_child_body": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "joint_axis_in_child_body": [
+            -1.592320025833871e-13,
+            6.093216209368535e-17,
+            1.0000000000000002
+          ],
+          "joint_ref_rad": 0.0,
+          "joint_limited": true,
+          "joint_range_rad": [
+            -3.141592653589793,
+            3.141592653589793
+          ]
+        }
+      },
+      {
+        "name": "J6_to_gripper",
+        "physical_actuators": [],
+        "parent_link": "link6",
+        "child_link": "gripper",
+        "joint_type_ros2": "fixed",
+        "axis_xyz_in_joint_frame": null,
+        "origin_xyz_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "origin_rpy_rad": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "position_limit_rad": null,
+        "mechanical_zero_deg": 0.0,
+        "velocity_limit_rad_s": null,
+        "effort_limit_nm": null,
+        "mujoco": {
+          "body_pos_m_in_parent": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "body_quat_wxyz_in_parent": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "joint_type": "fixed_body_nesting"
+        }
+      }
+    ],
+    "tree": "world -> base_link -> J1 -> link1 -> J2 -> link2 -> J3 -> link3 -> J4 -> link4 -> J5 -> link5 -> J6 -> link6 -> fixed -> gripper"
+  },
+  "mesh_contract": {
+    "stl_numeric_unit": "mm",
+    "ros2_mesh_scale_xyz": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "mujoco_mesh_scale_xyz": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "visual_linear_deflection_mm": 0.2,
+    "collision_linear_deflection_mm": 0.35
+  },
+  "links": {
+    "base_link": {
+      "source_group": "J1_Fixed_Rigid",
+      "frame_world_at_zero": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          90.0
+        ],
+        "rotation_matrix_row_major": [
+          [
+            -0.20169035804441449,
+            0.9794493348162099,
+            0.0
+          ],
+          [
+            -0.9794493348162099,
+            -0.20169035804441449,
+            0.0
+          ],
+          [
+            0.0,
+            -2.7755575615628914e-17,
+            1.0
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -2.7755575615628914e-17,
+          -0.0,
+          -1.7738797667774742
+        ]
+      },
+      "visual_members": [
+        "Support_Foot",
+        "Upper_Base",
+        "derived:J1_GO_M8010_stator"
+      ],
+      "collision_members": [
+        "Support_Foot",
+        "Upper_Base",
+        "J1_Fixed_Collision_Proxy",
+        "derived:J1_GO_M8010_stator"
+      ],
+      "visual_mesh": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\visual\\base_link.stl",
+      "collision_mesh": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\collision\\base_link.stl",
+      "collision_step": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\collision\\base_link.step",
+      "mesh_scale_xyz_to_m": [
+        0.001,
+        0.001,
+        0.001
+      ],
+      "visual_facets": 186478,
+      "collision_facets": 180745,
+      "visual_bounds_local": {
+        "min_mm": [
+          -88.47176361083984,
+          -88.49915313720703,
+          -90.0
+        ],
+        "max_mm": [
+          88.44879913330078,
+          88.36668395996094,
+          10.0
+        ],
+        "size_mm": [
+          176.92056274414062,
+          176.86583709716797,
+          100.0
+        ]
+      },
+      "collision_bounds_local": {
+        "min_mm": [
+          -88.47176725394597,
+          -88.4991508019605,
+          -90.0
+        ],
+        "max_mm": [
+          88.44880258476466,
+          88.3666830184818,
+          10.000000000000028
+        ],
+        "size_mm": [
+          176.92056983871063,
+          176.86583382044228,
+          100.00000000000003
+        ]
+      },
+      "collision_mesh_bounds_local": {
+        "min_mm": [
+          -88.47176361083984,
+          -88.49915313720703,
+          -90.0
+        ],
+        "max_mm": [
+          88.44879913330078,
+          88.36668395996094,
+          10.0
+        ],
+        "size_mm": [
+          176.92056274414062,
+          176.86583709716797,
+          100.0
+        ]
+      }
+    },
+    "link1": {
+      "source_group": "J1_Moving_Rigid",
+      "frame_world_at_zero": {
+        "origin_mm": [
+          0.0,
+          0.0,
+          90.0
+        ],
+        "rotation_matrix_row_major": [
+          [
+            -0.20169035804441449,
+            0.9794493348162099,
+            0.0
+          ],
+          [
+            -0.9794493348162099,
+            -0.20169035804441449,
+            0.0
+          ],
+          [
+            0.0,
+            -2.7755575615628914e-17,
+            1.0
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -2.7755575615628914e-17,
+          -0.0,
+          -1.7738797667774742
+        ]
+      },
+      "visual_members": [
+        "J1_Axial_Compensation_Spacer",
+        "V6_Shoulder_Official_M4",
+        "M4_Screw_01",
+        "M4_Screw_02",
+        "M4_Screw_03",
+        "M4_Screw_04",
+        "M4_Screw_05",
+        "M4_Screw_06",
+        "J2_Left_M4x30_Screw_01",
+        "J2_Left_M4x30_Screw_02",
+        "J2_Left_M4x30_Screw_03",
+        "J2_Left_M4x30_Screw_04",
+        "J2_Left_M4x30_Screw_05",
+        "J2_Left_M4x30_Screw_06",
+        "J2_Left_M4_Washer_01",
+        "J2_Left_M4_Washer_02",
+        "J2_Left_M4_Washer_03",
+        "J2_Left_M4_Washer_04",
+        "J2_Left_M4_Washer_05",
+        "J2_Left_M4_Washer_06",
+        "J2_Right_M4x30_Screw_01",
+        "J2_Right_M4x30_Screw_02",
+        "J2_Right_M4x30_Screw_03",
+        "J2_Right_M4x30_Screw_04",
+        "J2_Right_M4x30_Screw_05",
+        "J2_Right_M4x30_Screw_06",
+        "J2_Right_M4_Washer_01",
+        "J2_Right_M4_Washer_02",
+        "J2_Right_M4_Washer_03",
+        "J2_Right_M4_Washer_04",
+        "J2_Right_M4_Washer_05",
+        "J2_Right_M4_Washer_06",
+        "derived:J1_GO_M8010_output",
+        "derived:J1_GO_M8010_neutral",
+        "derived:J2A_GO_M8010_stator",
+        "derived:J2B_GO_M8010_stator"
+      ],
+      "collision_members": [
+        "J1_Moving_Collision_Proxy",
+        "J1_Output_Rotor_Proxy"
+      ],
+      "visual_mesh": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\visual\\link1.stl",
+      "collision_mesh": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\collision\\link1.stl",
+      "collision_step": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\collision\\link1.step",
+      "mesh_scale_xyz_to_m": [
+        0.001,
+        0.001,
+        0.001
+      ],
+      "visual_facets": 472622,
+      "collision_facets": 3060,
+      "visual_bounds_local": {
+        "min_mm": [
+          -48.24928665161133,
+          -68.79864501953125,
+          -30.443662643432617
+        ],
+        "max_mm": [
+          117.0,
+          68.80135345458984,
+          140.8894805908203
+        ],
+        "size_mm": [
+          165.24928665161133,
+          137.5999984741211,
+          171.33314323425293
+        ]
+      },
+      "collision_bounds_local": {
+        "min_mm": [
+          -48.251195299999964,
+          -63.9986451,
+          -6.59999999999998
+        ],
+        "max_mm": [
+          48.248804700000036,
+          64.0013549,
+          140.889782
+        ],
+        "size_mm": [
+          96.5,
+          128.0,
+          147.489782
+        ]
+      },
+      "collision_mesh_bounds_local": {
+        "min_mm": [
+          -48.23619842529297,
+          -63.9986457824707,
+          -6.599999904632568
+        ],
+        "max_mm": [
+          48.23380661010742,
+          64.00135803222656,
+          140.88978576660156
+        ],
+        "size_mm": [
+          96.47000503540039,
+          128.00000381469727,
+          147.48978567123413
+        ]
+      }
+    },
+    "link2": {
+      "source_group": "J2_Driven_Reference_Rigid",
+      "frame_world_at_zero": {
+        "origin_mm": [
+          -0.3412391307969642,
+          0.0714890908393357,
+          182.639782
+        ],
+        "rotation_matrix_row_major": [
+          [
+            -0.20169035804441449,
+            0.9794493348162099,
+            0.0
+          ],
+          [
+            -0.9794493348162099,
+            -0.20169035804441449,
+            0.0
+          ],
+          [
+            0.0,
+            -2.7755575615628914e-17,
+            1.0
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -2.7755575615628914e-17,
+          -0.0,
+          -1.7738797667774742
+        ]
+      },
+      "visual_members": [
+        "UpperArm_A_SleeveSide_PrintPart",
+        "UpperArm_B_Distal_PrintPart",
+        "J3_Output_Rotor_STEP_Display",
+        "J3_B6808_Bearing_Neutral_STEP_Display",
+        "UpperArm_M35_Bottom_01",
+        "UpperArm_M35_Bottom_02",
+        "UpperArm_M35_Bottom_03",
+        "UpperArm_M35_Top_01",
+        "UpperArm_M35_Top_02",
+        "UpperArm_M35_Top_03",
+        "J3_Output_M4_Screw_01",
+        "J3_Output_M4_Screw_02",
+        "J3_Output_M4_Screw_03",
+        "J3_Output_M4_Screw_04",
+        "J3_Output_M4_Screw_05",
+        "J3_Output_M4_Screw_06",
+        "derived:J2A_GO_M8010_output",
+        "derived:J2A_GO_M8010_neutral",
+        "derived:J2B_GO_M8010_output",
+        "derived:J2B_GO_M8010_neutral"
+      ],
+      "collision_members": [
+        "UpperArm_Full_Collision_Proxy",
+        "J3_Output_Flange_Proxy",
+        "derived:J2A_GO_M8010_output_collision",
+        "derived:J2B_GO_M8010_output_collision"
+      ],
+      "visual_mesh": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\visual\\link2.stl",
+      "collision_mesh": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\collision\\link2.stl",
+      "collision_step": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\collision\\link2.step",
+      "mesh_scale_xyz_to_m": [
+        0.001,
+        0.001,
+        0.001
+      ],
+      "visual_facets": 263463,
+      "collision_facets": 75024,
+      "visual_bounds_local": {
+        "min_mm": [
+          -277.599365234375,
+          -50.0,
+          -41.53804397583008
+        ],
+        "max_mm": [
+          3714.841064453125,
+          1346.6297607421875,
+          92.0
+        ],
+        "size_mm": [
+          3992.4404296875,
+          1396.6297607421875,
+          133.53804397583008
+        ]
+      },
+      "collision_bounds_local": {
+        "min_mm": [
+          -293.20276920883646,
+          -45.99999999999965,
+          -57.99039854182113
+        ],
+        "max_mm": [
+          22.662405452379062,
+          46.00000000000035,
+          57.990398541823666
+        ],
+        "size_mm": [
+          315.8651746612155,
+          92.0,
+          115.9807970836448
+        ]
+      },
+      "collision_mesh_bounds_local": {
+        "min_mm": [
+          -293.1790771484375,
+          -46.0,
+          -57.99039840698242
+        ],
+        "max_mm": [
+          22.662405014038086,
+          46.0,
+          57.99039840698242
+        ],
+        "size_mm": [
+          315.8414821624756,
+          92.0,
+          115.98079681396484
+        ]
+      }
+    },
+    "link3": {
+      "source_group": "J3_Driven_Rigid",
+      "frame_world_at_zero": {
+        "origin_mm": [
+          14.539162672271004,
+          250.825169822946,
+          182.65656354005273
+        ],
+        "rotation_matrix_row_major": [
+          [
+            -0.20169035804441449,
+            0.9794493348162099,
+            0.0
+          ],
+          [
+            -0.9794493348162099,
+            -0.20169035804441449,
+            0.0
+          ],
+          [
+            0.0,
+            -2.7755575615628914e-17,
+            1.0
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -2.7755575615628914e-17,
+          -0.0,
+          -1.7738797667774742
+        ]
+      },
+      "visual_members": [
+        "J3_Motor_Stator_STEP_Display",
+        "Forearm_v3_HighDetail_Display",
+        "J4_Motor_Stator_STEP_Display",
+        "Forearm_J3_M35_Screw_01",
+        "Forearm_J3_M35_Screw_02",
+        "Forearm_J3_M35_Screw_03",
+        "Forearm_J3_M35_Screw_04",
+        "Forearm_J3_M35_Screw_05",
+        "Forearm_J3_M35_Screw_06",
+        "Forearm_J4_M35_Screw_01",
+        "Forearm_J4_M35_Screw_02",
+        "Forearm_J4_M35_Screw_03",
+        "Forearm_J4_M35_Screw_04",
+        "Forearm_J4_M35_Screw_05",
+        "Forearm_J4_M35_Screw_06"
+      ],
+      "collision_members": [
+        "J3_Motor_Stator_Collision_Proxy",
+        "Forearm_Collision_Proxy",
+        "J4_Motor_Stator_Collision_Proxy"
+      ],
+      "visual_mesh": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\visual\\link3.stl",
+      "collision_mesh": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\collision\\link3.stl",
+      "collision_step": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\collision\\link3.step",
+      "mesh_scale_xyz_to_m": [
+        0.001,
+        0.001,
+        0.001
+      ],
+      "visual_facets": 383190,
+      "collision_facets": 932,
+      "visual_bounds_local": {
+        "min_mm": [
+          -250.59280395507812,
+          11.800000190734863,
+          -48.246368408203125
+        ],
+        "max_mm": [
+          3520.744384765625,
+          1337.3289794921875,
+          100.20814514160156
+        ],
+        "size_mm": [
+          3771.337188720703,
+          1325.5289793014526,
+          148.4545135498047
+        ]
+      },
+      "collision_bounds_local": {
+        "min_mm": [
+          -250.946021853263,
+          16.599999999999913,
+          -48.59999995495501
+        ],
+        "max_mm": [
+          48.59999999634498,
+          64.3000000172043,
+          100.5614240105002
+        ],
+        "size_mm": [
+          299.546021849608,
+          47.70000001720439,
+          149.1614239654552
+        ]
+      },
+      "collision_mesh_bounds_local": {
+        "min_mm": [
+          -250.93101501464844,
+          16.600000381469727,
+          -48.550052642822266
+        ],
+        "max_mm": [
+          48.581111907958984,
+          64.30000305175781,
+          100.56137084960938
+        ],
+        "size_mm": [
+          299.5121269226074,
+          47.700002670288086,
+          149.11142349243164
+        ]
+      }
+    },
+    "link4": {
+      "source_group": "J4_Driven_Rigid",
+      "frame_world_at_zero": {
+        "origin_mm": [
+          55.350404267981276,
+          449.0128463262506,
+          234.61798750550838
+        ],
+        "rotation_matrix_row_major": [
+          [
+            -0.0035710719250043816,
+            0.9794493348162099,
+            0.20165874137608789
+          ],
+          [
+            -0.017341850427658345,
+            -0.20169035804441449,
+            0.9792957978545928
+          ],
+          [
+            0.9998432415479195,
+            -2.7755575615628914e-17,
+            0.01770571464100866
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -1.5676054979076366e-15,
+          -1.5530896869223991,
+          -1.773879766755972
+        ]
+      },
+      "visual_members": [
+        "J4_Output_Rotor_STEP_Display",
+        "J4_B6808_Bearing_Neutral_STEP_Display",
+        "Wrist_Prelink_v1_HighDetail_Display",
+        "J5_Motor_Stator_STEP_Display",
+        "J4_Output_M4_Screw_01",
+        "J4_Output_M4_Screw_02",
+        "J4_Output_M4_Screw_03",
+        "J4_Output_M4_Screw_04",
+        "J4_Output_M4_Screw_05",
+        "J4_Output_M4_Screw_06",
+        "Wrist_Prelink_J5_M35_Screw_01",
+        "Wrist_Prelink_J5_M35_Screw_02",
+        "Wrist_Prelink_J5_M35_Screw_03",
+        "Wrist_Prelink_J5_M35_Screw_04",
+        "Wrist_Prelink_J5_M35_Screw_05",
+        "Wrist_Prelink_J5_M35_Screw_06"
+      ],
+      "collision_members": [
+        "J4_Output_Flange_Collision_Proxy",
+        "Wrist_Prelink_Collision_Proxy",
+        "J5_Motor_Stator_Collision_Proxy"
+      ],
+      "visual_mesh": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\visual\\link4.stl",
+      "collision_mesh": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\collision\\link4.stl",
+      "collision_step": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\collision\\link4.step",
+      "mesh_scale_xyz_to_m": [
+        0.001,
+        0.001,
+        0.001
+      ],
+      "visual_facets": 283388,
+      "collision_facets": 2532,
+      "visual_bounds_local": {
+        "min_mm": [
+          -31.0,
+          -15.0,
+          -28.99042320251465
+        ],
+        "max_mm": [
+          3403.453857421875,
+          1431.85009765625,
+          146.13963317871094
+        ],
+        "size_mm": [
+          3434.453857421875,
+          1446.85009765625,
+          175.1300563812256
+        ]
+      },
+      "collision_bounds_local": {
+        "min_mm": [
+          -29.82817387016571,
+          -16.499984326525976,
+          -29.865638090087828
+        ],
+        "max_mm": [
+          29.827587129834306,
+          80.50007570706508,
+          146.39894344437994
+        ],
+        "size_mm": [
+          59.65576100000001,
+          97.00006003359105,
+          176.26458153446777
+        ]
+      },
+      "collision_mesh_bounds_local": {
+        "min_mm": [
+          -29.828174591064453,
+          -16.499984741210938,
+          -29.865638732910156
+        ],
+        "max_mm": [
+          29.827587127685547,
+          80.50007629394531,
+          146.39894104003906
+        ],
+        "size_mm": [
+          59.65576171875,
+          97.00006103515625,
+          176.26457977294922
+        ]
+      }
+    },
+    "link5": {
+      "source_group": "J5_Driven_Rigid",
+      "frame_world_at_zero": {
+        "origin_mm": [
+          106.4017711248739,
+          538.269499832604,
+          245.64990061866112
+        ],
+        "rotation_matrix_row_major": [
+          [
+            -0.0035710719250043816,
+            0.5055278533035291,
+            0.8628028957876956
+          ],
+          [
+            -0.017341850427658345,
+            -0.8627099527291532,
+            0.505401620185185
+          ],
+          [
+            0.9998432415479195,
+            -0.013157773230605666,
+            0.01184758771045874
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -0.8377464785157944,
+          -1.5530896869223991,
+          -1.773879766755972
+        ]
+      },
+      "visual_members": [
+        "J5_Output_Rotor_STEP_Display",
+        "J5_B6808_Bearing_Neutral_STEP_Display",
+        "J5_to_Damiao_J6_Adapter_STL_Display",
+        "J6_DM_G6220_Stator_STEP_Display",
+        "Adapter_DM_G6220_M4x12_Screw_01",
+        "Adapter_DM_G6220_M4x12_Screw_02",
+        "Adapter_DM_G6220_M4x12_Screw_03"
+      ],
+      "collision_members": [
+        "J5_Output_Flange_Collision_Proxy",
+        "J5_to_Damiao_J6_Adapter_Collision_Proxy",
+        "J6_DM_G6220_Stator_Collision_Proxy"
+      ],
+      "visual_mesh": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\visual\\link5.stl",
+      "collision_mesh": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\collision\\link5.stl",
+      "collision_step": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\collision\\link5.step",
+      "mesh_scale_xyz_to_m": [
+        0.001,
+        0.001,
+        0.001
+      ],
+      "visual_facets": 168690,
+      "collision_facets": 78614,
+      "visual_bounds_local": {
+        "min_mm": [
+          -46.0,
+          -35.14717483520508,
+          -28.97247314453125
+        ],
+        "max_mm": [
+          24.0,
+          34.85282516479492,
+          98.52752685546875
+        ],
+        "size_mm": [
+          70.0,
+          70.0,
+          127.5
+        ]
+      },
+      "collision_bounds_local": {
+        "min_mm": [
+          -46.00000000099673,
+          -35.1471746753488,
+          -29.499999958111065
+        ],
+        "max_mm": [
+          23.99999999900455,
+          34.85282532465127,
+          98.5275274114747
+        ],
+        "size_mm": [
+          70.00000000000128,
+          70.00000000000007,
+          128.02752736958575
+        ]
+      },
+      "collision_mesh_bounds_local": {
+        "min_mm": [
+          -46.0,
+          -35.14717483520508,
+          -29.467798233032227
+        ],
+        "max_mm": [
+          24.0,
+          34.85282516479492,
+          98.52752685546875
+        ],
+        "size_mm": [
+          70.0,
+          70.0,
+          127.99532508850098
+        ]
+      }
+    },
+    "link6": {
+      "source_group": "J6_Driven_Rigid",
+      "frame_world_at_zero": {
+        "origin_mm": [
+          192.2393012604722,
+          588.8885662821208,
+          235.8335265622101
+        ],
+        "rotation_matrix_row_major": [
+          [
+            0.0035710719250040546,
+            -0.5055278533035291,
+            0.8628028957876952
+          ],
+          [
+            0.017341850427658206,
+            0.8627099527291531,
+            0.5054016201851823
+          ],
+          [
+            -0.9998432415479197,
+            0.013157773230605602,
+            0.011847587710617558
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          0.8377464785091262,
+          1.5530896869223993,
+          1.3677128868338377
+        ]
+      },
+      "visual_members": [
+        "J6_DM_G6220_Output_Rotor_STEP_Display"
+      ],
+      "collision_members": [
+        "J6_DM_G6220_Output_Rotor_Collision_Proxy"
+      ],
+      "visual_mesh": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\visual\\link6.stl",
+      "collision_mesh": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\collision\\link6.stl",
+      "collision_step": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\collision\\link6.step",
+      "mesh_scale_xyz_to_m": [
+        0.001,
+        0.001,
+        0.001
+      ],
+      "visual_facets": 2505,
+      "collision_facets": 2790,
+      "visual_bounds_local": {
+        "min_mm": [
+          -17.499553680419922,
+          -17.500459671020508,
+          -1.000100016593933
+        ],
+        "max_mm": [
+          17.500146865844727,
+          17.49605941772461,
+          3.353761712787673e-12
+        ],
+        "size_mm": [
+          34.99970054626465,
+          34.99651908874512,
+          1.0001000165972869
+        ]
+      },
+      "collision_bounds_local": {
+        "min_mm": [
+          -17.5005000000001,
+          -17.500499999999995,
+          -1.0001000000027822
+        ],
+        "max_mm": [
+          17.500499999999896,
+          17.5005,
+          3.3344700330321225e-12
+        ],
+        "size_mm": [
+          35.00099999999999,
+          35.00099999999999,
+          1.0001000000061167
+        ]
+      },
+      "collision_mesh_bounds_local": {
+        "min_mm": [
+          -17.49605941772461,
+          -17.500459671020508,
+          -1.000100016593933
+        ],
+        "max_mm": [
+          17.49605941772461,
+          17.49605941772461,
+          3.410605131648481e-12
+        ],
+        "size_mm": [
+          34.99211883544922,
+          34.99651908874512,
+          1.0001000165973437
+        ]
+      }
+    },
+    "gripper": {
+      "source_group": "J6_Gripper_Assembly/static + Gemini camera",
+      "frame_world_at_zero": {
+        "origin_mm": [
+          192.2393012604722,
+          588.8885662821208,
+          235.8335265622101
+        ],
+        "rotation_matrix_row_major": [
+          [
+            0.0035710719250040546,
+            -0.5055278533035291,
+            0.8628028957876952
+          ],
+          [
+            0.017341850427658206,
+            0.8627099527291531,
+            0.5054016201851823
+          ],
+          [
+            -0.9998432415479197,
+            0.013157773230605602,
+            0.011847587710617558
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          0.8377464785091262,
+          1.5530896869223993,
+          1.3677128868338377
+        ]
+      },
+      "visual_members": [
+        "J6_Gripper_Connector_STEP_Display",
+        "Gripper_Servo_STEP_Display",
+        "Gripper_Fixed_Frame_STEP_Display",
+        "Gemini_Pro_Camera_STEP_Display",
+        "Gripper_Hardware_03",
+        "Gripper_Hardware_04",
+        "Gripper_Hardware_07",
+        "Gripper_Hardware_08",
+        "Gripper_Hardware_09",
+        "Gripper_Hardware_10",
+        "Gripper_Hardware_15",
+        "Gripper_Hardware_16",
+        "DM_G6220_Connector_M4x14_Screw_01",
+        "DM_G6220_Connector_M4x14_Screw_02",
+        "DM_G6220_Connector_M4x14_Screw_03",
+        "DM_G6220_Connector_M4x14_Screw_04",
+        "DM_G6220_Connector_M4x14_Screw_05",
+        "DM_G6220_Connector_M4x14_Screw_06",
+        "Gripper_Clevis_3DPrinted_M3x25_Screw_01",
+        "Gripper_Clevis_3DPrinted_M3x25_Screw_02"
+      ],
+      "collision_members": [
+        "J6_Gripper_Connector_Collision_Proxy",
+        "Gripper_Fixed_Frame_Collision_Proxy",
+        "Gripper_Servo_Collision_Proxy",
+        "Gemini_Pro_Camera_Collision_Proxy"
+      ],
+      "visual_mesh": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\visual\\gripper.stl",
+      "collision_mesh": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\collision\\gripper.stl",
+      "collision_step": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\collision\\gripper.step",
+      "mesh_scale_xyz_to_m": [
+        0.001,
+        0.001,
+        0.001
+      ],
+      "visual_facets": 58862,
+      "collision_facets": 13680,
+      "visual_bounds_local": {
+        "min_mm": [
+          -64.51704406738281,
+          -50.65126037597656,
+          -4.0
+        ],
+        "max_mm": [
+          42.612274169921875,
+          50.78903579711914,
+          46.5
+        ],
+        "size_mm": [
+          107.12931823730469,
+          101.4402961730957,
+          50.5
+        ]
+      },
+      "collision_bounds_local": {
+        "min_mm": [
+          -65.43636806939472,
+          -51.38675118630328,
+          -6.131983809609665e-12
+        ],
+        "max_mm": [
+          42.61227360001285,
+          51.50876539788897,
+          46.50000000000049
+        ],
+        "size_mm": [
+          108.04864166940757,
+          102.89551658419225,
+          46.50000000000662
+        ]
+      },
+      "collision_mesh_bounds_local": {
+        "min_mm": [
+          -65.43637084960938,
+          -51.38675308227539,
+          -5.9685589803848416e-12
+        ],
+        "max_mm": [
+          42.612274169921875,
+          51.508766174316406,
+          46.5
+        ],
+        "size_mm": [
+          108.04864501953125,
+          102.8955192565918,
+          46.50000000000597
+        ]
+      }
+    }
+  },
+  "gripper_internal_rigid_roles": {
+    "left_outer": {
+      "members": [
+        "Gripper_Left_Outer_Link"
+      ],
+      "visual_mesh_zero_reference_in_gripper_frame": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\gripper_internal_zero_reference\\left_outer_visual.stl",
+      "collision_mesh_zero_reference_in_gripper_frame": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\gripper_internal_zero_reference\\left_outer_collision.stl",
+      "visual_facets": 1896,
+      "collision_facets": 1896,
+      "status": "RIGID MEMBERSHIP DEFINED; INTERNAL JOINT/PIVOT FRAME EXPORT IS A SEPARATE GRIPPER-KINEMATICS STEP"
+    },
+    "right_outer": {
+      "members": [
+        "Gripper_Right_Outer_Link"
+      ],
+      "visual_mesh_zero_reference_in_gripper_frame": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\gripper_internal_zero_reference\\right_outer_visual.stl",
+      "collision_mesh_zero_reference_in_gripper_frame": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\gripper_internal_zero_reference\\right_outer_collision.stl",
+      "visual_facets": 1896,
+      "collision_facets": 1896,
+      "status": "RIGID MEMBERSHIP DEFINED; INTERNAL JOINT/PIVOT FRAME EXPORT IS A SEPARATE GRIPPER-KINEMATICS STEP"
+    },
+    "left_drive": {
+      "members": [
+        "Gripper_Left_Drive_Link"
+      ],
+      "visual_mesh_zero_reference_in_gripper_frame": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\gripper_internal_zero_reference\\left_drive_visual.stl",
+      "collision_mesh_zero_reference_in_gripper_frame": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\gripper_internal_zero_reference\\left_drive_collision.stl",
+      "visual_facets": 1528,
+      "collision_facets": 1528,
+      "status": "RIGID MEMBERSHIP DEFINED; INTERNAL JOINT/PIVOT FRAME EXPORT IS A SEPARATE GRIPPER-KINEMATICS STEP"
+    },
+    "right_drive": {
+      "members": [
+        "Gripper_Right_Drive_Link"
+      ],
+      "visual_mesh_zero_reference_in_gripper_frame": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\gripper_internal_zero_reference\\right_drive_visual.stl",
+      "collision_mesh_zero_reference_in_gripper_frame": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\gripper_internal_zero_reference\\right_drive_collision.stl",
+      "visual_facets": 5216,
+      "collision_facets": 5216,
+      "status": "RIGID MEMBERSHIP DEFINED; INTERNAL JOINT/PIVOT FRAME EXPORT IS A SEPARATE GRIPPER-KINEMATICS STEP"
+    },
+    "left_finger": {
+      "members": [
+        "Gripper_Left_Finger",
+        "Gripper_Hardware_02",
+        "Gripper_Hardware_05",
+        "Gripper_Hardware_11",
+        "Gripper_Hardware_13",
+        "Gripper_Hardware_14"
+      ],
+      "visual_mesh_zero_reference_in_gripper_frame": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\gripper_internal_zero_reference\\left_finger_visual.stl",
+      "collision_mesh_zero_reference_in_gripper_frame": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\gripper_internal_zero_reference\\left_finger_collision.stl",
+      "visual_facets": 13752,
+      "collision_facets": 6260,
+      "status": "RIGID MEMBERSHIP DEFINED; INTERNAL JOINT/PIVOT FRAME EXPORT IS A SEPARATE GRIPPER-KINEMATICS STEP"
+    },
+    "right_finger": {
+      "members": [
+        "Gripper_Right_Finger",
+        "Gripper_Hardware_01",
+        "Gripper_Hardware_06",
+        "Gripper_Hardware_12",
+        "Gripper_Hardware_17",
+        "Gripper_Hardware_18",
+        "Gripper_Hardware_19"
+      ],
+      "visual_mesh_zero_reference_in_gripper_frame": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\gripper_internal_zero_reference\\right_finger_visual.stl",
+      "collision_mesh_zero_reference_in_gripper_frame": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\gripper_internal_zero_reference\\right_finger_collision.stl",
+      "visual_facets": 16336,
+      "collision_facets": 6260,
+      "status": "RIGID MEMBERSHIP DEFINED; INTERNAL JOINT/PIVOT FRAME EXPORT IS A SEPARATE GRIPPER-KINEMATICS STEP"
+    }
+  },
+  "gripper_internal_policy": {
+    "gripper_main_link_contains_only_static_members": true,
+    "moving_roles_are_not_merged_into_gripper": true,
+    "complete_zero_reference_mesh": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\gripper_internal_zero_reference\\gripper_complete_zero_reference.stl",
+    "complete_zero_reference_is_not_a_valid_single_link": true
+  },
+  "go_m8010_split": {
+    "output_visual_solid_indices": [
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      32,
+      34
+    ],
+    "neutral_visual_solid_indices": [
+      31
+    ],
+    "stator_rule": "all remaining solids",
+    "output_collision_indices": [
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      34
+    ],
+    "basis": "V4 independently QA'd BRep solid split; negative-volume solid 32 excluded from collision only"
+  },
+  "unexported_or_reference_objects": [
+    {
+      "source_group": "J1_Fixed_Rigid",
+      "object": "Joint_Motor_GO_M8010_6",
+      "reason": "complete_motor_source_replaced_by_audited_BRep_solid_split"
+    },
+    {
+      "source_group": "J1_Moving_Rigid",
+      "object": "J2_Left_Joint_Motor_GO_M8010_6",
+      "reason": "complete_motor_source_replaced_by_audited_BRep_solid_split"
+    },
+    {
+      "source_group": "J1_Moving_Rigid",
+      "object": "J2_Right_Joint_Motor_GO_M8010_6",
+      "reason": "complete_motor_source_replaced_by_audited_BRep_solid_split"
+    },
+    {
+      "source_group": "J1_Moving_Rigid",
+      "object": "J2_Left_Motor_Nominal_Envelope",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J1_Moving_Rigid",
+      "object": "J2_Right_Motor_Nominal_Envelope",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J1_Moving_Rigid",
+      "object": "J2_Centred_Limit_Arc_Reference",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J1_Moving_Rigid",
+      "object": "J2_Side_12xM4_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J1_Moving_Rigid",
+      "object": "J23_Canonical_Axis_Reference",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J2_Driven_Reference_Rigid",
+      "object": "J2_Zero_Direction_Reference",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J2_Driven_Reference_Rigid",
+      "object": "UpperArm_Sleeve_Fit_Proxy",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J2_Driven_Reference_Rigid",
+      "object": "UpperArm_Motion_Collision_Proxy",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J2_Driven_Reference_Rigid",
+      "object": "UpperArm_Lap_A_Upper_Proxy",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J2_Driven_Reference_Rigid",
+      "object": "UpperArm_Lap_B_Lower_Proxy",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J2_Driven_Reference_Rigid",
+      "object": "UpperArm_Original_6xDia3_Interface_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J2_Driven_Reference_Rigid",
+      "object": "UpperArm_Derived_6xM35_PCD89_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J2_Driven_Reference_Rigid",
+      "object": "J3_Distal_Axis_Reference",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J2_Driven_Reference_Rigid",
+      "object": "J3_UpperArm_End_Interface_Proxy",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J2_Driven_Reference_Rigid",
+      "object": "J3_Original_6xDia4_PCD34p088_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J2_Driven_Reference_Rigid",
+      "object": "J3_Derived_6xM4_PCD34p5_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J3_Driven_Rigid",
+      "object": "J3_Motor_OutputFace_8xM35_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J3_Driven_Rigid",
+      "object": "J3_Motor_RearFace_8xM35_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J3_Driven_Rigid",
+      "object": "J3_Positive_Direction_Marker",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J3_Driven_Rigid",
+      "object": "Forearm_Proximal_Derived_PCD85_Interface",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J3_Driven_Rigid",
+      "object": "Forearm_Proximal_Original_8xDia3_PCD84p848_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J3_Driven_Rigid",
+      "object": "Forearm_Proximal_Derived_6xM35_PCD85_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J3_Driven_Rigid",
+      "object": "J4_Motor_RearFace_8xM35_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J3_Driven_Rigid",
+      "object": "Forearm_Distal_J4_Derived_6xM35_PCD85_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J4_Driven_Rigid",
+      "object": "J4_Output_Derived_6xM4_PCD34p5_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J4_Driven_Rigid",
+      "object": "J4_Output_Direction_Witness",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J4_Driven_Rigid",
+      "object": "Wrist_Prelink_Source_6xM4_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J4_Driven_Rigid",
+      "object": "Wrist_Prelink_Future_J5_6xM35_PCD85_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J4_Driven_Rigid",
+      "object": "J5_Motor_RearFace_8xM35_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J5_Driven_Rigid",
+      "object": "J5_Output_Derived_6xM4_PCD34p5_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J5_Driven_Rigid",
+      "object": "J5_Output_Direction_Witness",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J5_Driven_Rigid",
+      "object": "Future_J6_Interface_Frame_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J5_Driven_Rigid",
+      "object": "J5_Adapter_Input_Actual_6Hole_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J5_Driven_Rigid",
+      "object": "Future_J6_Actual_3Hole_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J5_Driven_Rigid",
+      "object": "Future_J6_Interface_Frame",
+      "reason": "metadata_controller_or_joint_frame_no_exportable_geometry"
+    },
+    {
+      "source_group": "J5_Driven_Rigid",
+      "object": "J6_DM_G6220_Mount_3xM4_PCD60_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J6_Driven_Rigid",
+      "object": "J6_DM_G6220_Output_6xM4_PCD28_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J6_Driven_Rigid",
+      "object": "J6_DM_G6220_Output_Frame_Axes",
+      "reason": "reference_axis_envelope_witness_or_redundant_engineering_proxy"
+    },
+    {
+      "source_group": "J6_Driven_Rigid",
+      "object": "J6_Output_Interface_Frame",
+      "reason": "metadata_controller_or_joint_frame_no_exportable_geometry"
+    },
+    {
+      "source_group": "J6_Driven_Rigid",
+      "object": "J6_Gripper_Assembly",
+      "reason": "nested_assembly_classified_separately"
+    },
+    {
+      "source_group": "J6_Gripper_Assembly",
+      "object": "Gripper_Servo_Controller",
+      "reason": "metadata_controller_or_joint_frame_no_exportable_geometry"
+    }
+  ],
+  "physics_status": {
+    "mass_center_of_mass_inertia": "PENDING PHYSICAL MEASUREMENT; NOT GUESSED",
+    "velocity_effort_limits": "PENDING VERIFIED MOTOR/REDUCER DATA; NOT GUESSED",
+    "mujoco_contact_exclusions": "PENDING TRANSFER FROM V14 DESIGNED-CONTACT AUDIT",
+    "tool0_tcp": "NOT DEFINED; REQUIRES PHYSICAL TASK-FRAME MEASUREMENT"
+  },
+  "known_preserved_interface_residuals_mm": {
+    "DM_stator_3hole_max_axis_error": 0.0021585046047673,
+    "connector_6hole_max_axis_error": 0.1897206562832246,
+    "clevis_max_cross_axis_error": 0.4485390535734353,
+    "clevis_radial_clearance_remaining": 0.0514609464265647
+  },
+  "artifacts": {
+    "membership_csv": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\rigid_link_membership.csv",
+    "qa_json": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\qa_rigid_link_export.json",
+    "readme": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\README.md",
+    "ros2_staging": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\ros2\\rigid_link_tree_staging.json",
+    "mujoco_staging": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\rigid_links_v15_13\\mujoco\\rigid_body_tree_staging.json"
+  }
+}

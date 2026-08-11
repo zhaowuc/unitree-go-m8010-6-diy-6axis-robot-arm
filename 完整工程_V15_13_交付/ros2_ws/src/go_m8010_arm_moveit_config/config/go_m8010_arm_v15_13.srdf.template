@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="go_m8010_arm_v15_13">
+  <group name="arm"><chain base_link="base_link" tip_link="gripper"/></group>
+  <group_state name="camera_up_zero" group="arm">
+    <joint name="J1" value="0"/><joint name="J2" value="0"/>
+    <joint name="J3" value="0"/><joint name="J4" value="0"/>
+    <joint name="J5" value="0"/><joint name="J6" value="0"/>
+  </group_state>
+  <!-- Do not blanket-disable adjacent-link collisions. Generate/inspect ACM in Setup Assistant. -->
+</robot>

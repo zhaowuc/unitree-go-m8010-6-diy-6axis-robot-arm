@@ -1,0 +1,57 @@
+# Python
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# ROS 2 / colcon
+build/
+install/
+log/
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Operating systems
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+~$*
+
+# MuJoCo runtime caches
+mujoco_cache/
+cache/
+
+# Local environments and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+credentials*
+secrets*
+token*
+
+# Generated delivery archives and old CAD backups.
+# Their extracted/current source trees are committed; the files are not deleted locally.
+*.zip
+*.zip.sha256
+*.FCBak
+*.fcbak
+

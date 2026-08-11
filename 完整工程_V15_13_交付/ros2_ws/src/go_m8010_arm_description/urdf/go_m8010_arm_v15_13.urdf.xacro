@@ -1,0 +1,161 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="go_m8010_arm_v15_13">
+  <!-- Geometry/kinematics are verified. Effort and velocity default to 0 (fail-closed). -->
+  <xacro:arg name="mesh_prefix" default="package://go_m8010_arm_description/meshes"/>
+  <xacro:arg name="j1_effort_nm" default="0.0"/>
+  <xacro:arg name="j1_velocity_rad_s" default="0.0"/>
+  <xacro:arg name="j2_effort_nm" default="0.0"/>
+  <xacro:arg name="j2_velocity_rad_s" default="0.0"/>
+  <xacro:arg name="j3_effort_nm" default="0.0"/>
+  <xacro:arg name="j3_velocity_rad_s" default="0.0"/>
+  <xacro:arg name="j4_effort_nm" default="0.0"/>
+  <xacro:arg name="j4_velocity_rad_s" default="0.0"/>
+  <xacro:arg name="j5_effort_nm" default="0.0"/>
+  <xacro:arg name="j5_velocity_rad_s" default="0.0"/>
+  <xacro:arg name="j6_effort_nm" default="0.0"/>
+  <xacro:arg name="j6_velocity_rad_s" default="0.0"/>
+  <material name="arm_visual"><color rgba="0.55 0.18 0.22 1"/></material>
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="$(arg mesh_prefix)/visual/base_link.stl" scale="0.001 0.001 0.001"/></geometry>
+      <material name="arm_visual"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="$(arg mesh_prefix)/collision/base_link.stl" scale="0.001 0.001 0.001"/></geometry>
+    </collision>
+    <!-- Inertial intentionally omitted until measured mass/COM/inertia are supplied. -->
+  </link>
+  <link name="link1">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="$(arg mesh_prefix)/visual/link1.stl" scale="0.001 0.001 0.001"/></geometry>
+      <material name="arm_visual"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="$(arg mesh_prefix)/collision/link1.stl" scale="0.001 0.001 0.001"/></geometry>
+    </collision>
+    <!-- Inertial intentionally omitted until measured mass/COM/inertia are supplied. -->
+  </link>
+  <link name="link2">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="$(arg mesh_prefix)/visual/link2.stl" scale="0.001 0.001 0.001"/></geometry>
+      <material name="arm_visual"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="$(arg mesh_prefix)/collision/link2.stl" scale="0.001 0.001 0.001"/></geometry>
+    </collision>
+    <!-- Inertial intentionally omitted until measured mass/COM/inertia are supplied. -->
+  </link>
+  <link name="link3">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="$(arg mesh_prefix)/visual/link3.stl" scale="0.001 0.001 0.001"/></geometry>
+      <material name="arm_visual"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="$(arg mesh_prefix)/collision/link3.stl" scale="0.001 0.001 0.001"/></geometry>
+    </collision>
+    <!-- Inertial intentionally omitted until measured mass/COM/inertia are supplied. -->
+  </link>
+  <link name="link4">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="$(arg mesh_prefix)/visual/link4.stl" scale="0.001 0.001 0.001"/></geometry>
+      <material name="arm_visual"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="$(arg mesh_prefix)/collision/link4.stl" scale="0.001 0.001 0.001"/></geometry>
+    </collision>
+    <!-- Inertial intentionally omitted until measured mass/COM/inertia are supplied. -->
+  </link>
+  <link name="link5">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="$(arg mesh_prefix)/visual/link5.stl" scale="0.001 0.001 0.001"/></geometry>
+      <material name="arm_visual"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="$(arg mesh_prefix)/collision/link5.stl" scale="0.001 0.001 0.001"/></geometry>
+    </collision>
+    <!-- Inertial intentionally omitted until measured mass/COM/inertia are supplied. -->
+  </link>
+  <link name="link6">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="$(arg mesh_prefix)/visual/link6.stl" scale="0.001 0.001 0.001"/></geometry>
+      <material name="arm_visual"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="$(arg mesh_prefix)/collision/link6.stl" scale="0.001 0.001 0.001"/></geometry>
+    </collision>
+    <!-- Inertial intentionally omitted until measured mass/COM/inertia are supplied. -->
+  </link>
+  <link name="gripper">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="$(arg mesh_prefix)/visual/gripper.stl" scale="0.001 0.001 0.001"/></geometry>
+      <material name="arm_visual"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><mesh filename="$(arg mesh_prefix)/collision/gripper.stl" scale="0.001 0.001 0.001"/></geometry>
+    </collision>
+    <!-- Inertial intentionally omitted until measured mass/COM/inertia are supplied. -->
+  </link>
+  <joint name="J1" type="continuous">
+    <parent link="base_link"/>
+    <child link="link1"/>
+    <origin xyz="0 0 0" rpy="-2.77555756156289e-17 -0 0"/>
+    <axis xyz="0 -2.77555756156289e-17 1"/>
+    <limit effort="$(arg j1_effort_nm)" velocity="$(arg j1_velocity_rad_s)"/>
+  </joint>
+  <joint name="J2" type="revolute">
+    <parent link="link1"/>
+    <child link="link2"/>
+    <origin xyz="-1.19529999999846e-06 -0.000348645100000006 0.092639782" rpy="-2.77555756156289e-17 -0 0"/>
+    <axis xyz="0 1 -2.77555756156289e-17"/>
+    <limit lower="-2.96705972839036" upper="2.96705972839036" effort="$(arg j2_effort_nm)" velocity="$(arg j2_velocity_rad_s)"/>
+  </joint>
+  <joint name="J3" type="revolute">
+    <parent link="link2"/>
+    <child link="link3"/>
+    <origin xyz="-0.248601759363284 -0.0360000000000005 1.67815400527331e-05" rpy="-2.77555756156289e-17 -0 0"/>
+    <axis xyz="0 1 -2.77555756156289e-17"/>
+    <limit lower="-2.96705972839036" upper="2.96705972839036" effort="$(arg j3_effort_nm)" velocity="$(arg j3_velocity_rad_s)"/>
+  </joint>
+  <joint name="J4" type="revolute">
+    <parent link="link3"/>
+    <child link="link4"/>
+    <origin xyz="-0.202346021849608 -3.6969356019974e-17 0.0519614239654557" rpy="-1.56760549790764e-15 -1.5530896869224 2.15005669337953e-11"/>
+    <axis xyz="3.80682902749686e-13 1 -4.91432301547264e-19"/>
+    <limit lower="-2.02458193231342" upper="2.77507351067098" effort="$(arg j4_effort_nm)" velocity="$(arg j4_velocity_rad_s)"/>
+  </joint>
+  <joint name="J5" type="revolute">
+    <parent link="link4"/>
+    <child link="link5"/>
+    <origin xyz="0.00930000012983338 0.0320000209058991 0.097898948000751" rpy="-0.837746478487614 -0 3.80682902749686e-13"/>
+    <axis xyz="1 0 -1.59232002583387e-13"/>
+    <limit lower="-1.232202451908" upper="2.63893782901543" effort="$(arg j5_effort_nm)" velocity="$(arg j5_velocity_rad_s)"/>
+  </joint>
+  <joint name="J6" type="revolute">
+    <parent link="link5"/>
+    <child link="link6"/>
+    <origin xyz="-0.0109991955299831 -0.000147148457748934 0.0995275274114727" rpy="-1.11022302462516e-16 -6.16297582203915e-33 3.14159265358979"/>
+    <axis xyz="-1.59232002583387e-13 6.09321620936853e-17 1"/>
+    <limit lower="-3.14159265358979" upper="3.14159265358979" effort="$(arg j6_effort_nm)" velocity="$(arg j6_velocity_rad_s)"/>
+  </joint>
+  <joint name="J6_to_gripper" type="fixed">
+    <parent link="link6"/>
+    <child link="gripper"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+</robot>

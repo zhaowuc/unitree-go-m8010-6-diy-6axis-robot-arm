@@ -1,0 +1,17 @@
+# This repository intentionally stores model assets as ordinary Git objects.
+# Generated delivery archives and obsolete backups remain excluded by .gitignore.
+*.step binary
+*.STEP binary
+*.stp binary
+*.STP binary
+*.FCStd binary
+*.fcstd binary
+*.stl binary
+*.STL binary
+*.obj binary
+*.dae binary
+*.glb binary
+*.mp4 binary
+*.pdf binary
+*.PDF binary
+*.m4s binary

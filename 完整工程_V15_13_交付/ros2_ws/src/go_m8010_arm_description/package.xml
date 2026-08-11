@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>go_m8010_arm_description</name>
+  <version>15.13.0</version>
+  <description>Verified V15.13 geometry and kinematic frames for the GO-M8010 arm.</description>
+  <maintainer email="replace@after.measurement.invalid">V15.13 handoff</maintainer>
+  <license>Proprietary project data</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+</package>

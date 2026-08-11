@@ -1,0 +1,67 @@
+{
+  "status": "PASS",
+  "source_v15_immutable": true,
+  "source_v15_sha256_before": "B4A02A97AFAFF88E246A46340DAD4CACD3C645A7456FDD087A69552E14D3DDC0",
+  "source_v15_sha256_after": "B4A02A97AFAFF88E246A46340DAD4CACD3C645A7456FDD087A69552E14D3DDC0",
+  "source_axes_json_sha256": "9B46C1FD816530235E80C453587E58E62A1DCCF1828C72C3867CC8DF720EE5A9",
+  "output_fcstd": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\机械臂完整装配_六轴_刚性Link拆分_v15_13.FCStd",
+  "output_fcstd_sha256": "2AE05FAB2A15C5C75BB05DB8B456F149DA20F79CEDBA2FC8D47F1624BCEC34C7",
+  "link_count_excluding_world": 8,
+  "main_chain": [
+    "base_link",
+    "link1",
+    "link2",
+    "link3",
+    "link4",
+    "link5",
+    "link6",
+    "gripper"
+  ],
+  "all_main_link_assets_nonempty": true,
+  "unique_visual_direct_object_ownership": true,
+  "unique_visual_derived_component_ownership": true,
+  "J6_type": "revolute",
+  "J6_lower_rad": -3.141592653589793,
+  "J6_upper_rad": 3.141592653589793,
+  "J6_plus_minus_180_verified": true,
+  "fasteners_are_members_not_links": true,
+  "full_go_m8010_objects_not_exported_unsplit": true,
+  "go_m8010_split_rule": {
+    "output_visual_solid_indices": [
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      32,
+      34
+    ],
+    "neutral_visual_solid_indices": [
+      31
+    ],
+    "stator_rule": "all remaining solids",
+    "output_collision_indices": [
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      34
+    ],
+    "basis": "V4 independently QA'd BRep solid split; negative-volume solid 32 excluded from collision only"
+  },
+  "gripper_static_not_contaminated_by_moving_roles": true,
+  "gripper_internal_roles": [
+    "left_drive",
+    "left_finger",
+    "left_outer",
+    "right_drive",
+    "right_finger",
+    "right_outer"
+  ],
+  "unexported_classified_count": 44
+}

@@ -1,0 +1,9 @@
+runtime_collision_guard_required: true
+freecad_reference_guard: j123456_camera_physical_collision_guard_v15_13.py
+continuous_trajectory_validation_required: true
+automatically_disable_all_adjacent_links: false
+reason: >-
+  The full 6-D joint space is non-rectangular. Five collisions were found in
+  150 deterministic coupled samples even though all independent scans passed.
+  Designed stator/output contacts are component-level exclusions and must not
+  be converted into blanket adjacent-link exclusions without validation.
