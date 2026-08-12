@@ -1,0 +1,1501 @@
+{
+  "schema": "go-m8010-arm-v15.15-mass-ledger-v1/1.0",
+  "revision": "V15.15-MASS_LEDGER_V1",
+  "source_branch": "agent/v15-14-trajectory-loop",
+  "source_commit": "d284bd68388bc61aa1a7badce6fcaa6437a820c5",
+  "target_branch": "agent/v15-15-mass-ledger-v1",
+  "measurement_authority": "USER_PHYSICAL_SCALE",
+  "scope": "LINK2_TO_GRIPPER_MASS_ONLY_NO_COM_NO_INERTIA",
+  "units": {
+    "mass": "kg"
+  },
+  "scale_uncertainty": {
+    "direct_single_measurement_abs_kg": 0.005,
+    "authority": "USER_SCALE_MAX_SINGLE_READING_ERROR"
+  },
+  "status_definitions": {
+    "MEASURED": "Direct leaf assembly measurement with a confirmed bookkeeping boundary.",
+    "MEASURED_TOTAL": "Direct complete-motor or nested compound total; non-additive when its split/children are used.",
+    "DERIVED_FROM_MEASURED_TOTAL": "Nominal residual from confirmed compound totals; not an independent scale reading.",
+    "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL": "Frozen V1 allocation of a measured complete motor; not a disassembled or vendor-official measurement.",
+    "INCLUDED_NO_SEPARATE_MASS": "Physical CAD members covered by an explicit V1 boundary policy; not zero physical mass and not independently added."
+  },
+  "git_scope_guard": {
+    "current_branch": "agent/v15-15-mass-ledger-v1",
+    "source_branch": "agent/v15-14-trajectory-loop",
+    "source_commit": "d284bd68388bc61aa1a7badce6fcaa6437a820c5",
+    "source_tree": "49574af97884b8ec9ab05c7cc1fd36e2a586f62c",
+    "changed_paths": [
+      "V15_15_实测质量映射契约.json",
+      "V15_15_实测质量映射说明.md",
+      "V15_15_实测质量账本_v1.json",
+      "V15_15_实测质量账本_v1.md",
+      "tools/build_mass_mapping_v15_15.py",
+      "tools/validate_mass_ledger_v15_15.py"
+    ],
+    "allowed_changed_paths": [
+      "V15_15_实测质量映射契约.json",
+      "V15_15_实测质量映射说明.md",
+      "V15_15_实测质量账本_v1.json",
+      "V15_15_实测质量账本_v1.md",
+      "tools/build_mass_mapping_v15_15.py",
+      "tools/validate_mass_ledger_v15_15.py"
+    ],
+    "unexpected_changed_paths": [],
+    "pass": true
+  },
+  "frozen_baseline_guard": {
+    "protected_inputs": [
+      {
+        "path": "rigid_links_v15_13/rigid_link_membership.csv",
+        "sha256_before": "9a93b5a4494a67584bfda6eb0067ef0e75928bfbae77fd6e411ba1e15e9d70f3",
+        "sha256_after": "9a93b5a4494a67584bfda6eb0067ef0e75928bfbae77fd6e411ba1e15e9d70f3",
+        "hash_mode": "UTF8_LF_CANONICAL_BYTES",
+        "unchanged": true,
+        "matches_review_baseline": true
+      },
+      {
+        "path": "rigid_links_v15_13/rigid_link_manifest.json",
+        "sha256_before": "cacf017aaa73e18658869896aaa79cba40938bb18d2cb56d8759ab32c5bb3ef9",
+        "sha256_after": "cacf017aaa73e18658869896aaa79cba40938bb18d2cb56d8759ab32c5bb3ef9",
+        "hash_mode": "UTF8_LF_CANONICAL_BYTES",
+        "unchanged": true,
+        "matches_review_baseline": true
+      },
+      {
+        "path": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+        "sha256_before": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0",
+        "sha256_after": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0",
+        "hash_mode": "RAW_BYTES",
+        "unchanged": true,
+        "matches_review_baseline": true
+      },
+      {
+        "path": "机械臂完整装配_六轴_刚性Link拆分_v15_13.FCStd",
+        "sha256_before": "2ae05fab2a15c5c75bb05db8b456f149da20f79cedba2fc8d47f1624bcec34c7",
+        "sha256_after": "2ae05fab2a15c5c75bb05db8b456f149da20f79cedba2fc8d47f1624bcec34c7",
+        "hash_mode": "RAW_BYTES",
+        "unchanged": true,
+        "matches_review_baseline": true
+      },
+      {
+        "path": "完整工程_V15_13_交付/ros2_ws/src/go_m8010_arm_description/urdf/go_m8010_arm_v15_13.urdf.xacro",
+        "sha256_before": "fec9863b45addbea15f66ff617e42d6c9a2c06170c240e8ce51361e2b3fe0fdf",
+        "sha256_after": "fec9863b45addbea15f66ff617e42d6c9a2c06170c240e8ce51361e2b3fe0fdf",
+        "hash_mode": "UTF8_LF_CANONICAL_BYTES",
+        "unchanged": true,
+        "matches_review_baseline": true
+      },
+      {
+        "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_v15_14_description/urdf/go_m8010_arm_v15_14.urdf.xacro",
+        "sha256_before": "f9c15d366e27bef76eeafd44efcca0de96d2f4e944584fcc74c9764a198a914c",
+        "sha256_after": "f9c15d366e27bef76eeafd44efcca0de96d2f4e944584fcc74c9764a198a914c",
+        "hash_mode": "UTF8_LF_CANONICAL_BYTES",
+        "unchanged": true,
+        "matches_review_baseline": true
+      },
+      {
+        "path": "mujoco_kinematic_v1/go_m8010_arm_v15_13_kinematic.xml",
+        "sha256_before": "26f9e0efe10b7d208378d816540098625a34826069fdf7bbafc1db94cf073941",
+        "sha256_after": "26f9e0efe10b7d208378d816540098625a34826069fdf7bbafc1db94cf073941",
+        "hash_mode": "UTF8_LF_CANONICAL_BYTES",
+        "unchanged": true,
+        "matches_review_baseline": true
+      },
+      {
+        "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/mujoco_v15_14/go_m8010_arm_v15_14_kinematic.xml",
+        "sha256_before": "f086d27c61aa3be02234356af6fd8fcf269a3e3b65bdeb08cd04435ba679f0b0",
+        "sha256_after": "f086d27c61aa3be02234356af6fd8fcf269a3e3b65bdeb08cd04435ba679f0b0",
+        "hash_mode": "UTF8_LF_CANONICAL_BYTES",
+        "unchanged": true,
+        "matches_review_baseline": true
+      },
+      {
+        "path": "V15_13_自碰撞对矩阵契约.json",
+        "sha256_before": "b95d95f89d8792080c2ff50c55a4054be44fffe4d2916b49e382bde6600ef1d0",
+        "sha256_after": "b95d95f89d8792080c2ff50c55a4054be44fffe4d2916b49e382bde6600ef1d0",
+        "hash_mode": "UTF8_LF_CANONICAL_BYTES",
+        "unchanged": true,
+        "matches_review_baseline": true
+      },
+      {
+        "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/config/accepted_frozen_contract_v15_13.json",
+        "sha256_before": "a6434ddb448f749eeaefeab3313fb2692fb5c7535270da0946f5ba317b48b496",
+        "sha256_after": "a6434ddb448f749eeaefeab3313fb2692fb5c7535270da0946f5ba317b48b496",
+        "hash_mode": "UTF8_LF_CANONICAL_BYTES",
+        "unchanged": true,
+        "matches_review_baseline": true
+      }
+    ],
+    "all_protected_inputs_unchanged": true,
+    "all_protected_inputs_match_review_baseline": true,
+    "frozen_joint_canonical_sha256": {
+      "V15.13": {
+        "J1": "9f5139d5304b6440a2d382449cbf7f14554a5b4c3c95140da6f23c4648626eff",
+        "J2": "34220de19f3c2c7f2e5a8dac3bbec6edaf4caec688f4f1875b6e6f371f3f16fc",
+        "J3": "2ed43661b0257acf5980412cf967396cb7d8fec65998be902845e1a695c3e634",
+        "J4": "8fc2a20e9cfe6c06d8ca204c44d42e6b253a534eb9f608a0c15c2eace76457f7",
+        "J5": "79d1f4fc8462baa22f0ee9ca8ac56957e42010c529e52ab73ddaabdd3c5fe75c",
+        "J6": "df2d3cf1e80850a13c7d98331cb6fa006c11fbf938caa1eb966773d9f3f1c91e",
+        "J6_to_gripper": "feafb2a3f0db191b976faf680689663ad367d5652fbdc84215857068e6e6de3d",
+        "gripper_to_tcp_nominal": "878e384608d6be17824c5a34f12826338eabe2fa3170e01be0d20fa931e75f0c",
+        "gripper_to_camera_link": "de3c2a796e6806d029a2454f0f8cc93320daa83fb4ff150d3c76872ede46cbc1",
+        "camera_link_to_sim_camera_optical_frame": "e2dc445ba877b22281aff329beb61c4765e601c8abbecf5ced8e9474d37b1f27"
+      },
+      "V15.14": {
+        "J1": "9f5139d5304b6440a2d382449cbf7f14554a5b4c3c95140da6f23c4648626eff",
+        "J2": "34220de19f3c2c7f2e5a8dac3bbec6edaf4caec688f4f1875b6e6f371f3f16fc",
+        "J3": "2ed43661b0257acf5980412cf967396cb7d8fec65998be902845e1a695c3e634",
+        "J4": "8fc2a20e9cfe6c06d8ca204c44d42e6b253a534eb9f608a0c15c2eace76457f7",
+        "J5": "79d1f4fc8462baa22f0ee9ca8ac56957e42010c529e52ab73ddaabdd3c5fe75c",
+        "J6": "df2d3cf1e80850a13c7d98331cb6fa006c11fbf938caa1eb966773d9f3f1c91e",
+        "J6_to_gripper": "feafb2a3f0db191b976faf680689663ad367d5652fbdc84215857068e6e6de3d",
+        "gripper_to_tcp_nominal": "878e384608d6be17824c5a34f12826338eabe2fa3170e01be0d20fa931e75f0c",
+        "gripper_to_camera_link": "de3c2a796e6806d029a2454f0f8cc93320daa83fb4ff150d3c76872ede46cbc1",
+        "camera_link_to_sim_camera_optical_frame": "e2dc445ba877b22281aff329beb61c4765e601c8abbecf5ced8e9474d37b1f27"
+      }
+    },
+    "all_frozen_joint_elements_unchanged": true,
+    "kinematics_tf_collision_control_files_modified": false,
+    "com_inertia_gravity_written": false
+  },
+  "topology": {
+    "tree": "world -> base_link -> J1 -> link1 -> J2 -> link2 -> J3 -> link3 -> J4 -> link4 -> J5 -> link5 -> J6 -> link6 -> fixed -> gripper",
+    "topology_modified": false,
+    "scope_links": [
+      "link2",
+      "link3",
+      "link4",
+      "link5",
+      "link6",
+      "gripper"
+    ]
+  },
+  "motor_mass_models": {
+    "GO_M8010_6_V1": {
+      "measurement_id": "M_GO_M8010_COMPLETE_WITH_WIRING",
+      "measured_total_kg": 0.54,
+      "measured_total_status": "MEASURED_TOTAL",
+      "scale_uncertainty_abs_kg": 0.005,
+      "output_equivalent_kg": 0.07,
+      "stator_core_equivalent_kg": 0.47,
+      "split_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+      "split_uncertainty_kg": null,
+      "split_uncertainty_status": "UNQUANTIFIED_ENGINEERING_MODEL",
+      "neutral_b6808_policy": "included inside output equivalent; no additional mass",
+      "attached_wire_policy": "included inside the measured complete-motor/stator-core model; must not be independently added again"
+    },
+    "DM_G6220_V1": {
+      "measurement_id": "M_DM_G6220_COMPLETE",
+      "measured_total_kg": 0.5,
+      "measured_total_status": "MEASURED_TOTAL",
+      "scale_uncertainty_abs_kg": 0.005,
+      "stator_side_kg": 0.375,
+      "output_rotor_side_kg": 0.125,
+      "split_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+      "split_uncertainty_kg": null,
+      "split_uncertainty_status": "UNQUANTIFIED_ENGINEERING_MODEL_NOT_VENDOR_OFFICIAL_SPLIT"
+    }
+  },
+  "direct_measurements": {
+    "upper_arm_print": {
+      "measurement_id": "M_UPPER_ARM_PRINT",
+      "mass_kg": 0.5515,
+      "mass_status": "MEASURED",
+      "scale_uncertainty_abs_kg": 0.005,
+      "boundary": "UpperArm_A + UpperArm_B; no GO motor"
+    },
+    "forearm_print": {
+      "measurement_id": "M_FOREARM_PRINT",
+      "mass_kg": 0.135,
+      "mass_status": "MEASURED",
+      "scale_uncertainty_abs_kg": 0.005,
+      "boundary": "Forearm_v3_HighDetail_Display; no J3/J4 motor"
+    },
+    "wrist_prelink_print": {
+      "measurement_id": "M_WRIST_PRELINK_PRINT",
+      "mass_kg": 0.089,
+      "mass_status": "MEASURED",
+      "scale_uncertainty_abs_kg": 0.005,
+      "boundary": "Wrist_Prelink_v1_HighDetail_Display; no J4/J5 motor"
+    },
+    "complete_gripper_connector_camera": {
+      "measurement_id": "M_GRIPPER_CONNECTOR_CAMERA_COMPLETE",
+      "mass_kg": 0.296,
+      "mass_status": "MEASURED",
+      "scale_uncertainty_abs_kg": 0.005,
+      "boundary": "connector + complete gripper + Gemini Pro + associated connector hardware"
+    }
+  },
+  "compound_measurements": {
+    "compound_A": {
+      "measurement_id": "M_COMPOUND_A_DM_TO_END",
+      "mass_kg": 0.855,
+      "mass_status": "MEASURED_TOTAL",
+      "scale_uncertainty_abs_kg": 0.005,
+      "accounting_role": "NON_ADDITIVE_CONSTRAINT",
+      "confirmed_contains": [
+        "M_DM_G6220_COMPLETE",
+        "M_GRIPPER_CONNECTOR_CAMERA_COMPLETE",
+        "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING"
+      ]
+    },
+    "compound_B": {
+      "measurement_id": "M_COMPOUND_B_J5_TO_END",
+      "mass_kg": 1.441,
+      "mass_status": "MEASURED_TOTAL",
+      "scale_uncertainty_abs_kg": 0.005,
+      "accounting_role": "NON_ADDITIVE_CONSTRAINT",
+      "confirmed_contains": [
+        "M_COMPOUND_A_DM_TO_END",
+        "M_GO_M8010_COMPLETE_WITH_WIRING",
+        "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING"
+      ]
+    },
+    "compound_C": {
+      "measurement_id": "M_COMPOUND_C_FOREARM_TO_END",
+      "mass_kg": 2.22,
+      "mass_status": "MEASURED_TOTAL",
+      "scale_uncertainty_abs_kg": 0.005,
+      "accounting_role": "NON_ADDITIVE_CONSTRAINT",
+      "confirmed_contains": [
+        "M_FOREARM_PRINT",
+        "M_GO_M8010_COMPLETE_WITH_WIRING",
+        "M_WRIST_PRELINK_PRINT",
+        "M_COMPOUND_B_J5_TO_END",
+        "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING"
+      ],
+      "J3_motor_included": false
+    }
+  },
+  "measurement_dependency_graph": {
+    "confirmed_contains_edges": [
+      {
+        "parent": "M_COMPOUND_A_DM_TO_END",
+        "children": [
+          "M_DM_G6220_COMPLETE",
+          "M_GRIPPER_CONNECTOR_CAMERA_COMPLETE",
+          "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING"
+        ]
+      },
+      {
+        "parent": "M_COMPOUND_B_J5_TO_END",
+        "children": [
+          "M_COMPOUND_A_DM_TO_END",
+          "M_GO_M8010_COMPLETE_WITH_WIRING",
+          "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING"
+        ]
+      },
+      {
+        "parent": "M_COMPOUND_C_FOREARM_TO_END",
+        "children": [
+          "M_FOREARM_PRINT",
+          "M_GO_M8010_COMPLETE_WITH_WIRING",
+          "M_WRIST_PRELINK_PRINT",
+          "M_COMPOUND_B_J5_TO_END",
+          "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING"
+        ]
+      }
+    ],
+    "is_dag": true,
+    "parent_totals_are_non_additive": true
+  },
+  "residuals": {
+    "residual_A": {
+      "residual_id": "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING",
+      "nominal_mass_kg": 0.059,
+      "mass_status": "DERIVED_FROM_MEASURED_TOTAL",
+      "owner_link": "link5",
+      "equation": "0.855 - 0.500 - 0.296",
+      "terms": [
+        {
+          "id": "M_COMPOUND_A_DM_TO_END",
+          "sign": 1
+        },
+        {
+          "id": "M_DM_G6220_COMPLETE",
+          "sign": -1
+        },
+        {
+          "id": "M_GRIPPER_CONNECTOR_CAMERA_COMPLETE",
+          "sign": -1
+        }
+      ],
+      "conservative_closure_uncertainty_abs_kg": 0.015,
+      "uncertainty_type": "CLOSURE_UNCERTAINTY_NOT_DYNAMICS_IDENTIFICATION_ERROR",
+      "candidate_cad_members": [
+        "J5_to_Damiao_J6_Adapter_STL_Display",
+        "Adapter_DM_G6220_M4x12_Screw_01",
+        "Adapter_DM_G6220_M4x12_Screw_02",
+        "Adapter_DM_G6220_M4x12_Screw_03"
+      ],
+      "cad_owner_validation": "PASS"
+    },
+    "residual_B": {
+      "residual_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING",
+      "nominal_mass_kg": 0.046,
+      "mass_status": "DERIVED_FROM_MEASURED_TOTAL",
+      "owner_link": "link4",
+      "equation": "1.441 - 0.855 - 0.540",
+      "terms": [
+        {
+          "id": "M_COMPOUND_B_J5_TO_END",
+          "sign": 1
+        },
+        {
+          "id": "M_COMPOUND_A_DM_TO_END",
+          "sign": -1
+        },
+        {
+          "id": "M_GO_M8010_COMPLETE_WITH_WIRING",
+          "sign": -1
+        }
+      ],
+      "conservative_closure_uncertainty_abs_kg": 0.015,
+      "uncertainty_type": "CLOSURE_UNCERTAINTY_NOT_DYNAMICS_IDENTIFICATION_ERROR",
+      "candidate_cad_members": [
+        "J4_Output_M4_Screw_01",
+        "J4_Output_M4_Screw_02",
+        "J4_Output_M4_Screw_03",
+        "J4_Output_M4_Screw_04",
+        "J4_Output_M4_Screw_05",
+        "J4_Output_M4_Screw_06",
+        "Wrist_Prelink_J5_M35_Screw_01",
+        "Wrist_Prelink_J5_M35_Screw_02",
+        "Wrist_Prelink_J5_M35_Screw_03",
+        "Wrist_Prelink_J5_M35_Screw_04",
+        "Wrist_Prelink_J5_M35_Screw_05",
+        "Wrist_Prelink_J5_M35_Screw_06"
+      ],
+      "cad_owner_validation": "PASS"
+    },
+    "residual_C": {
+      "residual_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING",
+      "nominal_mass_kg": 0.015,
+      "mass_status": "DERIVED_FROM_MEASURED_TOTAL",
+      "owner_link": "link3",
+      "equation": "2.220 - 0.135 - 0.540 - 0.089 - 1.441",
+      "terms": [
+        {
+          "id": "M_COMPOUND_C_FOREARM_TO_END",
+          "sign": 1
+        },
+        {
+          "id": "M_FOREARM_PRINT",
+          "sign": -1
+        },
+        {
+          "id": "M_GO_M8010_COMPLETE_WITH_WIRING",
+          "sign": -1
+        },
+        {
+          "id": "M_WRIST_PRELINK_PRINT",
+          "sign": -1
+        },
+        {
+          "id": "M_COMPOUND_B_J5_TO_END",
+          "sign": -1
+        }
+      ],
+      "conservative_closure_uncertainty_abs_kg": 0.025,
+      "uncertainty_type": "CLOSURE_UNCERTAINTY_NOT_DYNAMICS_IDENTIFICATION_ERROR",
+      "uncertainty_interval_contains_zero": true,
+      "candidate_cad_members": [
+        "Forearm_J3_M35_Screw_01",
+        "Forearm_J3_M35_Screw_02",
+        "Forearm_J3_M35_Screw_03",
+        "Forearm_J3_M35_Screw_04",
+        "Forearm_J3_M35_Screw_05",
+        "Forearm_J3_M35_Screw_06",
+        "Forearm_J4_M35_Screw_01",
+        "Forearm_J4_M35_Screw_02",
+        "Forearm_J4_M35_Screw_03",
+        "Forearm_J4_M35_Screw_04",
+        "Forearm_J4_M35_Screw_05",
+        "Forearm_J4_M35_Screw_06"
+      ],
+      "cad_owner_validation": "PASS"
+    }
+  },
+  "component_to_link_mapping": {
+    "additive_components": [
+      {
+        "component_id": "J2A_OUTPUT_EQ",
+        "name": "J2A GO-M8010 output + neutral equivalent",
+        "nominal_mass_kg": 0.07,
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+        "ledger_link": "link2",
+        "cad_members": [
+          "derived:J2A_GO_M8010_output",
+          "derived:J2A_GO_M8010_neutral"
+        ],
+        "cad_owners": [
+          "link2"
+        ],
+        "geometry_role": "visual",
+        "source_measurement_or_model_id": "MODEL_GO_M8010_V1",
+        "accounting_role": "ADDITIVE_LEAF",
+        "owner_mapping_policy": "DIRECT_CAD_OWNER",
+        "non_cad_scope": [],
+        "notes": "B6808 neutral is included; no separate mass."
+      },
+      {
+        "component_id": "J2B_OUTPUT_EQ",
+        "name": "J2B GO-M8010 output + neutral equivalent",
+        "nominal_mass_kg": 0.07,
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+        "ledger_link": "link2",
+        "cad_members": [
+          "derived:J2B_GO_M8010_output",
+          "derived:J2B_GO_M8010_neutral"
+        ],
+        "cad_owners": [
+          "link2"
+        ],
+        "geometry_role": "visual",
+        "source_measurement_or_model_id": "MODEL_GO_M8010_V1",
+        "accounting_role": "ADDITIVE_LEAF",
+        "owner_mapping_policy": "DIRECT_CAD_OWNER",
+        "non_cad_scope": [],
+        "notes": "B6808 neutral is included; no separate mass."
+      },
+      {
+        "component_id": "J3_OUTPUT_EQ",
+        "name": "J3 GO-M8010 output + neutral equivalent",
+        "nominal_mass_kg": 0.07,
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+        "ledger_link": "link2",
+        "cad_members": [
+          "J3_Output_Rotor_STEP_Display",
+          "J3_B6808_Bearing_Neutral_STEP_Display"
+        ],
+        "cad_owners": [
+          "link2"
+        ],
+        "geometry_role": "visual",
+        "source_measurement_or_model_id": "MODEL_GO_M8010_V1",
+        "accounting_role": "ADDITIVE_LEAF",
+        "owner_mapping_policy": "DIRECT_CAD_OWNER",
+        "non_cad_scope": [],
+        "notes": "B6808 neutral is included; no separate mass."
+      },
+      {
+        "component_id": "UPPER_ARM_PRINT_MEASURED",
+        "name": "J2-J3 upper-arm printed structure",
+        "nominal_mass_kg": 0.5515,
+        "mass_status": "MEASURED",
+        "ledger_link": "link2",
+        "cad_members": [
+          "UpperArm_A_SleeveSide_PrintPart",
+          "UpperArm_B_Distal_PrintPart"
+        ],
+        "cad_owners": [
+          "link2"
+        ],
+        "geometry_role": "visual",
+        "source_measurement_or_model_id": "M_UPPER_ARM_PRINT",
+        "accounting_role": "ADDITIVE_LEAF",
+        "owner_mapping_policy": "DIRECT_CAD_OWNER",
+        "non_cad_scope": [],
+        "notes": "Direct scale measurement; the two print parts remain one unsplit measured group."
+      },
+      {
+        "component_id": "J3_STATOR_EQ",
+        "name": "J3 GO-M8010 stator/core equivalent",
+        "nominal_mass_kg": 0.47,
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+        "ledger_link": "link3",
+        "cad_members": [
+          "J3_Motor_Stator_STEP_Display"
+        ],
+        "cad_owners": [
+          "link3"
+        ],
+        "geometry_role": "visual",
+        "source_measurement_or_model_id": "MODEL_GO_M8010_V1",
+        "accounting_role": "ADDITIVE_LEAF",
+        "owner_mapping_policy": "DIRECT_CAD_OWNER",
+        "non_cad_scope": [],
+        "notes": "Includes the frozen complete-motor wiring boundary; no extra motor wire mass."
+      },
+      {
+        "component_id": "J4_STATOR_EQ",
+        "name": "J4 GO-M8010 stator/core equivalent",
+        "nominal_mass_kg": 0.47,
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+        "ledger_link": "link3",
+        "cad_members": [
+          "J4_Motor_Stator_STEP_Display"
+        ],
+        "cad_owners": [
+          "link3"
+        ],
+        "geometry_role": "visual",
+        "source_measurement_or_model_id": "MODEL_GO_M8010_V1",
+        "accounting_role": "ADDITIVE_LEAF",
+        "owner_mapping_policy": "DIRECT_CAD_OWNER",
+        "non_cad_scope": [],
+        "notes": "Includes the frozen complete-motor wiring boundary; no extra motor wire mass."
+      },
+      {
+        "component_id": "FOREARM_PRINT_MEASURED",
+        "name": "J3-J4 forearm print",
+        "nominal_mass_kg": 0.135,
+        "mass_status": "MEASURED",
+        "ledger_link": "link3",
+        "cad_members": [
+          "Forearm_v3_HighDetail_Display"
+        ],
+        "cad_owners": [
+          "link3"
+        ],
+        "geometry_role": "visual",
+        "source_measurement_or_model_id": "M_FOREARM_PRINT",
+        "accounting_role": "ADDITIVE_LEAF",
+        "owner_mapping_policy": "DIRECT_CAD_OWNER",
+        "non_cad_scope": [],
+        "notes": "Direct scale measurement without J3/J4 motors."
+      },
+      {
+        "component_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING",
+        "name": "Compound-C remainder: forearm fasteners and local unweighed assembly remainder",
+        "nominal_mass_kg": 0.015,
+        "mass_status": "DERIVED_FROM_MEASURED_TOTAL",
+        "ledger_link": "link3",
+        "cad_members": [
+          "Forearm_J3_M35_Screw_01",
+          "Forearm_J3_M35_Screw_02",
+          "Forearm_J3_M35_Screw_03",
+          "Forearm_J3_M35_Screw_04",
+          "Forearm_J3_M35_Screw_05",
+          "Forearm_J3_M35_Screw_06",
+          "Forearm_J4_M35_Screw_01",
+          "Forearm_J4_M35_Screw_02",
+          "Forearm_J4_M35_Screw_03",
+          "Forearm_J4_M35_Screw_04",
+          "Forearm_J4_M35_Screw_05",
+          "Forearm_J4_M35_Screw_06"
+        ],
+        "cad_owners": [
+          "link3"
+        ],
+        "geometry_role": "visual",
+        "source_measurement_or_model_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING",
+        "accounting_role": "ADDITIVE_LEAF",
+        "owner_mapping_policy": "DIRECT_CAD_OWNER",
+        "non_cad_scope": [
+          "local forearm wiring not already included with a motor",
+          "other unmodeled small hardware within the confirmed Compound C boundary"
+        ],
+        "notes": "Nominal closure remainder 2.220-0.135-0.540-0.089-1.441. All named CAD members are link3."
+      },
+      {
+        "component_id": "J4_OUTPUT_EQ",
+        "name": "J4 GO-M8010 output + neutral equivalent",
+        "nominal_mass_kg": 0.07,
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+        "ledger_link": "link4",
+        "cad_members": [
+          "J4_Output_Rotor_STEP_Display",
+          "J4_B6808_Bearing_Neutral_STEP_Display"
+        ],
+        "cad_owners": [
+          "link4"
+        ],
+        "geometry_role": "visual",
+        "source_measurement_or_model_id": "MODEL_GO_M8010_V1",
+        "accounting_role": "ADDITIVE_LEAF",
+        "owner_mapping_policy": "DIRECT_CAD_OWNER",
+        "non_cad_scope": [],
+        "notes": "B6808 neutral is included; no separate mass."
+      },
+      {
+        "component_id": "J5_STATOR_EQ",
+        "name": "J5 GO-M8010 stator/core equivalent",
+        "nominal_mass_kg": 0.47,
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+        "ledger_link": "link4",
+        "cad_members": [
+          "J5_Motor_Stator_STEP_Display"
+        ],
+        "cad_owners": [
+          "link4"
+        ],
+        "geometry_role": "visual",
+        "source_measurement_or_model_id": "MODEL_GO_M8010_V1",
+        "accounting_role": "ADDITIVE_LEAF",
+        "owner_mapping_policy": "DIRECT_CAD_OWNER",
+        "non_cad_scope": [],
+        "notes": "Includes the frozen complete-motor wiring boundary; no extra motor wire mass."
+      },
+      {
+        "component_id": "WRIST_PRELINK_PRINT_MEASURED",
+        "name": "J4-J5 printed connector",
+        "nominal_mass_kg": 0.089,
+        "mass_status": "MEASURED",
+        "ledger_link": "link4",
+        "cad_members": [
+          "Wrist_Prelink_v1_HighDetail_Display"
+        ],
+        "cad_owners": [
+          "link4"
+        ],
+        "geometry_role": "visual",
+        "source_measurement_or_model_id": "M_WRIST_PRELINK_PRINT",
+        "accounting_role": "ADDITIVE_LEAF",
+        "owner_mapping_policy": "DIRECT_CAD_OWNER",
+        "non_cad_scope": [],
+        "notes": "Direct scale measurement without J4/J5 motors."
+      },
+      {
+        "component_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING",
+        "name": "Compound-B remainder: J5 interface fasteners and local unweighed assembly remainder",
+        "nominal_mass_kg": 0.046,
+        "mass_status": "DERIVED_FROM_MEASURED_TOTAL",
+        "ledger_link": "link4",
+        "cad_members": [
+          "J4_Output_M4_Screw_01",
+          "J4_Output_M4_Screw_02",
+          "J4_Output_M4_Screw_03",
+          "J4_Output_M4_Screw_04",
+          "J4_Output_M4_Screw_05",
+          "J4_Output_M4_Screw_06",
+          "Wrist_Prelink_J5_M35_Screw_01",
+          "Wrist_Prelink_J5_M35_Screw_02",
+          "Wrist_Prelink_J5_M35_Screw_03",
+          "Wrist_Prelink_J5_M35_Screw_04",
+          "Wrist_Prelink_J5_M35_Screw_05",
+          "Wrist_Prelink_J5_M35_Screw_06"
+        ],
+        "cad_owners": [
+          "link4"
+        ],
+        "geometry_role": "visual",
+        "source_measurement_or_model_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING",
+        "accounting_role": "ADDITIVE_LEAF",
+        "owner_mapping_policy": "DIRECT_CAD_OWNER",
+        "non_cad_scope": [
+          "local assembly wiring not already included with a motor",
+          "other unmodeled small hardware introduced at the J5 boundary"
+        ],
+        "notes": "Nominal closure remainder 1.441-0.855-0.540. All named CAD members are link4."
+      },
+      {
+        "component_id": "J5_OUTPUT_EQ",
+        "name": "J5 GO-M8010 output + neutral equivalent",
+        "nominal_mass_kg": 0.07,
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+        "ledger_link": "link5",
+        "cad_members": [
+          "J5_Output_Rotor_STEP_Display",
+          "J5_B6808_Bearing_Neutral_STEP_Display"
+        ],
+        "cad_owners": [
+          "link5"
+        ],
+        "geometry_role": "visual",
+        "source_measurement_or_model_id": "MODEL_GO_M8010_V1",
+        "accounting_role": "ADDITIVE_LEAF",
+        "owner_mapping_policy": "DIRECT_CAD_OWNER",
+        "non_cad_scope": [],
+        "notes": "B6808 neutral is included; no separate mass."
+      },
+      {
+        "component_id": "J6_DM_STATOR_EQ",
+        "name": "DM-G6220 stator-side equivalent",
+        "nominal_mass_kg": 0.375,
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+        "ledger_link": "link5",
+        "cad_members": [
+          "J6_DM_G6220_Stator_STEP_Display"
+        ],
+        "cad_owners": [
+          "link5"
+        ],
+        "geometry_role": "visual",
+        "source_measurement_or_model_id": "MODEL_DM_G6220_V1",
+        "accounting_role": "ADDITIVE_LEAF",
+        "owner_mapping_policy": "DIRECT_CAD_OWNER",
+        "non_cad_scope": [],
+        "notes": "Engineering allocation from the measured 0.500 kg complete motor."
+      },
+      {
+        "component_id": "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING",
+        "name": "Compound-A remainder: J5-to-DM adapter, fasteners and local unweighed assembly remainder",
+        "nominal_mass_kg": 0.059,
+        "mass_status": "DERIVED_FROM_MEASURED_TOTAL",
+        "ledger_link": "link5",
+        "cad_members": [
+          "J5_to_Damiao_J6_Adapter_STL_Display",
+          "Adapter_DM_G6220_M4x12_Screw_01",
+          "Adapter_DM_G6220_M4x12_Screw_02",
+          "Adapter_DM_G6220_M4x12_Screw_03"
+        ],
+        "cad_owners": [
+          "link5"
+        ],
+        "geometry_role": "visual",
+        "source_measurement_or_model_id": "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING",
+        "accounting_role": "ADDITIVE_LEAF",
+        "owner_mapping_policy": "DIRECT_CAD_OWNER",
+        "non_cad_scope": [
+          "local assembly wiring not already included with a motor",
+          "other unmodeled small hardware within confirmed Compound A boundary"
+        ],
+        "notes": "Nominal closure remainder 0.855-0.500-0.296. CAD named members are all link5; unmodeled local wiring/small hardware remains a lumped boundary."
+      },
+      {
+        "component_id": "J6_DM_OUTPUT_EQ",
+        "name": "DM-G6220 output/rotor-side equivalent",
+        "nominal_mass_kg": 0.125,
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+        "ledger_link": "link6",
+        "cad_members": [
+          "J6_DM_G6220_Output_Rotor_STEP_Display"
+        ],
+        "cad_owners": [
+          "link6"
+        ],
+        "geometry_role": "visual",
+        "source_measurement_or_model_id": "MODEL_DM_G6220_V1",
+        "accounting_role": "ADDITIVE_LEAF",
+        "owner_mapping_policy": "DIRECT_CAD_OWNER",
+        "non_cad_scope": [],
+        "notes": "Engineering allocation from the measured 0.500 kg complete motor."
+      },
+      {
+        "component_id": "GRIPPER_CONNECTOR_CAMERA_MEASURED_ROLLUP",
+        "name": "Complete gripper + connector + Gemini Pro accounting roll-up",
+        "nominal_mass_kg": 0.296,
+        "mass_status": "MEASURED",
+        "ledger_link": "gripper",
+        "cad_members": [
+          "DM_G6220_Connector_M4x14_Screw_01",
+          "DM_G6220_Connector_M4x14_Screw_02",
+          "DM_G6220_Connector_M4x14_Screw_03",
+          "DM_G6220_Connector_M4x14_Screw_04",
+          "DM_G6220_Connector_M4x14_Screw_05",
+          "DM_G6220_Connector_M4x14_Screw_06",
+          "Gemini_Pro_Camera_STEP_Display",
+          "Gripper_Clevis_3DPrinted_M3x25_Screw_01",
+          "Gripper_Clevis_3DPrinted_M3x25_Screw_02",
+          "Gripper_Fixed_Frame_STEP_Display",
+          "Gripper_Hardware_01",
+          "Gripper_Hardware_02",
+          "Gripper_Hardware_03",
+          "Gripper_Hardware_04",
+          "Gripper_Hardware_05",
+          "Gripper_Hardware_06",
+          "Gripper_Hardware_07",
+          "Gripper_Hardware_08",
+          "Gripper_Hardware_09",
+          "Gripper_Hardware_10",
+          "Gripper_Hardware_11",
+          "Gripper_Hardware_12",
+          "Gripper_Hardware_13",
+          "Gripper_Hardware_14",
+          "Gripper_Hardware_15",
+          "Gripper_Hardware_16",
+          "Gripper_Hardware_17",
+          "Gripper_Hardware_18",
+          "Gripper_Hardware_19",
+          "Gripper_Left_Drive_Link",
+          "Gripper_Left_Finger",
+          "Gripper_Left_Outer_Link",
+          "Gripper_Right_Drive_Link",
+          "Gripper_Right_Finger",
+          "Gripper_Right_Outer_Link",
+          "Gripper_Servo_STEP_Display",
+          "J6_Gripper_Connector_STEP_Display"
+        ],
+        "cad_owners": [
+          "gripper",
+          "gripper_internal:left_drive",
+          "gripper_internal:left_finger",
+          "gripper_internal:left_outer",
+          "gripper_internal:right_drive",
+          "gripper_internal:right_finger",
+          "gripper_internal:right_outer"
+        ],
+        "geometry_role": "visual",
+        "source_measurement_or_model_id": "M_GRIPPER_CONNECTOR_CAMERA_COMPLETE",
+        "accounting_role": "ADDITIVE_LEAF",
+        "owner_mapping_policy": "ACCOUNTING_ROLLUP_ONLY_NOT_CAD_REPARENTING",
+        "non_cad_scope": [],
+        "notes": "Direct complete-end measurement. Static gripper and six internal moving rigid roles retain their true CAD owners; this is main-chain bookkeeping only and is not a future internal-link inertial allocation."
+      }
+    ],
+    "non_additive_boundary_members": [
+      {
+        "group_id": "LINK2_USER_CONFIRMED_NO_RESIDUAL_BOUNDARY",
+        "ledger_link": "link2",
+        "cad_members": [
+          "UpperArm_M35_Bottom_01",
+          "UpperArm_M35_Bottom_02",
+          "UpperArm_M35_Bottom_03",
+          "UpperArm_M35_Top_01",
+          "UpperArm_M35_Top_02",
+          "UpperArm_M35_Top_03",
+          "J3_Output_M4_Screw_01",
+          "J3_Output_M4_Screw_02",
+          "J3_Output_M4_Screw_03",
+          "J3_Output_M4_Screw_04",
+          "J3_Output_M4_Screw_05",
+          "J3_Output_M4_Screw_06"
+        ],
+        "cad_owners": [
+          "link2"
+        ],
+        "mass_status": "INCLUDED_NO_SEPARATE_MASS",
+        "nominal_mass_kg": null,
+        "accounting_role": "NON_ADDITIVE_BOUNDARY_MEMBER",
+        "authority": "USER_CONFIRMED_V15_15_V1_NO_ADDITIONAL_J2_REGION_RESIDUAL",
+        "notes": "These fasteners have physical mass, but V1 assigns no independent additive mass or residual to them. They are covered by the user-frozen link2 closure; this is not a claim of zero physical mass."
+      }
+    ]
+  },
+  "cad_membership_validation": {
+    "expected_scope_visual_token_count": 96,
+    "covered_scope_visual_token_count": 96,
+    "missing_tokens": [],
+    "extra_tokens": [],
+    "duplicate_tokens": [],
+    "gripper_rollup_cad_owner_set": [
+      "gripper",
+      "gripper_internal:left_drive",
+      "gripper_internal:left_finger",
+      "gripper_internal:left_outer",
+      "gripper_internal:right_drive",
+      "gripper_internal:right_finger",
+      "gripper_internal:right_outer"
+    ],
+    "gripper_rollup_member_count": 37,
+    "gripper_internal_roles_reparented": false,
+    "pass": true
+  },
+  "link_mass_ledger": {
+    "link2": {
+      "nominal_mass_kg": 0.7615,
+      "aggregate_status": "MIXED_STATUS_LEDGER_SUM",
+      "subtotal_by_status_kg": {
+        "MEASURED": 0.5515,
+        "DERIVED_FROM_MEASURED_TOTAL": 0.0,
+        "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL": 0.21
+      },
+      "uncertainty_kg": null,
+      "uncertainty_reason": "Motor split uncertainty is unquantified and residual uncertainties share correlated compound measurements; no unsupported aggregate uncertainty is synthesized.",
+      "is_final_v1_nominal_mass": true,
+      "components": [
+        {
+          "component_id": "J2A_OUTPUT_EQ",
+          "name": "J2A GO-M8010 output + neutral equivalent",
+          "nominal_mass_kg": 0.07,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "ledger_link": "link2",
+          "cad_members": [
+            "derived:J2A_GO_M8010_output",
+            "derived:J2A_GO_M8010_neutral"
+          ],
+          "cad_owners": [
+            "link2"
+          ],
+          "geometry_role": "visual",
+          "source_measurement_or_model_id": "MODEL_GO_M8010_V1",
+          "accounting_role": "ADDITIVE_LEAF",
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "non_cad_scope": [],
+          "notes": "B6808 neutral is included; no separate mass."
+        },
+        {
+          "component_id": "J2B_OUTPUT_EQ",
+          "name": "J2B GO-M8010 output + neutral equivalent",
+          "nominal_mass_kg": 0.07,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "ledger_link": "link2",
+          "cad_members": [
+            "derived:J2B_GO_M8010_output",
+            "derived:J2B_GO_M8010_neutral"
+          ],
+          "cad_owners": [
+            "link2"
+          ],
+          "geometry_role": "visual",
+          "source_measurement_or_model_id": "MODEL_GO_M8010_V1",
+          "accounting_role": "ADDITIVE_LEAF",
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "non_cad_scope": [],
+          "notes": "B6808 neutral is included; no separate mass."
+        },
+        {
+          "component_id": "J3_OUTPUT_EQ",
+          "name": "J3 GO-M8010 output + neutral equivalent",
+          "nominal_mass_kg": 0.07,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "ledger_link": "link2",
+          "cad_members": [
+            "J3_Output_Rotor_STEP_Display",
+            "J3_B6808_Bearing_Neutral_STEP_Display"
+          ],
+          "cad_owners": [
+            "link2"
+          ],
+          "geometry_role": "visual",
+          "source_measurement_or_model_id": "MODEL_GO_M8010_V1",
+          "accounting_role": "ADDITIVE_LEAF",
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "non_cad_scope": [],
+          "notes": "B6808 neutral is included; no separate mass."
+        },
+        {
+          "component_id": "UPPER_ARM_PRINT_MEASURED",
+          "name": "J2-J3 upper-arm printed structure",
+          "nominal_mass_kg": 0.5515,
+          "mass_status": "MEASURED",
+          "ledger_link": "link2",
+          "cad_members": [
+            "UpperArm_A_SleeveSide_PrintPart",
+            "UpperArm_B_Distal_PrintPart"
+          ],
+          "cad_owners": [
+            "link2"
+          ],
+          "geometry_role": "visual",
+          "source_measurement_or_model_id": "M_UPPER_ARM_PRINT",
+          "accounting_role": "ADDITIVE_LEAF",
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "non_cad_scope": [],
+          "notes": "Direct scale measurement; the two print parts remain one unsplit measured group."
+        }
+      ]
+    },
+    "link3": {
+      "nominal_mass_kg": 1.09,
+      "aggregate_status": "MIXED_STATUS_LEDGER_SUM",
+      "subtotal_by_status_kg": {
+        "MEASURED": 0.135,
+        "DERIVED_FROM_MEASURED_TOTAL": 0.015,
+        "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL": 0.94
+      },
+      "uncertainty_kg": null,
+      "uncertainty_reason": "Motor split uncertainty is unquantified and residual uncertainties share correlated compound measurements; no unsupported aggregate uncertainty is synthesized.",
+      "is_final_v1_nominal_mass": true,
+      "components": [
+        {
+          "component_id": "J3_STATOR_EQ",
+          "name": "J3 GO-M8010 stator/core equivalent",
+          "nominal_mass_kg": 0.47,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "ledger_link": "link3",
+          "cad_members": [
+            "J3_Motor_Stator_STEP_Display"
+          ],
+          "cad_owners": [
+            "link3"
+          ],
+          "geometry_role": "visual",
+          "source_measurement_or_model_id": "MODEL_GO_M8010_V1",
+          "accounting_role": "ADDITIVE_LEAF",
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "non_cad_scope": [],
+          "notes": "Includes the frozen complete-motor wiring boundary; no extra motor wire mass."
+        },
+        {
+          "component_id": "J4_STATOR_EQ",
+          "name": "J4 GO-M8010 stator/core equivalent",
+          "nominal_mass_kg": 0.47,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "ledger_link": "link3",
+          "cad_members": [
+            "J4_Motor_Stator_STEP_Display"
+          ],
+          "cad_owners": [
+            "link3"
+          ],
+          "geometry_role": "visual",
+          "source_measurement_or_model_id": "MODEL_GO_M8010_V1",
+          "accounting_role": "ADDITIVE_LEAF",
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "non_cad_scope": [],
+          "notes": "Includes the frozen complete-motor wiring boundary; no extra motor wire mass."
+        },
+        {
+          "component_id": "FOREARM_PRINT_MEASURED",
+          "name": "J3-J4 forearm print",
+          "nominal_mass_kg": 0.135,
+          "mass_status": "MEASURED",
+          "ledger_link": "link3",
+          "cad_members": [
+            "Forearm_v3_HighDetail_Display"
+          ],
+          "cad_owners": [
+            "link3"
+          ],
+          "geometry_role": "visual",
+          "source_measurement_or_model_id": "M_FOREARM_PRINT",
+          "accounting_role": "ADDITIVE_LEAF",
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "non_cad_scope": [],
+          "notes": "Direct scale measurement without J3/J4 motors."
+        },
+        {
+          "component_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING",
+          "name": "Compound-C remainder: forearm fasteners and local unweighed assembly remainder",
+          "nominal_mass_kg": 0.015,
+          "mass_status": "DERIVED_FROM_MEASURED_TOTAL",
+          "ledger_link": "link3",
+          "cad_members": [
+            "Forearm_J3_M35_Screw_01",
+            "Forearm_J3_M35_Screw_02",
+            "Forearm_J3_M35_Screw_03",
+            "Forearm_J3_M35_Screw_04",
+            "Forearm_J3_M35_Screw_05",
+            "Forearm_J3_M35_Screw_06",
+            "Forearm_J4_M35_Screw_01",
+            "Forearm_J4_M35_Screw_02",
+            "Forearm_J4_M35_Screw_03",
+            "Forearm_J4_M35_Screw_04",
+            "Forearm_J4_M35_Screw_05",
+            "Forearm_J4_M35_Screw_06"
+          ],
+          "cad_owners": [
+            "link3"
+          ],
+          "geometry_role": "visual",
+          "source_measurement_or_model_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING",
+          "accounting_role": "ADDITIVE_LEAF",
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "non_cad_scope": [
+            "local forearm wiring not already included with a motor",
+            "other unmodeled small hardware within the confirmed Compound C boundary"
+          ],
+          "notes": "Nominal closure remainder 2.220-0.135-0.540-0.089-1.441. All named CAD members are link3."
+        }
+      ]
+    },
+    "link4": {
+      "nominal_mass_kg": 0.675,
+      "aggregate_status": "MIXED_STATUS_LEDGER_SUM",
+      "subtotal_by_status_kg": {
+        "MEASURED": 0.089,
+        "DERIVED_FROM_MEASURED_TOTAL": 0.046,
+        "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL": 0.54
+      },
+      "uncertainty_kg": null,
+      "uncertainty_reason": "Motor split uncertainty is unquantified and residual uncertainties share correlated compound measurements; no unsupported aggregate uncertainty is synthesized.",
+      "is_final_v1_nominal_mass": true,
+      "components": [
+        {
+          "component_id": "J4_OUTPUT_EQ",
+          "name": "J4 GO-M8010 output + neutral equivalent",
+          "nominal_mass_kg": 0.07,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "ledger_link": "link4",
+          "cad_members": [
+            "J4_Output_Rotor_STEP_Display",
+            "J4_B6808_Bearing_Neutral_STEP_Display"
+          ],
+          "cad_owners": [
+            "link4"
+          ],
+          "geometry_role": "visual",
+          "source_measurement_or_model_id": "MODEL_GO_M8010_V1",
+          "accounting_role": "ADDITIVE_LEAF",
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "non_cad_scope": [],
+          "notes": "B6808 neutral is included; no separate mass."
+        },
+        {
+          "component_id": "J5_STATOR_EQ",
+          "name": "J5 GO-M8010 stator/core equivalent",
+          "nominal_mass_kg": 0.47,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "ledger_link": "link4",
+          "cad_members": [
+            "J5_Motor_Stator_STEP_Display"
+          ],
+          "cad_owners": [
+            "link4"
+          ],
+          "geometry_role": "visual",
+          "source_measurement_or_model_id": "MODEL_GO_M8010_V1",
+          "accounting_role": "ADDITIVE_LEAF",
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "non_cad_scope": [],
+          "notes": "Includes the frozen complete-motor wiring boundary; no extra motor wire mass."
+        },
+        {
+          "component_id": "WRIST_PRELINK_PRINT_MEASURED",
+          "name": "J4-J5 printed connector",
+          "nominal_mass_kg": 0.089,
+          "mass_status": "MEASURED",
+          "ledger_link": "link4",
+          "cad_members": [
+            "Wrist_Prelink_v1_HighDetail_Display"
+          ],
+          "cad_owners": [
+            "link4"
+          ],
+          "geometry_role": "visual",
+          "source_measurement_or_model_id": "M_WRIST_PRELINK_PRINT",
+          "accounting_role": "ADDITIVE_LEAF",
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "non_cad_scope": [],
+          "notes": "Direct scale measurement without J4/J5 motors."
+        },
+        {
+          "component_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING",
+          "name": "Compound-B remainder: J5 interface fasteners and local unweighed assembly remainder",
+          "nominal_mass_kg": 0.046,
+          "mass_status": "DERIVED_FROM_MEASURED_TOTAL",
+          "ledger_link": "link4",
+          "cad_members": [
+            "J4_Output_M4_Screw_01",
+            "J4_Output_M4_Screw_02",
+            "J4_Output_M4_Screw_03",
+            "J4_Output_M4_Screw_04",
+            "J4_Output_M4_Screw_05",
+            "J4_Output_M4_Screw_06",
+            "Wrist_Prelink_J5_M35_Screw_01",
+            "Wrist_Prelink_J5_M35_Screw_02",
+            "Wrist_Prelink_J5_M35_Screw_03",
+            "Wrist_Prelink_J5_M35_Screw_04",
+            "Wrist_Prelink_J5_M35_Screw_05",
+            "Wrist_Prelink_J5_M35_Screw_06"
+          ],
+          "cad_owners": [
+            "link4"
+          ],
+          "geometry_role": "visual",
+          "source_measurement_or_model_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING",
+          "accounting_role": "ADDITIVE_LEAF",
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "non_cad_scope": [
+            "local assembly wiring not already included with a motor",
+            "other unmodeled small hardware introduced at the J5 boundary"
+          ],
+          "notes": "Nominal closure remainder 1.441-0.855-0.540. All named CAD members are link4."
+        }
+      ]
+    },
+    "link5": {
+      "nominal_mass_kg": 0.504,
+      "aggregate_status": "MIXED_STATUS_LEDGER_SUM",
+      "subtotal_by_status_kg": {
+        "MEASURED": 0.0,
+        "DERIVED_FROM_MEASURED_TOTAL": 0.059,
+        "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL": 0.445
+      },
+      "uncertainty_kg": null,
+      "uncertainty_reason": "Motor split uncertainty is unquantified and residual uncertainties share correlated compound measurements; no unsupported aggregate uncertainty is synthesized.",
+      "is_final_v1_nominal_mass": true,
+      "components": [
+        {
+          "component_id": "J5_OUTPUT_EQ",
+          "name": "J5 GO-M8010 output + neutral equivalent",
+          "nominal_mass_kg": 0.07,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "ledger_link": "link5",
+          "cad_members": [
+            "J5_Output_Rotor_STEP_Display",
+            "J5_B6808_Bearing_Neutral_STEP_Display"
+          ],
+          "cad_owners": [
+            "link5"
+          ],
+          "geometry_role": "visual",
+          "source_measurement_or_model_id": "MODEL_GO_M8010_V1",
+          "accounting_role": "ADDITIVE_LEAF",
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "non_cad_scope": [],
+          "notes": "B6808 neutral is included; no separate mass."
+        },
+        {
+          "component_id": "J6_DM_STATOR_EQ",
+          "name": "DM-G6220 stator-side equivalent",
+          "nominal_mass_kg": 0.375,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "ledger_link": "link5",
+          "cad_members": [
+            "J6_DM_G6220_Stator_STEP_Display"
+          ],
+          "cad_owners": [
+            "link5"
+          ],
+          "geometry_role": "visual",
+          "source_measurement_or_model_id": "MODEL_DM_G6220_V1",
+          "accounting_role": "ADDITIVE_LEAF",
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "non_cad_scope": [],
+          "notes": "Engineering allocation from the measured 0.500 kg complete motor."
+        },
+        {
+          "component_id": "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING",
+          "name": "Compound-A remainder: J5-to-DM adapter, fasteners and local unweighed assembly remainder",
+          "nominal_mass_kg": 0.059,
+          "mass_status": "DERIVED_FROM_MEASURED_TOTAL",
+          "ledger_link": "link5",
+          "cad_members": [
+            "J5_to_Damiao_J6_Adapter_STL_Display",
+            "Adapter_DM_G6220_M4x12_Screw_01",
+            "Adapter_DM_G6220_M4x12_Screw_02",
+            "Adapter_DM_G6220_M4x12_Screw_03"
+          ],
+          "cad_owners": [
+            "link5"
+          ],
+          "geometry_role": "visual",
+          "source_measurement_or_model_id": "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING",
+          "accounting_role": "ADDITIVE_LEAF",
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "non_cad_scope": [
+            "local assembly wiring not already included with a motor",
+            "other unmodeled small hardware within confirmed Compound A boundary"
+          ],
+          "notes": "Nominal closure remainder 0.855-0.500-0.296. CAD named members are all link5; unmodeled local wiring/small hardware remains a lumped boundary."
+        }
+      ]
+    },
+    "link6": {
+      "nominal_mass_kg": 0.125,
+      "aggregate_status": "MIXED_STATUS_LEDGER_SUM",
+      "subtotal_by_status_kg": {
+        "MEASURED": 0.0,
+        "DERIVED_FROM_MEASURED_TOTAL": 0.0,
+        "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL": 0.125
+      },
+      "uncertainty_kg": null,
+      "uncertainty_reason": "Motor split uncertainty is unquantified and residual uncertainties share correlated compound measurements; no unsupported aggregate uncertainty is synthesized.",
+      "is_final_v1_nominal_mass": true,
+      "components": [
+        {
+          "component_id": "J6_DM_OUTPUT_EQ",
+          "name": "DM-G6220 output/rotor-side equivalent",
+          "nominal_mass_kg": 0.125,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "ledger_link": "link6",
+          "cad_members": [
+            "J6_DM_G6220_Output_Rotor_STEP_Display"
+          ],
+          "cad_owners": [
+            "link6"
+          ],
+          "geometry_role": "visual",
+          "source_measurement_or_model_id": "MODEL_DM_G6220_V1",
+          "accounting_role": "ADDITIVE_LEAF",
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "non_cad_scope": [],
+          "notes": "Engineering allocation from the measured 0.500 kg complete motor."
+        }
+      ]
+    },
+    "gripper": {
+      "nominal_mass_kg": 0.296,
+      "aggregate_status": "MIXED_STATUS_LEDGER_SUM",
+      "subtotal_by_status_kg": {
+        "MEASURED": 0.296,
+        "DERIVED_FROM_MEASURED_TOTAL": 0.0,
+        "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL": 0.0
+      },
+      "uncertainty_kg": null,
+      "uncertainty_reason": "Motor split uncertainty is unquantified and residual uncertainties share correlated compound measurements; no unsupported aggregate uncertainty is synthesized.",
+      "is_final_v1_nominal_mass": true,
+      "components": [
+        {
+          "component_id": "GRIPPER_CONNECTOR_CAMERA_MEASURED_ROLLUP",
+          "name": "Complete gripper + connector + Gemini Pro accounting roll-up",
+          "nominal_mass_kg": 0.296,
+          "mass_status": "MEASURED",
+          "ledger_link": "gripper",
+          "cad_members": [
+            "DM_G6220_Connector_M4x14_Screw_01",
+            "DM_G6220_Connector_M4x14_Screw_02",
+            "DM_G6220_Connector_M4x14_Screw_03",
+            "DM_G6220_Connector_M4x14_Screw_04",
+            "DM_G6220_Connector_M4x14_Screw_05",
+            "DM_G6220_Connector_M4x14_Screw_06",
+            "Gemini_Pro_Camera_STEP_Display",
+            "Gripper_Clevis_3DPrinted_M3x25_Screw_01",
+            "Gripper_Clevis_3DPrinted_M3x25_Screw_02",
+            "Gripper_Fixed_Frame_STEP_Display",
+            "Gripper_Hardware_01",
+            "Gripper_Hardware_02",
+            "Gripper_Hardware_03",
+            "Gripper_Hardware_04",
+            "Gripper_Hardware_05",
+            "Gripper_Hardware_06",
+            "Gripper_Hardware_07",
+            "Gripper_Hardware_08",
+            "Gripper_Hardware_09",
+            "Gripper_Hardware_10",
+            "Gripper_Hardware_11",
+            "Gripper_Hardware_12",
+            "Gripper_Hardware_13",
+            "Gripper_Hardware_14",
+            "Gripper_Hardware_15",
+            "Gripper_Hardware_16",
+            "Gripper_Hardware_17",
+            "Gripper_Hardware_18",
+            "Gripper_Hardware_19",
+            "Gripper_Left_Drive_Link",
+            "Gripper_Left_Finger",
+            "Gripper_Left_Outer_Link",
+            "Gripper_Right_Drive_Link",
+            "Gripper_Right_Finger",
+            "Gripper_Right_Outer_Link",
+            "Gripper_Servo_STEP_Display",
+            "J6_Gripper_Connector_STEP_Display"
+          ],
+          "cad_owners": [
+            "gripper",
+            "gripper_internal:left_drive",
+            "gripper_internal:left_finger",
+            "gripper_internal:left_outer",
+            "gripper_internal:right_drive",
+            "gripper_internal:right_finger",
+            "gripper_internal:right_outer"
+          ],
+          "geometry_role": "visual",
+          "source_measurement_or_model_id": "M_GRIPPER_CONNECTOR_CAMERA_COMPLETE",
+          "accounting_role": "ADDITIVE_LEAF",
+          "owner_mapping_policy": "ACCOUNTING_ROLLUP_ONLY_NOT_CAD_REPARENTING",
+          "non_cad_scope": [],
+          "notes": "Direct complete-end measurement. Static gripper and six internal moving rigid roles retain their true CAD owners; this is main-chain bookkeeping only and is not a future internal-link inertial allocation."
+        }
+      ]
+    }
+  },
+  "total_link2_to_gripper_nominal_mass_kg": 3.4515,
+  "total_aggregate_status": "MIXED_STATUS_LEDGER_SUM",
+  "total_uncertainty_kg": null,
+  "total_uncertainty_reason": "Engineering split uncertainties are unquantified and residual closure uncertainties are correlated; no unsupported total uncertainty is synthesized.",
+  "closure_checks": {
+    "GO_0_070_plus_0_470": {
+      "actual_kg": 0.54,
+      "expected_kg": 0.54,
+      "absolute_error_kg": 0.0,
+      "tolerance_kg": 1e-09,
+      "pass": true
+    },
+    "DM_0_375_plus_0_125": {
+      "actual_kg": 0.5,
+      "expected_kg": 0.5,
+      "absolute_error_kg": 0.0,
+      "tolerance_kg": 1e-09,
+      "pass": true
+    },
+    "compound_A_0_500_plus_0_296_plus_0_059": {
+      "actual_kg": 0.855,
+      "expected_kg": 0.855,
+      "absolute_error_kg": 0.0,
+      "tolerance_kg": 1e-09,
+      "pass": true
+    },
+    "compound_B_0_855_plus_0_540_plus_0_046": {
+      "actual_kg": 1.441,
+      "expected_kg": 1.441,
+      "absolute_error_kg": 0.0,
+      "tolerance_kg": 1e-09,
+      "pass": true
+    },
+    "compound_C_0_135_plus_0_540_plus_0_089_plus_1_441_plus_0_015": {
+      "actual_kg": 2.22,
+      "expected_kg": 2.22,
+      "absolute_error_kg": 0.0,
+      "tolerance_kg": 1e-09,
+      "pass": true
+    },
+    "link2_to_gripper_sum": {
+      "actual_kg": 3.4515,
+      "expected_kg": 3.4515,
+      "absolute_error_kg": 0.0,
+      "tolerance_kg": 1e-09,
+      "pass": true
+    },
+    "alternative_0_140_plus_0_5515_plus_0_540_plus_2_220": {
+      "actual_kg": 3.4515,
+      "expected_kg": 3.4515,
+      "absolute_error_kg": 0.0,
+      "tolerance_kg": 1e-09,
+      "pass": true
+    },
+    "two_total_paths_equal": {
+      "actual_kg": 3.4515,
+      "expected_kg": 3.4515,
+      "absolute_error_kg": 0.0,
+      "tolerance_kg": 1e-09,
+      "pass": true
+    },
+    "independence_note": {
+      "statistically_independent": false,
+      "closure_type": "ALGEBRAIC_RECONCILIATION_WITH_SHARED_INPUTS",
+      "notes": "The two 3.4515 kg paths are required arithmetic cross-representations, not statistically independent experiments."
+    }
+  },
+  "uncertainty_model": {
+    "residual_A_conservative_abs_kg": 0.015,
+    "residual_B_conservative_abs_kg": 0.015,
+    "residual_C_conservative_abs_kg": 0.025,
+    "residual_uncertainty_type": "CLOSURE_UNCERTAINTY_NOT_DYNAMICS_IDENTIFICATION_ERROR",
+    "residuals_are_correlated": true,
+    "rss_or_direct_sum_allowed": false,
+    "motor_internal_split_uncertainty": "UNQUANTIFIED_ENGINEERING_MODEL"
+  },
+  "wire_boundary_policy": {
+    "motor_attached_wiring_already_in_complete_motor_measurement": true,
+    "independent_motor_wire_mass_added": false,
+    "residual_wire_scope": "Only local assembly wiring not already included in a measured complete motor; no wire mass is guessed or separately resolved."
+  },
+  "double_count_checks": {
+    "additive_component_ids_unique": true,
+    "parent_compound_totals_added_to_links": false,
+    "complete_motor_totals_added_on_top_of_splits": false,
+    "residual_cad_sets_disjoint": true,
+    "neutral_b6808_separate_mass_count": 0,
+    "neutral_b6808_tokens_covered_once": true,
+    "motor_attached_wiring_separate_mass_count": 0,
+    "scoped_visual_tokens_covered_exactly_once": true,
+    "gemini_pro_count": 1,
+    "gripper_connector_count": 1,
+    "complete_gripper_measurement_count": 1,
+    "dm_g6220_count": 1,
+    "J5_motor_count": 1,
+    "J4_motor_count": 1,
+    "J2A_output_count": 1,
+    "J2B_output_count": 1,
+    "adapter_count": 1,
+    "complete_motor_total_component_count": 0,
+    "double_count_detected": false,
+    "pass": true
+  },
+  "unresolved_items": [],
+  "nonblocking_model_limitations": [
+    "The 12 link2 fastener tokens are closed only by the user's V1 no-additional-J2-residual policy; they are not claimed to have zero physical mass.",
+    "The 0.296 kg gripper value is a main-chain accounting roll-up across static gripper and six internal moving CAD owner roles; it is not an internal inertial allocation.",
+    "Motor internal split uncertainty is unquantified.",
+    "Residual closure uncertainties are correlated; residual_C nominal 0.015 kg has a conservative +/-0.025 kg interval that crosses zero.",
+    "The two 3.4515 kg paths are algebraically linked and are not statistically independent measurements."
+  ],
+  "prohibited_outputs": {
+    "COM": false,
+    "inertia_tensor": false,
+    "URDF_inertial": false,
+    "MuJoCo_inertial": false,
+    "gravity": false,
+    "joint_damping": false,
+    "joint_friction": false,
+    "motor_armature": false,
+    "motor_torque_model": false
+  },
+  "validation": {
+    "cad_membership": "PASS",
+    "residual_A_owner": "link5",
+    "residual_B_owner": "link4",
+    "residual_C_owner": "link3",
+    "all_closures": "PASS",
+    "double_count": "PASS",
+    "unresolved_items_empty": true,
+    "forbidden_files_modified": false,
+    "all_assertions_pass": true
+  },
+  "final_status": "V15.15 MASS_LEDGER_V1 = PASS"
+}
