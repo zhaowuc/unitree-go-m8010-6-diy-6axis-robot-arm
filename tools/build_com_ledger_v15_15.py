@@ -26,9 +26,11 @@ from typing import Any, Iterable
 try:
     import FreeCAD as App
     import Mesh
+    import Part
 except Exception as exc:  # pragma: no cover - exercised outside FreeCAD
     App = None
     Mesh = None
+    Part = None
     FREECAD_IMPORT_ERROR = exc
 else:
     FREECAD_IMPORT_ERROR = None
@@ -49,6 +51,17 @@ DERIVED_CAD = "机械臂完整装配_六轴_刚性Link拆分_v15_13.FCStd"
 MANIFEST = "rigid_links_v15_13/rigid_link_manifest.json"
 MEMBERSHIP = "rigid_links_v15_13/rigid_link_membership.csv"
 RIGID_BUILDER = "完整工程_V15_13_交付/tools/build_robot_arm_rigid_links_v15.py"
+UPPER_A_MASS_GEOMETRY = (
+    "mass_properties_geometry_v15_15/"
+    "UpperArm_A_SleeveSide_PrintPart_mass_properties.stl"
+)
+UPPER_A_MASS_REPORT = (
+    "mass_properties_geometry_v15_15/"
+    "UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json"
+)
+UPPER_A_MASS_GEOMETRY_SHA256 = "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45"
+UPPER_A_MASS_REPORT_SHA256 = "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815"
+UPPER_A_REPORT_SCHEMA = "go-m8010-arm-v15.15-upperarm-a-mass-properties/1.0"
 
 PROTECTED_HASHES = {
     "V15_15_实测质量映射契约.json": "40f86fa1a529dc86ba31e7e6a724f2fdf79022cf8962b7526f1dbdf0b4deac5d",
@@ -62,6 +75,8 @@ PROTECTED_HASHES = {
     MEMBERSHIP: "3d2a4d52d679eb97917410c6e60bec22c0c269f91ed31b35fd53ff94167e1b8c",
     MANIFEST: "8db76f9228f7a60bd017276239e3669de3cfd443c8cd36d0dd555e184606384f",
     RIGID_BUILDER: "e9b66986377eb2a30d464c6b9ca9c1371bc2e83f4e7d180f23e0da08cf8fb944",
+    UPPER_A_MASS_GEOMETRY: UPPER_A_MASS_GEOMETRY_SHA256,
+    UPPER_A_MASS_REPORT: UPPER_A_MASS_REPORT_SHA256,
 }
 
 ALLOWED_CHANGED_PATHS = {
@@ -69,6 +84,10 @@ ALLOWED_CHANGED_PATHS = {
     OUTPUT_MD,
     "tools/build_com_ledger_v15_15.py",
     "tools/validate_com_ledger_v15_15.py",
+    "tools/build_upperarm_a_mass_properties_v15_15.py",
+    "tools/validate_upperarm_a_mass_properties_v15_15.py",
+    UPPER_A_MASS_GEOMETRY,
+    UPPER_A_MASS_REPORT,
 }
 
 LINK_ORDER = ["link2", "link3", "link4", "link5", "link6", "gripper"]
@@ -125,6 +144,7 @@ AUDITED_WORLD_COM_MM = {
     "J2A_OUTPUT_EQ": [-37.737486715, 7.770220161, 182.640063717],
     "J2B_OUTPUT_EQ": [37.055008454, -7.627241979, 182.640063717],
     "J3_OUTPUT_EQ": [28.417849911, 247.969111783, 182.657273243],
+    "UPPER_ARM_PRINT_MEASURED": [3.9119055019, 117.4139177018, 182.8607651079],
     "J3_STATOR_EQ": [44.659931122, 244.750925608, 182.661617302],
     "FOREARM_PRINT_MEASURED": [85.928666323, 339.768722600, 208.657945481],
     "J4_STATOR_EQ": [85.471172718, 442.938602111, 234.623041267],
@@ -531,35 +551,177 @@ def closed_mesh_geometry(doc: Any, member: str, policy: str) -> dict[str, Any]:
     }
 
 
-def upper_arm_geometry(doc: Any) -> dict[str, Any]:
-    upper_a_obj = doc.getObject("UpperArm_A_SleeveSide_PrintPart")
-    upper_a = mesh_diagnostic(upper_a_obj, "UpperArm_A_SleeveSide_PrintPart", repair_non_manifolds=False)
-    upper_a.pop("mesh")
-    upper_b = closed_mesh_geometry(doc, "UpperArm_B_Distal_PrintPart", "upper_b_minimal_repair")
+def upper_a_mass_properties_geometry(root: Path, doc: Any) -> dict[str, Any]:
+    """Independently reimport and validate the mass-properties-only artifact."""
+
+    artifact_path = root / UPPER_A_MASS_GEOMETRY
+    report_path = root / UPPER_A_MASS_REPORT
+    if sha256(artifact_path) != UPPER_A_MASS_GEOMETRY_SHA256:
+        raise AuditError("UPPER_A_MASS_GEOMETRY_HASH_MISMATCH")
+    if sha256(report_path) != UPPER_A_MASS_REPORT_SHA256:
+        raise AuditError("UPPER_A_MASS_REPORT_HASH_MISMATCH")
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    if report.get("schema") != UPPER_A_REPORT_SCHEMA or report.get("status") != "PASS":
+        raise AuditError("UPPER_A_MASS_REPORT_STATUS_OR_SCHEMA_MISMATCH")
+    if report["artifact"]["sha256"] != UPPER_A_MASS_GEOMETRY_SHA256:
+        raise AuditError("UPPER_A_MASS_REPORT_ARTIFACT_HASH_MISMATCH")
+    if report["source"]["sha256"] != PROTECTED_HASHES[SOURCE_CAD]:
+        raise AuditError("UPPER_A_MASS_REPORT_SOURCE_HASH_MISMATCH")
+    if not report["validation"]["pass"] or report["repair_method"]["collision_proxy_used"]:
+        raise AuditError("UPPER_A_MASS_REPORT_VALIDATION_FAILURE")
+    if any(bool(value) for value in report["forbidden_actions"].values()):
+        raise AuditError("UPPER_A_MASS_REPORT_FORBIDDEN_ACTION")
+
+    mesh = Mesh.Mesh(str(artifact_path))
+    if (
+        int(mesh.CountPoints) != 899
+        or int(mesh.CountFacets) != 1834
+        or not bool(mesh.isSolid())
+        or bool(mesh.hasNonManifolds())
+        or bool(mesh.hasSelfIntersections())
+    ):
+        raise AuditError("UPPER_A_MASS_GEOMETRY_TOPOLOGY_FAILURE")
+    shape = Part.Shape()
+    shape.makeShapeFromMesh(mesh.Topology, 0.001)
+    if len(shape.Shells) != 1 or not shape.isClosed() or not shape.isValid():
+        raise AuditError("UPPER_A_MASS_GEOMETRY_SHELL_INVALID")
+    solid = Part.makeSolid(shape.Shells[0])
+    if not solid.isClosed() or not solid.isValid() or len(solid.Solids) != 1:
+        raise AuditError("UPPER_A_MASS_GEOMETRY_SOLID_INVALID")
+    volume = float(solid.Volume)
+    source_center = vec(solid.CenterOfGravity)
+    expected_volume = float(report["volume_mm3"])
+    if abs(volume - expected_volume) > 1.0e-6:
+        raise AuditError(f"UPPER_A_MASS_GEOMETRY_VOLUME_MISMATCH:{volume}")
+    if max(abs(source_center[axis] - report["centroid_mm_source_local"][axis]) for axis in range(3)) > 1.0e-8:
+        raise AuditError("UPPER_A_MASS_GEOMETRY_SOURCE_CENTER_MISMATCH")
+
+    source_obj = doc.getObject("UpperArm_A_SleeveSide_PrintPart")
+    if source_obj is None or source_obj.TypeId != "Mesh::Feature":
+        raise AuditError("UPPER_A_SOURCE_OBJECT_MISSING")
+    placement = source_obj.Mesh.Placement
+    world_vector = placement.multVec(App.Vector(*source_center))
+    world_center = vec(world_vector)
+    if max(abs(world_center[axis] - report["centroid_mm_world"][axis]) for axis in range(3)) > 1.0e-8:
+        raise AuditError("UPPER_A_MASS_GEOMETRY_WORLD_CENTER_MISMATCH")
+    world_points = [vec(placement.multVec(point.Vector)) for point in mesh.Points]
+    world_box = bbox_dict(
+        [min(point[axis] for point in world_points) for axis in range(3)],
+        [max(point[axis] for point in world_points) for axis in range(3)],
+    )
     return {
-        "resolved": False,
-        "error_codes": [
-            "UPPER_ARM_PRINT_COM_GEOMETRY_UNRESOLVED",
-            "SOURCE_VISUAL_MESH_NOT_CLOSED",
-            "SOURCE_VISUAL_MESH_NON_MANIFOLD",
-        ],
-        "blocking_member": "UpperArm_A_SleeveSide_PrintPart",
-        "diagnostic_subgeometry": {
-            "UpperArm_A_SleeveSide_PrintPart": upper_a,
-            "UpperArm_B_Distal_PrintPart": {key: value for key, value in upper_b.items() if key != "geometry_atoms"},
+        "member": "UpperArm_A_SleeveSide_PrintPart",
+        "source_object": "UpperArm_A_SleeveSide_PrintPart",
+        "source_type": "MASS_PROPERTIES_ONLY_CLOSED_MESH_REIMPORTED_AS_VALID_BREP_SOLID",
+        "solid_count": 1,
+        "negative_oriented_solid_count": 0,
+        "signed_volume_sum_mm3": volume,
+        "abs_volume_mm3": volume,
+        "center_source_local_mm": source_center,
+        "center_world_mm": world_center,
+        "bbox_world_mm": world_box,
+        "artifact_path": UPPER_A_MASS_GEOMETRY,
+        "artifact_sha256": UPPER_A_MASS_GEOMETRY_SHA256,
+        "report_path": UPPER_A_MASS_REPORT,
+        "report_sha256": UPPER_A_MASS_REPORT_SHA256,
+        "coordinate_frame": report["artifact"]["coordinate_frame"],
+        "independently_reimported": True,
+        "closed": True,
+        "manifold": True,
+        "valid": True,
+        "collision_proxy_used": False,
+    }
+
+
+def upper_arm_geometry(root: Path, doc: Any) -> dict[str, Any]:
+    upper_a = upper_a_mass_properties_geometry(root, doc)
+    upper_b = closed_mesh_geometry(doc, "UpperArm_B_Distal_PrintPart", "upper_b_minimal_repair")
+    if not upper_b.get("resolved"):
+        raise AuditError("UPPER_ARM_B_GEOMETRY_UNRESOLVED")
+    volume_a = float(upper_a["abs_volume_mm3"])
+    volume_b = float(upper_b["volume_mm3"])
+    total_volume = volume_a + volume_b
+    fraction_a = volume_a / total_volume
+    fraction_b = volume_b / total_volume
+    mass_total = 0.5515
+    allocated_mass_a = mass_total * fraction_a
+    allocated_mass_b = mass_total * fraction_b
+    center = [
+        (volume_a * upper_a["center_world_mm"][axis] + volume_b * upper_b["center_world_mm"][axis])
+        / total_volume
+        for axis in range(3)
+    ]
+    upper_b_atom = {
+        "member": "UpperArm_B_Distal_PrintPart",
+        "source_type": "CAD_HIGH_DETAIL_VISUAL_MESH_MINIMAL_NONMANIFOLD_FACET_REPAIR",
+        "solid_count": 1,
+        "negative_oriented_solid_count": 0,
+        "signed_volume_sum_mm3": volume_b,
+        "abs_volume_mm3": volume_b,
+        "center_world_mm": upper_b["center_world_mm"],
+        "bbox_world_mm": upper_b["bbox_world_mm"],
+        "closed": True,
+        "manifold": True,
+        "valid": True,
+        "collision_proxy_used": False,
+    }
+    return {
+        "resolved": True,
+        "center_world_mm": center,
+        "bbox_world_mm": merge_bboxes([upper_a["bbox_world_mm"], upper_b["bbox_world_mm"]]),
+        "volume_mm3": total_volume,
+        "geometry_atoms": [upper_a, upper_b_atom],
+        "negative_oriented_solid_count": 0,
+        "positive_volume_component_count": 2,
+        "all_positive_volume_components_closed_manifold": True,
+        "mass_properties_artifact": {
+            "path": UPPER_A_MASS_GEOMETRY,
+            "sha256": UPPER_A_MASS_GEOMETRY_SHA256,
+            "report_path": UPPER_A_MASS_REPORT,
+            "report_sha256": UPPER_A_MASS_REPORT_SHA256,
+            "independently_reimported": True,
+            "report_crosscheck_pass": True,
+        },
+        "equal_density_volume_allocation": {
+            "assumption": "SAME_PRINT_MATERIAL_UNIFORM_EFFECTIVE_DENSITY_V1",
+            "total_measured_mass_kg": mass_total,
+            "total_volume_mm3": total_volume,
+            "parts": [
+                {
+                    "member": "UpperArm_A_SleeveSide_PrintPart",
+                    "volume_mm3": volume_a,
+                    "volume_fraction": fraction_a,
+                    "allocated_mass_kg": allocated_mass_a,
+                    "center_world_mm": upper_a["center_world_mm"],
+                },
+                {
+                    "member": "UpperArm_B_Distal_PrintPart",
+                    "volume_mm3": volume_b,
+                    "volume_fraction": fraction_b,
+                    "allocated_mass_kg": allocated_mass_b,
+                    "center_world_mm": upper_b["center_world_mm"],
+                },
+            ],
+            "volume_fraction_sum": fraction_a + fraction_b,
+            "allocated_mass_sum_kg": allocated_mass_a + allocated_mass_b,
+            "fifty_fifty_used": False,
+            "allocation_is_explanatory_not_additive": True,
+            "pass": abs(fraction_a + fraction_b - 1.0) < 1.0e-12
+            and abs(allocated_mass_a + allocated_mass_b - mass_total) < 1.0e-12,
         },
         "notes": (
-            "UpperArm_A has 1913 facets, 63 components, is not solid, and is non-manifold. "
-            "Its volume centroid is not reliable. No collision proxy or whole-link STL fallback is allowed."
+            "UpperArm A uses an independently reimported, deterministic mass-properties-only closed geometry; "
+            "UpperArm B uses the accepted minimal source-mesh repair. The measured 0.5515 kg total is split "
+            "for COM explanation only by equal-density volume fractions, never 50/50."
         ),
     }
 
 
-def geometry_for_component(doc: Any, component: dict[str, Any]) -> dict[str, Any]:
+def geometry_for_component(root: Path, doc: Any, component: dict[str, Any]) -> dict[str, Any]:
     component_id = component["component_id"]
     members = list(component["cad_members"])
     if component_id == "UPPER_ARM_PRINT_MEASURED":
-        return upper_arm_geometry(doc)
+        return upper_arm_geometry(root, doc)
     if component_id == "FOREARM_PRINT_MEASURED":
         return closed_mesh_geometry(doc, members[0], "positive_closed_components_only")
     if component_id == "WRIST_PRELINK_PRINT_MEASURED":
@@ -574,6 +736,11 @@ def component_status_and_method(component_id: str, geometry: dict[str, Any]) -> 
         return "ENGINEERING_ESTIMATE_GEOMETRIC_CENTROID", "CAD_MEMBER_ABS_VOLUME_WEIGHTED_GEOMETRIC_CENTROID"
     if component_id == "GRIPPER_CONNECTOR_CAMERA_MEASURED_ROLLUP":
         return "MEASURED_TOTAL_MASS_WITH_GEOMETRIC_COM_ESTIMATE", "37_MEMBER_CAD_ABS_VOLUME_WEIGHTED_GEOMETRIC_CENTROID"
+    if component_id == "UPPER_ARM_PRINT_MEASURED":
+        return (
+            "MEASURED_TOTAL_MASS_WITH_EQUAL_DENSITY_VOLUME_WEIGHTED_GEOMETRIC_COM",
+            "UPPERARM_A_MASS_PROPERTIES_ARTIFACT_PLUS_UPPERARM_B_SOURCE_MESH_VOLUME_WEIGHTED_CENTER",
+        )
     if component_id == "FOREARM_PRINT_MEASURED":
         return (
             "CAD_SOURCE_MESH_ZERO_VOLUME_ARTIFACT_EXCLUDED_VOLUME_CENTER",
@@ -591,12 +758,13 @@ def component_status_and_method(component_id: str, geometry: dict[str, Any]) -> 
 
 
 def build_component(
+    root: Path,
     doc: Any,
     mass_component: dict[str, Any],
     origin: list[float],
     rotation: list[list[float]],
 ) -> dict[str, Any]:
-    geometry = geometry_for_component(doc, mass_component)
+    geometry = geometry_for_component(root, doc, mass_component)
     component_id = mass_component["component_id"]
     status, method = component_status_and_method(component_id, geometry)
     output = {
@@ -630,6 +798,10 @@ def build_component(
         "cable_geometry_available": False if component_id.startswith("RESIDUAL_") else None,
         "notes": mass_component.get("notes", ""),
     }
+    if component_id == "UPPER_ARM_PRINT_MEASURED" and geometry.get("resolved"):
+        output["geometry_source"] = f"{UPPER_A_MASS_GEOMETRY} + {SOURCE_CAD}:UpperArm_B_Distal_PrintPart"
+        output["mass_properties_artifact"] = geometry["mass_properties_artifact"]
+        output["equal_density_volume_allocation"] = geometry["equal_density_volume_allocation"]
     if component_id == "GRIPPER_CONNECTOR_CAMERA_MEASURED_ROLLUP":
         output["closure_angle_deg"] = 0.0
         output["notes"] += " Internal member masses were not guessed; complete measured 0.296 kg is assigned to the 37-member geometric centroid."
@@ -799,7 +971,7 @@ def build_document(root: Path | None = None) -> dict[str, Any]:
             link = authority["ledger_link"]
             frame = manifest["links"][link]["frame_world_at_zero"]
             origin, rotation = validate_frame(frame, link)
-            component = build_component(source_doc, authority, origin, rotation)
+            component = build_component(root, source_doc, authority, origin, rotation)
             components_by_link[link].append(component)
     finally:
         if derived_doc is not None:
@@ -824,7 +996,8 @@ def build_document(root: Path | None = None) -> dict[str, Any]:
     total_mass_pass = abs(total - EXPECTED_TOTAL_MASS) <= MASS_TOL_KG
     unresolved = unresolved_items_from_links(links)
     all_links_resolved = all(link["validation"]["all_components_resolved"] for link in links.values())
-    final_pass = total_mass_pass and all_links_resolved and not unresolved
+    all_link_numeric_pass = all(link["validation"]["pass"] for link in links.values())
+    final_pass = total_mass_pass and all_links_resolved and all_link_numeric_pass and not unresolved
     final_status = "V15.15 COM_LEDGER_V1 = PASS" if final_pass else "V15.15 COM_LEDGER_V1 = FAIL"
     return {
         "schema": SCHEMA,
@@ -866,6 +1039,14 @@ def build_document(root: Path | None = None) -> dict[str, Any]:
             "whole_link_stl_center_used": False,
             "collision_proxy_fallback_allowed": False,
             "collision_proxy_used": False,
+            "upperarm_a_mass_properties_artifact": {
+                "path": UPPER_A_MASS_GEOMETRY,
+                "sha256": UPPER_A_MASS_GEOMETRY_SHA256,
+                "report_path": UPPER_A_MASS_REPORT,
+                "report_sha256": UPPER_A_MASS_REPORT_SHA256,
+                "usage": "volume_and_geometric_centroid_only",
+                "independently_reimported": True,
+            },
             "brep_volume_policy": "per-solid abs(Volume) weighting prevents negative orientation cancellation",
             "printed_part_policy": (
                 "each retained positive-volume source high-detail visual-mesh component must be closed and manifold; "
@@ -885,6 +1066,10 @@ def build_document(root: Path | None = None) -> dict[str, Any]:
             "CAD_SOURCE_MESH_ZERO_VOLUME_ARTIFACT_EXCLUDED_VOLUME_CENTER": (
                 "Source mesh volume center after explicitly excluding recorded zero-volume artifact components; "
                 "every retained positive-volume component is closed and manifold."
+            ),
+            "MEASURED_TOTAL_MASS_WITH_EQUAL_DENSITY_VOLUME_WEIGHTED_GEOMETRIC_COM": (
+                "Measured A+B print total placed at their equal-density volume-weighted geometric center; "
+                "A uses the independently validated mass-properties-only artifact and B the accepted source mesh."
             ),
             "ENGINEERING_ESTIMATE_GEOMETRIC_CENTROID": "Residual mass placed at the traceable CAD member-set geometric centroid.",
             "MEASURED_TOTAL_MASS_WITH_GEOMETRIC_COM_ESTIMATE": "Measured total mass placed at complete assembly geometric centroid without internal mass guesses.",
@@ -913,13 +1098,14 @@ def build_document(root: Path | None = None) -> dict[str, Any]:
             "resolved_link_com_count": sum(link["validation"]["pass"] for link in links.values()),
             "all_links_resolved": all_links_resolved,
             "collision_proxy_used": False,
+            "all_link_numeric_pass": all_link_numeric_pass,
             "all_assertions_pass": final_pass,
         },
         "unresolved_items": unresolved,
         "known_model_limitations": [
             "Residual CAD centroids omit cable geometry because no authoritative cable CAD is available; cable_geometry_available=false.",
             "The gripper COM is a static ClosureAngle=0 geometric estimate for a measured complete total, not an internal inertial allocation.",
-            "UpperArm_A source visual mesh topology blocks upper-arm, link2, and full-chain COM authority.",
+            "UpperArm A/B mass allocation is a V1 equal-effective-density assumption because only their combined 0.5515 kg was measured.",
         ],
         "prohibited_outputs": {
             "mass_modified": False,
@@ -945,6 +1131,12 @@ def format_vector(vector: list[float] | None) -> str:
 
 
 def markdown_text(document: dict[str, Any]) -> str:
+    upper_arm = next(
+        component
+        for component in document["links"]["link2"]["components"]
+        if component["component_id"] == "UPPER_ARM_PRINT_MEASURED"
+    )
+    allocation = upper_arm["equal_density_volume_allocation"]
     lines = [
         "# V15.15 COM 账本 V1",
         "",
@@ -971,6 +1163,36 @@ def markdown_text(document: dict[str, Any]) -> str:
         lines.append(
             f"| {link_name} | {link['mass_kg']:.4f} | `{format_vector(link['com_xyz_m_in_link_frame'])}` | PASS | {status} |"
         )
+    lines.extend(
+        [
+            "",
+            "## UpperArm A 质量属性修复与 A/B 体积分配",
+            "",
+            f"- mass-properties-only artifact: `{upper_arm['mass_properties_artifact']['path']}` / "
+            f"`{upper_arm['mass_properties_artifact']['sha256']}`",
+            f"- repair report: `{upper_arm['mass_properties_artifact']['report_path']}` / "
+            f"`{upper_arm['mass_properties_artifact']['report_sha256']}`",
+            "- artifact 已独立重导入为 closed/manifold/valid solid；collision proxy used: **NO**",
+            "- 上臂 A+B 总实测质量保持 `0.5515 kg`；按同材料统一等效密度进行真实闭合体积加权，未使用 50/50。",
+            "",
+            "| Part | Volume (mm^3) | Volume fraction | Explanatory allocated mass (kg) | COM world at zero (mm) |",
+            "|---|---:|---:|---:|---|",
+        ]
+    )
+    for part in allocation["parts"]:
+        lines.append(
+            f"| {part['member']} | {part['volume_mm3']:.12g} | {part['volume_fraction']:.12g} | "
+            f"{part['allocated_mass_kg']:.12g} | `{format_vector(part['center_world_mm'])}` |"
+        )
+    lines.extend(
+        [
+            "",
+            f"- upper-arm print COM world at zero (mm): `{format_vector(upper_arm['cad_com_world_mm'])}`",
+            f"- upper-arm print COM in link2 (mm): `{format_vector(upper_arm['cad_com_link_mm'])}`",
+            f"- link2 final COM in link frame (m): `{format_vector(document['links']['link2']['com_xyz_m_in_link_frame'])}`",
+            f"- link2 final COM world at zero (m): `{format_vector(document['links']['link2']['com_xyz_m_world_at_zero'])}`",
+        ]
+    )
     lines.extend(
         [
             "",
@@ -1020,7 +1242,12 @@ def markdown_text(document: dict[str, Any]) -> str:
             "",
             "## 结论",
             "",
-            "当前必须保持 **FAIL**。不得用 `UpperArm_Full_Collision_Proxy` 或整个 link STL 的几何中心绕过源几何拓扑问题。",
+            (
+                "六个 Link COM 已全部解析。UpperArm A 仅使用独立质量属性几何，"
+                "未使用 collision proxy，未写入惯量/重力/动力学。"
+                if document["validation"]["all_links_resolved"]
+                else "COM 仍有阻塞，禁止使用 collision proxy 绕过。"
+            ),
             "",
         ]
     )

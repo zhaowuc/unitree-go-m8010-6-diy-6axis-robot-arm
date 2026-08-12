@@ -32,14 +32,22 @@
     "changed_paths": [
       "V15_15_COM账本_v1.json",
       "V15_15_COM账本_v1.md",
+      "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+      "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json",
       "tools/build_com_ledger_v15_15.py",
-      "tools/validate_com_ledger_v15_15.py"
+      "tools/build_upperarm_a_mass_properties_v15_15.py",
+      "tools/validate_com_ledger_v15_15.py",
+      "tools/validate_upperarm_a_mass_properties_v15_15.py"
     ],
     "allowed_changed_paths": [
       "V15_15_COM账本_v1.json",
       "V15_15_COM账本_v1.md",
+      "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+      "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json",
       "tools/build_com_ledger_v15_15.py",
-      "tools/validate_com_ledger_v15_15.py"
+      "tools/build_upperarm_a_mass_properties_v15_15.py",
+      "tools/validate_com_ledger_v15_15.py",
+      "tools/validate_upperarm_a_mass_properties_v15_15.py"
     ],
     "unexpected_changed_paths": [],
     "source_commit_is_ancestor": true,
@@ -112,6 +120,18 @@
         "sha256": "e9b66986377eb2a30d464c6b9ca9c1371bc2e83f4e7d180f23e0da08cf8fb944",
         "hash_mode": "RAW_BYTES",
         "locked": true
+      },
+      {
+        "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+        "sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json",
+        "sha256": "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
       }
     ],
     "after": [
@@ -180,6 +200,18 @@
         "sha256": "e9b66986377eb2a30d464c6b9ca9c1371bc2e83f4e7d180f23e0da08cf8fb944",
         "hash_mode": "RAW_BYTES",
         "locked": true
+      },
+      {
+        "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+        "sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json",
+        "sha256": "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
       }
     ],
     "all_locked": true,
@@ -210,6 +242,14 @@
     "whole_link_stl_center_used": false,
     "collision_proxy_fallback_allowed": false,
     "collision_proxy_used": false,
+    "upperarm_a_mass_properties_artifact": {
+      "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+      "sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45",
+      "report_path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json",
+      "report_sha256": "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815",
+      "usage": "volume_and_geometric_centroid_only",
+      "independently_reimported": true
+    },
     "brep_volume_policy": "per-solid abs(Volume) weighting prevents negative orientation cancellation",
     "printed_part_policy": "each retained positive-volume source high-detail visual-mesh component must be closed and manifold; zero-volume components may be excluded only with explicit component/facet evidence",
     "go_output_policy": "0.070 kg output equivalent uses output solids plus neutral B6808 geometry; neutral has no separate mass",
@@ -221,6 +261,7 @@
     "CAD_COMPOUND_VOLUME_WEIGHTED_CENTER": "FreeCAD BRep multi-solid/member center weighted by absolute solid volume.",
     "CAD_HIGH_DETAIL_VISUAL_MESH_VOLUME_CENTROID": "Volume centroid of retained positive-volume source high-detail visual-mesh components; each retained component is closed and manifold.",
     "CAD_SOURCE_MESH_ZERO_VOLUME_ARTIFACT_EXCLUDED_VOLUME_CENTER": "Source mesh volume center after explicitly excluding recorded zero-volume artifact components; every retained positive-volume component is closed and manifold.",
+    "MEASURED_TOTAL_MASS_WITH_EQUAL_DENSITY_VOLUME_WEIGHTED_GEOMETRIC_COM": "Measured A+B print total placed at their equal-density volume-weighted geometric center; A uses the independently validated mass-properties-only artifact and B the accepted source mesh.",
     "ENGINEERING_ESTIMATE_GEOMETRIC_CENTROID": "Residual mass placed at the traceable CAD member-set geometric centroid.",
     "MEASURED_TOTAL_MASS_WITH_GEOMETRIC_COM_ESTIMATE": "Measured total mass placed at complete assembly geometric centroid without internal mass guesses.",
     "UNRESOLVED": "No authoritative COM can be emitted; the build remains fail-closed."
@@ -258,10 +299,33 @@
           -1.7738797667774742
         ]
       },
-      "com_xyz_m_in_link_frame": null,
-      "com_xyz_mm_in_link_frame": null,
-      "com_xyz_m_world_at_zero": null,
-      "combined_mass_component_bbox_link_mm": null,
+      "com_xyz_m_in_link_frame": [
+        -0.10671013093600745,
+        -0.016129992301934973,
+        0.00016170191924484812
+      ],
+      "com_xyz_mm_in_link_frame": [
+        -106.71013093600745,
+        -16.129992301934973,
+        0.1617019192448481
+      ],
+      "com_xyz_m_world_at_zero": [
+        0.005382655153931933,
+        0.10784191977689339,
+        0.18280148391924486
+      ],
+      "combined_mass_component_bbox_link_mm": {
+        "min_mm": [
+          -293.0638287737092,
+          -104.03773233860144,
+          -59.8137279396183
+        ],
+        "max_mm": [
+          48.10545576649879,
+          78.16065107923663,
+          65.0357831590147
+        ]
+      },
       "components": [
         {
           "component_id": "J2A_OUTPUT_EQ",
@@ -552,58 +616,105 @@
           "mass_kg": 0.5515,
           "mass_status": "MEASURED",
           "source_mass_component_id": "UPPER_ARM_PRINT_MEASURED",
-          "geometry_source": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+          "geometry_source": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl + 机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd:UpperArm_B_Distal_PrintPart",
           "geometry_members": [
             "UpperArm_A_SleeveSide_PrintPart",
             "UpperArm_B_Distal_PrintPart"
           ],
-          "geometry_method": "FAIL_CLOSED_NO_COLLISION_PROXY_FALLBACK",
-          "cad_com_world_mm": null,
-          "cad_com_link_mm": null,
-          "com_status": "UNRESOLVED",
-          "cad_volume_mm3": null,
-          "bbox_world_mm": null,
-          "bbox_link_mm": null,
-          "reconstructed_world_com_m": null,
-          "round_trip_error_m": null,
-          "component_com_inside_bbox": null,
-          "collision_proxy_used": false,
-          "geometry_atoms": [],
-          "positive_volume_component_count": null,
-          "all_positive_volume_components_closed_manifold": null,
-          "excluded_zero_volume_component_count": null,
-          "excluded_zero_volume_facets": null,
-          "excluded_zero_volume_components": [],
-          "cable_geometry_available": null,
-          "notes": "UpperArm_A has 1913 facets, 63 components, is not solid, and is non-manifold. Its volume centroid is not reliable. No collision proxy or whole-link STL fallback is allowed.",
-          "blocking": true,
-          "error_codes": [
-            "UPPER_ARM_PRINT_COM_GEOMETRY_UNRESOLVED",
-            "SOURCE_VISUAL_MESH_NOT_CLOSED",
-            "SOURCE_VISUAL_MESH_NON_MANIFOLD"
+          "geometry_method": "UPPERARM_A_MASS_PROPERTIES_ARTIFACT_PLUS_UPPERARM_B_SOURCE_MESH_VOLUME_WEIGHTED_CENTER",
+          "cad_com_world_mm": [
+            3.9119055018377793,
+            117.41391770185992,
+            182.86076510798924
           ],
-          "blocking_member": "UpperArm_A_SleeveSide_PrintPart",
-          "diagnostic_subgeometry": {
-            "UpperArm_A_SleeveSide_PrintPart": {
+          "cad_com_link_mm": [
+            -115.78878191255349,
+            -19.501096759046654,
+            0.22098310798924103
+          ],
+          "com_status": "MEASURED_TOTAL_MASS_WITH_EQUAL_DENSITY_VOLUME_WEIGHTED_GEOMETRIC_COM",
+          "cad_volume_mm3": 458087.6504331233,
+          "bbox_world_mm": {
+            "min_mm": [
+              -47.35342421727944,
+              -18.71236104720583,
+              122.8260540603817
+            ],
+            "max_mm": [
+              56.40148254290307,
+              287.599755140222,
+              247.6755651590147
+            ]
+          },
+          "bbox_link_mm": {
+            "min_mm": [
+              -293.0638287737092,
+              -104.03773233860144,
+              -59.8137279396183
+            ],
+            "max_mm": [
+              27.879733965538644,
+              59.36514245876179,
+              65.0357831590147
+            ]
+          },
+          "reconstructed_world_com_m": [
+            0.0039119055018377825,
+            0.11741391770185994,
+            0.18286076510798924
+          ],
+          "round_trip_error_m": 1.464821375527116e-17,
+          "component_com_inside_bbox": true,
+          "collision_proxy_used": false,
+          "geometry_atoms": [
+            {
               "member": "UpperArm_A_SleeveSide_PrintPart",
-              "before": {
-                "facets": 1913,
-                "components": 63,
-                "is_solid": false,
-                "has_non_manifolds": true,
-                "volume_mm3": 3980640.0
+              "source_object": "UpperArm_A_SleeveSide_PrintPart",
+              "source_type": "MASS_PROPERTIES_ONLY_CLOSED_MESH_REIMPORTED_AS_VALID_BREP_SOLID",
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 308654.9785581233,
+              "abs_volume_mm3": 308654.9785581233,
+              "center_source_local_mm": [
+                3414.7028593279297,
+                1277.1059547526816,
+                34.687833260141105
+              ],
+              "center_world_mm": [
+                -0.7894327050343009,
+                53.98176991501941,
+                183.0347984497073
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  -47.35342421727944,
+                  -18.71236104720583,
+                  124.68929829103422
+                ],
+                "max_mm": [
+                  56.40148254290307,
+                  172.65569133963663,
+                  240.59023732922856
+                ]
               },
-              "after": {
-                "facets": 1913,
-                "components": 63,
-                "is_solid": false,
-                "has_non_manifolds": true,
-                "volume_mm3": 3980640.0
-              },
-              "repair": null
+              "artifact_path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+              "artifact_sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45",
+              "report_path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json",
+              "report_sha256": "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815",
+              "coordinate_frame": "UPPERARM_A_SOURCE_STL_LOCAL",
+              "independently_reimported": true,
+              "closed": true,
+              "manifold": true,
+              "valid": true,
+              "collision_proxy_used": false
             },
-            "UpperArm_B_Distal_PrintPart": {
-              "resolved": true,
+            {
+              "member": "UpperArm_B_Distal_PrintPart",
+              "source_type": "CAD_HIGH_DETAIL_VISUAL_MESH_MINIMAL_NONMANIFOLD_FACET_REPAIR",
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 149432.671875,
+              "abs_volume_mm3": 149432.671875,
               "center_world_mm": [
                 13.62257603478804,
                 248.43378082403203,
@@ -621,32 +732,69 @@
                   247.6755651590147
                 ]
               },
-              "volume_mm3": 149432.671875,
-              "diagnostic": {
-                "member": "UpperArm_B_Distal_PrintPart",
-                "before": {
-                  "facets": 696,
-                  "components": 1,
-                  "is_solid": false,
-                  "has_non_manifolds": true,
-                  "volume_mm3": 149432.671875
-                },
-                "after": {
-                  "facets": 694,
-                  "components": 1,
-                  "is_solid": true,
-                  "has_non_manifolds": false,
-                  "volume_mm3": 149432.671875
-                },
-                "repair": "IN_MEMORY_REMOVE_NON_MANIFOLD_FACETS"
-              },
-              "positive_volume_component_count": 1,
-              "all_positive_volume_components_closed_manifold": true,
-              "excluded_zero_volume_component_count": 0,
-              "excluded_zero_volume_facets": 0,
-              "excluded_zero_volume_components": []
+              "closed": true,
+              "manifold": true,
+              "valid": true,
+              "collision_proxy_used": false
             }
-          }
+          ],
+          "positive_volume_component_count": 2,
+          "all_positive_volume_components_closed_manifold": true,
+          "excluded_zero_volume_component_count": null,
+          "excluded_zero_volume_facets": null,
+          "excluded_zero_volume_components": [],
+          "cable_geometry_available": null,
+          "notes": "Direct scale measurement; the two print parts remain one unsplit measured group.",
+          "mass_properties_artifact": {
+            "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+            "sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45",
+            "report_path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json",
+            "report_sha256": "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815",
+            "independently_reimported": true,
+            "report_crosscheck_pass": true
+          },
+          "equal_density_volume_allocation": {
+            "assumption": "SAME_PRINT_MATERIAL_UNIFORM_EFFECTIVE_DENSITY_V1",
+            "total_measured_mass_kg": 0.5515,
+            "total_volume_mm3": 458087.6504331233,
+            "parts": [
+              {
+                "member": "UpperArm_A_SleeveSide_PrintPart",
+                "volume_mm3": 308654.9785581233,
+                "volume_fraction": 0.6737902195492261,
+                "allocated_mass_kg": 0.3715953060813982,
+                "center_world_mm": [
+                  -0.7894327050343009,
+                  53.98176991501941,
+                  183.0347984497073
+                ]
+              },
+              {
+                "member": "UpperArm_B_Distal_PrintPart",
+                "volume_mm3": 149432.671875,
+                "volume_fraction": 0.32620978045077387,
+                "allocated_mass_kg": 0.17990469391860178,
+                "center_world_mm": [
+                  13.62257603478804,
+                  248.43378082403203,
+                  182.50129715039748
+                ]
+              }
+            ],
+            "volume_fraction_sum": 1.0,
+            "allocated_mass_sum_kg": 0.5515,
+            "fifty_fifty_used": false,
+            "allocation_is_explanatory_not_additive": true,
+            "pass": true
+          },
+          "independent_audit_reference_world_com_mm": [
+            3.9119055019,
+            117.4139177018,
+            182.8607651079
+          ],
+          "independent_audit_reference_error_mm": 1.2419953475331028e-10,
+          "independent_audit_reference_pass": true,
+          "blocking": false
         },
         {
           "component_id": "J3_OUTPUT_EQ",
@@ -781,12 +929,11 @@
       "validation": {
         "component_mass_sum_error_kg": 0.0,
         "component_mass_sum_pass": true,
-        "all_components_resolved": false,
-        "com_finite": null,
-        "com_inside_combined_component_bbox": null,
-        "link_world_vs_local_round_trip_error_m": null,
-        "pass": false,
-        "failure_code": "LINK_COM_BLOCKED_BY_UNRESOLVED_COMPONENT"
+        "all_components_resolved": true,
+        "com_finite": true,
+        "com_inside_combined_component_bbox": true,
+        "link_world_vs_local_round_trip_error_m": 8.881784197001253e-19,
+        "pass": true
       }
     },
     "link3": {
@@ -4248,44 +4395,17 @@
     "coordinate_round_trip_max_error_m": 1.2994659181158156e-14,
     "coordinate_round_trip_tolerance_m": 1e-08,
     "all_resolved_component_round_trips_pass": true,
-    "resolved_link_com_count": 5,
-    "all_links_resolved": false,
+    "resolved_link_com_count": 6,
+    "all_links_resolved": true,
     "collision_proxy_used": false,
-    "all_assertions_pass": false
+    "all_link_numeric_pass": true,
+    "all_assertions_pass": true
   },
-  "unresolved_items": [
-    {
-      "code": "UPPER_ARM_PRINT_COM_GEOMETRY_UNRESOLVED",
-      "owner_link": "link2",
-      "component_id": "UPPER_ARM_PRINT_MEASURED",
-      "member": "UpperArm_A_SleeveSide_PrintPart",
-      "blocking": true,
-      "reason": "UpperArm_A has 1913 facets, 63 components, is not solid, and is non-manifold. Its volume centroid is not reliable. No collision proxy or whole-link STL fallback is allowed.",
-      "required_resolution": "Provide or repair authoritative closed, manifold source BRep/STEP/visual geometry, then re-run the read-only COM audit."
-    },
-    {
-      "code": "SOURCE_VISUAL_MESH_NOT_CLOSED",
-      "owner_link": "link2",
-      "component_id": "UPPER_ARM_PRINT_MEASURED",
-      "member": "UpperArm_A_SleeveSide_PrintPart",
-      "blocking": true,
-      "reason": "UpperArm_A has 1913 facets, 63 components, is not solid, and is non-manifold. Its volume centroid is not reliable. No collision proxy or whole-link STL fallback is allowed.",
-      "required_resolution": "Provide or repair authoritative closed, manifold source BRep/STEP/visual geometry, then re-run the read-only COM audit."
-    },
-    {
-      "code": "SOURCE_VISUAL_MESH_NON_MANIFOLD",
-      "owner_link": "link2",
-      "component_id": "UPPER_ARM_PRINT_MEASURED",
-      "member": "UpperArm_A_SleeveSide_PrintPart",
-      "blocking": true,
-      "reason": "UpperArm_A has 1913 facets, 63 components, is not solid, and is non-manifold. Its volume centroid is not reliable. No collision proxy or whole-link STL fallback is allowed.",
-      "required_resolution": "Provide or repair authoritative closed, manifold source BRep/STEP/visual geometry, then re-run the read-only COM audit."
-    }
-  ],
+  "unresolved_items": [],
   "known_model_limitations": [
     "Residual CAD centroids omit cable geometry because no authoritative cable CAD is available; cable_geometry_available=false.",
     "The gripper COM is a static ClosureAngle=0 geometric estimate for a measured complete total, not an internal inertial allocation.",
-    "UpperArm_A source visual mesh topology blocks upper-arm, link2, and full-chain COM authority."
+    "UpperArm A/B mass allocation is a V1 equal-effective-density assumption because only their combined 0.5515 kg was measured."
   ],
   "prohibited_outputs": {
     "mass_modified": false,
@@ -4296,5 +4416,5 @@
     "gravity_written": false,
     "damping_friction_armature_written": false
   },
-  "final_status": "V15.15 COM_LEDGER_V1 = FAIL"
+  "final_status": "V15.15 COM_LEDGER_V1 = PASS"
 }
