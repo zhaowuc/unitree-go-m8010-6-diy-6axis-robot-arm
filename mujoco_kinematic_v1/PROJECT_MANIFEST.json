@@ -1,19 +1,21 @@
 {
   "schema": "go-m8010-arm-v15.13-mujoco-kinematic-delivery/1.1",
   "revision": "V15.13-MuJoCo-empty-load-kinematic-v1.2-geometric-gui-zero",
-  "generated_at_utc": "2026-08-10T19:36:45.907205+00:00",
+  "generated_at_utc": "2026-08-11T22:26:59.842924+00:00",
   "qa_status": "PASS",
   "qa_reports": [
     "QA_MUJOCO_V15_13_空载运动学版.json",
     "QA_MUJOCO_V15_13_逐轴运动语义与地面复核.json",
-    "QA_MUJOCO_V15_13_GUI零位几何校准.json"
+    "QA_MUJOCO_V15_13_GUI零位几何校准.json",
+    "QA_MUJOCO_V15_13_虚拟相机坐标闭环.json",
+    "QA_ROS2_V15_13_RVIZ可视网格.json"
   ],
   "mujoco_version_verified": "3.11.0",
   "main_model": "go_m8010_arm_v15_13_kinematic.xml",
   "temporary_gui": "temporary_joint_gui.py",
   "ground_z_m": -0.09,
-  "file_count_excluding_manifest": 1076,
-  "total_bytes_excluding_manifest": 784547517,
+  "file_count_excluding_manifest": 1090,
+  "total_bytes_excluding_manifest": 867523521,
   "files": [
     {
       "path": "QA_MUJOCO_V15_13_GUI零位几何校准.json",
@@ -22,13 +24,23 @@
     },
     {
       "path": "QA_MUJOCO_V15_13_空载运动学版.json",
-      "bytes": 19280,
-      "sha256": "09BCCB7384097CEF024647EBE7E6376D3D0C3ECB6AFCBB651C0139D0FCCEF6B3"
+      "bytes": 21879,
+      "sha256": "625D4B47C0F2036D43AA233B5F85B892081C1AC926CA36A7B8C0A10DF728A4FD"
+    },
+    {
+      "path": "QA_MUJOCO_V15_13_虚拟相机坐标闭环.json",
+      "bytes": 7250,
+      "sha256": "07762436081E23091DA4913C81CA5427D257C2FDFF64F49506832FD557A64283"
     },
     {
       "path": "QA_MUJOCO_V15_13_逐轴运动语义与地面复核.json",
       "bytes": 48689,
       "sha256": "8E34DB711E579960957AFD213A07311418EC8CF85AC71C8741B5E8EAE5B5BB4E"
+    },
+    {
+      "path": "QA_ROS2_V15_13_RVIZ可视网格.json",
+      "bytes": 9018,
+      "sha256": "FADC3DFF50F5CAD77E5A087A0D320E97CA555D0CB9D673773D59CFDF05F48663"
     },
     {
       "path": "QA_V15_13_整机深度碰撞与限位.json",
@@ -62,8 +74,8 @@
     },
     {
       "path": "build_model.py",
-      "bytes": 12481,
-      "sha256": "271EF1E62049DCAD1630407746E4BDA11702575510E16597709B409A9F24EE8F"
+      "bytes": 16332,
+      "sha256": "268139EB0DD3386D22334F6B1F3E66533AE2CB2A7732C7A9DF66EE0B3450C72C"
     },
     {
       "path": "calibrate_gui_zero.py",
@@ -72,13 +84,13 @@
     },
     {
       "path": "generate_project_manifest.py",
-      "bytes": 2271,
-      "sha256": "CABE5EC9FB12BC2DA32FC0A7FD972E0A6797D5D16A52859BCFED3DB61E6EBFB1"
+      "bytes": 2385,
+      "sha256": "E14AADF8A32DB7C5EF0F30A2CFBC1038498DADBDDA529983A76C90DFBF452A60"
     },
     {
       "path": "go_m8010_arm_v15_13_kinematic.xml",
-      "bytes": 352756,
-      "sha256": "3E3F684912A428AEABBA2EEF5C993975184C3EAE52EA11994281DBAFA4FE5393"
+      "bytes": 353489,
+      "sha256": "26F9E0EFE10B7D208378D816540098625A34826069FDF7BBAFC1DB94CF073941"
     },
     {
       "path": "gui_default_zero.json",
@@ -5026,6 +5038,46 @@
       "sha256": "61A7CCBDF0CA0ABA70F447C323989AD4344B2627537429405F87B4F6C1FB91F7"
     },
     {
+      "path": "meshes/ros_visual_mm/base_link.stl",
+      "bytes": 7387284,
+      "sha256": "CB842671BB5138EFF40845C4C6C42E552D32BF0C0810D2AEC1831A8142DDB754"
+    },
+    {
+      "path": "meshes/ros_visual_mm/gripper.stl",
+      "bytes": 11934184,
+      "sha256": "8E70B714ED248877A87CBED8015C610E56A3E6831D438362BC35A9E6DC6EB748"
+    },
+    {
+      "path": "meshes/ros_visual_mm/link1.stl",
+      "bytes": 14497884,
+      "sha256": "AC3499867B772A867D09188FF34767EE5F696054DB54E21680D7F53DEEEE2BDB"
+    },
+    {
+      "path": "meshes/ros_visual_mm/link2.stl",
+      "bytes": 14745834,
+      "sha256": "50B21130AD2C40C9858ABDD769782BDC2504F4928302759F185D8E253DD63A0A"
+    },
+    {
+      "path": "meshes/ros_visual_mm/link3.stl",
+      "bytes": 13063584,
+      "sha256": "14E415E076A41A81BC2ECA9D5B0C89E428DABF10D4BEB93E5A5F7FEAC5C1BB44"
+    },
+    {
+      "path": "meshes/ros_visual_mm/link4.stl",
+      "bytes": 11797184,
+      "sha256": "E9EAE973EABC3E15B1C9924081297436C50351661CC59B4D44FD056D191609D9"
+    },
+    {
+      "path": "meshes/ros_visual_mm/link5.stl",
+      "bytes": 9151284,
+      "sha256": "49EA0CA3C6DF1AC235C9D80704C847996A1D71F07564863FB47886B852A9BB15"
+    },
+    {
+      "path": "meshes/ros_visual_mm/link6.stl",
+      "bytes": 253284,
+      "sha256": "9587C3BECA7BEB23672A1BAAB6F36322D5F40D5C81454E7DBCEFCEC2632F8849"
+    },
+    {
       "path": "meshes/visual_chunks_mm/base_link/001.stl",
       "bytes": 9500084,
       "sha256": "54B6769E551B660AF73ED5FF24A73EEAC7C278DF460ED572B17FAAB72A80FBA4"
@@ -5292,13 +5344,18 @@
     },
     {
       "path": "model_contract.json",
-      "bytes": 5317,
-      "sha256": "D982877C0D84170CB3651A9C37DC9AB32CE154333672435AB14E9EA7E15C2643"
+      "bytes": 7282,
+      "sha256": "D68FFA00610362ECA7591EB616A38A6F02E13CB048809CF799B50C03E4FB90AF"
     },
     {
       "path": "prepare_assets.py",
       "bytes": 9427,
       "sha256": "25F31F09AE58D440DEA5F77A174A929DAAFD4FAB5F2247B4331076CBB5BAED8A"
+    },
+    {
+      "path": "prepare_ros_visual_meshes.py",
+      "bytes": 6463,
+      "sha256": "655AFF72F1D45C02D162EFA44F9BA7F24DEED8611A7CFEC9303DED800DDE6DC6"
     },
     {
       "path": "prepare_visual_chunks.py",
@@ -5334,6 +5391,16 @@
       "path": "previews/restored_gui_default_zero.png",
       "bytes": 789491,
       "sha256": "AD01B70172F697EA536DA7A5B2C2E081E59606E77C8984534719E68E20D1E9DE"
+    },
+    {
+      "path": "previews/virtual_camera_orientation_raw.png",
+      "bytes": 42528,
+      "sha256": "450677A0297C3FE012E58A4370A3B4334B9744234315CB6547D307842E72B0AF"
+    },
+    {
+      "path": "previews/virtual_camera_orientation_validation.png",
+      "bytes": 48474,
+      "sha256": "095EADAFE3B628F251CBE0C8DE77F0D72F9E60FEDEB87A8A666A6B2A57214418"
     },
     {
       "path": "previews/zero_front.png",
@@ -5382,8 +5449,13 @@
     },
     {
       "path": "validate_model.py",
-      "bytes": 15930,
-      "sha256": "66CF2B0E713FA6FC7D7F595C3421831CABDFF259F94903D5B97204C9D4E6EB70"
+      "bytes": 20307,
+      "sha256": "9BE9FAB3E5C7850F001C2E46B83AEBF033A02FEFF2A9E27DBC15347DB4098EA4"
+    },
+    {
+      "path": "validate_virtual_camera.py",
+      "bytes": 18110,
+      "sha256": "12159EF8F53C33E985F1BC210F0B4DABE7D9F97AAF91C8380575BEC00BB9E975"
     },
     {
       "path": "windows_export_tools/export_mujoco_kinematic_v1_meshes.py",

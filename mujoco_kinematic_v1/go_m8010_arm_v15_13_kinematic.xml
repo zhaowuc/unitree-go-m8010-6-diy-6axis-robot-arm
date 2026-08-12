@@ -2064,6 +2064,12 @@
                     <geom name="collision__gripper__Gripper_Right_Finger__079" type="mesh" mesh="collision_gripper_10_079" rgba="0.95 0.42 0.08 0.20" contype="1" conaffinity="7" group="3" mass="0" solref="0.002 1" solimp="0.95 0.99 0.001" />
                     <site name="tool_reference" pos="0 0 0" type="sphere" size="0.003" rgba="0.2 0.6 1 1" group="4" />
                     <site name="tcp_nominal" pos="-0.001187726400 0.000060729026 0.092493513872" type="sphere" size="0.006" rgba="1 0.05 0.95 1" group="0" />
+                    <body name="camera_link" pos="-0.038917046930682 0.000061006900000 0.019635428243040" quat="0.5 -0.5 0.5 -0.5">
+                      <body name="sim_camera_optical_frame" pos="0 -0.00905 -0.0128" quat="0.707106781186548 0.707106781186548 0 0">
+                        <site name="sim_camera_optical_origin" pos="0 0 0" type="sphere" size="0.004" rgba="0.05 0.85 1 1" group="4" />
+                        <camera name="sim_gemini_pro_renderer" pos="0 0 0" quat="0 1 0 0" mode="fixed" fovy="60" />
+                      </body>
+                    </body>
                   </body>
                 </body>
               </body>

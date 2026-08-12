@@ -1,0 +1,64 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 1.0
+      Class: rviz_default_plugins/RobotModel
+      Description Source: Topic
+      Description Topic:
+        Depth: 5
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
+      Enabled: true
+      Name: RobotModel
+      Visual Enabled: true
+      Collision Enabled: false
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+      Marker Scale: 0.16
+      Name: TF — CAD + simulated optical
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Update Interval: 0
+  Enabled: true
+  Global Options:
+    Background Color: 35; 38; 45
+    Fixed Frame: world
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+  Transformation:
+    Current:
+      Class: rviz_default_plugins/TF
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 1.15
+      Focal Point:
+        X: -0.18
+        Y: 0.0
+        Z: 0.25
+      Name: Virtual camera TF overview
+      Near Clip Distance: 0.01
+      Pitch: 0.55
+      Target Frame: world
+      Yaw: 2.45
+    Saved: ~
+Window Geometry:
+  Height: 1000
+  Width: 1500
+  X: 40
+  Y: 40

@@ -7,7 +7,7 @@
   "dummy_inertials": true,
   "dummy_inertial_warning": "Numerical compile placeholders only; never use for dynamics or torque control.",
   "base_frame_policy": "CAD base_link frame is mapped to MuJoCo world identity; all relative transforms are preserved.",
-  "topology": "world/base_link/J1/link1/J2/link2/J3/link3/J4/link4/J5/link5/J6/link6/fixed/gripper",
+  "topology": "world/base_link/J1/link1/J2/link2/J3/link3/J4/link4/J5/link5/J6/link6/fixed/gripper; gripper/{tcp_nominal,camera_link/sim_camera_optical_frame/sim_gemini_pro_renderer}",
   "joints": {
     "J1": {
       "source_joint": "J1",
@@ -194,6 +194,91 @@
     }
   },
   "gripper": "frozen at verified V15.13 zero pose and fixed to link6",
+  "tcp_nominal": {
+    "frame": "gripper",
+    "closure_angle_deg": 0.0,
+    "position_m": [
+      -0.0011877264,
+      6.0729026e-05,
+      0.092493513872
+    ],
+    "rpy_deg": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "definition": "midpoint of the area centroids of the left and right effective silicone gripping surfaces"
+  },
+  "virtual_camera": {
+    "scope": "simulation-only frames; not a real Gemini Pro driver optical frame",
+    "camera_link": {
+      "parent": "gripper",
+      "position_m": [
+        -0.038917046930682,
+        6.10069e-05,
+        0.01963542824304
+      ],
+      "rpy_rad": [
+        -1.5707963267948966,
+        0.0,
+        -1.5707963267948966
+      ],
+      "quaternion_xyzw": [
+        -0.5,
+        0.5,
+        -0.5,
+        0.5
+      ],
+      "cad_axes": {
+        "+X": "stereo baseline direction",
+        "+Y": "camera housing rear",
+        "+Z": "mounting contact direction",
+        "view": "-Y"
+      }
+    },
+    "sim_camera_optical_frame": {
+      "parent": "camera_link",
+      "position_m": [
+        0.0,
+        -0.00905,
+        -0.0128
+      ],
+      "rpy_rad": [
+        1.5707963267948966,
+        0.0,
+        0.0
+      ],
+      "quaternion_xyzw": [
+        0.7071067811865476,
+        0.0,
+        0.0,
+        0.7071067811865476
+      ],
+      "axes": {
+        "+X": "image right",
+        "+Y": "image down",
+        "+Z": "forward"
+      }
+    },
+    "mujoco_renderer_camera": {
+      "name": "sim_gemini_pro_renderer",
+      "parent": "sim_camera_optical_frame",
+      "position_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "quaternion_wxyz": [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      "mapping": "X_mj=+X_opt, Y_mj=-Y_opt, Z_mj=-Z_opt (Rx(pi))",
+      "synthetic_fovy_deg": 60.0,
+      "intrinsics_policy": "synthetic renderer only; no real CameraInfo is claimed"
+    }
+  },
   "mesh_units": "visual STL mm with scale 0.001; convex collision STL metres",
   "collision_filter": "MuJoCo broad/narrow phase plus V15_13_self-collision-pair contract in kinematic_guard.py; same-body/direct-parent contacts and audited designed contacts are ignored; ground uses collision bit 4 and is active for every moving link but excluded for the fixed base.",
   "ground": {

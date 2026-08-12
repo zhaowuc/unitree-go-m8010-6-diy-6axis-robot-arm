@@ -14,12 +14,16 @@
   <xacro:arg name="j5_velocity_rad_s" default="0.0"/>
   <xacro:arg name="j6_effort_nm" default="0.0"/>
   <xacro:arg name="j6_velocity_rad_s" default="0.0"/>
-  <material name="arm_visual"><color rgba="0.55 0.18 0.22 1"/></material>
+  <material name="base_visual"><color rgba="0.28 0.30 0.34 1"/></material>
+  <material name="arm_visual"><color rgba="0.54 0.09 0.13 1"/></material>
+  <material name="link6_visual"><color rgba="0.20 0.22 0.25 1"/></material>
+  <material name="gripper_visual"><color rgba="0.05 0.50 0.58 1"/></material>
+  <link name="world"/>
   <link name="base_link">
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry><mesh filename="$(arg mesh_prefix)/visual/base_link.stl" scale="0.001 0.001 0.001"/></geometry>
-      <material name="arm_visual"/>
+      <material name="base_visual"/>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -91,7 +95,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry><mesh filename="$(arg mesh_prefix)/visual/link6.stl" scale="0.001 0.001 0.001"/></geometry>
-      <material name="arm_visual"/>
+      <material name="link6_visual"/>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -103,7 +107,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry><mesh filename="$(arg mesh_prefix)/visual/gripper.stl" scale="0.001 0.001 0.001"/></geometry>
-      <material name="arm_visual"/>
+      <material name="gripper_visual"/>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -111,6 +115,16 @@
     </collision>
     <!-- Inertial intentionally omitted until measured mass/COM/inertia are supplied. -->
   </link>
+  <link name="tcp_nominal"/>
+  <!-- Simulation-only camera frames.  camera_link preserves the frozen CAD
+       placement; sim_camera_optical_frame is not a vendor-driver frame. -->
+  <link name="camera_link"/>
+  <link name="sim_camera_optical_frame"/>
+  <joint name="world_to_base_link" type="fixed">
+    <parent link="world"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
   <joint name="J1" type="continuous">
     <parent link="base_link"/>
     <child link="link1"/>
@@ -157,5 +171,21 @@
     <parent link="link6"/>
     <child link="gripper"/>
     <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+  <joint name="gripper_to_tcp_nominal" type="fixed">
+    <parent link="gripper"/>
+    <child link="tcp_nominal"/>
+    <origin xyz="-0.001187726400 0.000060729026 0.092493513872" rpy="0 0 0"/>
+  </joint>
+  <joint name="gripper_to_camera_link" type="fixed">
+    <parent link="gripper"/>
+    <child link="camera_link"/>
+    <origin xyz="-0.038917046930682 0.000061006900000 0.019635428243040"
+            rpy="-1.5707963267948966 0 -1.5707963267948966"/>
+  </joint>
+  <joint name="camera_link_to_sim_camera_optical_frame" type="fixed">
+    <parent link="camera_link"/>
+    <child link="sim_camera_optical_frame"/>
+    <origin xyz="0 -0.00905 -0.0128" rpy="1.5707963267948966 0 0"/>
   </joint>
 </robot>

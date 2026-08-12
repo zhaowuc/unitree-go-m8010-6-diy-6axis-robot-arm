@@ -55,3 +55,12 @@ token*
 *.FCBak
 *.fcbak
 
+# Superseded local QA/debug evidence. Canonical PASS evidence is retained in
+# the timestamped V15.14 acceptance directories and committed.
+V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/evidence/debug_d217/
+V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/evidence/collision_cross_regression_503.json
+V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/evidence/collision_layer_runtime_validation_v15_14.json
+V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/evidence/live_acceptance_d229_20260812/V15_14_LIVE_ACCEPTANCE_d229_desktop.png
+V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/evidence/visual_sync_d231_20260812/V15_14_RViz_robot_model_same_final_state.png
+V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/evidence/visual_sync_d231_20260812T024535Z/
+V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/evidence/v15_13_regression_20260811T231406Z/workdir.txt
