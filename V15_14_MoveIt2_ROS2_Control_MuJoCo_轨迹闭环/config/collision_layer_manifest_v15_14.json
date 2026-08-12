@@ -1,0 +1,290 @@
+{
+  "schema": "go-m8010-arm-v15.14-collision-layer-manifest/1.0",
+  "source_authorities": {
+    "v15_13_xacro": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\完整工程_V15_13_交付\\ros2_ws\\src\\go_m8010_arm_description\\urdf\\go_m8010_arm_v15_13.urdf.xacro",
+    "v15_13_xacro_sha256": "66e14959c9bf65abdcc9028d4f8008a803050865ae965fbf168b1cd08229e84b",
+    "v15_13_collision_contract": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\V15_13_自碰撞对矩阵契约.json",
+    "v15_13_collision_contract_sha256": "75156e7fc1683f7309aa686bd7d714dac0883b6145e4be93c7ed3a1d4a95ccea",
+    "v15_13_mjcf": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\mujoco_kinematic_v1\\go_m8010_arm_v15_13_kinematic.xml",
+    "v15_13_mjcf_sha256": "26F9E0EFE10B7D208378D816540098625A34826069FDF7BBAFC1DB94CF073941",
+    "v15_13_guard": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\mujoco_kinematic_v1\\kinematic_guard.py",
+    "v15_13_guard_sha256": "1EA118C453FDF10183BF314B722A68C7969E6E68020B8356B0ABBF24CB3E40F6",
+    "v15_13_mesh_export_manifest": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\mujoco_kinematic_v1\\mesh_export_manifest.json",
+    "v15_13_mesh_export_manifest_sha256": "22CFB9A194495B442731405A023CEC8F83FB03D17B2E814CF13FEBC924D1CE3A"
+  },
+  "pair_partition": {
+    "proxy_count": 25,
+    "all_unordered_pair_count": 300,
+    "runtime_full_pair_count": 231,
+    "runtime_excluded_pair_count": 69,
+    "specialized_pair_geometry": {
+      "token": "UpperArm_Motion_Collision_Proxy",
+      "parent_link": "link2",
+      "role": "collision-only alternate excluding the permitted J2 sleeve/motor mounting neighborhood",
+      "enabled_pairs": [
+        [
+          "J1_Fixed_Collision_Proxy",
+          "UpperArm_Motion_Collision_Proxy"
+        ],
+        [
+          "J1_Moving_Collision_Proxy",
+          "UpperArm_Motion_Collision_Proxy"
+        ]
+      ],
+      "excluded_pair_count": 22,
+      "general_upperarm_token": "UpperArm_Full_Collision_Proxy"
+    }
+  },
+  "motion_proxy_export": {
+    "schema": "go-m8010-arm-v15.14-upperarm-motion-proxy-export/1.0",
+    "source_policy": "read-only frozen V15.13 FCStd; document is never saved",
+    "source_fcstd": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+    "source_fcstd_sha256": "B4A02A97AFAFF88E246A46340DAD4CACD3C645A7456FDD087A69552E14D3DDC0",
+    "axis_contract": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\V15_13_真实关节轴与相机上置零位.json",
+    "axis_contract_sha256": "9B46C1FD816530235E80C453587E58E62A1DCCF1828C72C3867CC8DF720EE5A9",
+    "object": "UpperArm_Motion_Collision_Proxy",
+    "owner": "link2",
+    "source_group": "J2_Driven_Reference_Rigid",
+    "brep_sha256": "2E7C0D1F1A61B612261EE537498A24FE5410886BE96FD07A9404D6604A274F7D",
+    "source_shape": {
+      "valid": true,
+      "closed": true,
+      "solid_count": 2,
+      "face_count": 9,
+      "volume_mm3": 309250.04267525265,
+      "area_mm2": 44953.716329882904,
+      "global_placement": {
+        "base_mm": [
+          -645.7783335564332,
+          -2906.2297267154954,
+          -1845.150522456254
+        ],
+        "quaternion_xyzw": [
+          0.5961412145925024,
+          0.38028364711643353,
+          0.5071905711438046,
+          0.49270450022586687
+        ]
+      }
+    },
+    "transform": "FreeCAD world mesh, then inverse frozen link2 frame baked into vertices",
+    "world_bounds_mm": {
+      "min_mm": [
+        -30.87419891357422,
+        75.83580780029297,
+        138.0410614013672
+      ],
+      "max_mm": [
+        33.327911376953125,
+        296.52001953125,
+        227.23849487304688
+      ],
+      "size_mm": [
+        64.20211029052734,
+        220.68421173095703,
+        89.19743347167969
+      ]
+    },
+    "urdf_mesh": {
+      "path": "ros2_ws/src/go_m8010_arm_v15_14_description/meshes/collision_proxies/link2/03_UpperArm_Motion_Collision_Proxy.stl",
+      "units": "mm",
+      "scale_to_m": [
+        0.001,
+        0.001,
+        0.001
+      ],
+      "facets": 512,
+      "bounds_local_mm": {
+        "min_mm": [
+          -293.1961364746094,
+          -46.000003814697266,
+          -44.59872055053711
+        ],
+        "max_mm": [
+          -72.00001525878906,
+          -25.999996185302734,
+          44.59871292114258
+        ],
+        "size_mm": [
+          221.1961212158203,
+          20.00000762939453,
+          89.19743347167969
+        ]
+      },
+      "sha256": "F67DACE5D0D6327BE1D2091E93B0F538823AC526DB9750E604969BFDF2F75C20"
+    },
+    "mjcf_components": [
+      {
+        "index": 1,
+        "path": "mujoco_v15_14/meshes/collision_motion_proxy_mm/link2/UpperArm_Motion_Collision_Proxy__component_001.stl",
+        "units": "mm",
+        "facets": 500,
+        "bounds_local_mm": {
+          "min_mm": [
+            -293.1961364746094,
+            -46.000003814697266,
+            -44.59872055053711
+          ],
+          "max_mm": [
+            -204.00949096679688,
+            -25.999996185302734,
+            44.59871292114258
+          ],
+          "size_mm": [
+            89.1866455078125,
+            20.00000762939453,
+            89.19743347167969
+          ]
+        },
+        "sha256": "1F3B3C3878B93C450C9C90590542174E18259902B22EB81DC8A427563EE3F555"
+      },
+      {
+        "index": 2,
+        "path": "mujoco_v15_14/meshes/collision_motion_proxy_mm/link2/UpperArm_Motion_Collision_Proxy__component_002.stl",
+        "units": "mm",
+        "facets": 12,
+        "bounds_local_mm": {
+          "min_mm": [
+            -220.6028594970703,
+            -46.0,
+            -31.000041961669922
+          ],
+          "max_mm": [
+            -72.00001525878906,
+            -25.999998092651367,
+            31.000003814697266
+          ],
+          "size_mm": [
+            148.60284423828125,
+            20.000001907348633,
+            62.00004577636719
+          ]
+        },
+        "sha256": "11FB6C54F4D972E7C13B86167EA7CB1987354FA59DEFCE43A0D9D4FF9F0CCF2A"
+      }
+    ]
+  },
+  "inherited_proxy_mesh_validation": {
+    "pass": true,
+    "source_manifest": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\mujoco_kinematic_v1\\mesh_export_manifest.json",
+    "source_manifest_sha256": "22CFB9A194495B442731405A023CEC8F83FB03D17B2E814CF13FEBC924D1CE3A",
+    "verified_proxy_count": 24,
+    "proxy_sha256": {
+      "Forearm_Collision_Proxy": "727C6BCB15D11502A906518CFE2D4808832A81BCCD54ABB233469C9462DB7D28",
+      "Gemini_Pro_Camera_Collision_Proxy": "7E6B9802DBBFEBBC5BF3CE6EAA6CD74FA2C1DC5AF57E7DD15CDCBDEE2F9DEE4E",
+      "Gripper_Fixed_Frame_Collision_Proxy": "28BB8A43206CF6E463909F0A7367AE03C2B48EE9E0218DC6B2F9D95F842CE578",
+      "Gripper_Left_Drive_Link": "15EA6FFDCB6EB49CDED34577A6C40D49F188FADB8B65DCE2395F03D79EC784D4",
+      "Gripper_Left_Finger": "FDF20997418C1ED180B8FE8FAE52F90126DECA1010BFBF7497211139A614D7EB",
+      "Gripper_Left_Outer_Link": "EFB9E077D4FF375EFB4DEA74D7F8378F336EBB8292725C37B6EEF7B86C441F5B",
+      "Gripper_Right_Drive_Link": "CC1E733DB18F6F9625B930618479286B8616E1A02EF1747F08D2257F883EC8CE",
+      "Gripper_Right_Finger": "B414E031634554EBB8C1B22C4A946715A401274265315632148C7E9366E45B08",
+      "Gripper_Right_Outer_Link": "A0E5B83E596D7EEDAF37B11DBFD36F461928068BB186A68DA84D6B30289BD74C",
+      "Gripper_Servo_Collision_Proxy": "D6B7266484641BA3D811F07628B67E7749E4258A01C4B0DBB7CC14CA8BDF361E",
+      "J1_Fixed_Collision_Proxy": "5EEBBF65E94709D6FD46ACD153B0CA94B67508DD2E4F3F10C40AD87E2A701713",
+      "J1_Moving_Collision_Proxy": "5D0764D6A30D2EB9CBE183B481135FF0A17D8B6949A79ECA71178A427356CCB6",
+      "J3_Motor_Stator_Collision_Proxy": "58136021CF54F0EA52EEE43B9918F0DCBCB8AE0DA334F3CC75A9E91EDDA732CB",
+      "J3_Output_Flange_Proxy": "5F54572985C71D088D82920ED076CFD67E29BC29F8F252B81326C09A6816BE6B",
+      "J4_Motor_Stator_Collision_Proxy": "D27D23F5B0C781C2856499A0D4502D0A60FE97A11EED7E05BB8F0F14D3AB327C",
+      "J4_Output_Flange_Collision_Proxy": "D413F0718388162AB887DEE5FF57D6EADE4EC7EF61AB6630C864475689965C79",
+      "J5_Motor_Stator_Collision_Proxy": "1AC670C34911923F858DB097D743FDE70AE535857CB9EB94666AD67EE1706F19",
+      "J5_Output_Flange_Collision_Proxy": "D8C2ED47FF851B756BE94EE8519A308EB733B96A9400497815E5D78B6D195F22",
+      "J5_to_Damiao_J6_Adapter_Collision_Proxy": "09196122E0A218B4085098F9939B2BBAFC2A4CAF5C95A789670F36D071893A38",
+      "J6_DM_G6220_Output_Rotor_Collision_Proxy": "61A7CCBDF0CA0ABA70F447C323989AD4344B2627537429405F87B4F6C1FB91F7",
+      "J6_DM_G6220_Stator_Collision_Proxy": "24AEBD1C33FF7DC9DAD6C3AEA084B5D8073235BBE03F6CB2EAC453874842EFC7",
+      "J6_Gripper_Connector_Collision_Proxy": "BCE241E8122CE46BBBABD61E3E28AA5020CBD8877551D08EBEA586F50E443AF5",
+      "UpperArm_Full_Collision_Proxy": "1DB9265C9A30E2F6065EE0BC06D6F78C2DF52A1192CB48369E5FC0007CC56161",
+      "Wrist_Prelink_Collision_Proxy": "CF3C12E0E62276C091E612C27EE39FC5DFE579190698464FE2287D09FF1BBD0F"
+    }
+  },
+  "runtime_token_coverage": {
+    "pass": true,
+    "runtime_pair_token_count": 25,
+    "urdf_proxy_token_count": 25,
+    "mjcf_proxy_token_count": 25,
+    "mesh_proxy_token_count": 25,
+    "motion_geom_count": 2,
+    "motion_enabled_token_pairs": [
+      [
+        "J1_Fixed_Collision_Proxy",
+        "UpperArm_Motion_Collision_Proxy"
+      ],
+      [
+        "J1_Moving_Collision_Proxy",
+        "UpperArm_Motion_Collision_Proxy"
+      ]
+    ]
+  },
+  "derived_mjcf": {
+    "source_mjcf": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\mujoco_kinematic_v1\\go_m8010_arm_v15_13_kinematic.xml",
+    "source_mjcf_sha256": "26F9E0EFE10B7D208378D816540098625A34826069FDF7BBAFC1DB94CF073941",
+    "motion_component_count": 2,
+    "motion_geom_names": [
+      "collision__link2__UpperArm_Motion_Collision_Proxy__001",
+      "collision__link2__UpperArm_Motion_Collision_Proxy__002"
+    ],
+    "j1_fixed_geom_count": 21,
+    "j1_moving_geom_count": 20,
+    "explicit_geom_pair_count": 82,
+    "explicit_token_pairs": [
+      [
+        "J1_Fixed_Collision_Proxy",
+        "UpperArm_Motion_Collision_Proxy"
+      ],
+      [
+        "J1_Moving_Collision_Proxy",
+        "UpperArm_Motion_Collision_Proxy"
+      ]
+    ],
+    "frozen_element_hashes_source": {
+      "joint:J1": "08F294F6406D8D15874E7B6DE3DD395C451289A00E6D6F87DC6D83A3C3C0A4CA",
+      "joint:J2": "628754D945D9FA6C3E0930756AC1D5EDBB7773D8890BEF21C3DAD6FD88FC3329",
+      "joint:J3": "4D32A896B22C77B1EC915E5D2000ACDBA472AA1C1A4480A1B0C87F3222120965",
+      "joint:J4": "C010E46914886306D62A87CCEC12C1D682384DFA53502E20EE012B033EBC728E",
+      "joint:J5": "8D822490CCB281C68C1112A867947B53DE1F338955348C7C731505208B8ACE46",
+      "joint:J6": "08E5068E641EA0C68692C16D10E93A06038D748498AD156ED66875263BEFAD03",
+      "site:tool_reference": "C60632788A351AC859AF3B23F04AE185291377A4E2DF43137CDF73008811FEBD",
+      "site:tcp_nominal": "0010E76FDE029949A947EBF262F8419792CB069F1CFFD0B79D18887C15679320",
+      "body:camera_link": "AE5D4A43A33B306FC2F719019FB9DC6A3C159D8C118107189CCE2B90A321EC70",
+      "body:sim_camera_optical_frame": "D2F18BAC374AD9996D6382461D0C1AD54DF3B2C5302D0A67036E06122621F932",
+      "camera:sim_gemini_pro_renderer": "137C016EB0182D6B4DEAE3511C243D2BDA8BF7C08484E56089738E850074A439"
+    },
+    "frozen_element_hashes_derived": {
+      "joint:J1": "08F294F6406D8D15874E7B6DE3DD395C451289A00E6D6F87DC6D83A3C3C0A4CA",
+      "joint:J2": "628754D945D9FA6C3E0930756AC1D5EDBB7773D8890BEF21C3DAD6FD88FC3329",
+      "joint:J3": "4D32A896B22C77B1EC915E5D2000ACDBA472AA1C1A4480A1B0C87F3222120965",
+      "joint:J4": "C010E46914886306D62A87CCEC12C1D682384DFA53502E20EE012B033EBC728E",
+      "joint:J5": "8D822490CCB281C68C1112A867947B53DE1F338955348C7C731505208B8ACE46",
+      "joint:J6": "08E5068E641EA0C68692C16D10E93A06038D748498AD156ED66875263BEFAD03",
+      "site:tool_reference": "C60632788A351AC859AF3B23F04AE185291377A4E2DF43137CDF73008811FEBD",
+      "site:tcp_nominal": "0010E76FDE029949A947EBF262F8419792CB069F1CFFD0B79D18887C15679320",
+      "body:camera_link": "AE5D4A43A33B306FC2F719019FB9DC6A3C159D8C118107189CCE2B90A321EC70",
+      "body:sim_camera_optical_frame": "D2F18BAC374AD9996D6382461D0C1AD54DF3B2C5302D0A67036E06122621F932",
+      "camera:sim_gemini_pro_renderer": "137C016EB0182D6B4DEAE3511C243D2BDA8BF7C08484E56089738E850074A439"
+    },
+    "all_frozen_elements_identical": true
+  },
+  "derived_guard": {
+    "source_guard": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\mujoco_kinematic_v1\\kinematic_guard.py",
+    "source_guard_sha256": "1EA118C453FDF10183BF314B722A68C7969E6E68020B8356B0ABBF24CB3E40F6",
+    "derivation": [
+      "versioned model filename",
+      "versioned pair-contract filename",
+      "runtime pair token -> MJCF geom fail-closed assertion"
+    ]
+  },
+  "generated_files": {
+    "collision_contract": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环\\config\\collision_pair_contract_v15_14.json",
+    "xacro": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环\\ros2_ws\\src\\go_m8010_arm_v15_14_description\\urdf\\go_m8010_arm_v15_14.urdf.xacro",
+    "srdf": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环\\ros2_ws\\src\\go_m8010_arm_v15_14_moveit_config\\config\\go_m8010_arm_v15_14.srdf",
+    "mjcf": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环\\mujoco_v15_14\\go_m8010_arm_v15_14_kinematic.xml",
+    "guard": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环\\mujoco_v15_14\\kinematic_guard.py",
+    "collision_contract_sha256": "6D802909E44F238816F007EF33B57E1B57099C5522A473CD2DCC2705397AF9C9",
+    "xacro_sha256": "9196DAA600D82B07ADA259044DF4C815B2A824A7658AB7647AC56C4E3C05C968",
+    "srdf_sha256": "AC45155004B4B86E8DE51727D750AA26722A9A9DC706A93721D3A81FAF75A862",
+    "mjcf_sha256": "CE6EC828D32F445FF25FB4B3BA3167F7F0BEC61CDFCA5962EE4072DF4B022844",
+    "guard_sha256": "648B9DE953A84BE46CD5F95E24DAF9F683F3025E73048DC068EF7BD8E5670C6A",
+    "mjcf_contract_sha256": "6D802909E44F238816F007EF33B57E1B57099C5522A473CD2DCC2705397AF9C9",
+    "motion_export_manifest_sha256": "B73D0AA45029F5AF65A9E842340A31157BD34894D23AD5A6E9C4FD752EE84DA9",
+    "motion_urdf_mesh_sha256": "F67DACE5D0D6327BE1D2091E93B0F538823AC526DB9750E604969BFDF2F75C20"
+  }
+}

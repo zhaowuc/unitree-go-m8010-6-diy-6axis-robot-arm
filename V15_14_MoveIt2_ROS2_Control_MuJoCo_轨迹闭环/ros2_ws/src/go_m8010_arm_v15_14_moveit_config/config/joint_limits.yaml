@@ -1,0 +1,18 @@
+# V15.14 SIMULATION-ONLY execution envelope.
+# These numbers are conservative software timing limits, not verified motor,
+# reducer, thermal, effort, or real-hardware ratings. Position bounds continue
+# to come unchanged from the frozen V15.13 URDF.
+default_velocity_scaling_factor: 0.40
+default_acceleration_scaling_factor: 0.40
+
+joint_limits:
+  J1: &simulation_joint_limit
+    has_velocity_limits: true
+    max_velocity: 0.5
+    has_acceleration_limits: true
+    max_acceleration: 1.0
+  J2: *simulation_joint_limit
+  J3: *simulation_joint_limit
+  J4: *simulation_joint_limit
+  J5: *simulation_joint_limit
+  J6: *simulation_joint_limit

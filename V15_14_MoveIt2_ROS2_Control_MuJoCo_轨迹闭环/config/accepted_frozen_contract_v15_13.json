@@ -1,0 +1,18 @@
+{
+  "schema": "go-m8010-arm-v15.13-accepted-frozen-contract/1.0",
+  "accepted_source_xacro_sha256": "66e14959c9bf65abdcc9028d4f8008a803050865ae965fbf168b1cd08229e84b",
+  "accepted_collision_contract_sha256": "75156e7fc1683f7309aa686bd7d714dac0883b6145e4be93c7ed3a1d4a95ccea",
+  "frozen_joint_canonical_sha256": {
+    "J1": "9f5139d5304b6440a2d382449cbf7f14554a5b4c3c95140da6f23c4648626eff",
+    "J2": "34220de19f3c2c7f2e5a8dac3bbec6edaf4caec688f4f1875b6e6f371f3f16fc",
+    "J3": "2ed43661b0257acf5980412cf967396cb7d8fec65998be902845e1a695c3e634",
+    "J4": "8fc2a20e9cfe6c06d8ca204c44d42e6b253a534eb9f608a0c15c2eace76457f7",
+    "J5": "79d1f4fc8462baa22f0ee9ca8ac56957e42010c529e52ab73ddaabdd3c5fe75c",
+    "J6": "df2d3cf1e80850a13c7d98331cb6fa006c11fbf938caa1eb966773d9f3f1c91e",
+    "J6_to_gripper": "feafb2a3f0db191b976faf680689663ad367d5652fbdc84215857068e6e6de3d",
+    "gripper_to_tcp_nominal": "878e384608d6be17824c5a34f12826338eabe2fa3170e01be0d20fa931e75f0c",
+    "gripper_to_camera_link": "de3c2a796e6806d029a2454f0f8cc93320daa83fb4ff150d3c76872ede46cbc1",
+    "camera_link_to_sim_camera_optical_frame": "e2dc445ba877b22281aff329beb61c4765e601c8abbecf5ced8e9474d37b1f27"
+  },
+  "policy": "This accepted manifest is review-controlled and must never be regenerated from the current source. Any mismatch fails before V15.14 outputs are written."
+}

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+MUJOCO_PYTHON="${MUJOCO_PYTHON:-/home/codex/mujoco_arm_env/bin/python}"
+exec "${MUJOCO_PYTHON}" "$(dirname "$0")/v15_14_regression.py" "$@"
