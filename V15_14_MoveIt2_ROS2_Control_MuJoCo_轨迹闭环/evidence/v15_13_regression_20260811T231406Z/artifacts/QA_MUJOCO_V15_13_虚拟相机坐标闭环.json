@@ -1,0 +1,300 @@
+{
+  "schema": "go-m8010-arm-v15.13-virtual-camera-closure-qa/1.0",
+  "scope": "pure simulation; no real Gemini driver frames or CameraInfo",
+  "model_xml": "go_m8010_arm_v15_13_kinematic.xml",
+  "frames": {
+    "camera_link": {
+      "parent": "gripper",
+      "position_m": [
+        -0.038917046930682,
+        6.10069e-05,
+        0.01963542824304
+      ],
+      "quaternion_xyzw": [
+        -0.5,
+        0.5,
+        -0.5,
+        0.5
+      ],
+      "frozen_cad_extrinsic": true
+    },
+    "sim_camera_optical_frame": {
+      "parent": "camera_link",
+      "position_m": [
+        0.0,
+        -0.00905,
+        -0.0128
+      ],
+      "rpy_rad": [
+        1.5707963267948966,
+        0.0,
+        0.0
+      ],
+      "quaternion_xyzw": [
+        0.7071067811865476,
+        0.0,
+        0.0,
+        0.7071067811865476
+      ]
+    },
+    "sim_gemini_pro_renderer": {
+      "parent": "sim_camera_optical_frame",
+      "position_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "quaternion_wxyz": [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      "synthetic_fovy_deg": 60.0
+    }
+  },
+  "camera_link_to_sim_camera_optical_frame_matrix": [
+    [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      -1.0,
+      -0.00905
+    ],
+    [
+      0.0,
+      1.0,
+      0.0,
+      -0.0128
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "sim_camera_optical_to_mujoco_camera_matrix": [
+    [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      -1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      -1.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "local_transform_checks": {
+    "camera_parent_is_gripper": true,
+    "optical_parent_is_camera_link": true,
+    "renderer_parent_is_optical": true,
+    "frozen_camera_position_error_m": 0.0,
+    "frozen_camera_rotation_error": 0.0,
+    "optical_position_error_m": 0.0,
+    "optical_rotation_error": 0.0,
+    "renderer_position_error_m": 0.0,
+    "renderer_rotation_error": 0.0,
+    "pass": true
+  },
+  "axis_math_checks": {
+    "x_opt_in_camera_link": [
+      1.0,
+      0.0,
+      0.0
+    ],
+    "y_opt_in_camera_link": [
+      0.0,
+      -2.220446049250313e-16,
+      1.0000000000000002
+    ],
+    "z_opt_in_camera_link": [
+      0.0,
+      -1.0000000000000002,
+      -2.220446049250313e-16
+    ],
+    "x_mj_in_optical": [
+      1.0,
+      0.0,
+      0.0
+    ],
+    "y_mj_in_optical": [
+      0.0,
+      -1.0,
+      0.0
+    ],
+    "z_mj_in_optical": [
+      0.0,
+      0.0,
+      -1.0
+    ],
+    "ros_optical_matrix_error": 2.220446049250313e-16,
+    "mujoco_camera_matrix_error": 0.0,
+    "ros_optical_determinant": 1.0000000000000004,
+    "mujoco_camera_determinant": 1.0,
+    "mujoco_view_direction_in_optical": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "mujoco_up_direction_in_optical": [
+      0.0,
+      -1.0,
+      0.0
+    ],
+    "pass": true
+  },
+  "rigid_follow": {
+    "pose_count": 7,
+    "poses": [
+      {
+        "pose": "zero",
+        "camera_link_position_error_m": 0.0,
+        "camera_link_rotation_error": 2.220446049250313e-16,
+        "optical_position_error_m": 0.0,
+        "optical_rotation_error": 1.6653345369377348e-15,
+        "renderer_position_error_m": 0.0,
+        "renderer_rotation_error": 1.6653345369377348e-15
+      },
+      {
+        "pose": "J1_plus_20",
+        "camera_link_position_error_m": 2.7755575615628914e-17,
+        "camera_link_rotation_error": 3.3306690738754696e-16,
+        "optical_position_error_m": 2.7755575615628914e-17,
+        "optical_rotation_error": 1.1102230246251565e-15,
+        "renderer_position_error_m": 2.7755575615628914e-17,
+        "renderer_rotation_error": 1.1102230246251565e-15
+      },
+      {
+        "pose": "J2_plus_20",
+        "camera_link_position_error_m": 0.0,
+        "camera_link_rotation_error": 1.1102230246251565e-16,
+        "optical_position_error_m": 0.0,
+        "optical_rotation_error": 1.3322676295501878e-15,
+        "renderer_position_error_m": 0.0,
+        "renderer_rotation_error": 1.3322676295501878e-15
+      },
+      {
+        "pose": "J3_minus_20",
+        "camera_link_position_error_m": 0.0,
+        "camera_link_rotation_error": 2.220446049250313e-16,
+        "optical_position_error_m": 0.0,
+        "optical_rotation_error": 1.1102230246251565e-15,
+        "renderer_position_error_m": 0.0,
+        "renderer_rotation_error": 1.1102230246251565e-15
+      },
+      {
+        "pose": "J4_plus_20",
+        "camera_link_position_error_m": 2.7755575615628914e-17,
+        "camera_link_rotation_error": 2.220446049250313e-16,
+        "optical_position_error_m": 5.551115123125783e-17,
+        "optical_rotation_error": 1.2212453270876722e-15,
+        "renderer_position_error_m": 5.551115123125783e-17,
+        "renderer_rotation_error": 1.2212453270876722e-15
+      },
+      {
+        "pose": "J5_minus_20",
+        "camera_link_position_error_m": 0.0,
+        "camera_link_rotation_error": 2.220446049250313e-16,
+        "optical_position_error_m": 0.0,
+        "optical_rotation_error": 1.4432899320127035e-15,
+        "renderer_position_error_m": 0.0,
+        "renderer_rotation_error": 1.4432899320127035e-15
+      },
+      {
+        "pose": "J6_plus_30",
+        "camera_link_position_error_m": 0.0,
+        "camera_link_rotation_error": 1.1102230246251565e-16,
+        "optical_position_error_m": 0.0,
+        "optical_rotation_error": 1.2212453270876722e-15,
+        "renderer_position_error_m": 0.0,
+        "renderer_rotation_error": 1.2212453270876722e-15
+      }
+    ],
+    "max_position_error_m": 5.551115123125783e-17,
+    "max_rotation_error": 1.6653345369377348e-15,
+    "pass": true
+  },
+  "render_orientation_qa": {
+    "raw_image": "/home/codex/projects/v15_13_regression_work_20260811T231406Z_w0J3P6/previews/virtual_camera_orientation_raw.png",
+    "annotated_image": "/home/codex/projects/v15_13_regression_work_20260811T231406Z_w0J3P6/previews/virtual_camera_orientation_validation.png",
+    "resolution_px": [
+      960,
+      720
+    ],
+    "synthetic_fovy_deg": 60.0,
+    "markers": {
+      "left": {
+        "geom": "qa_left_red_tall",
+        "pixel_count": 9578,
+        "centroid_xy_px": [
+          299.7442054708707,
+          359.5
+        ]
+      },
+      "right": {
+        "geom": "qa_right_green_round",
+        "pixel_count": 7816,
+        "centroid_xy_px": [
+          658.691914022518,
+          359.5
+        ]
+      },
+      "up": {
+        "geom": "qa_up_blue_wide",
+        "pixel_count": 8342,
+        "centroid_xy_px": [
+          479.5,
+          224.31383361304245
+        ]
+      },
+      "down": {
+        "geom": "qa_down_yellow_small",
+        "pixel_count": 4050,
+        "centroid_xy_px": [
+          479.5,
+          493.52395061728396
+        ]
+      },
+      "front_plane": {
+        "geom": "qa_front_plane",
+        "pixel_count": 131051,
+        "centroid_xy_px": [
+          484.03317792309866,
+          365.3495280463331
+        ]
+      },
+      "rear": {
+        "geom": "qa_rear_purple_guard",
+        "pixel_count": 0,
+        "centroid_xy_px": null
+      }
+    },
+    "left_right_order_pass": true,
+    "up_down_order_pass": true,
+    "front_visible_pass": true,
+    "rear_hidden_pass": true,
+    "pass": true
+  },
+  "pass": true
+}
