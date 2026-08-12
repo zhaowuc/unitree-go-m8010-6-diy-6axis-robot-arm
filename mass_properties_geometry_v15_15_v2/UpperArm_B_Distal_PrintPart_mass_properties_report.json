@@ -1,0 +1,427 @@
+{
+  "schema": "go-m8010-arm-v15.15-mass-properties-geometry-v2/1.0",
+  "revision": "V15.15-COM_LEDGER_VOLUME_V2",
+  "status": "PASS",
+  "scope": "COM_ONLY_NO_INERTIA_NO_DYNAMICS",
+  "source_authority": {
+    "source_branch": "agent/v15-15-com-v1",
+    "source_commit": "71d77e902cd91bcdbce14500826f5a5fd24f67d3",
+    "source_tree": "7993e9b85d15b5934dcf0c3372b2ac12c6a26b67",
+    "path": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+    "sha256": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0",
+    "object": "UpperArm_B_Distal_PrintPart",
+    "object_type": "Mesh::Feature",
+    "opened_read_only": true,
+    "modified_or_saved": false,
+    "source_placement_matrix_row_major": [
+      [
+        0.19628414455729026,
+        -0.04638464318604624,
+        0.97944933481621,
+        -662.483414371231
+      ],
+      [
+        0.9531956643126751,
+        -0.22525324638600508,
+        -0.20169035804441443,
+        -2987.352991361105
+      ],
+      [
+        0.22997947762992033,
+        0.9731954787549464,
+        0.0,
+        -1842.9174900227936
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ]
+  },
+  "repair": {
+    "working_copy_only": true,
+    "decision_was_explicit_not_silent": true,
+    "direct_source_part_crosscheck_before_any_working_copy_repair": {
+      "mesh_to_shape_tolerance_mm": 0.001,
+      "conversion_succeeded": true,
+      "shape_shell_count": 1,
+      "shape_closed": false,
+      "shape_valid": true,
+      "solid_created": true,
+      "solid_count": 1,
+      "solid_closed": false,
+      "solid_valid": false,
+      "direct_valid_closed_solid": false,
+      "repair_required": true,
+      "role": "REPAIR_DECISION_DIAGNOSTIC_ONLY_NOT_A_MASS_PROPERTY_PATH"
+    },
+    "method": "REMOVE_NON_MANIFOLDS_THEN_EDGE_BFS",
+    "actions_in_order": [
+      "FREECAD_MESH_REMOVE_NON_MANIFOLDS_ON_WORKING_COPY",
+      "INDEPENDENT_DETERMINISTIC_EDGE_BFS_ORIENTATION"
+    ],
+    "before": {
+      "point_count": 339,
+      "facet_count": 696,
+      "component_count": 1,
+      "has_non_manifolds": true
+    },
+    "before_topology_source_local": {
+      "vertex_count": 339,
+      "facet_count": 696,
+      "edge_count": 1045,
+      "edge_incidence_histogram": {
+        "1": 4,
+        "2": 1039,
+        "3": 2
+      },
+      "orientation_conflict_count": 0,
+      "bbox_source_local": {
+        "min_mm": [
+          3550.00146484375,
+          1180.971435546875,
+          7.19091466602241e-14
+        ],
+        "max_mm": [
+          3714.841064453125,
+          1270.3057861328125,
+          20.0
+        ],
+        "size_mm": [
+          164.839599609375,
+          89.3343505859375,
+          19.99999999999993
+        ]
+      }
+    },
+    "selected_component_topology_before_harmonize": {
+      "vertex_count": 337,
+      "facet_count": 694,
+      "edge_count": 1041,
+      "edge_incidence_histogram": {
+        "2": 1041
+      },
+      "orientation_conflict_count": 0,
+      "bbox_source_local": {
+        "min_mm": [
+          3550.00146484375,
+          1180.971435546875,
+          7.19091466602241e-14
+        ],
+        "max_mm": [
+          3714.841064453125,
+          1270.3057861328125,
+          20.0
+        ],
+        "size_mm": [
+          164.839599609375,
+          89.3343505859375,
+          19.99999999999993
+        ]
+      }
+    },
+    "topology_after_harmonize_before_fix": {
+      "vertex_count": 337,
+      "facet_count": 694,
+      "edge_count": 1041,
+      "edge_incidence_histogram": {
+        "2": 1041
+      },
+      "orientation_conflict_count": 0,
+      "bbox_source_local": {
+        "min_mm": [
+          3550.00146484375,
+          1180.971435546875,
+          7.19091466602241e-14
+        ],
+        "max_mm": [
+          3714.841064453125,
+          1270.3057861328125,
+          20.0
+        ],
+        "size_mm": [
+          164.839599609375,
+          89.3343505859375,
+          19.99999999999993
+        ]
+      }
+    },
+    "after": {
+      "point_count": 337,
+      "facet_count": 694,
+      "component_count": 1,
+      "is_solid": true,
+      "has_non_manifolds": false,
+      "has_self_intersections": false
+    },
+    "facet_accounting_semantics": "UNORIENTED_TRIANGLE_MULTISET_COUNTS;REMOVED_AND_ADDED_ARE_SOURCE_WORKING_COPY_TO_REPAIRED_ARTIFACT_GEOMETRY",
+    "removed_facet_count": 2,
+    "added_facet_count": 0,
+    "excluded_zero_volume_component_facet_count": 0,
+    "retained_component_retriangulation_removed_facet_count": 0,
+    "retained_component_retriangulation_added_facet_count": 0,
+    "bbox_before_source_local_mm": {
+      "min_mm": [
+        3550.00146484375,
+        1180.971435546875,
+        7.19091466602241e-14
+      ],
+      "max_mm": [
+        3714.841064453125,
+        1270.3057861328125,
+        20.0
+      ],
+      "size_mm": [
+        164.839599609375,
+        89.3343505859375,
+        19.99999999999993
+      ]
+    },
+    "bbox_after_source_local_mm": {
+      "min_mm": [
+        3550.00146484375,
+        1180.971435546875,
+        7.19091466602241e-14
+      ],
+      "max_mm": [
+        3714.841064453125,
+        1270.3057861328125,
+        20.0
+      ],
+      "size_mm": [
+        164.839599609375,
+        89.3343505859375,
+        19.99999999999993
+      ]
+    },
+    "bbox_size_delta_mm": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "excluded_components": [],
+    "retained_vertices_moved": false,
+    "surface_fidelity": {
+      "method": "EVERY_RETAINED_CANONICAL_FACET_IS_AN_EXACT_SOURCE_TRIANGLE;NO_VERTEX_MOVEMENT",
+      "retained_canonical_facets_are_exact_subset_of_source_triangles": true,
+      "max_retained_vertex_displacement_mm": 0.0,
+      "selected_surface_area_before_mm2": 26736.598628943928,
+      "surface_area_after_mm2": 26736.598628943928,
+      "surface_area_delta_mm2": 0.0,
+      "pass": true
+    },
+    "collision_proxy_used": false,
+    "edge_bfs": {
+      "algorithm": "DETERMINISTIC_UNDIRECTED_EDGE_ADJACENCY_BFS",
+      "connected_component_count": 1,
+      "per_face_flip_count": 0,
+      "global_flip_to_positive_volume": false,
+      "orientation_conflict_count_after": 0,
+      "anchor_mm": [
+        3632.4212646484375,
+        1225.6386108398438,
+        10.000000000000036
+      ],
+      "signed_volume_mm3": 149458.60600804185,
+      "centroid_mm": [
+        3642.222338416429,
+        1220.9618469582863,
+        8.987435017023826
+      ]
+    },
+    "canonical_topology_sha256": "66903365065b93dcf5a0b2f38d3024cc6dcd8a1328a10426bfb0d22f5ca83d16"
+  },
+  "artifact": {
+    "path": "mass_properties_geometry_v15_15_v2/UpperArm_B_Distal_PrintPart_mass_properties.stl",
+    "format": "CANONICAL_BINARY_STL",
+    "coordinate_frame": "SOURCE_OBJECT_LOCAL",
+    "sha256": "bafb8dc8b06242a844196bc63971f95a0a7dd52834b2a05ab72f40b28460a081",
+    "size_bytes": 34784,
+    "fixed_header": true,
+    "canonical_face_order": "LEXICOGRAPHIC_AFTER_CYCLIC_MINIMUM"
+  },
+  "source_working_copy_path_a": {
+    "anchor_mm": [
+      3632.4212646484375,
+      1225.6386108398438,
+      10.000000000000036
+    ],
+    "volume_mm3": 149458.60600804185,
+    "centroid_mm_source_local": [
+      3642.222338416429,
+      1220.9618469582863,
+      8.987435017023826
+    ]
+  },
+  "artifact_reimport": {
+    "mesh_qa": {
+      "point_count": 337,
+      "facet_count": 694,
+      "component_count": 1,
+      "is_solid": true,
+      "has_non_manifolds": false,
+      "has_self_intersections": false
+    },
+    "canonical_topology_sha256": "66903365065b93dcf5a0b2f38d3024cc6dcd8a1328a10426bfb0d22f5ca83d16",
+    "path_a_anchored_signed_tetrahedra": {
+      "coordinate_frame": "SOURCE_OBJECT_LOCAL",
+      "anchor_mm": [
+        3632.4212646484375,
+        1225.6386108398438,
+        10.000000000000036
+      ],
+      "signed_volume_mm3": 149458.60600804185,
+      "volume_mm3": 149458.60600804185,
+      "centroid_mm": [
+        3642.222338416429,
+        1220.9618469582863,
+        8.987435017023826
+      ],
+      "orientation": {
+        "algorithm": "DETERMINISTIC_UNDIRECTED_EDGE_ADJACENCY_BFS",
+        "connected_component_count": 1,
+        "per_face_flip_count": 0,
+        "global_flip_to_positive_volume": false,
+        "orientation_conflict_count_after": 0,
+        "anchor_mm": [
+          3632.4212646484375,
+          1225.6386108398438,
+          10.000000000000036
+        ],
+        "signed_volume_mm3": 149458.60600804185,
+        "centroid_mm": [
+          3642.222338416429,
+          1220.9618469582863,
+          8.987435017023826
+        ]
+      },
+      "authoritative_for_com": true
+    },
+    "path_b_part_reimport": {
+      "coordinate_frame": "SOURCE_OBJECT_LOCAL",
+      "mesh_to_shape_tolerance_mm": 0.001,
+      "shape_shell_count": 1,
+      "shape_closed": true,
+      "shape_valid": true,
+      "solid_count": 1,
+      "solid_closed": true,
+      "solid_valid": true,
+      "volume_mm3": 149458.6060080418,
+      "centroid_mm": [
+        3642.222338416421,
+        1220.9618469582815,
+        8.987435017023829
+      ],
+      "crosscheck_only": true
+    },
+    "path_a_b_agreement": {
+      "relative_volume_error": 3.8945673633765494e-16,
+      "relative_volume_tolerance_strict_less_than": 1e-08,
+      "centroid_distance_mm": 9.476328818274646e-12,
+      "centroid_tolerance_mm_strict_less_than": 1e-06,
+      "pass": true
+    },
+    "mesh_api_diagnostic": {
+      "freecad_mesh_center_of_gravity_mm": [
+        3682.852294921875,
+        1210.89599609375,
+        9.584569931030273
+      ],
+      "vertex_arithmetic_mean_mm": [
+        3682.8504062731827,
+        1210.8958349029813,
+        9.584569732937748
+      ],
+      "distance_between_mesh_cog_and_vertex_mean_mm": 0.0018955148076971087,
+      "freecad_mesh_volume_mm3": 149433.328125,
+      "used_in_mass_formula": false,
+      "role": "DIAGNOSTIC_ONLY_KNOWN_VERTEX_DENSITY_DEPENDENT_API"
+    },
+    "bbox_source_local": {
+      "min_mm": [
+        3550.00146484375,
+        1180.971435546875,
+        7.19091466602241e-14
+      ],
+      "max_mm": [
+        3714.841064453125,
+        1270.3057861328125,
+        20.0
+      ],
+      "size_mm": [
+        164.839599609375,
+        89.3343505859375,
+        19.99999999999993
+      ]
+    }
+  },
+  "accepted_volume_mm3": 149458.60600804185,
+  "accepted_centroid_mm_source_local": [
+    3642.222338416429,
+    1220.9618469582863,
+    8.987435017023826
+  ],
+  "accepted_centroid_mm_world_at_mechanical_zero": [
+    4.59593924648334,
+    207.55925135291682,
+    182.9534499703368
+  ],
+  "bbox_mm_source_local": {
+    "min_mm": [
+      3550.00146484375,
+      1180.971435546875,
+      7.19091466602241e-14
+    ],
+    "max_mm": [
+      3714.841064453125,
+      1270.3057861328125,
+      20.0
+    ],
+    "size_mm": [
+      164.839599609375,
+      89.3343505859375,
+      19.99999999999993
+    ]
+  },
+  "bbox_mm_world_at_mechanical_zero": {
+    "min_mm": [
+      -21.973004276758388,
+      121.07872140599375,
+      153.26357588451083
+    ],
+    "max_mm": [
+      30.28321478302803,
+      281.73433889875014,
+      213.0321551216707
+    ],
+    "size_mm": [
+      52.25621905978642,
+      160.6556174927564,
+      59.768579237159884
+    ]
+  },
+  "algorithm_contract": {
+    "accepted_formula": "ANCHORED_SIGNED_TETRAHEDRA_WITH_MATH_FSUM",
+    "mesh_center_of_gravity_used_in_mass_formula": false,
+    "mesh_volume_used_in_mass_formula": false,
+    "part_center_of_gravity_role": "INDEPENDENT_CROSSCHECK_ONLY"
+  },
+  "validation": {
+    "source_hash_locked": true,
+    "source_to_artifact_path_a_pass": true,
+    "artifact_mesh_closed_manifold_self_intersection_free": true,
+    "part_closed_and_valid": true,
+    "path_a_b_pass": true,
+    "finite_positive_volume_and_centroid": true,
+    "pass": true
+  },
+  "prohibited_outputs": {
+    "inertia_computed_or_written": false,
+    "gravity_or_dynamics_computed_or_written": false,
+    "urdf_or_mjcf_inertial_written": false,
+    "visual_or_collision_geometry_modified": false,
+    "kinematics_tf_or_control_modified": false
+  }
+}
