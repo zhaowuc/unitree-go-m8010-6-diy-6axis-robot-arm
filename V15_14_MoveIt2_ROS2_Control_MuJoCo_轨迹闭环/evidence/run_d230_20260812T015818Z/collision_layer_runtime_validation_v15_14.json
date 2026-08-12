@@ -1,0 +1,86 @@
+{
+  "schema": "go-m8010-arm-v15.14-collision-layer-validation/1.0",
+  "root": "/home/codex/projects/v15_14_runtime",
+  "runtime_validation": {
+    "pass": true,
+    "mujoco_version": "3.11.0",
+    "model_nq": 6,
+    "model_ngeom": 1009,
+    "model_npair": 82,
+    "expected_explicit_geom_pairs": 82,
+    "frozen_pose_set_gate": {
+      "pass": true,
+      "source_sha256": "9BE9FAB3E5C7850F001C2E46B83AEBF033A02FEFF2A9E27DBC15347DB4098EA4",
+      "pose_count": 503,
+      "pose_set_sha256": "4D9CFAF15CC20FE16393D1AA3BCCDDC5273E77E2DE08CF9D0045976C301799AA"
+    },
+    "cases": [
+      {
+        "name": "zero",
+        "pose_deg": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "safe": true,
+        "reason": "clear",
+        "motion_contact_count": 0,
+        "motion_token_pairs": [],
+        "minimum_motion_contact_distance_m": null,
+        "pass": true
+      },
+      {
+        "name": "motion_vs_j1_moving",
+        "pose_deg": [
+          0.0,
+          -120.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "safe": false,
+        "reason": "ground_collision",
+        "motion_contact_count": 8,
+        "motion_token_pairs": [
+          [
+            "J1_Fixed_Collision_Proxy",
+            "UpperArm_Motion_Collision_Proxy"
+          ],
+          [
+            "J1_Moving_Collision_Proxy",
+            "UpperArm_Motion_Collision_Proxy"
+          ]
+        ],
+        "minimum_motion_contact_distance_m": -0.02705110262961133,
+        "pass": true
+      },
+      {
+        "name": "motion_vs_j1_fixed",
+        "pose_deg": [
+          0.0,
+          -140.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "safe": false,
+        "reason": "ground_collision",
+        "motion_contact_count": 1,
+        "motion_token_pairs": [
+          [
+            "J1_Fixed_Collision_Proxy",
+            "UpperArm_Motion_Collision_Proxy"
+          ]
+        ],
+        "minimum_motion_contact_distance_m": -0.0012004230606530405,
+        "pass": true
+      }
+    ]
+  },
+  "pass": true
+}
