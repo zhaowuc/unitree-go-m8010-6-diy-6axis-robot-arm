@@ -1,0 +1,1948 @@
+{
+  "acceptance_gate_count": 20,
+  "acceptance_gates": [
+    {
+      "failure_code": null,
+      "name": "git_base_branch_exact4_remote",
+      "number": 1,
+      "pass": true,
+      "source_section": "git_scope_guard"
+    },
+    {
+      "failure_code": null,
+      "name": "old_new_production_model_hashes",
+      "number": 2,
+      "pass": true,
+      "source_section": "model_semantic_diff"
+    },
+    {
+      "failure_code": null,
+      "name": "semantic_only_six_accepted_inertials",
+      "number": 3,
+      "pass": true,
+      "source_section": "model_semantic_diff"
+    },
+    {
+      "failure_code": null,
+      "name": "bridge_only_model_anchor_migrated",
+      "number": 4,
+      "pass": true,
+      "source_section": "bridge_hash_migration"
+    },
+    {
+      "failure_code": null,
+      "name": "old_hash_references_classified",
+      "number": 5,
+      "pass": true,
+      "source_section": "old_hash_reference_audit"
+    },
+    {
+      "failure_code": null,
+      "name": "mesh_1008_manifest_asset_authority",
+      "number": 6,
+      "pass": true,
+      "source_section": "mesh_authority"
+    },
+    {
+      "failure_code": null,
+      "name": "collision_contract_geoms_pairs_unchanged",
+      "number": 7,
+      "pass": true,
+      "source_section": "collision_authority"
+    },
+    {
+      "failure_code": null,
+      "name": "fresh_colcon_current_install_binding",
+      "number": 8,
+      "pass": true,
+      "source_section": "runtime_boot"
+    },
+    {
+      "failure_code": null,
+      "name": "production_bridge_hash_authority_compile",
+      "number": 9,
+      "pass": true,
+      "source_section": "runtime_boot"
+    },
+    {
+      "failure_code": null,
+      "name": "six_body_independent_runtime_readback",
+      "number": 10,
+      "pass": true,
+      "source_section": "independent_mujoco_readback"
+    },
+    {
+      "failure_code": null,
+      "name": "moveit_load",
+      "number": 11,
+      "pass": true,
+      "source_section": "controller_graph"
+    },
+    {
+      "failure_code": null,
+      "name": "ros2_control_load",
+      "number": 12,
+      "pass": true,
+      "source_section": "controller_graph"
+    },
+    {
+      "failure_code": null,
+      "name": "standard_fjt_and_joint_state_authority",
+      "number": 13,
+      "pass": true,
+      "source_section": "trajectory_loop"
+    },
+    {
+      "failure_code": null,
+      "name": "all_expected_success_targets",
+      "number": 14,
+      "pass": true,
+      "source_section": "trajectory_loop"
+    },
+    {
+      "failure_code": null,
+      "name": "all_expected_rejection_targets",
+      "number": 15,
+      "pass": true,
+      "source_section": "trajectory_loop"
+    },
+    {
+      "failure_code": null,
+      "name": "v15_14_numeric_thresholds",
+      "number": 16,
+      "pass": true,
+      "source_section": "trajectory_loop"
+    },
+    {
+      "failure_code": null,
+      "name": "fresh_current_model_503_collision",
+      "number": 17,
+      "pass": true,
+      "source_section": "collision_503_runtime"
+    },
+    {
+      "failure_code": null,
+      "name": "tf_origin_axis_tcp_camera_unchanged",
+      "number": 18,
+      "pass": true,
+      "source_section": "tf_geometry_regression"
+    },
+    {
+      "failure_code": null,
+      "name": "visual_limitation_gravity_controller_prohibitions",
+      "number": 19,
+      "pass": true,
+      "source_section": "prohibited_actions"
+    },
+    {
+      "failure_code": null,
+      "name": "protected_toctou_and_hard_unresolved_empty",
+      "number": 20,
+      "pass": true,
+      "source_section": "toctou_guard"
+    }
+  ],
+  "audit_valid": true,
+  "bridge_hash_migration": {
+    "baseline_bridge_sha256": "b4c932db2a98bc6361c56c533adcacfd68b4d37dca33ddfaa01a82f2a8e90fbd",
+    "current_bridge_sha256": "9815472370f68f718f63611ac532c989fbaf2cf7d600e4647103e50da5c9a8aa",
+    "migration_kind": "ONE_LITERAL_PRODUCTION_MODEL_HASH_ANCHOR_ONLY",
+    "modified_hash_anchors": [
+      "ACCEPTED_MODEL_SHA256"
+    ],
+    "new_accepted_model_sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9",
+    "old_accepted_model_sha256": "ce6ec828d32f445ff25fb4b3ba3167f7f0bec61cdfca5962ee4072df4b022844",
+    "pass": true,
+    "protected_assignments": {
+      "ACCEPTED_COLLISION_CONTRACT_SHA256": "6d802909e44f238816f007ef33b57e1b57099c5522a473cd2dcc2705397af9c9",
+      "ACCEPTED_GUARD_SHA256": "648b9de953a84be46cd5f95e24daf9f683f3025e73048dc068ef7bd8e5670c6a",
+      "ACCEPTED_RUNTIME_ASSET_SET_SHA256": "fe517900413488414f9a606d7fd8f05ea8a7f2be08043672e75c57ae669f0425",
+      "ACCEPTED_RUNTIME_MESH_MANIFEST_SHA256": "1174abcfef3b87ee77d4ce50af5afc1aa62d45759f1560ace361997e8c60b19d",
+      "ACCEPTED_SOURCE_MESH_MANIFEST_SHA256": "22cfb9a194495b442731405a023cec8f83fb03d17b2e814cf13febc924d1ce3a",
+      "MOTION_PROXY_MESH_SHA256": {
+        "meshes/collision_motion_proxy_mm/link2/UpperArm_Motion_Collision_Proxy__component_001.stl": "1f3b3c3878b93c450c9c90590542174e18259902b22eb81dc8a427563ee3f555",
+        "meshes/collision_motion_proxy_mm/link2/UpperArm_Motion_Collision_Proxy__component_002.stl": "11fb6c54f4d972e7c13b86167ea7cb1987354fa59defce43a0d9d4ff9f0ccf2a"
+      }
+    },
+    "reverse_substitution_is_byte_exact": true
+  },
+  "collision_503_runtime": {
+    "independent_pose_audit": {
+      "boolean_mismatch_count": 0,
+      "canonical_pose_facts_sha256": "ba91d513315df8cbcd2793d94084162746d2ffad0d5c16dacf450b5b57581626",
+      "collision_pose_counts": {
+        "moveit": {
+          "ground": 118,
+          "overall": 182,
+          "self": 126
+        },
+        "mujoco": {
+          "ground": 118,
+          "overall": 182,
+          "self": 126
+        }
+      },
+      "ground_pair_set_diagnostic_mismatch_count": 90,
+      "match_count": 503,
+      "method": "INDEPENDENT_RECOMPUTATION_FROM_ALL_503_RAW_POSE_RECORDS",
+      "mismatch_count": 0,
+      "mismatch_global_indices": [],
+      "negative_control_identity": {
+        "coupled_random_seed_1513": [
+          43,
+          73,
+          75,
+          83,
+          87
+        ]
+      },
+      "negative_controls_pass": true,
+      "pass": true,
+      "pose_count": 503,
+      "pose_set_sha256": "4d9cfaf15cc20fe16393d1aa3bccddc5273e77e2de08cf9d0045976c301799aa",
+      "self_pair_set_mismatch_count": 0
+    },
+    "pass": true,
+    "raw_report_status": "PASS",
+    "runtime_model_sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9"
+  },
+  "collision_authority": {
+    "all_unordered_pair_count": 300,
+    "partition_exact": true,
+    "pass": true,
+    "proxy_count": 25,
+    "runtime_excluded_pair_count": 69,
+    "runtime_full_pair_count": 231,
+    "schema": "go-m8010-arm-v15.14-self-collision-pair-contract/2.0",
+    "sha256": "6d802909e44f238816f007ef33b57e1b57099c5522a473cd2dcc2705397af9c9"
+  },
+  "controller_graph": {
+    "actions": [
+      "/arm_controller/follow_joint_trajectory [control_msgs/action/FollowJointTrajectory]",
+      "/execute_trajectory [moveit_msgs/action/ExecuteTrajectory]",
+      "/move_action [moveit_msgs/action/MoveGroup]"
+    ],
+    "controllers": [
+      {
+        "name": "joint_state_broadcaster",
+        "state": "active",
+        "type": "joint_state_broadcaster/JointStateBroadcaster"
+      },
+      {
+        "name": "arm_controller",
+        "state": "active",
+        "type": "joint_trajectory_controller/JointTrajectoryController"
+      }
+    ],
+    "joint_states_publishers": [
+      {
+        "namespace": "/",
+        "node_name": "joint_state_broadcaster"
+      }
+    ],
+    "moveit_load_pass": true,
+    "pass": true,
+    "raw_source_hashes": {
+      "actions": "3b0b9bda04c499e59c34cafbb9c7daec19b9b2d1fcd812c6386a141089eed7c7",
+      "controllers": "a8c2d3d512f8053f9644cb64ac3684b239fcbefb558a6ad2913369662f37288b",
+      "joint_states": "82d8b7dbcfb16e5e9cc433dc45519969acaeccd360d8f248ecef4712282927b1",
+      "nodes": "8350efe30d27b5bd798c65744b9d4ffd0d881b1e8fc04f252570edfc8c70fb93"
+    },
+    "required_nodes": [
+      "/mujoco_bridge",
+      "/move_group",
+      "/controller_manager",
+      "/robot_state_publisher",
+      "/arm_controller",
+      "/joint_state_broadcaster"
+    ],
+    "ros2_control_load_pass": true,
+    "single_public_joint_state_authority": true,
+    "standard_fjt_action_pass": true
+  },
+  "final_facts": {
+    "camera_tf_unchanged": "YES",
+    "collision_contract": "PASS",
+    "collision_regression": {
+      "match": "503/503",
+      "mismatch_count": 0
+    },
+    "controller_modified": "NO",
+    "expected_rejection_targets": "2/2",
+    "expected_success_targets": "10/10",
+    "final_status": "V15.17 INERTIAL_DEPLOYMENT = PASS",
+    "follow_joint_trajectory": "PASS",
+    "gravity_enabled": "NO",
+    "joint_axes_unchanged": "YES",
+    "joint_origins_unchanged": "YES",
+    "max_final_joint_error_rad": 6.432490598706546e-16,
+    "max_rviz_mujoco_joint_sync_error_rad": 4.440892098500626e-16,
+    "max_tcp_orientation_error_rad": 0.00027038632003048476,
+    "max_tcp_position_error_m": 1.892103217369465e-05,
+    "mesh_authority": "PASS",
+    "modified_hash_anchors": [
+      "ACCEPTED_MODEL_SHA256"
+    ],
+    "moveit_load": "PASS",
+    "mujoco_compile": "PASS",
+    "production_bridge_model_hash": "PASS",
+    "ros2_control_load": "PASS",
+    "semantic_only_inertial_changes": "YES",
+    "six_body_max_tensor_error": 1.042904201715536e-15,
+    "tcp_unchanged": "YES",
+    "visual_limitation_present": "YES"
+  },
+  "final_report_items": [
+    {
+      "label": "branch / commit",
+      "number": 1,
+      "value": {
+        "branch": "agent/v15-17-production-hash-migration",
+        "head_contract": "BASE_COMMIT_OR_ITS_UNIQUE_DIRECT_CHILD",
+        "source_commit": "75f70ea4527dc90125a13c6d89efd789239367d0"
+      }
+    },
+    {
+      "label": "old MJCF SHA",
+      "number": 2,
+      "value": "ce6ec828d32f445ff25fb4b3ba3167f7f0bec61cdfca5962ee4072df4b022844"
+    },
+    {
+      "label": "new MJCF SHA",
+      "number": 3,
+      "value": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9"
+    },
+    {
+      "label": "semantic diff only inertial",
+      "number": 4,
+      "value": "YES"
+    },
+    {
+      "label": "modified hash anchors",
+      "number": 5,
+      "value": [
+        "ACCEPTED_MODEL_SHA256"
+      ]
+    },
+    {
+      "label": "mesh asset authority",
+      "number": 6,
+      "value": "PASS"
+    },
+    {
+      "label": "collision contract",
+      "number": 7,
+      "value": "PASS"
+    },
+    {
+      "label": "production bridge model hash",
+      "number": 8,
+      "value": "PASS"
+    },
+    {
+      "label": "MuJoCo compile",
+      "number": 9,
+      "value": "PASS"
+    },
+    {
+      "label": "six-body max tensor error",
+      "number": 10,
+      "value": 1.042904201715536e-15
+    },
+    {
+      "label": "MoveIt load",
+      "number": 11,
+      "value": "PASS"
+    },
+    {
+      "label": "ros2_control load",
+      "number": 12,
+      "value": "PASS"
+    },
+    {
+      "label": "FollowJointTrajectory action",
+      "number": 13,
+      "value": "PASS"
+    },
+    {
+      "label": "expected-success targets",
+      "number": 14,
+      "value": "10/10"
+    },
+    {
+      "label": "expected-rejection targets",
+      "number": 15,
+      "value": "2/2"
+    },
+    {
+      "label": "max final joint error",
+      "number": 16,
+      "value": 6.432490598706546e-16
+    },
+    {
+      "label": "max TCP position error",
+      "number": 17,
+      "value": 1.892103217369465e-05
+    },
+    {
+      "label": "max TCP orientation error",
+      "number": 18,
+      "value": 0.00027038632003048476
+    },
+    {
+      "label": "max RViz/MuJoCo joint sync error",
+      "number": 19,
+      "value": 4.440892098500626e-16
+    },
+    {
+      "label": "collision regression",
+      "number": 20,
+      "value": {
+        "match": "503/503",
+        "mismatch_count": 0
+      }
+    },
+    {
+      "label": "J1-J6 origin unchanged",
+      "number": 21,
+      "value": "YES"
+    },
+    {
+      "label": "J1-J6 axis unchanged",
+      "number": 22,
+      "value": "YES"
+    },
+    {
+      "label": "TCP unchanged",
+      "number": 23,
+      "value": "YES"
+    },
+    {
+      "label": "camera TF unchanged",
+      "number": 24,
+      "value": "YES"
+    },
+    {
+      "label": "visual link6 limitation",
+      "number": 25,
+      "value": {
+        "limitation": "NON_PHYSICAL_VISUAL_NUMERICAL_LIMITATION",
+        "still_present": "YES"
+      }
+    },
+    {
+      "label": "gravity enabled",
+      "number": 26,
+      "value": "NO"
+    },
+    {
+      "label": "controller modified",
+      "number": 27,
+      "value": "NO"
+    },
+    {
+      "label": "hard unresolved items",
+      "number": 28,
+      "value": []
+    },
+    {
+      "label": "final status",
+      "number": 29,
+      "value": "V15.17 INERTIAL_DEPLOYMENT = PASS"
+    }
+  ],
+  "final_status": "V15.17 INERTIAL_DEPLOYMENT = PASS",
+  "git_scope_guard": {
+    "allowed_changed_paths": [
+      "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_mujoco_bridge/scripts/mujoco_bridge.py",
+      "V15_17_ProductionHash迁移与轨迹闭环验收.json",
+      "V15_17_ProductionHash迁移与轨迹闭环验收.md",
+      "tools/validate_v15_17_production_hash_migration.py"
+    ],
+    "branch": "agent/v15-17-production-hash-migration",
+    "changed_paths": [
+      "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_mujoco_bridge/scripts/mujoco_bridge.py",
+      "V15_17_ProductionHash迁移与轨迹闭环验收.json",
+      "V15_17_ProductionHash迁移与轨迹闭环验收.md",
+      "tools/validate_v15_17_production_hash_migration.py"
+    ],
+    "exact_changed_path_count": 4,
+    "head_contract": "BASE_COMMIT_OR_ITS_UNIQUE_DIRECT_CHILD",
+    "pass": true,
+    "remote_base_commit": "75f70ea4527dc90125a13c6d89efd789239367d0",
+    "remote_base_ref": "refs/heads/agent/v15-17-inertial-deployment",
+    "source_commit": "75f70ea4527dc90125a13c6d89efd789239367d0"
+  },
+  "hard_unresolved_item_count": 0,
+  "hard_unresolved_items": [],
+  "independent_mujoco_readback": {
+    "compiled_gravity_enabled": false,
+    "interpreter_identity": {
+      "mujoco_version": "3.11.0",
+      "python_version": "Python 3.12.10"
+    },
+    "links": {
+      "gripper": {
+        "body_inertia_principal_kg_m2": [
+          0.00037497547647326,
+          0.0003938585140950338,
+          0.0004740673795944088
+        ],
+        "body_ipos_m": [
+          -0.0034049824167213345,
+          -0.0007997027279568269,
+          0.03493651236222258
+        ],
+        "body_iquat_wxyz": [
+          0.3437493074433223,
+          0.5735195693517792,
+          0.6648727695741156,
+          0.3329503228435606
+        ],
+        "com_error_m": 0.0,
+        "independent_reconstructed_tensor_kg_m2": [
+          [
+            0.0004501085843753894,
+            5.241520235144344e-06,
+            -3.6621915682409096e-05
+          ],
+          [
+            5.241520235144337e-06,
+            0.0003754819477600288,
+            -6.980811698350262e-07
+          ],
+          [
+            -3.6621915682409096e-05,
+            -6.980811698350245e-07,
+            0.00041731083802728505
+          ]
+        ],
+        "mass_error_kg": 0.0,
+        "mass_kg": 0.296,
+        "pass": true,
+        "tensor_relative_frobenius_error": 1.042904201715536e-15
+      },
+      "link2": {
+        "body_inertia_principal_kg_m2": [
+          0.0010041105324102276,
+          0.007363535125872096,
+          0.007408318752898626
+        ],
+        "body_ipos_m": [
+          -0.09682602754229415,
+          -0.01627177564337673,
+          0.00026852096508443425
+        ],
+        "body_iquat_wxyz": [
+          0.9956682729654489,
+          -0.053405864390123244,
+          -0.00327509762119186,
+          0.07603800098842532
+        ],
+        "com_error_m": 0.0,
+        "independent_reconstructed_tensor_kg_m2": [
+          [
+            0.0011506145878779188,
+            -0.0009540393634177021,
+            9.40471583068829e-06
+          ],
+          [
+            -0.0009540393634177019,
+            0.007217558727290137,
+            6.257421623984023e-06
+          ],
+          [
+            9.404715830688277e-06,
+            6.257421623984023e-06,
+            0.007407791096012893
+          ]
+        ],
+        "mass_error_kg": 1.1102230246251565e-16,
+        "mass_kg": 0.7615,
+        "pass": true,
+        "tensor_relative_frobenius_error": 6.657416243368897e-16
+      },
+      "link3": {
+        "body_inertia_principal_kg_m2": [
+          0.0007863702207150335,
+          0.012163930853475871,
+          0.01266270072813982
+        ],
+        "body_ipos_m": [
+          -0.10115006408445788,
+          0.034091146941368534,
+          0.02591627514565488
+        ],
+        "body_iquat_wxyz": [
+          0.7003303447278717,
+          0.7026443310182399,
+          0.0889348412149297,
+          -0.08898846194505229
+        ],
+        "com_error_m": 0.0,
+        "independent_reconstructed_tensor_kg_m2": [
+          [
+            0.0014953205051949693,
+            -3.4642987466911483e-06,
+            0.0027501824929620075
+          ],
+          [
+            -3.4642987466911475e-06,
+            0.01266269409574608,
+            2.5701148702925064e-06
+          ],
+          [
+            0.002750182492962008,
+            2.5701148702925064e-06,
+            0.011454987201389686
+          ]
+        ],
+        "mass_error_kg": 2.220446049250313e-16,
+        "mass_kg": 1.09,
+        "pass": true,
+        "tensor_relative_frobenius_error": 8.827912984029578e-16
+      },
+      "link4": {
+        "body_inertia_principal_kg_m2": [
+          0.00042205401921073743,
+          0.001535230761345874,
+          0.001785516906253784
+        ],
+        "body_ipos_m": [
+          -0.003256288062399695,
+          0.026691901325969727,
+          0.07712273077803503
+        ],
+        "body_iquat_wxyz": [
+          -0.692769943343069,
+          0.0892825384905402,
+          0.7106320975675021,
+          -0.08426420252953525
+        ],
+        "com_error_m": 0.0,
+        "independent_reconstructed_tensor_kg_m2": [
+          [
+            0.001784692866698605,
+            5.576191808676713e-06,
+            3.260540608689354e-05
+          ],
+          [
+            5.576191808676713e-06,
+            0.0014691530030288568,
+            -0.00026299080742249
+          ],
+          [
+            3.260540608689354e-05,
+            -0.0002629908074224899,
+            0.0004889558170829344
+          ]
+        ],
+        "mass_error_kg": 1.1102230246251565e-16,
+        "mass_kg": 0.675,
+        "pass": true,
+        "tensor_relative_frobenius_error": 4.549175505679605e-16
+      },
+      "link5": {
+        "body_inertia_principal_kg_m2": [
+          0.0002696744802799555,
+          0.0007038103474563456,
+          0.0007229583936251443
+        ],
+        "body_ipos_m": [
+          -0.007314793455186482,
+          -0.0001338266798615075,
+          0.06388991222545329
+        ],
+        "body_iquat_wxyz": [
+          -0.6083435682918202,
+          0.0008958574958809724,
+          0.7936684229227567,
+          0.0027811531109689916
+        ],
+        "com_error_m": 0.0,
+        "independent_reconstructed_tensor_kg_m2": [
+          [
+            0.0006923549323153037,
+            -3.2307499399949946e-07,
+            0.00011373297010931782
+          ],
+          [
+            -3.230749939995003e-07,
+            0.0007038092568726869,
+            7.950330868650627e-07
+          ],
+          [
+            0.00011373297010931782,
+            7.950330868650623e-07,
+            0.00030027903217345474
+          ]
+        ],
+        "mass_error_kg": 0.0,
+        "mass_kg": 0.504,
+        "pass": true,
+        "tensor_relative_frobenius_error": 3.5213327046804446e-16
+      },
+      "link6": {
+        "body_inertia_principal_kg_m2": [
+          1.151829969278952e-05,
+          1.1518299692790569e-05,
+          2.301583887297393e-05
+        ],
+        "body_ipos_m": [
+          -1.1047636330058231e-15,
+          1.360430323081585e-16,
+          -0.0005011957785718855
+        ],
+        "body_iquat_wxyz": [
+          0.9991296568278667,
+          -2.86131461404744e-15,
+          7.721002835442155e-14,
+          -0.04171245433955482
+        ],
+        "com_error_m": 0.0,
+        "independent_reconstructed_tensor_kg_m2": [
+          [
+            1.1518299692789528e-05,
+            8.703263533037678e-20,
+            1.7766499199231903e-18
+          ],
+          [
+            8.724439356719036e-20,
+            1.1518299692790562e-05,
+            -8.319515732206173e-21
+          ],
+          [
+            1.7766499199231903e-18,
+            -8.319515732206149e-21,
+            2.301583887297393e-05
+          ]
+        ],
+        "mass_error_kg": 0.0,
+        "mass_kg": 0.125,
+        "pass": true,
+        "tensor_relative_frobenius_error": 2.9795227587948044e-16
+      }
+    },
+    "max_com_error_m": 0.0,
+    "max_mass_error_kg": 2.220446049250313e-16,
+    "max_tensor_relative_frobenius_error": 1.042904201715536e-15,
+    "model_sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9",
+    "mujoco_compile_pass": true,
+    "pass": true,
+    "tensor_limit_strict_less_than": 1e-09
+  },
+  "mesh_authority": {
+    "collision_piece_count": 961,
+    "every_asset_hashed": true,
+    "every_asset_used_exactly_once": true,
+    "explicit_contact_pair_count": 82,
+    "explicit_contact_pair_set_sha256": "6f1eca1c23588cf8d0eb3be4b64c670731a7111b3eb2cdb3c8841561aa0c2ac5",
+    "mesh_count": 1008,
+    "motion_proxy_piece_count": 2,
+    "pass": true,
+    "runtime_asset_set_sha256": "fe517900413488414f9a606d7fd8f05ea8a7f2be08043672e75c57ae669f0425",
+    "runtime_manifest_sha256": "1174abcfef3b87ee77d4ce50af5afc1aa62d45759f1560ace361997e8c60b19d",
+    "source_manifest_sha256": "22cfb9a194495b442731405a023cec8f83fb03d17b2e814cf13febc924d1ce3a",
+    "total_bytes": 383827772,
+    "visual_chunk_count": 45
+  },
+  "model_semantic_diff": {
+    "changed_inertial_bodies": [
+      "gripper",
+      "link2",
+      "link3",
+      "link4",
+      "link5",
+      "link6"
+    ],
+    "gravity_enabled": false,
+    "gravity_vector_m_s2": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "link_records": {
+      "gripper": {
+        "new_attributes": {
+          "diaginertia": "0.00037497547647325998 0.00039385851409503382 0.0004740673795944088",
+          "mass": "0.29599999999999999",
+          "pos": "-0.0034049824167213345 -0.00079970272795682688 0.034936512362222581",
+          "quat": "0.34374930744332233 0.57351956935177917 0.66487276957411556 0.33295032284356058"
+        },
+        "old_attributes": {
+          "diaginertia": "0.001 0.001 0.001",
+          "mass": "1",
+          "pos": "0 0 0"
+        },
+        "representation_change": "V15_14_DUMMY_DIAGINERTIA_TO_V15_17_EXPLICIT_PRINCIPAL_FRAME"
+      },
+      "link2": {
+        "new_attributes": {
+          "diaginertia": "0.0010041105324102276 0.0073635351258720958 0.0074083187528986259",
+          "mass": "0.76149999999999995",
+          "pos": "-0.096826027542294149 -0.016271775643376729 0.00026852096508443425",
+          "quat": "0.99566827296544891 -0.053405864390123244 -0.0032750976211918599 0.076038000988425322"
+        },
+        "old_attributes": {
+          "diaginertia": "0.001 0.001 0.001",
+          "mass": "1",
+          "pos": "0 0 0"
+        },
+        "representation_change": "V15_14_DUMMY_DIAGINERTIA_TO_V15_17_EXPLICIT_PRINCIPAL_FRAME"
+      },
+      "link3": {
+        "new_attributes": {
+          "diaginertia": "0.00078637022071503348 0.012163930853475871 0.01266270072813982",
+          "mass": "1.0900000000000001",
+          "pos": "-0.10115006408445788 0.034091146941368534 0.02591627514565488",
+          "quat": "0.7003303447278717 0.70264433101823986 0.0889348412149297 -0.088988461945052291"
+        },
+        "old_attributes": {
+          "diaginertia": "0.001 0.001 0.001",
+          "mass": "1",
+          "pos": "0 0 0"
+        },
+        "representation_change": "V15_14_DUMMY_DIAGINERTIA_TO_V15_17_EXPLICIT_PRINCIPAL_FRAME"
+      },
+      "link4": {
+        "new_attributes": {
+          "diaginertia": "0.00042205401921073743 0.001535230761345874 0.0017855169062537841",
+          "mass": "0.67500000000000004",
+          "pos": "-0.0032562880623996952 0.026691901325969727 0.077122730778035026",
+          "quat": "-0.69276994334306896 0.0892825384905402 0.71063209756750212 -0.084264202529535245"
+        },
+        "old_attributes": {
+          "diaginertia": "0.001 0.001 0.001",
+          "mass": "1",
+          "pos": "0 0 0"
+        },
+        "representation_change": "V15_14_DUMMY_DIAGINERTIA_TO_V15_17_EXPLICIT_PRINCIPAL_FRAME"
+      },
+      "link5": {
+        "new_attributes": {
+          "diaginertia": "0.00026967448027995547 0.00070381034745634562 0.00072295839362514431",
+          "mass": "0.504",
+          "pos": "-0.0073147934551864822 -0.00013382667986150751 0.063889912225453288",
+          "quat": "-0.60834356829182024 0.00089585749588097236 0.79366842292275674 0.0027811531109689916"
+        },
+        "old_attributes": {
+          "diaginertia": "0.001 0.001 0.001",
+          "mass": "1",
+          "pos": "0 0 0"
+        },
+        "representation_change": "V15_14_DUMMY_DIAGINERTIA_TO_V15_17_EXPLICIT_PRINCIPAL_FRAME"
+      },
+      "link6": {
+        "new_attributes": {
+          "diaginertia": "1.151829969278952e-05 1.1518299692790569e-05 2.3015838872973929e-05",
+          "mass": "0.125",
+          "pos": "-1.1047636330058231e-15 1.360430323081585e-16 -0.00050119577857188553",
+          "quat": "0.9991296568278667 -2.8613146140474401e-15 7.7210028354421549e-14 -0.041712454339554818"
+        },
+        "old_attributes": {
+          "diaginertia": "0.001 0.001 0.001",
+          "mass": "1",
+          "pos": "0 0 0"
+        },
+        "representation_change": "V15_14_DUMMY_DIAGINERTIA_TO_V15_17_EXPLICIT_PRINCIPAL_FRAME"
+      }
+    },
+    "new_production_mjcf_sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9",
+    "old_accepted_mjcf_sha256": "ce6ec828d32f445ff25fb4b3ba3167f7f0bec61cdfca5962ee4072df4b022844",
+    "old_checkout_crlf_reconstruction": true,
+    "old_git_blob_lf_sha256": "f086d27c61aa3be02234356af6fd8fcf269a3e3b65bdeb08cd04435ba679f0b0",
+    "pass": true,
+    "semantic_diff_classification": "ONLY_ACCEPTED_INERTIAL_CHANGES",
+    "semantic_tree_without_inertials_sha256": "d48a700efcd9383c55a0770de59ea7d0fbc8c5918b246a459451a4b956d0c2bc",
+    "timestep_s": 0.002
+  },
+  "old_hash_reference_audit": {
+    "original_tools_preserved_as_fixtures": [
+      "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_v15_14_qa/scripts/v15_14_regression.py",
+      "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/tools/aggregate_v15_14_acceptance.py",
+      "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/tools/cross_validate_503_collisions.py"
+    ],
+    "pass": true,
+    "production_runtime_old_reference_count": 0,
+    "reference_count": 15,
+    "references": [
+      {
+        "classification": "HISTORICAL_AUDIT_EVIDENCE",
+        "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/evidence/live_acceptance_d229_20260812/V15_14_LIVE_FJT_d229.json"
+      },
+      {
+        "classification": "HISTORICAL_AUDIT_EVIDENCE",
+        "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/evidence/live_gui_zero_d229_20260812/V15_14_LIVE_GUI_ZERO_d229.json"
+      },
+      {
+        "classification": "HISTORICAL_AUDIT_EVIDENCE",
+        "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/evidence/run_d230_20260812T015818Z/QA_V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环.json"
+      },
+      {
+        "classification": "HISTORICAL_AUDIT_EVIDENCE",
+        "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/evidence/run_d230_20260812T015818Z/V15_14_FINAL_ACCEPTANCE.json"
+      },
+      {
+        "classification": "HISTORICAL_AUDIT_EVIDENCE",
+        "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/evidence/run_d230_20260812T015818Z/V15_14_FINAL_ACCEPTANCE.md"
+      },
+      {
+        "classification": "HISTORICAL_AUDIT_EVIDENCE",
+        "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/evidence/run_d230_20260812T015818Z/collision_cross_regression_503.json"
+      },
+      {
+        "classification": "HISTORICAL_AUDIT_EVIDENCE",
+        "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/evidence/visual_sync_d231_20260812/v15_14_visual_sync_d231.json"
+      },
+      {
+        "classification": "V15_14_TEST_FIXTURE_ANCHOR",
+        "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_v15_14_qa/scripts/v15_14_regression.py"
+      },
+      {
+        "classification": "V15_14_TEST_FIXTURE_ANCHOR",
+        "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/tools/aggregate_v15_14_acceptance.py"
+      },
+      {
+        "classification": "V15_14_TEST_FIXTURE_ANCHOR",
+        "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/tools/cross_validate_503_collisions.py"
+      },
+      {
+        "classification": "HISTORICAL_AUDIT_EVIDENCE",
+        "path": "V15_17_Inertial参数部署验收.json"
+      },
+      {
+        "classification": "HISTORICAL_AUDIT_EVIDENCE",
+        "path": "V15_17_MuJoCo主惯量显式部署.json"
+      },
+      {
+        "classification": "AUDIT_VALIDATOR_OR_DEPLOYMENT_CONTRACT",
+        "path": "tools/apply_inertial_parameters_v15_17.py"
+      },
+      {
+        "classification": "AUDIT_VALIDATOR_OR_DEPLOYMENT_CONTRACT",
+        "path": "tools/validate_inertial_deployment_v15_17.py"
+      },
+      {
+        "classification": "AUDIT_VALIDATOR_OR_DEPLOYMENT_CONTRACT",
+        "path": "tools/validate_v15_17_production_hash_migration.py"
+      }
+    ],
+    "searched_old_sha256": "ce6ec828d32f445ff25fb4b3ba3167f7f0bec61cdfca5962ee4072df4b022844"
+  },
+  "pass": true,
+  "prohibited_actions": {
+    "armature_modified": false,
+    "bridge_other_than_model_hash_anchor_modified": false,
+    "controller_modified": false,
+    "damping_modified": false,
+    "friction_modified": false,
+    "gravity_enabled": false,
+    "joint_limits_modified": false,
+    "model_or_geometry_modified_in_v15_17d": false,
+    "motor_dynamics_modified": false,
+    "pass": true,
+    "speed_or_acceleration_envelope_modified": false,
+    "trajectory_interpolation_modified": false
+  },
+  "protected_files": {
+    "frozen_pose_source_validator_sha256": "9be9fab3e5c7850f001c2e46b83aebf033a02feff2a9e27dbc15347db4098ea4",
+    "inertia_authority_sha256": "c6c398532d7144ed6aa340a8d8b765b333d01f1fddc2e3280106c90565614401",
+    "kinematic_guard_sha256": "648b9de953a84be46cd5f95e24daf9f683f3025e73048dc068ef7bd8e5670c6a",
+    "modified_protected_paths": [],
+    "original_collision_503_tool_sha256": "514486ffaba6405007dd5f80cc918de5bac421de7f8599a625a945f559fdd7b3",
+    "original_trajectory_qa_tool_sha256": "451ac2e5f9d26baf3230b99830203f8cfa4c6054f16afa221a7551b1c9be0575",
+    "pass": true,
+    "protected_path_count": 21,
+    "protected_path_set_sha256": "41bc53d239021f158708d4418cc7c18ea09321e7a4367d68aeef8a2e8145fd7c"
+  },
+  "revision": "V15.17D-PRODUCTION_HASH_MIGRATION_AND_V15.14_TRAJECTORY_LOOP",
+  "runtime_boot": {
+    "bridge_status": {
+      "collision_contract_sha256": "6d802909e44f238816f007ef33b57e1b57099c5522a473cd2dcc2705397af9c9",
+      "execution_mode": "kinematic_position_tracking",
+      "fault_latched": false,
+      "guard_sha256": "648b9de953a84be46cd5f95e24daf9f683f3025e73048dc068ef7bd8e5670c6a",
+      "mesh_authority_pass": true,
+      "model_sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9"
+    },
+    "bringup_rejection_markers_absent": true,
+    "current_source_install_binding_pass": true,
+    "fresh_colcon_build_pass": true,
+    "fresh_colcon_package_count": 5,
+    "fresh_colcon_packages": [
+      "go_m8010_arm_description",
+      "go_m8010_arm_mujoco_bridge",
+      "go_m8010_arm_v15_14_qa",
+      "go_m8010_arm_v15_14_description",
+      "go_m8010_arm_v15_14_moveit_config"
+    ],
+    "installed_bridge_byte_equivalent_to_source": true,
+    "installed_bridge_sha256": "9815472370f68f718f63611ac532c989fbaf2cf7d600e4647103e50da5c9a8aa",
+    "mujoco_compile_pass": true,
+    "pass": true,
+    "production_bridge_node_alive": true
+  },
+  "runtime_evidence": {
+    "artifact_count": 17,
+    "artifacts": {
+      "actions_post_txt": {
+        "logical_path": "runtime/action_list_post.txt",
+        "sha256": "3b0b9bda04c499e59c34cafbb9c7daec19b9b2d1fcd812c6386a141089eed7c7",
+        "size_bytes": 187
+      },
+      "bridge_status_json": {
+        "logical_path": "runtime/bridge_status.json",
+        "sha256": "79f189e24dfd3f2a0ff484408b37f1614f213d40bf3583c624b5a83e4cf6aff9",
+        "size_bytes": 3540
+      },
+      "bringup_log": {
+        "logical_path": "bringup.log",
+        "sha256": "54c20cb9afa51e26c8bd99c2c30249997a6a7b7dfe63a7ff3630052a88160393",
+        "size_bytes": 110314
+      },
+      "colcon_build_log": {
+        "logical_path": "build/colcon_build.log",
+        "sha256": "c342e1fa5145ea9fd044e424d6055565c91a89f0d7e34706bd18cecc07bdf0e6",
+        "size_bytes": 27355
+      },
+      "collision_503_json": {
+        "logical_path": "collision_503_v15_17d.json",
+        "sha256": "41c377f9a7a9b10586e0b870886b8f25907697173c24bda6a476262015fd5f8a",
+        "size_bytes": 2160316
+      },
+      "collision_503_tool": {
+        "logical_path": "runtime/cross_validate_503_collisions.v1517d.py",
+        "sha256": "f942094ec7e6420b9d3332ac7551a1c703f5664f578189d15550aed92cd7b0f1",
+        "size_bytes": 28672
+      },
+      "controller_graph_json": {
+        "logical_path": "runtime/controller_graph.json",
+        "sha256": "54d674ba387b6689ca589a1b79f41f3e5e871e33039cf9e7463347fc815d0277",
+        "size_bytes": 1447
+      },
+      "controllers_post_txt": {
+        "logical_path": "runtime/list_controllers_post.txt",
+        "sha256": "a8c2d3d512f8053f9644cb64ac3684b239fcbefb558a6ad2913369662f37288b",
+        "size_bytes": 208
+      },
+      "installed_bridge": {
+        "logical_path": "build/installed_mujoco_bridge.py",
+        "sha256": "9815472370f68f718f63611ac532c989fbaf2cf7d600e4647103e50da5c9a8aa",
+        "size_bytes": 46227
+      },
+      "joint_states_info_post_txt": {
+        "logical_path": "runtime/joint_states_info_post.txt",
+        "sha256": "82d8b7dbcfb16e5e9cc433dc45519969acaeccd360d8f248ecef4712282927b1",
+        "size_bytes": 1263
+      },
+      "nodes_post_txt": {
+        "logical_path": "runtime/node_list_post.txt",
+        "sha256": "8350efe30d27b5bd798c65744b9d4ffd0d881b1e8fc04f252570edfc8c70fb93",
+        "size_bytes": 263
+      },
+      "runtime_robot_description_txt": {
+        "logical_path": "runtime/move_group_robot_description.txt",
+        "sha256": "d26867ce44db18fbe21abf14bcdb8ac3bd5535bc0cdfc583d239b10ab0b6db02",
+        "size_bytes": 22151
+      },
+      "six_body_readback_json": {
+        "logical_path": "runtime/six_body_readback.json",
+        "sha256": "ac2af23fbaf6bd0ae38446f4de770b174a40d9a5c91368440735dd9cab86e78d",
+        "size_bytes": 8866
+      },
+      "tf_geometry_json": {
+        "logical_path": "runtime/tf_geometry.json",
+        "sha256": "7e06f82e6f0e1f54ac74abbc811f9d79db0bb7f85f73a36b0f138eea6965933c",
+        "size_bytes": 19079
+      },
+      "trajectory_qa_attempt1_json": {
+        "logical_path": "runtime/trajectory_attempt1.json",
+        "sha256": "508960ec6a09bd1912ce94ae6a1e801c3f1da965919e93a1ebe570e0d19e05d9",
+        "size_bytes": 269606
+      },
+      "trajectory_qa_json": {
+        "logical_path": "runtime/trajectory_attempt2.json",
+        "sha256": "c19631b207ad7b2d5ed5f0bd20dd4438bd2e29a71283f4ce7b4780e63d170cfd",
+        "size_bytes": 271717
+      },
+      "trajectory_qa_tool": {
+        "logical_path": "runtime/v15_14_regression.v1517d.py",
+        "sha256": "5c2267b98a78dec01f05c980ba748f02196750d9d01804f70214786a85e85af5",
+        "size_bytes": 136143
+      }
+    },
+    "envelope": {
+      "logical_path": "runtime_evidence.json",
+      "sha256": "d9b2c9a43986a5a8b6eab849b29e73a427e493444721f4c9fb0350c123b5413e",
+      "size_bytes": 5515
+    },
+    "provided": true,
+    "schema": "go-m8010-arm-v15.17d-production-runtime-evidence/1.0"
+  },
+  "runtime_six_body_diagnostic": {
+    "links": {
+      "gripper": {
+        "body_inertia_principal_kg_m2": [
+          0.00037497547647326,
+          0.0003938585140950338,
+          0.0004740673795944088
+        ],
+        "body_ipos_m": [
+          -0.0034049824167213345,
+          -0.0007997027279568269,
+          0.03493651236222258
+        ],
+        "body_iquat_wxyz": [
+          0.3437493074433223,
+          0.5735195693517792,
+          0.6648727695741156,
+          0.3329503228435606
+        ],
+        "com_max_abs_error_m": 0.0,
+        "independently_reconstructed_tensor_kg_m2": [
+          [
+            0.0004501085843753894,
+            5.241520235144344e-06,
+            -3.6621915682409096e-05
+          ],
+          [
+            5.241520235144337e-06,
+            0.0003754819477600288,
+            -6.980811698350262e-07
+          ],
+          [
+            -3.6621915682409096e-05,
+            -6.980811698350245e-07,
+            0.00041731083802728505
+          ]
+        ],
+        "mass_error_kg": 0.0,
+        "mass_kg": 0.296,
+        "pass": true,
+        "tensor_relative_frobenius_error": 1.042904201715536e-15
+      },
+      "link2": {
+        "body_inertia_principal_kg_m2": [
+          0.0010041105324102276,
+          0.007363535125872096,
+          0.007408318752898626
+        ],
+        "body_ipos_m": [
+          -0.09682602754229415,
+          -0.01627177564337673,
+          0.00026852096508443425
+        ],
+        "body_iquat_wxyz": [
+          0.9956682729654489,
+          -0.053405864390123244,
+          -0.00327509762119186,
+          0.07603800098842532
+        ],
+        "com_max_abs_error_m": 0.0,
+        "independently_reconstructed_tensor_kg_m2": [
+          [
+            0.0011506145878779188,
+            -0.0009540393634177021,
+            9.40471583068829e-06
+          ],
+          [
+            -0.0009540393634177019,
+            0.007217558727290137,
+            6.257421623984023e-06
+          ],
+          [
+            9.404715830688277e-06,
+            6.257421623984023e-06,
+            0.007407791096012893
+          ]
+        ],
+        "mass_error_kg": 1.1102230246251565e-16,
+        "mass_kg": 0.7615,
+        "pass": true,
+        "tensor_relative_frobenius_error": 6.657416243368897e-16
+      },
+      "link3": {
+        "body_inertia_principal_kg_m2": [
+          0.0007863702207150335,
+          0.012163930853475871,
+          0.01266270072813982
+        ],
+        "body_ipos_m": [
+          -0.10115006408445788,
+          0.034091146941368534,
+          0.02591627514565488
+        ],
+        "body_iquat_wxyz": [
+          0.7003303447278717,
+          0.7026443310182399,
+          0.0889348412149297,
+          -0.08898846194505229
+        ],
+        "com_max_abs_error_m": 0.0,
+        "independently_reconstructed_tensor_kg_m2": [
+          [
+            0.0014953205051949693,
+            -3.4642987466911483e-06,
+            0.0027501824929620075
+          ],
+          [
+            -3.4642987466911475e-06,
+            0.01266269409574608,
+            2.5701148702925064e-06
+          ],
+          [
+            0.002750182492962008,
+            2.5701148702925064e-06,
+            0.011454987201389686
+          ]
+        ],
+        "mass_error_kg": 2.220446049250313e-16,
+        "mass_kg": 1.09,
+        "pass": true,
+        "tensor_relative_frobenius_error": 8.827912984029578e-16
+      },
+      "link4": {
+        "body_inertia_principal_kg_m2": [
+          0.00042205401921073743,
+          0.001535230761345874,
+          0.001785516906253784
+        ],
+        "body_ipos_m": [
+          -0.003256288062399695,
+          0.026691901325969727,
+          0.07712273077803503
+        ],
+        "body_iquat_wxyz": [
+          -0.692769943343069,
+          0.0892825384905402,
+          0.7106320975675021,
+          -0.08426420252953525
+        ],
+        "com_max_abs_error_m": 0.0,
+        "independently_reconstructed_tensor_kg_m2": [
+          [
+            0.001784692866698605,
+            5.576191808676713e-06,
+            3.260540608689354e-05
+          ],
+          [
+            5.576191808676713e-06,
+            0.0014691530030288568,
+            -0.00026299080742249
+          ],
+          [
+            3.260540608689354e-05,
+            -0.0002629908074224899,
+            0.0004889558170829344
+          ]
+        ],
+        "mass_error_kg": 1.1102230246251565e-16,
+        "mass_kg": 0.675,
+        "pass": true,
+        "tensor_relative_frobenius_error": 4.549175505679605e-16
+      },
+      "link5": {
+        "body_inertia_principal_kg_m2": [
+          0.0002696744802799555,
+          0.0007038103474563456,
+          0.0007229583936251443
+        ],
+        "body_ipos_m": [
+          -0.007314793455186482,
+          -0.0001338266798615075,
+          0.06388991222545329
+        ],
+        "body_iquat_wxyz": [
+          -0.6083435682918202,
+          0.0008958574958809724,
+          0.7936684229227567,
+          0.0027811531109689916
+        ],
+        "com_max_abs_error_m": 0.0,
+        "independently_reconstructed_tensor_kg_m2": [
+          [
+            0.0006923549323153037,
+            -3.2307499399949946e-07,
+            0.00011373297010931782
+          ],
+          [
+            -3.230749939995003e-07,
+            0.0007038092568726869,
+            7.950330868650627e-07
+          ],
+          [
+            0.00011373297010931782,
+            7.950330868650623e-07,
+            0.00030027903217345474
+          ]
+        ],
+        "mass_error_kg": 0.0,
+        "mass_kg": 0.504,
+        "pass": true,
+        "tensor_relative_frobenius_error": 3.5213327046804446e-16
+      },
+      "link6": {
+        "body_inertia_principal_kg_m2": [
+          1.151829969278952e-05,
+          1.1518299692790569e-05,
+          2.301583887297393e-05
+        ],
+        "body_ipos_m": [
+          -1.1047636330058231e-15,
+          1.360430323081585e-16,
+          -0.0005011957785718855
+        ],
+        "body_iquat_wxyz": [
+          0.9991296568278667,
+          -2.86131461404744e-15,
+          7.721002835442155e-14,
+          -0.04171245433955482
+        ],
+        "com_max_abs_error_m": 0.0,
+        "independently_reconstructed_tensor_kg_m2": [
+          [
+            1.1518299692789528e-05,
+            8.703263533037678e-20,
+            1.7766499199231903e-18
+          ],
+          [
+            8.724439356719036e-20,
+            1.1518299692790562e-05,
+            -8.319515732206173e-21
+          ],
+          [
+            1.7766499199231903e-18,
+            -8.319515732206149e-21,
+            2.301583887297393e-05
+          ]
+        ],
+        "mass_error_kg": 0.0,
+        "mass_kg": 0.125,
+        "pass": true,
+        "tensor_relative_frobenius_error": 2.9795227587948044e-16
+      }
+    },
+    "max_com_error_m": 0.0,
+    "max_mass_error_kg": 2.220446049250313e-16,
+    "max_tensor_relative_error": 1.042904201715536e-15,
+    "model_sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9",
+    "mujoco_version": "3.11.0",
+    "pass": true,
+    "tensor_limit_strict_less_than": 1e-09
+  },
+  "runtime_tool_provenance": {
+    "collision_503_tool": {
+      "new_model_sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9",
+      "old_model_sha256": "ce6ec828d32f445ff25fb4b3ba3167f7f0bec61cdfca5962ee4072df4b022844",
+      "only_change": "EXPECTED_PRODUCTION_MODEL_SHA256_LITERAL",
+      "pass": true,
+      "runtime_copy_sha256": "f942094ec7e6420b9d3332ac7551a1c703f5664f578189d15550aed92cd7b0f1",
+      "source_relative_path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/tools/cross_validate_503_collisions.py",
+      "source_sha256": "514486ffaba6405007dd5f80cc918de5bac421de7f8599a625a945f559fdd7b3"
+    },
+    "pass": true,
+    "trajectory_qa_tool": {
+      "new_model_sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9",
+      "old_model_sha256": "ce6ec828d32f445ff25fb4b3ba3167f7f0bec61cdfca5962ee4072df4b022844",
+      "only_change": "EXPECTED_PRODUCTION_MODEL_SHA256_LITERAL",
+      "pass": true,
+      "runtime_copy_sha256": "5c2267b98a78dec01f05c980ba748f02196750d9d01804f70214786a85e85af5",
+      "source_relative_path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_v15_14_qa/scripts/v15_14_regression.py",
+      "source_sha256": "451ac2e5f9d26baf3230b99830203f8cfa4c6054f16afa221a7551b1c9be0575"
+    }
+  },
+  "schema": "go-m8010-arm-v15.17d-production-hash-trajectory-acceptance/1.0",
+  "scope": {
+    "exact_changed_paths": [
+      "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_mujoco_bridge/scripts/mujoco_bridge.py",
+      "V15_17_ProductionHash迁移与轨迹闭环验收.json",
+      "V15_17_ProductionHash迁移与轨迹闭环验收.md",
+      "tools/validate_v15_17_production_hash_migration.py"
+    ],
+    "source_commit": "75f70ea4527dc90125a13c6d89efd789239367d0",
+    "target_branch": "agent/v15-17-production-hash-migration",
+    "task": "PRODUCTION_MJCF_HASH_MIGRATION_PLUS_ORIGINAL_V15_14_TRAJECTORY_LOOP"
+  },
+  "static_tf_geometry": {
+    "camera_frames_unchanged": true,
+    "canonical_snapshot_sha256": "356759722d3c3c8afc6c73fb222aabb436721dfcae25a4bbc09d2506b0d76d04",
+    "comparison": "OLD_ACCEPTED_MJCF_VS_CURRENT_PRODUCTION_MJCF_SOURCE_SEMANTICS",
+    "joint_axes_unchanged": true,
+    "joint_origins_unchanged": true,
+    "moveit_tip_link": "tcp_nominal",
+    "pass": true,
+    "snapshot": {
+      "bodies": {
+        "base_link": {
+          "parent": null,
+          "position_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "quaternion_wxyz": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "camera_link": {
+          "parent": "gripper",
+          "position_m": [
+            -0.038917046930682,
+            6.10069e-05,
+            0.01963542824304
+          ],
+          "quaternion_wxyz": [
+            0.5,
+            -0.5,
+            0.5,
+            -0.5
+          ]
+        },
+        "gripper": {
+          "parent": "link6",
+          "position_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "quaternion_wxyz": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "link1": {
+          "parent": "base_link",
+          "position_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "quaternion_wxyz": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "link2": {
+          "parent": "link1",
+          "position_m": [
+            -1.19529999999846e-06,
+            -0.000348645100000006,
+            0.092639782
+          ],
+          "quaternion_wxyz": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "link3": {
+          "parent": "link2",
+          "position_m": [
+            -0.248601759363284,
+            -0.0360000000000005,
+            1.67815400527331e-05
+          ],
+          "quaternion_wxyz": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "link4": {
+          "parent": "link3",
+          "position_m": [
+            -0.202346021849608,
+            -3.6969356019974e-17,
+            0.0519614239654557
+          ],
+          "quaternion_wxyz": [
+            0.713339230184703,
+            -9.55511142539512e-18,
+            -0.70081890862012,
+            1.33415802272334e-13
+          ]
+        },
+        "link5": {
+          "parent": "link4",
+          "position_m": [
+            0.00930000012983338,
+            0.0320000209058991,
+            0.097898948000751
+          ],
+          "quaternion_wxyz": [
+            0.913547809067383,
+            -0.406731361648183,
+            -4.35751695212161e-14,
+            1.04177060842146e-13
+          ]
+        },
+        "link6": {
+          "parent": "link5",
+          "position_m": [
+            -0.0109991955299831,
+            -0.000147148457748934,
+            0.0995275274114727
+          ],
+          "quaternion_wxyz": [
+            5.55111512312578e-17,
+            0.0,
+            -5.55111512312578e-17,
+            1.0
+          ]
+        },
+        "sim_camera_optical_frame": {
+          "parent": "camera_link",
+          "position_m": [
+            0.0,
+            -0.00905,
+            -0.0128
+          ],
+          "quaternion_wxyz": [
+            0.707106781186548,
+            0.707106781186548,
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "joints": {
+        "J1": {
+          "armature": "0",
+          "axis_xyz": [
+            0.0,
+            -2.77555756156289e-17,
+            1.0
+          ],
+          "damping": "0",
+          "frictionloss": "0",
+          "limited": "false",
+          "parent_body": "link1",
+          "position_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "range": "",
+          "type": "hinge"
+        },
+        "J2": {
+          "armature": "0",
+          "axis_xyz": [
+            0.0,
+            1.0,
+            -2.77555756156289e-17
+          ],
+          "damping": "0",
+          "frictionloss": "0",
+          "limited": "true",
+          "parent_body": "link2",
+          "position_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "range": "-2.96705972839036 2.96705972839036",
+          "type": "hinge"
+        },
+        "J3": {
+          "armature": "0",
+          "axis_xyz": [
+            0.0,
+            1.0,
+            -2.77555756156289e-17
+          ],
+          "damping": "0",
+          "frictionloss": "0",
+          "limited": "true",
+          "parent_body": "link3",
+          "position_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "range": "-2.96705972839036 2.96705972839036",
+          "type": "hinge"
+        },
+        "J4": {
+          "armature": "0",
+          "axis_xyz": [
+            3.80682902749686e-13,
+            1.0,
+            -4.91432301547264e-19
+          ],
+          "damping": "0",
+          "frictionloss": "0",
+          "limited": "true",
+          "parent_body": "link4",
+          "position_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "range": "-2.02458193231342 2.77507351067098",
+          "type": "hinge"
+        },
+        "J5": {
+          "armature": "0",
+          "axis_xyz": [
+            1.0,
+            0.0,
+            -1.59232002583387e-13
+          ],
+          "damping": "0",
+          "frictionloss": "0",
+          "limited": "true",
+          "parent_body": "link5",
+          "position_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "range": "-1.232202451908 2.63893782901543",
+          "type": "hinge"
+        },
+        "J6": {
+          "armature": "0",
+          "axis_xyz": [
+            -1.59232002583387e-13,
+            6.09321620936853e-17,
+            1.0
+          ],
+          "damping": "0",
+          "frictionloss": "0",
+          "limited": "true",
+          "parent_body": "link6",
+          "position_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "range": "-3.14159265358979 3.14159265358979",
+          "type": "hinge"
+        }
+      },
+      "moveit_tip_link": "tcp_nominal",
+      "tcp_nominal": {
+        "parent_body": "gripper",
+        "position_m": [
+          -0.0011877264,
+          6.0729026e-05,
+          0.092493513872
+        ],
+        "quaternion_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "world_root_count": 1,
+      "world_roots": [
+        "base_link"
+      ]
+    },
+    "source_provenance": {
+      "base_xacro_git_lf_sha256": "aef7d9b23c41a31456fd138c7abfb22b6799f86bcdb26fd786c4042664601433",
+      "current_xacro_checkout_sha256": "1ba9d2ec1126371f676a55a33c05c61a5bc416651e963e350f28662cfd141652",
+      "old_xacro_git_lf_sha256": "f9c15d366e27bef76eeafd44efcca0de96d2f4e944584fcc74c9764a198a914c",
+      "srdf_checkout_sha256": "ac45155004b4b86e8de51727d750aa26722a9a9dc706a93721d3a81faf75a862",
+      "srdf_git_lf_sha256": "433284326632802fbeb7f1e5eda78d6d5ed5a9e4b006f08f61c6419e3c3f0222"
+    },
+    "tcp_nominal_unchanged": true,
+    "world_root_unique": true,
+    "world_to_base_link_unchanged": true
+  },
+  "status": "PASS",
+  "tf_geometry_regression": {
+    "absolute_tolerance": 1e-15,
+    "camera_errors": {
+      "position": {
+        "camera_link": 0.0,
+        "sim_camera_optical_frame": 0.0
+      },
+      "quaternion": {
+        "camera_link": 0.0,
+        "sim_camera_optical_frame": 0.0
+      }
+    },
+    "camera_max_abs_error": 0.0,
+    "current_source_identity_gate": {
+      "camera_identity_count": 2,
+      "joint_identity_count": 6,
+      "moveit_tip_link": "tcp_nominal",
+      "pass": true,
+      "world_root": "world"
+    },
+    "current_xacro_vs_current_max_abs_error": 2.220446049250313e-16,
+    "fresh_runtime_identity_gate": {
+      "camera_identity_count": 2,
+      "joint_identity_count": 6,
+      "moveit_tip_link": "tcp_nominal",
+      "pass": true,
+      "world_root": "world"
+    },
+    "joint_axis_errors": {
+      "J1": 0.0,
+      "J2": 0.0,
+      "J3": 0.0,
+      "J4": 0.0,
+      "J5": 0.0,
+      "J6": 0.0
+    },
+    "joint_axis_max_abs_error": 0.0,
+    "joint_origin_errors": {
+      "position": {
+        "J1": 0.0,
+        "J2": 0.0,
+        "J3": 0.0,
+        "J4": 0.0,
+        "J5": 0.0,
+        "J6": 0.0
+      },
+      "quaternion": {
+        "J1": 0.0,
+        "J2": 0.0,
+        "J3": 0.0,
+        "J4": 0.0,
+        "J5": 0.0,
+        "J6": 0.0
+      }
+    },
+    "joint_origin_max_abs_error": 0.0,
+    "legal_fail_mutation_self_test": {
+      "expected_audit_valid": true,
+      "expected_failure_code": "RUNTIME_TF_GEOMETRY_FAILED",
+      "expected_section_pass": false,
+      "expected_validator_exit_code_for_audit_valid_fail": 0,
+      "mutations": [
+        "J1_PARENT_CHILD_IDENTITY_REGRESSION",
+        "J1_ORIGIN_NUMERIC_REGRESSION"
+      ],
+      "observed_exception_types": [
+        "GateFailure",
+        "GateFailure"
+      ],
+      "pass": true
+    },
+    "moveit_tip_link": "tcp_nominal",
+    "old_xacro_vs_baseline_max_abs_error": 2.220446049250313e-16,
+    "pass": true,
+    "raw_robot_description_vs_runtime_max_abs_error": 2.220446049250313e-16,
+    "runtime_robot_description_sha256": "d26867ce44db18fbe21abf14bcdb8ac3bd5535bc0cdfc583d239b10ab0b6db02",
+    "tcp_max_abs_error": 0.0,
+    "three_source_semantic_digest": "7e3db2ac594b269cf0115145e747ce950f7571c13ffa0b487343074ece03c5a5",
+    "world_root_unique": true
+  },
+  "toctou_guard": {
+    "all_1008_mesh_assets_rehashed_at_end": true,
+    "git_scope_revalidated_at_end": true,
+    "mesh_asset_count": 1008,
+    "pass": true,
+    "repo_input_count": 25,
+    "repo_inputs_unchanged": true,
+    "runtime_evidence_artifact_count": 17,
+    "runtime_evidence_rehashed_at_end": true,
+    "runtime_head_unchanged": true
+  },
+  "trajectory_attempt_history": {
+    "attempt1": {
+      "artifact_sha256": "508960ec6a09bd1912ce94ae6a1e801c3f1da965919e93a1ebe570e0d19e05d9",
+      "bounds_violation_semantics": "BREAK_ON_FIRST_SENTINEL_AT_LEAST_ONE; NOT_A_TOTAL_COUNT",
+      "expected_success_pass_count": 10,
+      "first_detected_bounds_violation_count": 1,
+      "outside_joint_limit_execution_requested": false,
+      "outside_joint_limit_frozen_clamp_match": true,
+      "outside_joint_limit_no_execution_verified": true,
+      "outside_joint_limit_rejection_pass": false,
+      "reason_code": "OUTSIDE_JOINT_LIMIT_FROZEN_CLAMP_REJECTION_CONTRACT_FAILED",
+      "self_collision_rejection_pass": true,
+      "status": "FAIL"
+    },
+    "attempt2": {
+      "artifact_sha256": "c19631b207ad7b2d5ed5f0bd20dd4438bd2e29a71283f4ce7b4780e63d170cfd",
+      "selected_formal_run": true,
+      "status": "PASS"
+    },
+    "attempt_count": 2,
+    "history_complete": true,
+    "pass": true,
+    "repo_input_snapshot_sha256": "3a63764ea56dca03e4e79639b35af746dd81a3af7136b8c1518832381753ed3f",
+    "repo_inputs_unchanged_between_attempts": true,
+    "selected_attempt_id": "attempt2"
+  },
+  "trajectory_loop": {
+    "expected_rejection_pass_count": 2,
+    "expected_rejection_total": 2,
+    "expected_success_pass_count": 10,
+    "expected_success_total": 10,
+    "joint_state_authority_pass": true,
+    "maximums": {
+      "max_controller_state_gap_s": 0.042580991000000006,
+      "max_final_joint_error_rad": 6.432490598706546e-16,
+      "max_full_run_public_raw_sync_error_rad": 8.881784197001252e-16,
+      "max_public_raw_joint_velocity_error_rad_s": 5.169250689786555e-16,
+      "max_public_raw_pair_time_skew_s": 0.044196969,
+      "max_public_state_gap_s": 0.021927673,
+      "max_raw_state_gap_s": 0.024572513,
+      "max_rviz_mujoco_joint_sync_error_rad": 4.440892098500626e-16,
+      "max_tcp_orientation_error_rad": 0.00027038632003048476,
+      "max_tcp_position_error_m": 1.892103217369465e-05,
+      "max_tf_tcp_orientation_error_rad": 2.1463585809706258e-11,
+      "max_tf_tcp_position_error_m": 6.244428922723815e-12,
+      "max_trajectory_tracking_error_rad": 0.016028383799989943,
+      "max_trajectory_velocity_tracking_error_rad_s": 0.02785419244735663
+    },
+    "moveit_load_pass": true,
+    "original_tool_reused": true,
+    "pass": true,
+    "raw_trace_note": "TARGET_METRICS_RECOMPUTED_FROM_HASH_BOUND_QA_JSON; EXTERNAL_TRACE_FILES_NOT_CLAIMED_UNLESS_SEPARATELY_ENVELOPED",
+    "raw_trace_payload_hashes_verified": false,
+    "revision": "V15.14-MoveIt2-ros2_control-MuJoCo",
+    "ros2_control_load_pass": true,
+    "schema": "go-m8010-arm-v15.14-trajectory-closed-loop-qa/1.0",
+    "standard_follow_joint_trajectory_pass": true,
+    "target_count": 12,
+    "target_rows": [
+      {
+        "expected_outcome": "execute_success",
+        "id": "central",
+        "joint_sync_error_rad": 0.0,
+        "max_final_joint_error_rad": 0.0,
+        "tcp_orientation_error_rad": 0.0002571222669059251,
+        "tcp_position_error_m": 1.8136529147114913e-05,
+        "verdict": "PASS"
+      },
+      {
+        "expected_outcome": "execute_success",
+        "id": "high",
+        "joint_sync_error_rad": 0.0,
+        "max_final_joint_error_rad": 2.4492935982947064e-16,
+        "tcp_orientation_error_rad": 0.00015904319104730836,
+        "tcp_position_error_m": 1.054376462664253e-05,
+        "verdict": "PASS"
+      },
+      {
+        "expected_outcome": "execute_success",
+        "id": "left",
+        "joint_sync_error_rad": 0.0,
+        "max_final_joint_error_rad": 2.4492935982947064e-16,
+        "tcp_orientation_error_rad": 0.00019148003993874966,
+        "tcp_position_error_m": 1.4905934747356712e-05,
+        "verdict": "PASS"
+      },
+      {
+        "expected_outcome": "execute_success",
+        "id": "front",
+        "joint_sync_error_rad": 0.0,
+        "max_final_joint_error_rad": 2.4492935982947064e-16,
+        "tcp_orientation_error_rad": 0.00021443460807950006,
+        "tcp_position_error_m": 1.7718250113236564e-05,
+        "verdict": "PASS"
+      },
+      {
+        "expected_outcome": "execute_success",
+        "id": "low",
+        "joint_sync_error_rad": 0.0,
+        "max_final_joint_error_rad": 2.4492935982947064e-16,
+        "tcp_orientation_error_rad": 0.00022235995644026004,
+        "tcp_position_error_m": 6.499467134212807e-06,
+        "verdict": "PASS"
+      },
+      {
+        "expected_outcome": "execute_success",
+        "id": "right",
+        "joint_sync_error_rad": 0.0,
+        "max_final_joint_error_rad": 2.4492935982947064e-16,
+        "tcp_orientation_error_rad": 0.00027038632003048476,
+        "tcp_position_error_m": 1.892103217369465e-05,
+        "verdict": "PASS"
+      },
+      {
+        "expected_outcome": "execute_success",
+        "id": "back",
+        "joint_sync_error_rad": 4.440892098500626e-16,
+        "max_final_joint_error_rad": 2.4492935982947064e-16,
+        "tcp_orientation_error_rad": 0.0001958527625101394,
+        "tcp_position_error_m": 9.087917217256302e-06,
+        "verdict": "PASS"
+      },
+      {
+        "expected_outcome": "execute_success",
+        "id": "random_valid_seed_1514",
+        "joint_sync_error_rad": 0.0,
+        "max_final_joint_error_rad": 2.4492935982947064e-16,
+        "tcp_orientation_error_rad": 5.417190537818758e-07,
+        "tcp_position_error_m": 5.522400359167882e-07,
+        "verdict": "PASS"
+      },
+      {
+        "expected_outcome": "execute_success",
+        "id": "near_joint_limit_clear",
+        "joint_sync_error_rad": 0.0,
+        "max_final_joint_error_rad": 2.4492935982947064e-16,
+        "tcp_orientation_error_rad": 7.032817826659172e-07,
+        "tcp_position_error_m": 3.131482943882539e-07,
+        "verdict": "PASS"
+      },
+      {
+        "expected_outcome": "execute_success",
+        "id": "near_self_collision_clear",
+        "joint_sync_error_rad": 0.0,
+        "max_final_joint_error_rad": 6.432490598706546e-16,
+        "tcp_orientation_error_rad": 1.1626644426105012e-06,
+        "tcp_position_error_m": 1.5056475591258148e-07,
+        "verdict": "PASS"
+      },
+      {
+        "expected_outcome": "bounds_rejection",
+        "id": "outside_joint_limit_reject",
+        "max_joint_excursion_rad": 0.0,
+        "verdict": "EXPECTED_REJECTION_PASS"
+      },
+      {
+        "expected_outcome": "collision_rejection",
+        "id": "self_collision_reject",
+        "max_joint_excursion_rad": 0.0,
+        "verdict": "EXPECTED_REJECTION_PASS"
+      }
+    ],
+    "thresholds": {
+      "final_joint_max_abs_error_rad": 1e-06,
+      "final_public_raw_joint_sync_rad": 1e-06,
+      "final_tcp_orientation_error_rad": 0.001,
+      "final_tcp_position_error_m": 0.0001,
+      "max_controller_state_gap_s": 0.1,
+      "max_public_state_gap_s": 0.05,
+      "max_raw_state_gap_s": 0.05,
+      "max_state_pair_time_skew_s": 0.06,
+      "negative_no_execution_joint_excursion_rad": 1e-09,
+      "path_sample_max_joint_step_rad": 0.004363323129985824,
+      "public_raw_joint_sync_rad": 1e-06,
+      "public_raw_joint_velocity_sync_rad_s": 0.05,
+      "tf_mujoco_tcp_orientation_rad": 1e-07,
+      "tf_mujoco_tcp_position_m": 1e-08,
+      "trajectory_tracking_max_abs_error_rad": 0.05,
+      "trajectory_velocity_tracking_max_abs_error_rad_s": 0.1
+    },
+    "trajectory_numeric_thresholds_pass": true
+  },
+  "v15_17c_visual_limitation": {
+    "case": "CASE_2",
+    "json_sha256": "4de6e5905c049eebd8854c366fd04a16eb7d1baa9068727d0627503c2400f322",
+    "limitation": "NON_PHYSICAL_VISUAL_NUMERICAL_LIMITATION",
+    "markdown_sha256": "b03d35856cf0fc0303d486a6c9e270cbbec451f95d4b078bbb474f7deec217c3",
+    "maximum_runtime_position_delta_m": 4.0266962935798585e-07,
+    "maximum_runtime_rotation_delta_rad": 0.0,
+    "nonblocking": true,
+    "pass": true
+  }
+}
