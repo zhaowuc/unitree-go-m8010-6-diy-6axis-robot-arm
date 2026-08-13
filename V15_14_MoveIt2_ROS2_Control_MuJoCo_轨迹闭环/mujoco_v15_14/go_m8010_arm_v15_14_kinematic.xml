@@ -1173,7 +1173,7 @@
         <site name="J1_positive_witness" pos="0.04 0 0" type="sphere" size="0.003" rgba="0.1 1 0.2 1" group="4" />
         <body name="link2" pos="-1.19529999999846e-06 -0.000348645100000006 0.092639782" quat="1 0 0 0">
           <joint name="J2" type="hinge" pos="0 0 0" axis="0 1 -2.77555756156289e-17" ref="0" limited="true" damping="0" frictionloss="0" armature="0" range="-2.96705972839036 2.96705972839036" />
-          <inertial pos="0 0 0" mass="1" diaginertia="0.001 0.001 0.001" />
+          <inertial pos="-0.096826027542294149 -0.016271775643376729 0.00026852096508443425" quat="0.99566827296544891 -0.053405864390123244 -0.0032750976211918599 0.076038000988425322" mass="0.76149999999999995" diaginertia="0.0010041105324102276 0.0073635351258720958 0.0074083187528986259" />
           <geom name="visual__link2__001" type="mesh" mesh="visual_link2_001" rgba="0.62 0.12 0.16 1" contype="0" conaffinity="0" group="2" mass="0" />
           <geom name="visual__link2__002" type="mesh" mesh="visual_link2_002" rgba="0.62 0.12 0.16 1" contype="0" conaffinity="0" group="2" mass="0" />
           <geom name="visual__link2__003" type="mesh" mesh="visual_link2_003" rgba="0.62 0.12 0.16 1" contype="0" conaffinity="0" group="2" mass="0" />
@@ -1285,7 +1285,7 @@
           <site name="J2_positive_witness" pos="0.04 0 0" type="sphere" size="0.003" rgba="0.1 1 0.2 1" group="4" />
           <body name="link3" pos="-0.248601759363284 -0.0360000000000005 1.67815400527331e-05" quat="1 0 0 0">
             <joint name="J3" type="hinge" pos="0 0 0" axis="0 1 -2.77555756156289e-17" ref="0" limited="true" damping="0" frictionloss="0" armature="0" range="-2.96705972839036 2.96705972839036" />
-            <inertial pos="0 0 0" mass="1" diaginertia="0.001 0.001 0.001" />
+            <inertial pos="-0.10115006408445788 0.034091146941368534 0.02591627514565488" quat="0.7003303447278717 0.70264433101823986 0.0889348412149297 -0.088988461945052291" mass="1.0900000000000001" diaginertia="0.00078637022071503348 0.012163930853475871 0.01266270072813982" />
             <geom name="visual__link3__001" type="mesh" mesh="visual_link3_001" rgba="0.48 0.07 0.11 1" contype="0" conaffinity="0" group="2" mass="0" />
             <geom name="visual__link3__002" type="mesh" mesh="visual_link3_002" rgba="0.48 0.07 0.11 1" contype="0" conaffinity="0" group="2" mass="0" />
             <geom name="visual__link3__003" type="mesh" mesh="visual_link3_003" rgba="0.48 0.07 0.11 1" contype="0" conaffinity="0" group="2" mass="0" />
@@ -1368,7 +1368,7 @@
             <site name="J3_positive_witness" pos="0.04 0 0" type="sphere" size="0.003" rgba="0.1 1 0.2 1" group="4" />
             <body name="link4" pos="-0.202346021849608 -3.6969356019974e-17 0.0519614239654557" quat="0.713339230184703 -9.55511142539512e-18 -0.70081890862012 1.33415802272334e-13">
               <joint name="J4" type="hinge" pos="0 0 0" axis="3.80682902749686e-13 1 -4.91432301547264e-19" ref="0" limited="true" damping="0" frictionloss="0" armature="0" range="-2.02458193231342 2.77507351067098" />
-              <inertial pos="0 0 0" mass="1" diaginertia="0.001 0.001 0.001" />
+              <inertial pos="-0.0032562880623996952 0.026691901325969727 0.077122730778035026" quat="-0.69276994334306896 0.0892825384905402 0.71063209756750212 -0.084264202529535245" mass="0.67500000000000004" diaginertia="0.00042205401921073743 0.001535230761345874 0.0017855169062537841" />
               <geom name="visual__link4__001" type="mesh" mesh="visual_link4_001" rgba="0.66 0.14 0.18 1" contype="0" conaffinity="0" group="2" mass="0" />
               <geom name="visual__link4__002" type="mesh" mesh="visual_link4_002" rgba="0.66 0.14 0.18 1" contype="0" conaffinity="0" group="2" mass="0" />
               <geom name="visual__link4__003" type="mesh" mesh="visual_link4_003" rgba="0.66 0.14 0.18 1" contype="0" conaffinity="0" group="2" mass="0" />
@@ -1450,7 +1450,7 @@
               <site name="J4_positive_witness" pos="0.04 -1.52273161099875e-14 7.48319500231886e-33" type="sphere" size="0.003" rgba="0.1 1 0.2 1" group="4" />
               <body name="link5" pos="0.00930000012983338 0.0320000209058991 0.097898948000751" quat="0.913547809067383 -0.406731361648183 -4.35751695212161e-14 1.04177060842146e-13">
                 <joint name="J5" type="hinge" pos="0 0 0" axis="1 0 -1.59232002583387e-13" ref="0" limited="true" damping="0" frictionloss="0" armature="0" range="-1.232202451908 2.63893782901543" />
-                <inertial pos="0 0 0" mass="1" diaginertia="0.001 0.001 0.001" />
+                <inertial pos="-0.0073147934551864822 -0.00013382667986150751 0.063889912225453288" quat="-0.60834356829182024 0.00089585749588097236 0.79366842292275674 0.0027811531109689916" mass="0.504" diaginertia="0.00026967448027995547 0.00070381034745634562 0.00072295839362514431" />
                 <geom name="visual__link5__001" type="mesh" mesh="visual_link5_001" rgba="0.39 0.06 0.10 1" contype="0" conaffinity="0" group="2" mass="0" />
                 <geom name="visual__link5__002" type="mesh" mesh="visual_link5_002" rgba="0.39 0.06 0.10 1" contype="0" conaffinity="0" group="2" mass="0" />
                 <geom name="visual__link5__003" type="mesh" mesh="visual_link5_003" rgba="0.39 0.06 0.10 1" contype="0" conaffinity="0" group="2" mass="0" />
@@ -1672,7 +1672,7 @@
                 <site name="J5_positive_witness" pos="0 0.04 0" type="sphere" size="0.003" rgba="0.1 1 0.2 1" group="4" />
                 <body name="link6" pos="-0.0109991955299831 -0.000147148457748934 0.0995275274114727" quat="5.55111512312578e-17 0 -5.55111512312578e-17 1">
                   <joint name="J6" type="hinge" pos="0 0 0" axis="-1.59232002583387e-13 6.09321620936853e-17 1" ref="0" limited="true" damping="0" frictionloss="0" armature="0" range="-3.14159265358979 3.14159265358979" />
-                  <inertial pos="0 0 0" mass="1" diaginertia="0.001 0.001 0.001" />
+                  <inertial pos="-1.1047636330058231e-15 1.360430323081585e-16 -0.00050119577857188553" quat="0.9991296568278667 -2.8613146140474401e-15 7.7210028354421549e-14 -0.041712454339554818" mass="0.125" diaginertia="1.151829969278952e-05 1.1518299692790569e-05 2.3015838872973929e-05" />
                   <geom name="visual__link6__001" type="mesh" mesh="visual_link6_001" rgba="0.20 0.22 0.25 1" contype="0" conaffinity="0" group="2" mass="0" />
                   <geom name="collision__link6__J6_DM_G6220_Output_Rotor_Collision_Proxy__001" type="mesh" mesh="collision_link6_01_001" rgba="0.95 0.42 0.08 0.20" contype="1" conaffinity="7" group="3" mass="0" solref="0.002 1" solimp="0.95 0.99 0.001" />
                   <geom name="collision__link6__J6_DM_G6220_Output_Rotor_Collision_Proxy__002" type="mesh" mesh="collision_link6_01_002" rgba="0.95 0.42 0.08 0.20" contype="1" conaffinity="7" group="3" mass="0" solref="0.002 1" solimp="0.95 0.99 0.001" />
@@ -1705,7 +1705,7 @@
                   <site name="J6_axis_origin" pos="0 0 0" type="sphere" size="0.004" rgba="1 0.9 0.05 1" group="4" />
                   <site name="J6_positive_witness" pos="0.04 3.88094007676523e-31 6.36928010333548e-15" type="sphere" size="0.003" rgba="0.1 1 0.2 1" group="4" />
                   <body name="gripper" pos="0 0 0" quat="1 0 0 0">
-                    <inertial pos="0 0 0" mass="1" diaginertia="0.001 0.001 0.001" />
+                    <inertial pos="-0.0034049824167213345 -0.00079970272795682688 0.034936512362222581" quat="0.34374930744332233 0.57351956935177917 0.66487276957411556 0.33295032284356058" mass="0.29599999999999999" diaginertia="0.00037497547647325998 0.00039385851409503382 0.0004740673795944088" />
                     <geom name="visual__gripper__001" type="mesh" mesh="visual_gripper_001" rgba="0.05 0.50 0.58 1" contype="0" conaffinity="0" group="2" mass="0" />
                     <geom name="visual__gripper__002" type="mesh" mesh="visual_gripper_002" rgba="0.05 0.50 0.58 1" contype="0" conaffinity="0" group="2" mass="0" />
                     <geom name="collision__gripper__J6_Gripper_Connector_Collision_Proxy__001" type="mesh" mesh="collision_gripper_01_001" rgba="0.95 0.42 0.08 0.20" contype="2" conaffinity="6" group="3" mass="0" solref="0.002 1" solimp="0.95 0.99 0.001" />
