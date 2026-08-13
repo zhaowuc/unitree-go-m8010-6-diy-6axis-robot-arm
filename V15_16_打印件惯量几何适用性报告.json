@@ -1,0 +1,812 @@
+{
+  "algorithm": {
+    "mesh_center_of_gravity_role": "PROHIBITED_NOT_READ",
+    "mesh_volume_role": "PROHIBITED_NOT_READ",
+    "original_reports_modified": false,
+    "path_a": "STL_TO_CLOSED_VALID_OCCT_SOLID_MATRIX_OF_INERTIA",
+    "path_b": "BBOX_CENTER_ANCHORED_SIGNED_TETRAHEDRA_FULL_SECOND_MOMENTS"
+  },
+  "all_four_pass": true,
+  "artifacts": [
+    {
+      "artifact_path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+      "com_v2_member_centroid_world_mm": [
+        -0.7894327050344145,
+        53.98176991501896,
+        183.0347984497073
+      ],
+      "com_v2_reproduction_error_m": 6.431098710768744e-16,
+      "component_id": "UPPER_ARM_PRINT_MEASURED",
+      "coordinate_frame": "SOURCE_OBJECT_LOCAL",
+      "finite_volume_centroid": true,
+      "member": "UpperArm_A_SleeveSide_PrintPart",
+      "mesh_qa": {
+        "closed": true,
+        "consistent_orientation": true,
+        "facet_count": 1834,
+        "manifold": true,
+        "point_count": 899,
+        "self_intersection_count": 0,
+        "self_intersection_free": true,
+        "topology": {
+          "closed_two_manifold": true,
+          "consistent_orientation": true,
+          "degenerate_facet_count": 0,
+          "edge_count": 2751,
+          "edge_incidence_histogram": {
+            "2": 2751
+          },
+          "facet_count": 1834,
+          "open_or_nonmanifold_edge_count": 0,
+          "orientation_conflict_edge_count": 0,
+          "pass": true,
+          "vertex_count": 899
+        }
+      },
+      "original_v15_15_report_modified": false,
+      "pass": true,
+      "path_a_b_agreement": {
+        "centroid_distance_m": 1.3649080239232024e-15,
+        "centroid_limit_m_strict_less_than": 1e-07,
+        "inertia_limit_strict_less_than": 1e-05,
+        "inertia_relative_frobenius_error": 1.862689139297307e-12,
+        "pass": true,
+        "volume_limit_strict_less_than": 1e-08,
+        "volume_relative_error": 1.5086790094333453e-15
+      },
+      "path_a_occt_reimport": {
+        "centroid_source_local_mm": [
+          3414.7028593279306,
+          1277.1059547526816,
+          34.68783326014111
+        ],
+        "closed": true,
+        "raw_matrix_of_inertia_mm5": [
+          [
+            609829729.8582153,
+            41281191.892578125,
+            165681043.17218018
+          ],
+          [
+            41281191.892578125,
+            819402756.0654297,
+            -34288962.82433319
+          ],
+          [
+            165681043.17218018,
+            -34288962.82433319,
+            875052889.9506836
+          ]
+        ],
+        "unit_mass_inertia_com_kg_m2": [
+          [
+            0.001975765084713763,
+            0.00013374542696645468,
+            0.0005367839648858296
+          ],
+          [
+            0.00013374542696645468,
+            0.002654753083502026,
+            -0.00011109155920475838
+          ],
+          [
+            0.0005367839648858296,
+            -0.00011109155920475838,
+            0.0028350519212049607
+          ]
+        ],
+        "valid": true,
+        "volume_mm3": 308654.97855812334
+      },
+      "path_b_anchored_signed_tetrahedra": {
+        "anchor_source_local_mm": [
+          3437.57177734375,
+          1284.5418090820312,
+          46.0
+        ],
+        "centroid_source_local_mm": [
+          3414.702859327929,
+          1277.1059547526816,
+          34.68783326014107
+        ],
+        "first_moment_mm4": [
+          1053965037.8282229,
+          394185111.08063996,
+          10706572.431136582
+        ],
+        "mesh_center_of_gravity_used": false,
+        "mesh_volume_used": false,
+        "physical_volume_mm3": 308654.9785581229,
+        "polyhedral_inertia_valid": true,
+        "raw_inertia_com_mm5": [
+          [
+            609829729.8578968,
+            41281191.89196571,
+            165681043.17209285
+          ],
+          [
+            41281191.89196571,
+            819402756.067545,
+            -34288962.82434617
+          ],
+          [
+            165681043.17209285,
+            -34288962.82434617,
+            875052889.9517505
+          ]
+        ],
+        "second_moment_mm5": [
+          [
+            3599519741261.782,
+            1345983744719.6667,
+            36394082451.03157
+          ],
+          [
+            1345983744719.6667,
+            503748892567.8037,
+            13707716369.61977
+          ],
+          [
+            36394082451.03157,
+            13707716369.61977,
+            648477597.2657347
+          ]
+        ],
+        "signed_volume_mm3": 308654.9785581229,
+        "unit_mass_inertia_com_kg_m2": [
+          [
+            0.001975765084712734,
+            0.00013374542696447075,
+            0.0005367839648855475
+          ],
+          [
+            0.00013374542696447075,
+            0.0026547530835088835,
+            -0.0001110915592048006
+          ],
+          [
+            0.0005367839648855475,
+            -0.0001110915592048006,
+            0.0028350519212084215
+          ]
+        ]
+      },
+      "positive_volume": true,
+      "sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45",
+      "source_placement_matrix_row_major": [
+        [
+          0.19628414455729026,
+          -0.04638464318604624,
+          0.97944933481621,
+          -645.7783335564332
+        ],
+        [
+          0.9531956643126751,
+          -0.22525324638600508,
+          -0.20169035804441443,
+          -2906.2297267154954
+        ],
+        [
+          0.22997947762992033,
+          0.9731954787549464,
+          0.0,
+          -1845.150522456254
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "status": "PASS",
+      "upgraded_usage": "V15_16_INERTIA_SUITABLE_MASS_GEOMETRY",
+      "world_centroid_from_placement_mm": [
+        -0.7894327050348693,
+        53.9817699150185,
+        183.0347984497073
+      ]
+    },
+    {
+      "artifact_path": "mass_properties_geometry_v15_15_v2/UpperArm_B_Distal_PrintPart_mass_properties.stl",
+      "com_v2_member_centroid_world_mm": [
+        4.59593924648334,
+        207.55925135291682,
+        182.9534499703368
+      ],
+      "com_v2_reproduction_error_m": 4.547473508864641e-16,
+      "component_id": "UPPER_ARM_PRINT_MEASURED",
+      "coordinate_frame": "SOURCE_OBJECT_LOCAL",
+      "finite_volume_centroid": true,
+      "member": "UpperArm_B_Distal_PrintPart",
+      "mesh_qa": {
+        "closed": true,
+        "consistent_orientation": true,
+        "facet_count": 694,
+        "manifold": true,
+        "point_count": 337,
+        "self_intersection_count": 0,
+        "self_intersection_free": true,
+        "topology": {
+          "closed_two_manifold": true,
+          "consistent_orientation": true,
+          "degenerate_facet_count": 0,
+          "edge_count": 1041,
+          "edge_incidence_histogram": {
+            "2": 1041
+          },
+          "facet_count": 694,
+          "open_or_nonmanifold_edge_count": 0,
+          "orientation_conflict_edge_count": 0,
+          "pass": true,
+          "vertex_count": 337
+        }
+      },
+      "original_v15_15_report_modified": false,
+      "pass": true,
+      "path_a_b_agreement": {
+        "centroid_distance_m": 9.713408322576797e-15,
+        "centroid_limit_m_strict_less_than": 1e-07,
+        "inertia_limit_strict_less_than": 1e-05,
+        "inertia_relative_frobenius_error": 2.2503606218076595e-11,
+        "pass": true,
+        "volume_limit_strict_less_than": 1e-08,
+        "volume_relative_error": 0.0
+      },
+      "path_a_occt_reimport": {
+        "centroid_source_local_mm": [
+          3642.222338416421,
+          1220.961846958281,
+          8.987435017023822
+        ],
+        "closed": true,
+        "raw_matrix_of_inertia_mm5": [
+          [
+            58107825.76940918,
+            50809588.3605957,
+            -9074296.48540306
+          ],
+          [
+            50809588.3605957,
+            252226090.65795898,
+            2238253.450651884
+          ],
+          [
+            -9074296.48540306,
+            2238253.450651884,
+            300676484.25146484
+          ]
+        ],
+        "unit_mass_inertia_com_kg_m2": [
+          [
+            0.00038878875778008124,
+            0.0003399575957363192,
+            -6.071444614514071e-05
+          ],
+          [
+            0.0003399575957363192,
+            0.001687598308286025,
+            1.4975741514218668e-05
+          ],
+          [
+            -6.071444614514071e-05,
+            1.4975741514218668e-05,
+            0.0020117709664392723
+          ]
+        ],
+        "valid": true,
+        "volume_mm3": 149458.60600804185
+      },
+      "path_b_anchored_signed_tetrahedra": {
+        "anchor_source_local_mm": [
+          3632.4212646484375,
+          1225.6386108398438,
+          10.000000000000036
+        ],
+        "centroid_source_local_mm": [
+          3642.222338416429,
+          1220.9618469582863,
+          8.987435017023826
+        ],
+        "first_moment_mm4": [
+          544361473.4710699,
+          182483255.63538963,
+          1343249.509232243
+        ],
+        "mesh_center_of_gravity_used": false,
+        "mesh_volume_used": false,
+        "physical_volume_mm3": 149458.60600804185,
+        "polyhedral_inertia_valid": true,
+        "raw_inertia_com_mm5": [
+          [
+            58107825.76758847,
+            50809588.36413322,
+            -9074296.485395012
+          ],
+          [
+            50809588.36413322,
+            252226090.6535125,
+            2238253.4506584485
+          ],
+          [
+            -9074296.485395012,
+            2238253.4506584485,
+            300676484.2456083
+          ]
+        ],
+        "second_moment_mm5": [
+          [
+            1982932916224.179,
+            664593780473.8076,
+            4901487665.077976
+          ],
+          [
+            664593780473.8076,
+            222858371949.22626,
+            1637818148.2673526
+          ],
+          [
+            4901487665.077976,
+            1637818148.2673526,
+            16901083.763620257
+          ]
+        ],
+        "signed_volume_mm3": 149458.60600804185,
+        "unit_mass_inertia_com_kg_m2": [
+          [
+            0.0003887887577678992,
+            0.00033995759575998805,
+            -6.071444614508686e-05
+          ],
+          [
+            0.00033995759575998805,
+            0.0016875983082562745,
+            1.4975741514262588e-05
+          ],
+          [
+            -6.071444614508686e-05,
+            1.4975741514262588e-05,
+            0.0020117709664000875
+          ]
+        ]
+      },
+      "positive_volume": true,
+      "sha256": "bafb8dc8b06242a844196bc63971f95a0a7dd52834b2a05ab72f40b28460a081",
+      "source_placement_matrix_row_major": [
+        [
+          0.19628414455729026,
+          -0.04638464318604624,
+          0.97944933481621,
+          -662.483414371231
+        ],
+        [
+          0.9531956643126751,
+          -0.22525324638600508,
+          -0.20169035804441443,
+          -2987.352991361105
+        ],
+        [
+          0.22997947762992033,
+          0.9731954787549464,
+          0.0,
+          -1842.9174900227936
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "status": "PASS",
+      "upgraded_usage": "V15_16_INERTIA_SUITABLE_MASS_GEOMETRY",
+      "world_centroid_from_placement_mm": [
+        4.595939246482885,
+        207.55925135291682,
+        182.9534499703368
+      ]
+    },
+    {
+      "artifact_path": "mass_properties_geometry_v15_15_v2/Forearm_v3_HighDetail_Display_mass_properties.stl",
+      "com_v2_member_centroid_world_mm": [
+        88.95476531178917,
+        337.7147095928883,
+        208.08181856591455
+      ],
+      "com_v2_reproduction_error_m": 9.663381206337363e-16,
+      "component_id": "FOREARM_PRINT_MEASURED",
+      "coordinate_frame": "SOURCE_OBJECT_LOCAL",
+      "finite_volume_centroid": true,
+      "member": "Forearm_v3_HighDetail_Display",
+      "mesh_qa": {
+        "closed": true,
+        "consistent_orientation": true,
+        "facet_count": 2978,
+        "manifold": true,
+        "point_count": 1459,
+        "self_intersection_count": 0,
+        "self_intersection_free": true,
+        "topology": {
+          "closed_two_manifold": true,
+          "consistent_orientation": true,
+          "degenerate_facet_count": 0,
+          "edge_count": 4467,
+          "edge_incidence_histogram": {
+            "2": 4467
+          },
+          "facet_count": 2978,
+          "open_or_nonmanifold_edge_count": 0,
+          "orientation_conflict_edge_count": 0,
+          "pass": true,
+          "vertex_count": 1459
+        }
+      },
+      "original_v15_15_report_modified": false,
+      "pass": true,
+      "path_a_b_agreement": {
+        "centroid_distance_m": 8.879226418867049e-15,
+        "centroid_limit_m_strict_less_than": 1e-07,
+        "inertia_limit_strict_less_than": 1e-05,
+        "inertia_relative_frobenius_error": 7.655034051084405e-12,
+        "pass": true,
+        "volume_limit_strict_less_than": 1e-08,
+        "volume_relative_error": 1.6065603785781267e-15
+      },
+      "path_a_occt_reimport": {
+        "centroid_source_local_mm": [
+          3418.159823641018,
+          1198.5800081615419,
+          1.9384698984955304
+        ],
+        "closed": true,
+        "raw_matrix_of_inertia_mm5": [
+          [
+            1051423081.6751099,
+            579636164.5480957,
+            527142.8606636524
+          ],
+          [
+            579636164.5480957,
+            459516761.06225586,
+            -2162881.465817094
+          ],
+          [
+            527142.8606636524,
+            -2162881.465817094,
+            1502222133.057129
+          ]
+        ],
+        "unit_mass_inertia_com_kg_m2": [
+          [
+            0.005803959951776472,
+            0.0031996492603897386,
+            2.90988100364161e-06
+          ],
+          [
+            0.0031996492603897386,
+            0.002536578209911774,
+            -1.193932074236218e-05
+          ],
+          [
+            2.90988100364161e-06,
+            -1.193932074236218e-05,
+            0.008292415537468605
+          ]
+        ],
+        "valid": true,
+        "volume_mm3": 181156.15724627647
+      },
+      "path_b_anchored_signed_tetrahedra": {
+        "anchor_source_local_mm": [
+          3417.7862548828125,
+          1199.7171020507812,
+          3.0
+        ],
+        "centroid_source_local_mm": [
+          3418.159823641027,
+          1198.5800081615398,
+          1.9384698984955273
+        ],
+        "first_moment_mm4": [
+          619220698.5044194,
+          217130148.4307556,
+          351165.7577490299
+        ],
+        "mesh_center_of_gravity_used": false,
+        "mesh_volume_used": false,
+        "physical_volume_mm3": 181156.15724627677,
+        "polyhedral_inertia_valid": true,
+        "raw_inertia_com_mm5": [
+          [
+            1051423081.6762177,
+            579636164.5484096,
+            527142.8606675905
+          ],
+          [
+            579636164.5484096,
+            459516761.05046356,
+            -2162881.465817538
+          ],
+          [
+            527142.8606675905,
+            -2162881.465817538,
+            1502222133.0467257
+          ]
+        ],
+        "second_moment_mm5": [
+          [
+            2117050471500.9504,
+            741605913702.673,
+            1199813541.7155237
+          ],
+          [
+            741605913702.673,
+            261294919305.0876,
+            423063138.2547031
+          ],
+          [
+            1199813541.7155237,
+            423063138.2547031,
+            5039579.090756524
+          ]
+        ],
+        "signed_volume_mm3": 181156.15724627677,
+        "unit_mass_inertia_com_kg_m2": [
+          [
+            0.005803959951782578,
+            0.003199649260391466,
+            2.9098810036633446e-06
+          ],
+          [
+            0.003199649260391466,
+            0.0025365782098466755,
+            -1.1939320742364616e-05
+          ],
+          [
+            2.9098810036633446e-06,
+            -1.1939320742364616e-05,
+            0.008292415537411165
+          ]
+        ]
+      },
+      "positive_volume": true,
+      "sha256": "631217db4ad44f53313aa4691bde3eaaec9e043c9ff83cc6549ea42bd2832760",
+      "source_placement_matrix_row_major": [
+        [
+          -0.14467938429346305,
+          0.14052357911947888,
+          -0.9794493348162101,
+          416.96190445755315
+        ],
+        [
+          -0.7025924693764781,
+          0.6824110355550963,
+          0.20169035804441404,
+          1920.9728655552665
+        ],
+        [
+          0.6967292858319705,
+          0.7173341635974637,
+          -4.440892098500626e-16,
+          -3033.2326218782314
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "status": "PASS",
+      "upgraded_usage": "V15_16_INERTIA_SUITABLE_MASS_GEOMETRY",
+      "world_centroid_from_placement_mm": [
+        88.95476531178821,
+        337.7147095928883,
+        208.08181856591455
+      ]
+    },
+    {
+      "artifact_path": "mass_properties_geometry_v15_15_v2/Wrist_Prelink_v1_HighDetail_Display_mass_properties.stl",
+      "com_v2_member_centroid_world_mm": [
+        80.02930038978639,
+        495.1771748787429,
+        222.86558987985984
+      ],
+      "com_v2_reproduction_error_m": 2.2737367544323206e-16,
+      "component_id": "WRIST_PRELINK_PRINT_MEASURED",
+      "coordinate_frame": "SOURCE_OBJECT_LOCAL",
+      "finite_volume_centroid": true,
+      "member": "Wrist_Prelink_v1_HighDetail_Display",
+      "mesh_qa": {
+        "closed": true,
+        "consistent_orientation": true,
+        "facet_count": 2314,
+        "manifold": true,
+        "point_count": 1131,
+        "self_intersection_count": 0,
+        "self_intersection_free": true,
+        "topology": {
+          "closed_two_manifold": true,
+          "consistent_orientation": true,
+          "degenerate_facet_count": 0,
+          "edge_count": 3471,
+          "edge_incidence_histogram": {
+            "2": 3471
+          },
+          "facet_count": 2314,
+          "open_or_nonmanifold_edge_count": 0,
+          "orientation_conflict_edge_count": 0,
+          "pass": true,
+          "vertex_count": 1131
+        }
+      },
+      "original_v15_15_report_modified": false,
+      "pass": true,
+      "path_a_b_agreement": {
+        "centroid_distance_m": 3.784252569566137e-15,
+        "centroid_limit_m_strict_less_than": 1e-07,
+        "inertia_limit_strict_less_than": 1e-05,
+        "inertia_relative_frobenius_error": 1.8498845779115855e-11,
+        "pass": true,
+        "volume_limit_strict_less_than": 1e-08,
+        "volume_relative_error": 5.932489378586205e-15
+      },
+      "path_a_occt_reimport": {
+        "centroid_source_local_mm": [
+          3344.601979008009,
+          1352.3236753365456,
+          15.360739538247072
+        ],
+        "closed": true,
+        "raw_matrix_of_inertia_mm5": [
+          [
+            303304711.8312073,
+            53935126.71429443,
+            13948999.418278694
+          ],
+          [
+            53935126.71429443,
+            85580493.09204102,
+            -53338039.695301056
+          ],
+          [
+            13948999.418278694,
+            -53338039.695301056,
+            339078624.3112793
+          ]
+        ],
+        "unit_mass_inertia_com_kg_m2": [
+          [
+            0.0026880549266660764,
+            0.00047800306895793193,
+            0.00012362378540704328
+          ],
+          [
+            0.00047800306895793193,
+            0.0007584618936305737,
+            -0.00047271135194713025
+          ],
+          [
+            0.00012362378540704328,
+            -0.00047271135194713025,
+            0.0030051032214571376
+          ]
+        ],
+        "valid": true,
+        "volume_mm3": 112834.26868341122
+      },
+      "path_b_anchored_signed_tetrahedra": {
+        "anchor_source_local_mm": [
+          3354.968994140625,
+          1342.9307250976562,
+          27.999706506729126
+        ],
+        "centroid_source_local_mm": [
+          3344.601979008012,
+          1352.3236753365436,
+          15.36073953824707
+        ],
+        "first_moment_mm4": [
+          377385718.3384567,
+          152588452.9298608,
+          1733217.8122344578
+        ],
+        "mesh_center_of_gravity_used": false,
+        "mesh_volume_used": false,
+        "physical_volume_mm3": 112834.26868341056,
+        "polyhedral_inertia_valid": true,
+        "raw_inertia_com_mm5": [
+          [
+            303304711.8321756,
+            53935126.71355894,
+            13948999.418291876
+          ],
+          [
+            53935126.71355894,
+            85580493.08817136,
+            -53338039.69529732
+          ],
+          [
+            13948999.418291876,
+            -53338039.69529732,
+            339078624.3035048
+          ]
+        ],
+        "second_moment_mm5": [
+          [
+            1262265697606.9424,
+            510293706516.26984,
+            5782974725.433012
+          ],
+          [
+            510293706516.26984,
+            206627378901.55032,
+            2397209521.6949625
+          ],
+          [
+            5782974725.433012,
+            2397209521.6949625,
+            51526797.685205
+          ]
+        ],
+        "signed_volume_mm3": 112834.26868341056,
+        "unit_mass_inertia_com_kg_m2": [
+          [
+            0.0026880549266746737,
+            0.0004780030689514165,
+            0.00012362378540716084
+          ],
+          [
+            0.0004780030689514165,
+            0.0007584618935962831,
+            -0.00047271135194709994
+          ],
+          [
+            0.00012362378540716084,
+            -0.00047271135194709994,
+            0.003005103221388254
+          ]
+        ]
+      },
+      "positive_volume": true,
+      "sha256": "585d32a6ac54aca69a082947f31604e5f7b44e5be14eacab2c2db4f45a10f944",
+      "source_placement_matrix_row_major": [
+        [
+          -0.7305532732646434,
+          -0.6828463680562576,
+          -0.0035710719250043642,
+          3446.9233883672546
+        ],
+        [
+          0.6827932759053336,
+          -0.7304057794145717,
+          -0.017341850427657908,
+          -800.4831552151026
+        ],
+        [
+          0.009233488007172753,
+          -0.015107449492558633,
+          0.9998432415479195,
+          197.05507762816694
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "status": "PASS",
+      "upgraded_usage": "V15_16_INERTIA_SUITABLE_MASS_GEOMETRY",
+      "world_centroid_from_placement_mm": [
+        80.02930038978639,
+        495.1771748787427,
+        222.86558987985984
+      ]
+    }
+  ],
+  "final_status": "V15.16 PRINT_INERTIA_GEOMETRY_SUITABILITY = PASS",
+  "revision": "V15.16-PRINT_INERTIA_GEOMETRY_SUITABILITY_V2",
+  "schema": "go-m8010-arm-v15.16-print-inertia-suitability-v2/1.0",
+  "scope": "FOUR_FROZEN_CANONICAL_PRINT_STL_ARTIFACTS_NO_REPAIR_NO_DEPLOYMENT"
+}
