@@ -1,0 +1,1317 @@
+{
+  "authorities": {
+    "all_protected_inputs_unchanged": true,
+    "com_v2": {
+      "modified": false,
+      "path": "V15_15_COM账本_v2.json",
+      "sha256": "1cb975890dd121eb41d41bfee414a2c4643f4d917089970fac60009736fc77ae"
+    },
+    "mass": {
+      "modified": false,
+      "path": "V15_15_实测质量账本_v1.json",
+      "sha256": "658fa0b2aef1da4200d86fccf742e135215288e77f58fa5095a06f513eaba04a",
+      "total_mass_kg": 3.4515
+    },
+    "protected_inputs_after": [
+      {
+        "expected_sha256": "13e3470821541d7ae5c3f10223c51339d7d46df0d118a8e4dbeac2480c462d32",
+        "locked": true,
+        "path": "V15_15_COM账本_v1.json",
+        "sha256": "13e3470821541d7ae5c3f10223c51339d7d46df0d118a8e4dbeac2480c462d32"
+      },
+      {
+        "expected_sha256": "8875ff34ab6c091b2d5de6fff418553b0834a141adf32f4c88aac7d1d916d11a",
+        "locked": true,
+        "path": "V15_15_COM账本_v1.md",
+        "sha256": "8875ff34ab6c091b2d5de6fff418553b0834a141adf32f4c88aac7d1d916d11a"
+      },
+      {
+        "expected_sha256": "1cb975890dd121eb41d41bfee414a2c4643f4d917089970fac60009736fc77ae",
+        "locked": true,
+        "path": "V15_15_COM账本_v2.json",
+        "sha256": "1cb975890dd121eb41d41bfee414a2c4643f4d917089970fac60009736fc77ae"
+      },
+      {
+        "expected_sha256": "64117a409bc37b70e436eef5fee18aa94b21239c3ccdf127adafc5f550c0e59f",
+        "locked": true,
+        "path": "V15_15_COM账本_v2.md",
+        "sha256": "64117a409bc37b70e436eef5fee18aa94b21239c3ccdf127adafc5f550c0e59f"
+      },
+      {
+        "expected_sha256": "658fa0b2aef1da4200d86fccf742e135215288e77f58fa5095a06f513eaba04a",
+        "locked": true,
+        "path": "V15_15_实测质量账本_v1.json",
+        "sha256": "658fa0b2aef1da4200d86fccf742e135215288e77f58fa5095a06f513eaba04a"
+      },
+      {
+        "expected_sha256": "fa52587a3309ea5665197283b62ac2e165e67663070408931611fa3b7b4e946d",
+        "locked": true,
+        "path": "V15_15_实测质量账本_v1.md",
+        "sha256": "fa52587a3309ea5665197283b62ac2e165e67663070408931611fa3b7b4e946d"
+      },
+      {
+        "expected_sha256": "f8e0d62f027c932a49b5b38930ee770fca52c60ca2c3aa64b28308934cca55b8",
+        "locked": true,
+        "path": "V15_16_刚体惯量_FAIL审计_v2.json",
+        "sha256": "f8e0d62f027c932a49b5b38930ee770fca52c60ca2c3aa64b28308934cca55b8"
+      },
+      {
+        "expected_sha256": "94810a472a6e1a651f4a0b614e237d6241bc43bca3d7f66f908065ee26cdcfc7",
+        "locked": true,
+        "path": "V15_16_刚体惯量_FAIL审计_v2.md",
+        "sha256": "94810a472a6e1a651f4a0b614e237d6241bc43bca3d7f66f908065ee26cdcfc7"
+      },
+      {
+        "expected_sha256": "7308455fcdab006f68d90401c3206ce7209575feadfd700350122f96dc61cd14",
+        "locked": true,
+        "path": "V15_16_打印件惯量几何适用性报告.json",
+        "sha256": "7308455fcdab006f68d90401c3206ce7209575feadfd700350122f96dc61cd14"
+      },
+      {
+        "expected_sha256": "a355735105dc846e982d1476b05f76dba0394ff44572a3d2d31d9567e2b7a73e",
+        "locked": true,
+        "path": "V15_16_质量几何去重审计_v1.json",
+        "sha256": "a355735105dc846e982d1476b05f76dba0394ff44572a3d2d31d9567e2b7a73e"
+      },
+      {
+        "expected_sha256": "821146d4a7fe448d471df071857d7758c692dcfbc4ffe929101120a8cb0e05c2",
+        "locked": true,
+        "path": "V15_16_质量几何去重审计_v1.md",
+        "sha256": "821146d4a7fe448d471df071857d7758c692dcfbc4ffe929101120a8cb0e05c2"
+      },
+      {
+        "expected_sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+        "sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45"
+      },
+      {
+        "expected_sha256": "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json",
+        "sha256": "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815"
+      },
+      {
+        "expected_sha256": "631217db4ad44f53313aa4691bde3eaaec9e043c9ff83cc6549ea42bd2832760",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/Forearm_v3_HighDetail_Display_mass_properties.stl",
+        "sha256": "631217db4ad44f53313aa4691bde3eaaec9e043c9ff83cc6549ea42bd2832760"
+      },
+      {
+        "expected_sha256": "29961b01d574e37ba28c4d7d12cba46b8836911044d29184d1457d7b0160d94f",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/Forearm_v3_HighDetail_Display_mass_properties_report.json",
+        "sha256": "29961b01d574e37ba28c4d7d12cba46b8836911044d29184d1457d7b0160d94f"
+      },
+      {
+        "expected_sha256": "bafb8dc8b06242a844196bc63971f95a0a7dd52834b2a05ab72f40b28460a081",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/UpperArm_B_Distal_PrintPart_mass_properties.stl",
+        "sha256": "bafb8dc8b06242a844196bc63971f95a0a7dd52834b2a05ab72f40b28460a081"
+      },
+      {
+        "expected_sha256": "dbe4c0751ab7bf4c1e564ce8b078f6de96336aaa203f060b402cc68fa6483e0f",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/UpperArm_B_Distal_PrintPart_mass_properties_report.json",
+        "sha256": "dbe4c0751ab7bf4c1e564ce8b078f6de96336aaa203f060b402cc68fa6483e0f"
+      },
+      {
+        "expected_sha256": "585d32a6ac54aca69a082947f31604e5f7b44e5be14eacab2c2db4f45a10f944",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/Wrist_Prelink_v1_HighDetail_Display_mass_properties.stl",
+        "sha256": "585d32a6ac54aca69a082947f31604e5f7b44e5be14eacab2c2db4f45a10f944"
+      },
+      {
+        "expected_sha256": "561d497524b3ed21349caa69f0659f157a2486c50861abe407fad15f8e753614",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/Wrist_Prelink_v1_HighDetail_Display_mass_properties_report.json",
+        "sha256": "561d497524b3ed21349caa69f0659f157a2486c50861abe407fad15f8e753614"
+      },
+      {
+        "expected_sha256": "8db76f9228f7a60bd017276239e3669de3cfd443c8cd36d0dd555e184606384f",
+        "locked": true,
+        "path": "rigid_links_v15_13/rigid_link_manifest.json",
+        "sha256": "8db76f9228f7a60bd017276239e3669de3cfd443c8cd36d0dd555e184606384f"
+      },
+      {
+        "expected_sha256": "3d2a4d52d679eb97917410c6e60bec22c0c269f91ed31b35fd53ff94167e1b8c",
+        "locked": true,
+        "path": "rigid_links_v15_13/rigid_link_membership.csv",
+        "sha256": "3d2a4d52d679eb97917410c6e60bec22c0c269f91ed31b35fd53ff94167e1b8c"
+      },
+      {
+        "expected_sha256": "914d774f9abc4b5aa8638eec9b2533790e5ee446712358fbd33558d69c09e704",
+        "locked": true,
+        "path": "tools/build_inertia_ledger_v15_16_v2.py",
+        "sha256": "914d774f9abc4b5aa8638eec9b2533790e5ee446712358fbd33558d69c09e704"
+      },
+      {
+        "expected_sha256": "5202959aaa9c5b9cee631335fc9ff667ff117c43d3c5ff7d0ae37b34f74318c1",
+        "locked": true,
+        "path": "tools/build_mass_geometry_authority_v15_16.py",
+        "sha256": "5202959aaa9c5b9cee631335fc9ff667ff117c43d3c5ff7d0ae37b34f74318c1"
+      },
+      {
+        "expected_sha256": "141fcce0fb2b7af622f4c447bac5f5fa1ce72cf49745fb34aac6adac02c5e7fa",
+        "locked": true,
+        "path": "tools/test_inertia_math_v15_16_v2.py",
+        "sha256": "141fcce0fb2b7af622f4c447bac5f5fa1ce72cf49745fb34aac6adac02c5e7fa"
+      },
+      {
+        "expected_sha256": "22aadb9d72a3b7e1952bf53c981c889fc251f585174424be8204556595776590",
+        "locked": true,
+        "path": "tools/validate_inertia_ledger_v15_16_v2.py",
+        "sha256": "22aadb9d72a3b7e1952bf53c981c889fc251f585174424be8204556595776590"
+      },
+      {
+        "expected_sha256": "f44fb1f7721d419b3a7314e6e8272c8d7ac7f1ed2fd53d0a5510c8f85da169be",
+        "locked": true,
+        "path": "tools/validate_mass_geometry_authority_v15_16.py",
+        "sha256": "f44fb1f7721d419b3a7314e6e8272c8d7ac7f1ed2fd53d0a5510c8f85da169be"
+      },
+      {
+        "expected_sha256": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0",
+        "locked": true,
+        "path": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+        "sha256": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0"
+      }
+    ],
+    "protected_inputs_before": [
+      {
+        "expected_sha256": "13e3470821541d7ae5c3f10223c51339d7d46df0d118a8e4dbeac2480c462d32",
+        "locked": true,
+        "path": "V15_15_COM账本_v1.json",
+        "sha256": "13e3470821541d7ae5c3f10223c51339d7d46df0d118a8e4dbeac2480c462d32"
+      },
+      {
+        "expected_sha256": "8875ff34ab6c091b2d5de6fff418553b0834a141adf32f4c88aac7d1d916d11a",
+        "locked": true,
+        "path": "V15_15_COM账本_v1.md",
+        "sha256": "8875ff34ab6c091b2d5de6fff418553b0834a141adf32f4c88aac7d1d916d11a"
+      },
+      {
+        "expected_sha256": "1cb975890dd121eb41d41bfee414a2c4643f4d917089970fac60009736fc77ae",
+        "locked": true,
+        "path": "V15_15_COM账本_v2.json",
+        "sha256": "1cb975890dd121eb41d41bfee414a2c4643f4d917089970fac60009736fc77ae"
+      },
+      {
+        "expected_sha256": "64117a409bc37b70e436eef5fee18aa94b21239c3ccdf127adafc5f550c0e59f",
+        "locked": true,
+        "path": "V15_15_COM账本_v2.md",
+        "sha256": "64117a409bc37b70e436eef5fee18aa94b21239c3ccdf127adafc5f550c0e59f"
+      },
+      {
+        "expected_sha256": "658fa0b2aef1da4200d86fccf742e135215288e77f58fa5095a06f513eaba04a",
+        "locked": true,
+        "path": "V15_15_实测质量账本_v1.json",
+        "sha256": "658fa0b2aef1da4200d86fccf742e135215288e77f58fa5095a06f513eaba04a"
+      },
+      {
+        "expected_sha256": "fa52587a3309ea5665197283b62ac2e165e67663070408931611fa3b7b4e946d",
+        "locked": true,
+        "path": "V15_15_实测质量账本_v1.md",
+        "sha256": "fa52587a3309ea5665197283b62ac2e165e67663070408931611fa3b7b4e946d"
+      },
+      {
+        "expected_sha256": "f8e0d62f027c932a49b5b38930ee770fca52c60ca2c3aa64b28308934cca55b8",
+        "locked": true,
+        "path": "V15_16_刚体惯量_FAIL审计_v2.json",
+        "sha256": "f8e0d62f027c932a49b5b38930ee770fca52c60ca2c3aa64b28308934cca55b8"
+      },
+      {
+        "expected_sha256": "94810a472a6e1a651f4a0b614e237d6241bc43bca3d7f66f908065ee26cdcfc7",
+        "locked": true,
+        "path": "V15_16_刚体惯量_FAIL审计_v2.md",
+        "sha256": "94810a472a6e1a651f4a0b614e237d6241bc43bca3d7f66f908065ee26cdcfc7"
+      },
+      {
+        "expected_sha256": "7308455fcdab006f68d90401c3206ce7209575feadfd700350122f96dc61cd14",
+        "locked": true,
+        "path": "V15_16_打印件惯量几何适用性报告.json",
+        "sha256": "7308455fcdab006f68d90401c3206ce7209575feadfd700350122f96dc61cd14"
+      },
+      {
+        "expected_sha256": "a355735105dc846e982d1476b05f76dba0394ff44572a3d2d31d9567e2b7a73e",
+        "locked": true,
+        "path": "V15_16_质量几何去重审计_v1.json",
+        "sha256": "a355735105dc846e982d1476b05f76dba0394ff44572a3d2d31d9567e2b7a73e"
+      },
+      {
+        "expected_sha256": "821146d4a7fe448d471df071857d7758c692dcfbc4ffe929101120a8cb0e05c2",
+        "locked": true,
+        "path": "V15_16_质量几何去重审计_v1.md",
+        "sha256": "821146d4a7fe448d471df071857d7758c692dcfbc4ffe929101120a8cb0e05c2"
+      },
+      {
+        "expected_sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+        "sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45"
+      },
+      {
+        "expected_sha256": "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json",
+        "sha256": "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815"
+      },
+      {
+        "expected_sha256": "631217db4ad44f53313aa4691bde3eaaec9e043c9ff83cc6549ea42bd2832760",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/Forearm_v3_HighDetail_Display_mass_properties.stl",
+        "sha256": "631217db4ad44f53313aa4691bde3eaaec9e043c9ff83cc6549ea42bd2832760"
+      },
+      {
+        "expected_sha256": "29961b01d574e37ba28c4d7d12cba46b8836911044d29184d1457d7b0160d94f",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/Forearm_v3_HighDetail_Display_mass_properties_report.json",
+        "sha256": "29961b01d574e37ba28c4d7d12cba46b8836911044d29184d1457d7b0160d94f"
+      },
+      {
+        "expected_sha256": "bafb8dc8b06242a844196bc63971f95a0a7dd52834b2a05ab72f40b28460a081",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/UpperArm_B_Distal_PrintPart_mass_properties.stl",
+        "sha256": "bafb8dc8b06242a844196bc63971f95a0a7dd52834b2a05ab72f40b28460a081"
+      },
+      {
+        "expected_sha256": "dbe4c0751ab7bf4c1e564ce8b078f6de96336aaa203f060b402cc68fa6483e0f",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/UpperArm_B_Distal_PrintPart_mass_properties_report.json",
+        "sha256": "dbe4c0751ab7bf4c1e564ce8b078f6de96336aaa203f060b402cc68fa6483e0f"
+      },
+      {
+        "expected_sha256": "585d32a6ac54aca69a082947f31604e5f7b44e5be14eacab2c2db4f45a10f944",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/Wrist_Prelink_v1_HighDetail_Display_mass_properties.stl",
+        "sha256": "585d32a6ac54aca69a082947f31604e5f7b44e5be14eacab2c2db4f45a10f944"
+      },
+      {
+        "expected_sha256": "561d497524b3ed21349caa69f0659f157a2486c50861abe407fad15f8e753614",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/Wrist_Prelink_v1_HighDetail_Display_mass_properties_report.json",
+        "sha256": "561d497524b3ed21349caa69f0659f157a2486c50861abe407fad15f8e753614"
+      },
+      {
+        "expected_sha256": "8db76f9228f7a60bd017276239e3669de3cfd443c8cd36d0dd555e184606384f",
+        "locked": true,
+        "path": "rigid_links_v15_13/rigid_link_manifest.json",
+        "sha256": "8db76f9228f7a60bd017276239e3669de3cfd443c8cd36d0dd555e184606384f"
+      },
+      {
+        "expected_sha256": "3d2a4d52d679eb97917410c6e60bec22c0c269f91ed31b35fd53ff94167e1b8c",
+        "locked": true,
+        "path": "rigid_links_v15_13/rigid_link_membership.csv",
+        "sha256": "3d2a4d52d679eb97917410c6e60bec22c0c269f91ed31b35fd53ff94167e1b8c"
+      },
+      {
+        "expected_sha256": "914d774f9abc4b5aa8638eec9b2533790e5ee446712358fbd33558d69c09e704",
+        "locked": true,
+        "path": "tools/build_inertia_ledger_v15_16_v2.py",
+        "sha256": "914d774f9abc4b5aa8638eec9b2533790e5ee446712358fbd33558d69c09e704"
+      },
+      {
+        "expected_sha256": "5202959aaa9c5b9cee631335fc9ff667ff117c43d3c5ff7d0ae37b34f74318c1",
+        "locked": true,
+        "path": "tools/build_mass_geometry_authority_v15_16.py",
+        "sha256": "5202959aaa9c5b9cee631335fc9ff667ff117c43d3c5ff7d0ae37b34f74318c1"
+      },
+      {
+        "expected_sha256": "141fcce0fb2b7af622f4c447bac5f5fa1ce72cf49745fb34aac6adac02c5e7fa",
+        "locked": true,
+        "path": "tools/test_inertia_math_v15_16_v2.py",
+        "sha256": "141fcce0fb2b7af622f4c447bac5f5fa1ce72cf49745fb34aac6adac02c5e7fa"
+      },
+      {
+        "expected_sha256": "22aadb9d72a3b7e1952bf53c981c889fc251f585174424be8204556595776590",
+        "locked": true,
+        "path": "tools/validate_inertia_ledger_v15_16_v2.py",
+        "sha256": "22aadb9d72a3b7e1952bf53c981c889fc251f585174424be8204556595776590"
+      },
+      {
+        "expected_sha256": "f44fb1f7721d419b3a7314e6e8272c8d7ac7f1ed2fd53d0a5510c8f85da169be",
+        "locked": true,
+        "path": "tools/validate_mass_geometry_authority_v15_16.py",
+        "sha256": "f44fb1f7721d419b3a7314e6e8272c8d7ac7f1ed2fd53d0a5510c8f85da169be"
+      },
+      {
+        "expected_sha256": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0",
+        "locked": true,
+        "path": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+        "sha256": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0"
+      }
+    ],
+    "protected_overlap_audit": {
+      "classification_counts": {
+        "EXACT_DUPLICATE": 0,
+        "FULL_CONTAINMENT": 5,
+        "NUMERICAL_SLIVER": 3,
+        "PARTIAL_INTERPENETRATION": 83,
+        "ZERO_VOLUME_CONTACT": 0
+      },
+      "path": "V15_16_质量几何去重审计_v1.json",
+      "sha256": "a355735105dc846e982d1476b05f76dba0394ff44572a3d2d31d9567e2b7a73e"
+    },
+    "protected_print_geometry": {
+      "all_four_pass": true,
+      "recomputed": false,
+      "report_path": "V15_16_打印件惯量几何适用性报告.json",
+      "report_sha256": "7308455fcdab006f68d90401c3206ce7209575feadfd700350122f96dc61cd14"
+    },
+    "protected_v2_inertia_math": {
+      "builder_path": "tools/build_inertia_ledger_v15_16_v2.py",
+      "builder_sha256": "914d774f9abc4b5aa8638eec9b2533790e5ee446712358fbd33558d69c09e704",
+      "math_test_pass_reused": true,
+      "occt_semantics_pass_reused": true
+    }
+  },
+  "collision_proxy_used": false,
+  "deployment_performed": false,
+  "final_status": "V15.16 INERTIA_ENGINEERING_V1 = PASS",
+  "gravity_enabled": false,
+  "links": [
+    {
+      "com_xyz_m_in_link_frame": [
+        -0.09682602754229415,
+        -0.01627177564337673,
+        0.00026852096508443425
+      ],
+      "confidence_class": "ENGINEERING_V1",
+      "inertia_expressed_in": "OWNER_LINK_FRAME",
+      "inertia_reference_point": "FROZEN_COM_V2",
+      "inertia_tensor_kg_m2": [
+        [
+          0.0011506145878779188,
+          -0.0009540393634177025,
+          9.404715830688318e-06
+        ],
+        [
+          -0.0009540393634177025,
+          0.007217558727290144,
+          6.257421623983668e-06
+        ],
+        [
+          9.404715830688318e-06,
+          6.257421623983668e-06,
+          0.007407791096012893
+        ]
+      ],
+      "link": "link2",
+      "mass_kg": 0.7615000000000001,
+      "model_limitations": [
+        "CANONICAL_PRINT_GEOMETRY_REUSED_AS_REQUIRED; GEOMETRY_CENTROID_NOT_RECOMPUTED; SMALL_INTERPART_INTERPENETRATION_REMAINS_BELOW_1_PERCENT",
+        "canonical_geometry_is_working_copy_repair",
+        "gear_ratio_reflected_inertia_not_added",
+        "material_density_distribution_assumed_uniform",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia"
+      ],
+      "tensor_checks": {
+        "determinant_kg3_m6": 5.4775650721489636e-08,
+        "finite_pass": true,
+        "ixx": 0.0011506145878779188,
+        "ixy": -0.0009540393634177025,
+        "ixz": 9.404715830688318e-06,
+        "iyy": 0.007217558727290144,
+        "iyz": 6.257421623983668e-06,
+        "izz": 0.007407791096012893,
+        "matrix_kg_m2": [
+          [
+            0.0011506145878779188,
+            -0.0009540393634177025,
+            9.404715830688318e-06
+          ],
+          [
+            -0.0009540393634177025,
+            0.007217558727290144,
+            6.257421623983668e-06
+          ],
+          [
+            9.404715830688318e-06,
+            6.257421623983668e-06,
+            0.007407791096012893
+          ]
+        ],
+        "pass": true,
+        "positive_definite_pass": true,
+        "principal_axes_in_expression_frame_columns": [
+          [
+            0.9884149922825117,
+            -0.15106743140893752,
+            -0.014643571923138456
+          ],
+          [
+            0.1517670690866246,
+            0.9827320721088558,
+            0.1058509857747669
+          ],
+          [
+            -0.0015999287539971028,
+            -0.10684711327939642,
+            0.9942741747686308
+          ]
+        ],
+        "principal_moments_kg_m2": [
+          0.0010041105324102276,
+          0.007363535125872096,
+          0.007408318752898626
+        ],
+        "principal_triangle_inequality_pass": true,
+        "principal_triangle_margins_kg_m2": [
+          0.0009593269053836968,
+          0.001048894159436758,
+          0.013767743346360493
+        ],
+        "r_max_m": 0.19301977823848362,
+        "radius_of_gyration_m": [
+          0.03631247137952842,
+          0.09833502388110137,
+          0.09863359810353904
+        ],
+        "radius_of_gyration_sanity_pass": true,
+        "symmetry_max_abs_error_kg_m2": 0.0,
+        "symmetry_pass": true,
+        "trace_kg_m2": 0.015775964411180957,
+        "unit_audit_magnitude_pass": true,
+        "unit_audit_max_abs_entry_limit_strict_less_than_kg_m2": 1.0,
+        "unit_audit_max_abs_tensor_entry_kg_m2": 0.007407791096012893,
+        "unit_audit_pass": true,
+        "unit_audit_trace_bound_pass": true,
+        "unit_audit_trace_upper_bound_kg_m2": 0.056741854787048476
+      }
+    },
+    {
+      "com_xyz_m_in_link_frame": [
+        -0.10115006408445788,
+        0.034091146941368534,
+        0.02591627514565488
+      ],
+      "confidence_class": "ENGINEERING_V1",
+      "inertia_expressed_in": "OWNER_LINK_FRAME",
+      "inertia_reference_point": "FROZEN_COM_V2",
+      "inertia_tensor_kg_m2": [
+        [
+          0.0014953205051949686,
+          -3.464298746690975e-06,
+          0.0027501824929620057
+        ],
+        [
+          -3.464298746690975e-06,
+          0.012662694095746066,
+          2.570114870295044e-06
+        ],
+        [
+          0.0027501824929620057,
+          2.570114870295044e-06,
+          0.01145498720138968
+        ]
+      ],
+      "link": "link3",
+      "mass_kg": 1.0899999999999999,
+      "model_limitations": [
+        "BOUNDED_OCCUPIED_VOLUME_BUT_EMPIRICAL_NONCONSERVATIVE_ISOTROPIC_SIMILAR_SHAPE_SECOND_MOMENT_ESTIMATE_AFTER_NORMAL_OCCT_WORKER_FAILURE",
+        "PROTECTED_V2_INTRINSIC_REUSED; GEOMETRY_CENTROID_NOT_RECOMPUTED",
+        "canonical_geometry_is_working_copy_repair",
+        "gear_ratio_reflected_inertia_not_added",
+        "material_density_distribution_assumed_uniform",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia",
+        "uniform_proxy_geometry_not_measured_mass_distribution",
+        "wiring_geometry_incomplete"
+      ],
+      "tensor_checks": {
+        "determinant_kg3_m6": 1.211232022715169e-07,
+        "finite_pass": true,
+        "ixx": 0.0014953205051949686,
+        "ixy": -3.464298746690975e-06,
+        "ixz": 0.0027501824929620057,
+        "iyy": 0.012662694095746066,
+        "iyz": 2.570114870295044e-06,
+        "izz": 0.01145498720138968,
+        "matrix_kg_m2": [
+          [
+            0.0014953205051949686,
+            -3.464298746690975e-06,
+            0.0027501824929620057
+          ],
+          [
+            -3.464298746690975e-06,
+            0.012662694095746066,
+            2.570114870295044e-06
+          ],
+          [
+            0.0027501824929620057,
+            2.570114870295044e-06,
+            0.01145498720138968
+          ]
+        ],
+        "pass": true,
+        "positive_definite_pass": true,
+        "principal_axes_in_expression_frame_columns": [
+          [
+            0.9683432953174584,
+            0.24962176448091836,
+            -0.000486940610706998
+          ],
+          [
+            0.00033648355779225536,
+            -0.0032560045428348117,
+            -0.9999946425922656
+          ],
+          [
+            -0.24962201263618713,
+            0.9683379436600893,
+            -0.0032369237879918966
+          ]
+        ],
+        "principal_moments_kg_m2": [
+          0.0007863702207150338,
+          0.01216393085347587,
+          0.012662700728139816
+        ],
+        "principal_triangle_inequality_pass": true,
+        "principal_triangle_margins_kg_m2": [
+          0.0002876003460510878,
+          0.0012851400953789813,
+          0.024040261360900653
+        ],
+        "r_max_m": 0.21216443899883472,
+        "radius_of_gyration_m": [
+          0.026859645743444457,
+          0.10563886401483517,
+          0.10778291437570676
+        ],
+        "radius_of_gyration_sanity_pass": true,
+        "symmetry_max_abs_error_kg_m2": 0.0,
+        "symmetry_pass": true,
+        "trace_kg_m2": 0.025613001802330716,
+        "unit_audit_magnitude_pass": true,
+        "unit_audit_max_abs_entry_limit_strict_less_than_kg_m2": 1.0,
+        "unit_audit_max_abs_tensor_entry_kg_m2": 0.012662694095746066,
+        "unit_audit_pass": true,
+        "unit_audit_trace_bound_pass": true,
+        "unit_audit_trace_upper_bound_kg_m2": 0.09812997320300475
+      }
+    },
+    {
+      "com_xyz_m_in_link_frame": [
+        -0.003256288062399695,
+        0.026691901325969727,
+        0.07712273077803503
+      ],
+      "confidence_class": "ENGINEERING_V1",
+      "inertia_expressed_in": "OWNER_LINK_FRAME",
+      "inertia_reference_point": "FROZEN_COM_V2",
+      "inertia_tensor_kg_m2": [
+        [
+          0.0017846928666986044,
+          5.576191808676761e-06,
+          3.260540608689319e-05
+        ],
+        [
+          5.576191808676761e-06,
+          0.0014691530030288575,
+          -0.0002629908074224898
+        ],
+        [
+          3.260540608689319e-05,
+          -0.0002629908074224898,
+          0.0004889558170829342
+        ]
+      ],
+      "link": "link4",
+      "mass_kg": 0.6749999999999999,
+      "model_limitations": [
+        "BOUNDED_OCCUPIED_VOLUME_BUT_EMPIRICAL_NONCONSERVATIVE_ISOTROPIC_SIMILAR_SHAPE_SECOND_MOMENT_ESTIMATE_AFTER_NORMAL_OCCT_WORKER_FAILURE",
+        "PROTECTED_V2_INTRINSIC_REUSED; GEOMETRY_CENTROID_NOT_RECOMPUTED",
+        "RESIDUAL_SPATIAL_INERTIA_MODEL_UNCERTAINTY",
+        "canonical_geometry_is_working_copy_repair",
+        "gear_ratio_reflected_inertia_not_added",
+        "material_density_distribution_assumed_uniform",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia",
+        "uniform_proxy_geometry_not_measured_mass_distribution",
+        "wiring_geometry_incomplete"
+      ],
+      "tensor_checks": {
+        "determinant_kg3_m6": 1.156926238706004e-09,
+        "finite_pass": true,
+        "ixx": 0.0017846928666986044,
+        "ixy": 5.576191808676761e-06,
+        "ixz": 3.260540608689319e-05,
+        "iyy": 0.0014691530030288575,
+        "iyz": -0.0002629908074224898,
+        "izz": 0.0004889558170829342,
+        "matrix_kg_m2": [
+          [
+            0.0017846928666986044,
+            5.576191808676761e-06,
+            3.260540608689319e-05
+          ],
+          [
+            5.576191808676761e-06,
+            0.0014691530030288575,
+            -0.0002629908074224898
+          ],
+          [
+            3.260540608689319e-05,
+            -0.0002629908074224898,
+            0.0004889558170829342
+          ]
+        ],
+        "pass": true,
+        "positive_definite_pass": true,
+        "principal_axes_in_expression_frame_columns": [
+          [
+            -0.024196867842252667,
+            0.010142661582897484,
+            -0.999655759750645
+          ],
+          [
+            0.24364548883183756,
+            0.9698563449854933,
+            0.003942824276400792
+          ],
+          [
+            0.9695624721277732,
+            -0.2434662122500667,
+            -0.025938699545005092
+          ]
+        ],
+        "principal_moments_kg_m2": [
+          0.0004220540192107371,
+          0.0015352307613458742,
+          0.0017855169062537843
+        ],
+        "principal_triangle_inequality_pass": true,
+        "principal_triangle_margins_kg_m2": [
+          0.00017176787430282694,
+          0.0006723401641186471,
+          0.0028986936483889215
+        ],
+        "r_max_m": 0.13982456319857503,
+        "radius_of_gyration_m": [
+          0.025005303710323865,
+          0.04769083709408579,
+          0.051431607319692894
+        ],
+        "radius_of_gyration_sanity_pass": true,
+        "symmetry_max_abs_error_kg_m2": 0.0,
+        "symmetry_pass": true,
+        "trace_kg_m2": 0.0037428016868103963,
+        "unit_audit_magnitude_pass": true,
+        "unit_audit_max_abs_entry_limit_strict_less_than_kg_m2": 1.0,
+        "unit_audit_max_abs_tensor_entry_kg_m2": 0.0017846928666986044,
+        "unit_audit_pass": true,
+        "unit_audit_trace_bound_pass": true,
+        "unit_audit_trace_upper_bound_kg_m2": 0.026393726439457605
+      }
+    },
+    {
+      "com_xyz_m_in_link_frame": [
+        -0.007314793455186482,
+        -0.0001338266798615075,
+        0.06388991222545329
+      ],
+      "confidence_class": "ENGINEERING_V1",
+      "inertia_expressed_in": "OWNER_LINK_FRAME",
+      "inertia_reference_point": "FROZEN_COM_V2",
+      "inertia_tensor_kg_m2": [
+        [
+          0.0006923549323153038,
+          -3.23074993999531e-07,
+          0.00011373297010931771
+        ],
+        [
+          -3.23074993999531e-07,
+          0.0007038092568726869,
+          7.950330868652517e-07
+        ],
+        [
+          0.00011373297010931771,
+          7.950330868652517e-07,
+          0.0003002790321734546
+        ]
+      ],
+      "link": "link5",
+      "mass_kg": 0.504,
+      "model_limitations": [
+        "RESIDUAL_SPATIAL_INERTIA_MODEL_UNCERTAINTY",
+        "gear_ratio_reflected_inertia_not_added",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia",
+        "uniform_proxy_geometry_not_measured_mass_distribution",
+        "wiring_geometry_incomplete"
+      ],
+      "tensor_checks": {
+        "determinant_kg3_m6": 1.3721727875144273e-10,
+        "finite_pass": true,
+        "ixx": 0.0006923549323153038,
+        "ixy": -3.23074993999531e-07,
+        "ixz": 0.00011373297010931771,
+        "iyy": 0.0007038092568726869,
+        "iyz": 7.950330868652517e-07,
+        "izz": 0.0003002790321734546,
+        "matrix_kg_m2": [
+          [
+            0.0006923549323153038,
+            -3.23074993999531e-07,
+            0.00011373297010931771
+          ],
+          [
+            -3.23074993999531e-07,
+            0.0007038092568726869,
+            7.950330868652517e-07
+          ],
+          [
+            0.00011373297010931771,
+            7.950330868652517e-07,
+            0.0003002790321734546
+          ]
+        ],
+        "pass": true,
+        "positive_definite_pass": true,
+        "principal_axes_in_expression_frame_columns": [
+          [
+            -0.2598346007146449,
+            0.0048058208268250135,
+            -0.9656411778490194
+          ],
+          [
+            -0.001961765603146759,
+            0.9999829252534411,
+            0.005504605098430149
+          ],
+          [
+            0.9656511439164661,
+            0.0033246485155286054,
+            -0.25982073621069757
+          ]
+        ],
+        "principal_moments_kg_m2": [
+          0.0002696744802799555,
+          0.0007038103474563458,
+          0.0007229583936251443
+        ],
+        "principal_triangle_inequality_pass": true,
+        "principal_triangle_margins_kg_m2": [
+          0.000250526434111157,
+          0.00028882252644875394,
+          0.0011570942608015347
+        ],
+        "r_max_m": 0.13450411612152904,
+        "radius_of_gyration_m": [
+          0.023131545846611288,
+          0.037369092872264434,
+          0.03787401823404465
+        ],
+        "radius_of_gyration_sanity_pass": true,
+        "symmetry_max_abs_error_kg_m2": 0.0,
+        "symmetry_pass": true,
+        "trace_kg_m2": 0.0016964432213614452,
+        "unit_audit_magnitude_pass": true,
+        "unit_audit_max_abs_entry_limit_strict_less_than_kg_m2": 1.0,
+        "unit_audit_max_abs_tensor_entry_kg_m2": 0.0007038092568726869,
+        "unit_audit_pass": true,
+        "unit_audit_trace_bound_pass": true,
+        "unit_audit_trace_upper_bound_kg_m2": 0.01823608811166284
+      }
+    },
+    {
+      "com_xyz_m_in_link_frame": [
+        -1.1047636330058231e-15,
+        1.360430323081585e-16,
+        -0.0005011957785718855
+      ],
+      "confidence_class": "ENGINEERING_V1",
+      "inertia_expressed_in": "OWNER_LINK_FRAME",
+      "inertia_reference_point": "FROZEN_COM_V2",
+      "inertia_tensor_kg_m2": [
+        [
+          1.1518299692789527e-05,
+          8.646775045799554e-20,
+          1.7766902612207907e-18
+        ],
+        [
+          8.646775045799554e-20,
+          1.1518299692790563e-05,
+          -5.319523438636526e-21
+        ],
+        [
+          1.7766902612207907e-18,
+          -5.319523438636526e-21,
+          2.3015838872973936e-05
+        ]
+      ],
+      "link": "link6",
+      "mass_kg": 0.125,
+      "model_limitations": [
+        "gear_ratio_reflected_inertia_not_added",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia"
+      ],
+      "tensor_checks": {
+        "determinant_kg3_m6": 3.0535396024219588e-15,
+        "finite_pass": true,
+        "ixx": 1.1518299692789527e-05,
+        "ixy": 8.646775045799554e-20,
+        "ixz": 1.7766902612207907e-18,
+        "iyy": 1.1518299692790563e-05,
+        "iyz": -5.319523438636526e-21,
+        "izz": 2.3015838872973936e-05,
+        "matrix_kg_m2": [
+          [
+            1.1518299692789527e-05,
+            8.646775045799554e-20,
+            1.7766902612207907e-18
+          ],
+          [
+            8.646775045799554e-20,
+            1.1518299692790563e-05,
+            -5.319523438636526e-21
+          ],
+          [
+            1.7766902612207907e-18,
+            -5.319523438636526e-21,
+            2.3015838872973936e-05
+          ]
+        ],
+        "pass": true,
+        "positive_definite_pass": true,
+        "principal_axes_in_expression_frame_columns": [
+          [
+            0.996567147971205,
+            0.08278840247606084,
+            1.545278718669516e-13
+          ],
+          [
+            -0.08278840247606085,
+            0.996567147971205,
+            -4.440892098500626e-16
+          ],
+          [
+            -1.5404344466674047e-13,
+            -1.2323475573339238e-14,
+            0.9999999999999999
+          ]
+        ],
+        "principal_moments_kg_m2": [
+          1.151829969278952e-05,
+          1.1518299692790574e-05,
+          2.3015838872973932e-05
+        ],
+        "principal_triangle_inequality_pass": true,
+        "principal_triangle_margins_kg_m2": [
+          2.0760512606161116e-08,
+          2.3015838872972882e-05,
+          2.3015838872974986e-05
+        ],
+        "r_max_m": 0.025064371965255176,
+        "radius_of_gyration_m": [
+          0.009599291512518836,
+          0.009599291512519275,
+          0.013569329791253195
+        ],
+        "radius_of_gyration_sanity_pass": true,
+        "symmetry_max_abs_error_kg_m2": 0.0,
+        "symmetry_pass": true,
+        "trace_kg_m2": 4.6052438258554026e-05,
+        "unit_audit_magnitude_pass": true,
+        "unit_audit_max_abs_entry_limit_strict_less_than_kg_m2": 1.0,
+        "unit_audit_max_abs_tensor_entry_kg_m2": 2.3015838872973936e-05,
+        "unit_audit_pass": true,
+        "unit_audit_trace_bound_pass": true,
+        "unit_audit_trace_upper_bound_kg_m2": 0.0001570556855031674
+      }
+    },
+    {
+      "com_xyz_m_in_link_frame": [
+        -0.0034049824167213345,
+        -0.0007997027279568269,
+        0.03493651236222258
+      ],
+      "confidence_class": "ENGINEERING_V1",
+      "inertia_expressed_in": "OWNER_LINK_FRAME",
+      "inertia_reference_point": "FROZEN_COM_V2",
+      "inertia_tensor_kg_m2": [
+        [
+          0.00045010858437538907,
+          5.241520235144432e-06,
+          -3.6621915682408926e-05
+        ],
+        [
+          5.241520235144432e-06,
+          0.00037548194776002844,
+          -6.980811698347642e-07
+        ],
+        [
+          -3.6621915682408926e-05,
+          -6.980811698347642e-07,
+          0.0004173108380272847
+        ]
+      ],
+      "link": "gripper",
+      "mass_kg": 0.296,
+      "model_limitations": [
+        "BOUNDED_OCCUPIED_VOLUME_BUT_EMPIRICAL_NONCONSERVATIVE_ISOTROPIC_SIMILAR_SHAPE_SECOND_MOMENT_ESTIMATE_AFTER_NORMAL_OCCT_WORKER_FAILURE",
+        "dynamic_gripper_inertia_not_modeled",
+        "internal_component_mass_distribution_not_measured"
+      ],
+      "tensor_checks": {
+        "determinant_kg3_m6": 7.001372371858045e-11,
+        "finite_pass": true,
+        "ixx": 0.00045010858437538907,
+        "ixy": 5.241520235144432e-06,
+        "ixz": -3.6621915682408926e-05,
+        "iyy": 0.00037548194776002844,
+        "iyz": -6.980811698347642e-07,
+        "izz": 0.0004173108380272847,
+        "matrix_kg_m2": [
+          [
+            0.00045010858437538907,
+            5.241520235144432e-06,
+            -3.6621915682408926e-05
+          ],
+          [
+            5.241520235144432e-06,
+            0.00037548194776002844,
+            -6.980811698347642e-07
+          ],
+          [
+            -3.6621915682408926e-05,
+            -6.980811698347642e-07,
+            0.0004173108380272847
+          ]
+        ],
+        "pass": true,
+        "positive_definite_pass": true,
+        "principal_axes_in_expression_frame_columns": [
+          [
+            -0.1058234344055725,
+            0.5337322031787339,
+            0.8390061597036007
+          ],
+          [
+            0.9915379747407524,
+            0.1204387721778375,
+            0.048445297019455213
+          ],
+          [
+            -0.07519205661250294,
+            0.8370331160989212,
+            -0.5419609923012104
+          ]
+        ],
+        "principal_moments_kg_m2": [
+          0.00037497547647326,
+          0.0003938585140950338,
+          0.0004740673795944088
+        ],
+        "principal_triangle_inequality_pass": true,
+        "principal_triangle_margins_kg_m2": [
+          0.00029476661097388505,
+          0.0004551843419726349,
+          0.0004929504172161826
+        ],
+        "r_max_m": 0.10311749592466463,
+        "radius_of_gyration_m": [
+          0.03559226098661606,
+          0.03647743258727097,
+          0.04001973244683485
+        ],
+        "radius_of_gyration_sanity_pass": true,
+        "symmetry_max_abs_error_kg_m2": 0.0,
+        "symmetry_pass": true,
+        "trace_kg_m2": 0.0012429013701627022,
+        "unit_audit_magnitude_pass": true,
+        "unit_audit_max_abs_entry_limit_strict_less_than_kg_m2": 1.0,
+        "unit_audit_max_abs_tensor_entry_kg_m2": 0.00045010858437538907,
+        "unit_audit_pass": true,
+        "unit_audit_trace_bound_pass": true,
+        "unit_audit_trace_upper_bound_kg_m2": 0.006294865035737749
+      }
+    }
+  ],
+  "not_high_fidelity_identified_dynamics": true,
+  "not_measured_inertia": true,
+  "residual_sensitivity": [
+    {
+      "candidate_final_link_point_model_tensor_kg_m2": [
+        [
+          0.0006353771593661856,
+          -3.0091718374029417e-07,
+          9.748684829978119e-05
+        ],
+        [
+          -3.0091718374029417e-07,
+          0.0006429513188120297,
+          7.143944200691777e-07
+        ],
+        [
+          9.748684829978119e-05,
+          7.143944200691777e-07,
+          0.0002658253532375525
+        ]
+      ],
+      "candidate_final_link_uniform_proxy_tensor_kg_m2": [
+        [
+          0.0006923549323153038,
+          -3.23074993999531e-07,
+          0.00011373297010931771
+        ],
+        [
+          -3.23074993999531e-07,
+          0.0007038092568726869,
+          7.950330868652517e-07
+        ],
+        [
+          0.00011373297010931771,
+          7.950330868652517e-07,
+          0.0003002790321734546
+        ]
+      ],
+      "component_id": "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING",
+      "denominator_candidate_final_uniform_link_frobenius_kg_m2": 0.0010443860250950962,
+      "difference_frobenius_kg_m2": 9.30865090240317e-05,
+      "freeze_gate_pass": true,
+      "mass_kg": 0.059,
+      "model_limitations": [
+        "RESIDUAL_SPATIAL_INERTIA_MODEL_UNCERTAINTY"
+      ],
+      "occupied_volume_method": "NORMAL_OCCT_PAIRWISE_INCLUSION_EXCLUSION_MATCHING_GRAPH_NO_TRIPLE_TERM",
+      "owner_link": "link5",
+      "point_mass_component_contribution_about_link_frozen_com_kg_m2": [
+        [
+          5.774391474083536e-05,
+          9.144460212463702e-11,
+          1.5538143859167406e-05
+        ],
+        [
+          9.144460212463702e-11,
+          6.1925029158946e-05,
+          -3.39832695350956e-10
+        ],
+        [
+          1.5538143859167406e-05,
+          -3.39832695350956e-10,
+          4.181114422110575e-06
+        ]
+      ],
+      "point_model": "POINT_MASS_AT_FROZEN_RESIDUAL_COM_INTRINSIC_INERTIA_ZERO",
+      "relative_sensitivity": 0.08913036634663485,
+      "sensitivity_percent": 8.913036634663484,
+      "status": "PASS_WITH_MODEL_LIMITATION",
+      "thresholds_percent": {
+        "fail_strictly_greater_than": 15.0,
+        "freeze_gate_strictly_less_than": 10.0,
+        "pass_high_confidence_max_inclusive": 5.0,
+        "pass_with_model_limitation_gt_5_max_inclusive": 10.0,
+        "review_required_gt_10_max_inclusive": 15.0
+      },
+      "uniform_proxy_component_contribution_about_link_frozen_com_kg_m2": [
+        [
+          0.00011472168768995351,
+          -2.2066365657112197e-08,
+          3.1784265668703913e-05
+        ],
+        [
+          -2.2066365657112197e-08,
+          0.00012278296721960307,
+          8.029883410072318e-08
+        ],
+        [
+          3.1784265668703913e-05,
+          8.029883410072318e-08,
+          3.863479335801263e-05
+        ]
+      ],
+      "uniform_proxy_geometry_model": "OCCUPIED_VOLUME_CORRECTED_TRACEABLE_CAD_UNIFORM_EFFECTIVE_DENSITY"
+    },
+    {
+      "candidate_final_link_point_model_tensor_kg_m2": [
+        [
+          0.0016378165120135564,
+          -1.8911688884108898e-06,
+          7.88372134683921e-06
+        ],
+        [
+          -1.8911688884108898e-06,
+          0.001342587906538462,
+          -0.0002324283754112676
+        ],
+        [
+          7.88372134683921e-06,
+          -0.0002324283754112676,
+          0.00044653723459669976
+        ]
+      ],
+      "candidate_final_link_uniform_proxy_tensor_kg_m2": [
+        [
+          0.0017846928666986044,
+          5.576191808676761e-06,
+          3.260540608689319e-05
+        ],
+        [
+          5.576191808676761e-06,
+          0.0014691530030288575,
+          -0.0002629908074224898
+        ],
+        [
+          3.260540608689319e-05,
+          -0.0002629908074224898,
+          0.0004889558170829342
+        ]
+      ],
+      "component_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING",
+      "denominator_candidate_final_uniform_link_frobenius_kg_m2": 0.00239230719353361,
+      "difference_frobenius_kg_m2": 0.00020637997528962887,
+      "freeze_gate_pass": true,
+      "mass_kg": 0.046,
+      "model_limitations": [
+        "RESIDUAL_SPATIAL_INERTIA_MODEL_UNCERTAINTY"
+      ],
+      "occupied_volume_method": "NORMAL_OCCT_PAIRWISE_INCLUSION_EXCLUSION_MATCHING_GRAPH_NO_TRIPLE_TERM",
+      "owner_link": "link4",
+      "point_mass_component_contribution_about_link_frozen_com_kg_m2": [
+        [
+          8.821708965774317e-05,
+          -3.3783013842990533e-06,
+          -1.0539113988892353e-05
+        ],
+        [
+          -3.3783013842990533e-06,
+          8.13857043721754e-05,
+          -2.5643028801758797e-05
+        ],
+        [
+          -1.0539113988892353e-05,
+          -2.5643028801758797e-05,
+          9.608304007081558e-06
+        ]
+      ],
+      "point_model": "POINT_MASS_AT_FROZEN_RESIDUAL_COM_INTRINSIC_INERTIA_ZERO",
+      "relative_sensitivity": 0.08626817485959686,
+      "sensitivity_percent": 8.626817485959686,
+      "status": "PASS_WITH_MODEL_LIMITATION",
+      "thresholds_percent": {
+        "fail_strictly_greater_than": 15.0,
+        "freeze_gate_strictly_less_than": 10.0,
+        "pass_high_confidence_max_inclusive": 5.0,
+        "pass_with_model_limitation_gt_5_max_inclusive": 10.0,
+        "review_required_gt_10_max_inclusive": 15.0
+      },
+      "uniform_proxy_component_contribution_about_link_frozen_com_kg_m2": [
+        [
+          0.0002350934443427912,
+          4.089059312788597e-06,
+          1.4182570751161625e-05
+        ],
+        [
+          4.089059312788597e-06,
+          0.0002079508008625709,
+          -5.620546081298103e-05
+        ],
+        [
+          1.4182570751161625e-05,
+          -5.620546081298103e-05,
+          5.2026886493315976e-05
+        ]
+      ],
+      "uniform_proxy_geometry_model": "OCCUPIED_VOLUME_CORRECTED_TRACEABLE_CAD_UNIFORM_EFFECTIVE_DENSITY"
+    },
+    {
+      "candidate_final_link_point_model_tensor_kg_m2": [
+        [
+          0.0014671551084930478,
+          -3.4642987466938537e-06,
+          0.0027129299964038017
+        ],
+        [
+          -3.4642987466938537e-06,
+          0.012471883634896432,
+          2.5701148702940857e-06
+        ],
+        [
+          0.0027129299964038017,
+          2.5701148702940857e-06,
+          0.011291320922236106
+        ]
+      ],
+      "candidate_final_link_uniform_proxy_tensor_kg_m2": [
+        [
+          0.0014953205051949686,
+          -3.464298746690975e-06,
+          0.0027501824929620057
+        ],
+        [
+          -3.464298746690975e-06,
+          0.012662694095746066,
+          2.570114870295044e-06
+        ],
+        [
+          0.0027501824929620057,
+          2.570114870295044e-06,
+          0.01145498720138968
+        ]
+      ],
+      "component_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING",
+      "denominator_candidate_final_uniform_link_frobenius_kg_m2": 0.017576222053177472,
+      "difference_frobenius_kg_m2": 0.0002583874406248111,
+      "freeze_gate_pass": true,
+      "mass_kg": 0.015,
+      "model_limitations": [],
+      "occupied_volume_method": "NORMAL_OCCT_PAIRWISE_INCLUSION_EXCLUSION_MATCHING_GRAPH_NO_TRIPLE_TERM",
+      "owner_link": "link3",
+      "point_mass_component_contribution_about_link_frozen_com_kg_m2": [
+        [
+          5.641826139365163e-06,
+          6.675380794149262e-09,
+          2.2179346227680632e-11
+        ],
+        [
+          6.675380794149262e-09,
+          7.018004139982972e-11,
+          -1.8745093020635036e-08
+        ],
+        [
+          2.2179346227680632e-11,
+          -1.8745093020635036e-08,
+          5.64177175605325e-06
+        ]
+      ],
+      "point_model": "POINT_MASS_AT_FROZEN_RESIDUAL_COM_INTRINSIC_INERTIA_ZERO",
+      "relative_sensitivity": 0.014700965875547709,
+      "sensitivity_percent": 1.470096587554771,
+      "status": "PASS_HIGH_CONFIDENCE",
+      "thresholds_percent": {
+        "fail_strictly_greater_than": 15.0,
+        "freeze_gate_strictly_less_than": 10.0,
+        "pass_high_confidence_max_inclusive": 5.0,
+        "pass_with_model_limitation_gt_5_max_inclusive": 10.0,
+        "review_required_gt_10_max_inclusive": 15.0
+      },
+      "uniform_proxy_component_contribution_about_link_frozen_com_kg_m2": [
+        [
+          3.380722284128595e-05,
+          6.675380797027839e-09,
+          3.725251873754998e-05
+        ],
+        [
+          6.675380797027839e-09,
+          0.00019081053102967523,
+          -1.8745093019676618e-08
+        ],
+        [
+          3.725251873754998e-05,
+          -1.8745093019676618e-08,
+          0.0001693080509096292
+        ]
+      ],
+      "uniform_proxy_geometry_model": "OCCUPIED_VOLUME_CORRECTED_TRACEABLE_CAD_UNIFORM_EFFECTIVE_DENSITY"
+    }
+  ],
+  "revision": "V15.16-RIGID_BODY_INERTIA-ENGINEERING_V1",
+  "schema": "go-m8010-arm-v15.16-rigid-inertia-engineering-v1/1.0",
+  "status": "ENGINEERING_V1",
+  "total_mass_kg": 3.4515,
+  "unresolved_items": []
+}

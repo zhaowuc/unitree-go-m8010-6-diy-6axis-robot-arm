@@ -1,0 +1,5420 @@
+{
+  "authoritative_inertia_written": true,
+  "authorities": {
+    "all_protected_inputs_unchanged": true,
+    "com_v2": {
+      "modified": false,
+      "path": "V15_15_COM账本_v2.json",
+      "sha256": "1cb975890dd121eb41d41bfee414a2c4643f4d917089970fac60009736fc77ae"
+    },
+    "mass": {
+      "modified": false,
+      "path": "V15_15_实测质量账本_v1.json",
+      "sha256": "658fa0b2aef1da4200d86fccf742e135215288e77f58fa5095a06f513eaba04a",
+      "total_mass_kg": 3.4515
+    },
+    "protected_inputs_after": [
+      {
+        "expected_sha256": "13e3470821541d7ae5c3f10223c51339d7d46df0d118a8e4dbeac2480c462d32",
+        "locked": true,
+        "path": "V15_15_COM账本_v1.json",
+        "sha256": "13e3470821541d7ae5c3f10223c51339d7d46df0d118a8e4dbeac2480c462d32"
+      },
+      {
+        "expected_sha256": "8875ff34ab6c091b2d5de6fff418553b0834a141adf32f4c88aac7d1d916d11a",
+        "locked": true,
+        "path": "V15_15_COM账本_v1.md",
+        "sha256": "8875ff34ab6c091b2d5de6fff418553b0834a141adf32f4c88aac7d1d916d11a"
+      },
+      {
+        "expected_sha256": "1cb975890dd121eb41d41bfee414a2c4643f4d917089970fac60009736fc77ae",
+        "locked": true,
+        "path": "V15_15_COM账本_v2.json",
+        "sha256": "1cb975890dd121eb41d41bfee414a2c4643f4d917089970fac60009736fc77ae"
+      },
+      {
+        "expected_sha256": "64117a409bc37b70e436eef5fee18aa94b21239c3ccdf127adafc5f550c0e59f",
+        "locked": true,
+        "path": "V15_15_COM账本_v2.md",
+        "sha256": "64117a409bc37b70e436eef5fee18aa94b21239c3ccdf127adafc5f550c0e59f"
+      },
+      {
+        "expected_sha256": "658fa0b2aef1da4200d86fccf742e135215288e77f58fa5095a06f513eaba04a",
+        "locked": true,
+        "path": "V15_15_实测质量账本_v1.json",
+        "sha256": "658fa0b2aef1da4200d86fccf742e135215288e77f58fa5095a06f513eaba04a"
+      },
+      {
+        "expected_sha256": "fa52587a3309ea5665197283b62ac2e165e67663070408931611fa3b7b4e946d",
+        "locked": true,
+        "path": "V15_15_实测质量账本_v1.md",
+        "sha256": "fa52587a3309ea5665197283b62ac2e165e67663070408931611fa3b7b4e946d"
+      },
+      {
+        "expected_sha256": "f8e0d62f027c932a49b5b38930ee770fca52c60ca2c3aa64b28308934cca55b8",
+        "locked": true,
+        "path": "V15_16_刚体惯量_FAIL审计_v2.json",
+        "sha256": "f8e0d62f027c932a49b5b38930ee770fca52c60ca2c3aa64b28308934cca55b8"
+      },
+      {
+        "expected_sha256": "94810a472a6e1a651f4a0b614e237d6241bc43bca3d7f66f908065ee26cdcfc7",
+        "locked": true,
+        "path": "V15_16_刚体惯量_FAIL审计_v2.md",
+        "sha256": "94810a472a6e1a651f4a0b614e237d6241bc43bca3d7f66f908065ee26cdcfc7"
+      },
+      {
+        "expected_sha256": "7308455fcdab006f68d90401c3206ce7209575feadfd700350122f96dc61cd14",
+        "locked": true,
+        "path": "V15_16_打印件惯量几何适用性报告.json",
+        "sha256": "7308455fcdab006f68d90401c3206ce7209575feadfd700350122f96dc61cd14"
+      },
+      {
+        "expected_sha256": "a355735105dc846e982d1476b05f76dba0394ff44572a3d2d31d9567e2b7a73e",
+        "locked": true,
+        "path": "V15_16_质量几何去重审计_v1.json",
+        "sha256": "a355735105dc846e982d1476b05f76dba0394ff44572a3d2d31d9567e2b7a73e"
+      },
+      {
+        "expected_sha256": "821146d4a7fe448d471df071857d7758c692dcfbc4ffe929101120a8cb0e05c2",
+        "locked": true,
+        "path": "V15_16_质量几何去重审计_v1.md",
+        "sha256": "821146d4a7fe448d471df071857d7758c692dcfbc4ffe929101120a8cb0e05c2"
+      },
+      {
+        "expected_sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+        "sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45"
+      },
+      {
+        "expected_sha256": "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json",
+        "sha256": "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815"
+      },
+      {
+        "expected_sha256": "631217db4ad44f53313aa4691bde3eaaec9e043c9ff83cc6549ea42bd2832760",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/Forearm_v3_HighDetail_Display_mass_properties.stl",
+        "sha256": "631217db4ad44f53313aa4691bde3eaaec9e043c9ff83cc6549ea42bd2832760"
+      },
+      {
+        "expected_sha256": "29961b01d574e37ba28c4d7d12cba46b8836911044d29184d1457d7b0160d94f",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/Forearm_v3_HighDetail_Display_mass_properties_report.json",
+        "sha256": "29961b01d574e37ba28c4d7d12cba46b8836911044d29184d1457d7b0160d94f"
+      },
+      {
+        "expected_sha256": "bafb8dc8b06242a844196bc63971f95a0a7dd52834b2a05ab72f40b28460a081",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/UpperArm_B_Distal_PrintPart_mass_properties.stl",
+        "sha256": "bafb8dc8b06242a844196bc63971f95a0a7dd52834b2a05ab72f40b28460a081"
+      },
+      {
+        "expected_sha256": "dbe4c0751ab7bf4c1e564ce8b078f6de96336aaa203f060b402cc68fa6483e0f",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/UpperArm_B_Distal_PrintPart_mass_properties_report.json",
+        "sha256": "dbe4c0751ab7bf4c1e564ce8b078f6de96336aaa203f060b402cc68fa6483e0f"
+      },
+      {
+        "expected_sha256": "585d32a6ac54aca69a082947f31604e5f7b44e5be14eacab2c2db4f45a10f944",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/Wrist_Prelink_v1_HighDetail_Display_mass_properties.stl",
+        "sha256": "585d32a6ac54aca69a082947f31604e5f7b44e5be14eacab2c2db4f45a10f944"
+      },
+      {
+        "expected_sha256": "561d497524b3ed21349caa69f0659f157a2486c50861abe407fad15f8e753614",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/Wrist_Prelink_v1_HighDetail_Display_mass_properties_report.json",
+        "sha256": "561d497524b3ed21349caa69f0659f157a2486c50861abe407fad15f8e753614"
+      },
+      {
+        "expected_sha256": "8db76f9228f7a60bd017276239e3669de3cfd443c8cd36d0dd555e184606384f",
+        "locked": true,
+        "path": "rigid_links_v15_13/rigid_link_manifest.json",
+        "sha256": "8db76f9228f7a60bd017276239e3669de3cfd443c8cd36d0dd555e184606384f"
+      },
+      {
+        "expected_sha256": "3d2a4d52d679eb97917410c6e60bec22c0c269f91ed31b35fd53ff94167e1b8c",
+        "locked": true,
+        "path": "rigid_links_v15_13/rigid_link_membership.csv",
+        "sha256": "3d2a4d52d679eb97917410c6e60bec22c0c269f91ed31b35fd53ff94167e1b8c"
+      },
+      {
+        "expected_sha256": "914d774f9abc4b5aa8638eec9b2533790e5ee446712358fbd33558d69c09e704",
+        "locked": true,
+        "path": "tools/build_inertia_ledger_v15_16_v2.py",
+        "sha256": "914d774f9abc4b5aa8638eec9b2533790e5ee446712358fbd33558d69c09e704"
+      },
+      {
+        "expected_sha256": "5202959aaa9c5b9cee631335fc9ff667ff117c43d3c5ff7d0ae37b34f74318c1",
+        "locked": true,
+        "path": "tools/build_mass_geometry_authority_v15_16.py",
+        "sha256": "5202959aaa9c5b9cee631335fc9ff667ff117c43d3c5ff7d0ae37b34f74318c1"
+      },
+      {
+        "expected_sha256": "141fcce0fb2b7af622f4c447bac5f5fa1ce72cf49745fb34aac6adac02c5e7fa",
+        "locked": true,
+        "path": "tools/test_inertia_math_v15_16_v2.py",
+        "sha256": "141fcce0fb2b7af622f4c447bac5f5fa1ce72cf49745fb34aac6adac02c5e7fa"
+      },
+      {
+        "expected_sha256": "22aadb9d72a3b7e1952bf53c981c889fc251f585174424be8204556595776590",
+        "locked": true,
+        "path": "tools/validate_inertia_ledger_v15_16_v2.py",
+        "sha256": "22aadb9d72a3b7e1952bf53c981c889fc251f585174424be8204556595776590"
+      },
+      {
+        "expected_sha256": "f44fb1f7721d419b3a7314e6e8272c8d7ac7f1ed2fd53d0a5510c8f85da169be",
+        "locked": true,
+        "path": "tools/validate_mass_geometry_authority_v15_16.py",
+        "sha256": "f44fb1f7721d419b3a7314e6e8272c8d7ac7f1ed2fd53d0a5510c8f85da169be"
+      },
+      {
+        "expected_sha256": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0",
+        "locked": true,
+        "path": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+        "sha256": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0"
+      }
+    ],
+    "protected_inputs_before": [
+      {
+        "expected_sha256": "13e3470821541d7ae5c3f10223c51339d7d46df0d118a8e4dbeac2480c462d32",
+        "locked": true,
+        "path": "V15_15_COM账本_v1.json",
+        "sha256": "13e3470821541d7ae5c3f10223c51339d7d46df0d118a8e4dbeac2480c462d32"
+      },
+      {
+        "expected_sha256": "8875ff34ab6c091b2d5de6fff418553b0834a141adf32f4c88aac7d1d916d11a",
+        "locked": true,
+        "path": "V15_15_COM账本_v1.md",
+        "sha256": "8875ff34ab6c091b2d5de6fff418553b0834a141adf32f4c88aac7d1d916d11a"
+      },
+      {
+        "expected_sha256": "1cb975890dd121eb41d41bfee414a2c4643f4d917089970fac60009736fc77ae",
+        "locked": true,
+        "path": "V15_15_COM账本_v2.json",
+        "sha256": "1cb975890dd121eb41d41bfee414a2c4643f4d917089970fac60009736fc77ae"
+      },
+      {
+        "expected_sha256": "64117a409bc37b70e436eef5fee18aa94b21239c3ccdf127adafc5f550c0e59f",
+        "locked": true,
+        "path": "V15_15_COM账本_v2.md",
+        "sha256": "64117a409bc37b70e436eef5fee18aa94b21239c3ccdf127adafc5f550c0e59f"
+      },
+      {
+        "expected_sha256": "658fa0b2aef1da4200d86fccf742e135215288e77f58fa5095a06f513eaba04a",
+        "locked": true,
+        "path": "V15_15_实测质量账本_v1.json",
+        "sha256": "658fa0b2aef1da4200d86fccf742e135215288e77f58fa5095a06f513eaba04a"
+      },
+      {
+        "expected_sha256": "fa52587a3309ea5665197283b62ac2e165e67663070408931611fa3b7b4e946d",
+        "locked": true,
+        "path": "V15_15_实测质量账本_v1.md",
+        "sha256": "fa52587a3309ea5665197283b62ac2e165e67663070408931611fa3b7b4e946d"
+      },
+      {
+        "expected_sha256": "f8e0d62f027c932a49b5b38930ee770fca52c60ca2c3aa64b28308934cca55b8",
+        "locked": true,
+        "path": "V15_16_刚体惯量_FAIL审计_v2.json",
+        "sha256": "f8e0d62f027c932a49b5b38930ee770fca52c60ca2c3aa64b28308934cca55b8"
+      },
+      {
+        "expected_sha256": "94810a472a6e1a651f4a0b614e237d6241bc43bca3d7f66f908065ee26cdcfc7",
+        "locked": true,
+        "path": "V15_16_刚体惯量_FAIL审计_v2.md",
+        "sha256": "94810a472a6e1a651f4a0b614e237d6241bc43bca3d7f66f908065ee26cdcfc7"
+      },
+      {
+        "expected_sha256": "7308455fcdab006f68d90401c3206ce7209575feadfd700350122f96dc61cd14",
+        "locked": true,
+        "path": "V15_16_打印件惯量几何适用性报告.json",
+        "sha256": "7308455fcdab006f68d90401c3206ce7209575feadfd700350122f96dc61cd14"
+      },
+      {
+        "expected_sha256": "a355735105dc846e982d1476b05f76dba0394ff44572a3d2d31d9567e2b7a73e",
+        "locked": true,
+        "path": "V15_16_质量几何去重审计_v1.json",
+        "sha256": "a355735105dc846e982d1476b05f76dba0394ff44572a3d2d31d9567e2b7a73e"
+      },
+      {
+        "expected_sha256": "821146d4a7fe448d471df071857d7758c692dcfbc4ffe929101120a8cb0e05c2",
+        "locked": true,
+        "path": "V15_16_质量几何去重审计_v1.md",
+        "sha256": "821146d4a7fe448d471df071857d7758c692dcfbc4ffe929101120a8cb0e05c2"
+      },
+      {
+        "expected_sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+        "sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45"
+      },
+      {
+        "expected_sha256": "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json",
+        "sha256": "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815"
+      },
+      {
+        "expected_sha256": "631217db4ad44f53313aa4691bde3eaaec9e043c9ff83cc6549ea42bd2832760",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/Forearm_v3_HighDetail_Display_mass_properties.stl",
+        "sha256": "631217db4ad44f53313aa4691bde3eaaec9e043c9ff83cc6549ea42bd2832760"
+      },
+      {
+        "expected_sha256": "29961b01d574e37ba28c4d7d12cba46b8836911044d29184d1457d7b0160d94f",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/Forearm_v3_HighDetail_Display_mass_properties_report.json",
+        "sha256": "29961b01d574e37ba28c4d7d12cba46b8836911044d29184d1457d7b0160d94f"
+      },
+      {
+        "expected_sha256": "bafb8dc8b06242a844196bc63971f95a0a7dd52834b2a05ab72f40b28460a081",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/UpperArm_B_Distal_PrintPart_mass_properties.stl",
+        "sha256": "bafb8dc8b06242a844196bc63971f95a0a7dd52834b2a05ab72f40b28460a081"
+      },
+      {
+        "expected_sha256": "dbe4c0751ab7bf4c1e564ce8b078f6de96336aaa203f060b402cc68fa6483e0f",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/UpperArm_B_Distal_PrintPart_mass_properties_report.json",
+        "sha256": "dbe4c0751ab7bf4c1e564ce8b078f6de96336aaa203f060b402cc68fa6483e0f"
+      },
+      {
+        "expected_sha256": "585d32a6ac54aca69a082947f31604e5f7b44e5be14eacab2c2db4f45a10f944",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/Wrist_Prelink_v1_HighDetail_Display_mass_properties.stl",
+        "sha256": "585d32a6ac54aca69a082947f31604e5f7b44e5be14eacab2c2db4f45a10f944"
+      },
+      {
+        "expected_sha256": "561d497524b3ed21349caa69f0659f157a2486c50861abe407fad15f8e753614",
+        "locked": true,
+        "path": "mass_properties_geometry_v15_15_v2/Wrist_Prelink_v1_HighDetail_Display_mass_properties_report.json",
+        "sha256": "561d497524b3ed21349caa69f0659f157a2486c50861abe407fad15f8e753614"
+      },
+      {
+        "expected_sha256": "8db76f9228f7a60bd017276239e3669de3cfd443c8cd36d0dd555e184606384f",
+        "locked": true,
+        "path": "rigid_links_v15_13/rigid_link_manifest.json",
+        "sha256": "8db76f9228f7a60bd017276239e3669de3cfd443c8cd36d0dd555e184606384f"
+      },
+      {
+        "expected_sha256": "3d2a4d52d679eb97917410c6e60bec22c0c269f91ed31b35fd53ff94167e1b8c",
+        "locked": true,
+        "path": "rigid_links_v15_13/rigid_link_membership.csv",
+        "sha256": "3d2a4d52d679eb97917410c6e60bec22c0c269f91ed31b35fd53ff94167e1b8c"
+      },
+      {
+        "expected_sha256": "914d774f9abc4b5aa8638eec9b2533790e5ee446712358fbd33558d69c09e704",
+        "locked": true,
+        "path": "tools/build_inertia_ledger_v15_16_v2.py",
+        "sha256": "914d774f9abc4b5aa8638eec9b2533790e5ee446712358fbd33558d69c09e704"
+      },
+      {
+        "expected_sha256": "5202959aaa9c5b9cee631335fc9ff667ff117c43d3c5ff7d0ae37b34f74318c1",
+        "locked": true,
+        "path": "tools/build_mass_geometry_authority_v15_16.py",
+        "sha256": "5202959aaa9c5b9cee631335fc9ff667ff117c43d3c5ff7d0ae37b34f74318c1"
+      },
+      {
+        "expected_sha256": "141fcce0fb2b7af622f4c447bac5f5fa1ce72cf49745fb34aac6adac02c5e7fa",
+        "locked": true,
+        "path": "tools/test_inertia_math_v15_16_v2.py",
+        "sha256": "141fcce0fb2b7af622f4c447bac5f5fa1ce72cf49745fb34aac6adac02c5e7fa"
+      },
+      {
+        "expected_sha256": "22aadb9d72a3b7e1952bf53c981c889fc251f585174424be8204556595776590",
+        "locked": true,
+        "path": "tools/validate_inertia_ledger_v15_16_v2.py",
+        "sha256": "22aadb9d72a3b7e1952bf53c981c889fc251f585174424be8204556595776590"
+      },
+      {
+        "expected_sha256": "f44fb1f7721d419b3a7314e6e8272c8d7ac7f1ed2fd53d0a5510c8f85da169be",
+        "locked": true,
+        "path": "tools/validate_mass_geometry_authority_v15_16.py",
+        "sha256": "f44fb1f7721d419b3a7314e6e8272c8d7ac7f1ed2fd53d0a5510c8f85da169be"
+      },
+      {
+        "expected_sha256": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0",
+        "locked": true,
+        "path": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+        "sha256": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0"
+      }
+    ],
+    "protected_overlap_audit": {
+      "classification_counts": {
+        "EXACT_DUPLICATE": 0,
+        "FULL_CONTAINMENT": 5,
+        "NUMERICAL_SLIVER": 3,
+        "PARTIAL_INTERPENETRATION": 83,
+        "ZERO_VOLUME_CONTACT": 0
+      },
+      "path": "V15_16_质量几何去重审计_v1.json",
+      "sha256": "a355735105dc846e982d1476b05f76dba0394ff44572a3d2d31d9567e2b7a73e"
+    },
+    "protected_print_geometry": {
+      "all_four_pass": true,
+      "recomputed": false,
+      "report_path": "V15_16_打印件惯量几何适用性报告.json",
+      "report_sha256": "7308455fcdab006f68d90401c3206ce7209575feadfd700350122f96dc61cd14"
+    },
+    "protected_v2_inertia_math": {
+      "builder_path": "tools/build_inertia_ledger_v15_16_v2.py",
+      "builder_sha256": "914d774f9abc4b5aa8638eec9b2533790e5ee446712358fbd33558d69c09e704",
+      "math_test_pass_reused": true,
+      "occt_semantics_pass_reused": true
+    }
+  },
+  "components": [
+    {
+      "accepted_numerical_sliver_overlaps": [],
+      "applied_frozen_com_anchor_world_mm": [
+        -37.73748671526587,
+        7.770220161078309,
+        182.64006371742508
+      ],
+      "collision_proxy_used": false,
+      "component_id": "J2A_OUTPUT_EQ",
+      "confidence_class": "ENGINEERING_SPLIT_MASS_SCALED_CAD_RIGID_INERTIA_ESTIMATE",
+      "containment_actions": [
+        {
+          "classification": "FULL_CONTAINMENT",
+          "collapsed_atom_id": "J2A_OUTPUT_EQ:derived:J2A_GO_M8010_output:solid_30",
+          "double_count_avoided": true,
+          "fresh_common_volume_mm3": 53.989500835784426,
+          "retained_occupied_atom_id": "J2A_OUTPUT_EQ:derived:J2A_GO_M8010_output:solid_32",
+          "smaller_volume_mm3": 53.989500835784426
+        }
+      ],
+      "correction_method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+      "effective_density_kg_per_mm3": 4.71728799109987e-06,
+      "engineering_estimate_used": false,
+      "frozen_com_world_mm": [
+        -37.73748671526587,
+        7.770220161078309,
+        182.64006371742508
+      ],
+      "geometry_centroid_world_mm": [
+        -37.72707210975188,
+        7.768066930961246,
+        182.6400650258628
+      ],
+      "geometry_intrinsic_tensor_world_kg_m2": [
+        [
+          2.574659060397866e-05,
+          -2.5187496085084397e-06,
+          8.799009258608233e-10
+        ],
+        [
+          -2.5187496085084397e-06,
+          1.4040031251472678e-05,
+          3.1578338768153778e-09
+        ],
+        [
+          8.799009258608233e-10,
+          3.1578338768153778e-09,
+          1.3530867242685728e-05
+        ]
+      ],
+      "geometry_recentered_to_frozen_com_for_inertia_model": true,
+      "intrinsic_tensor_reference": "ABOUT_GEOMETRY_CENTROID_THEN_TRANSLATION_ONLY_PLACED_AT_FROZEN_COMPONENT_COM_V2",
+      "mass_kg": 0.07,
+      "mass_location_authority": "COM_V2_FROZEN_COMPONENT_COM",
+      "mass_normalization_volume_mm3": 14839.034659759876,
+      "mass_renormalization_pass": true,
+      "matching_graph_inclusion_exclusion_evidence": null,
+      "mesh_used": false,
+      "method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+      "model_limitations": [
+        "gear_ratio_reflected_inertia_not_added",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia"
+      ],
+      "normalized_to_frozen_mass_kg": 0.07,
+      "occupied_centroidal_volume_inertia_matrix_mm5": [
+        [
+          5457922.147758389,
+          -533940.1819987622,
+          186.526861942908
+        ],
+        [
+          -533940.1819987622,
+          2976293.005210213,
+          669.4172335403897
+        ],
+        [
+          186.526861942908,
+          669.4172335403897,
+          2868357.2570117577
+        ]
+      ],
+      "occupied_volume_method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+      "occupied_volume_mm3": 14839.034659759876,
+      "overlap_fraction_limit_max_inclusive": 0.01,
+      "overlap_gate_pass": true,
+      "owner_link": "link2",
+      "pass": true,
+      "raw_centroidal_matrix_of_inertia_mm5": [
+        [
+          5457922.147758389,
+          -533940.1819987622,
+          186.526861942908
+        ],
+        [
+          -533940.1819987622,
+          2976293.005210213,
+          669.4172335403897
+        ],
+        [
+          186.526861942908,
+          669.4172335403897,
+          2868357.2570117577
+        ]
+      ],
+      "raw_detected_overlap_fraction": 0.0036251536460023483,
+      "raw_detected_overlap_volume_upper_bound_mm3": 53.989500835784426,
+      "raw_volume_mm3": 14893.024160595662,
+      "remaining_or_estimated_uncertainty_fraction": 0.0,
+      "remaining_unresolved_overlap_fraction": 0.0,
+      "remaining_unresolved_overlap_volume_upper_bound_mm3": 0.0,
+      "removed_fraction": 0.0036251536460024064,
+      "removed_volume_mm3": 53.98950083578529,
+      "source_geometry_modified": false,
+      "worker": {
+        "exit_code": 0,
+        "hard_timeout_seconds": 60.0,
+        "reason": null,
+        "status": "PASS"
+      }
+    },
+    {
+      "accepted_numerical_sliver_overlaps": [],
+      "applied_frozen_com_anchor_world_mm": [
+        37.05500845367196,
+        -7.627241979399554,
+        182.64006371742505
+      ],
+      "collision_proxy_used": false,
+      "component_id": "J2B_OUTPUT_EQ",
+      "confidence_class": "ENGINEERING_SPLIT_MASS_SCALED_CAD_RIGID_INERTIA_ESTIMATE",
+      "containment_actions": [
+        {
+          "classification": "FULL_CONTAINMENT",
+          "collapsed_atom_id": "J2B_OUTPUT_EQ:derived:J2B_GO_M8010_output:solid_30",
+          "double_count_avoided": true,
+          "fresh_common_volume_mm3": 53.98950083578441,
+          "retained_occupied_atom_id": "J2B_OUTPUT_EQ:derived:J2B_GO_M8010_output:solid_32",
+          "smaller_volume_mm3": 53.98950083578441
+        }
+      ],
+      "correction_method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+      "effective_density_kg_per_mm3": 4.717287991099866e-06,
+      "engineering_estimate_used": false,
+      "frozen_com_world_mm": [
+        37.05500845367196,
+        -7.627241979399554,
+        182.64006371742505
+      ],
+      "geometry_centroid_world_mm": [
+        37.04459384815797,
+        -7.62508874928249,
+        182.64006502586273
+      ],
+      "geometry_intrinsic_tensor_world_kg_m2": [
+        [
+          2.5746590603978948e-05,
+          -2.5187496085085163e-06,
+          -8.799009258862578e-10
+        ],
+        [
+          -2.5187496085085163e-06,
+          1.4040031251472448e-05,
+          -3.1578338771796764e-09
+        ],
+        [
+          -8.799009258862578e-10,
+          -3.1578338771796764e-09,
+          1.3530867242685028e-05
+        ]
+      ],
+      "geometry_recentered_to_frozen_com_for_inertia_model": true,
+      "intrinsic_tensor_reference": "ABOUT_GEOMETRY_CENTROID_THEN_TRANSLATION_ONLY_PLACED_AT_FROZEN_COMPONENT_COM_V2",
+      "mass_kg": 0.07,
+      "mass_location_authority": "COM_V2_FROZEN_COMPONENT_COM",
+      "mass_normalization_volume_mm3": 14839.034659759887,
+      "mass_renormalization_pass": true,
+      "matching_graph_inclusion_exclusion_evidence": null,
+      "mesh_used": false,
+      "method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+      "model_limitations": [
+        "gear_ratio_reflected_inertia_not_added",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia"
+      ],
+      "normalized_to_frozen_mass_kg": 0.07,
+      "occupied_centroidal_volume_inertia_matrix_mm5": [
+        [
+          5457922.147758455,
+          -533940.181998779,
+          -186.52686194829994
+        ],
+        [
+          -533940.181998779,
+          2976293.0052101663,
+          -669.4172336176167
+        ],
+        [
+          -186.52686194829994,
+          -669.4172336176167,
+          2868357.257011612
+        ]
+      ],
+      "occupied_volume_method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+      "occupied_volume_mm3": 14839.034659759887,
+      "overlap_fraction_limit_max_inclusive": 0.01,
+      "overlap_gate_pass": true,
+      "owner_link": "link2",
+      "pass": true,
+      "raw_centroidal_matrix_of_inertia_mm5": [
+        [
+          5457922.147758455,
+          -533940.181998779,
+          -186.52686194829994
+        ],
+        [
+          -533940.181998779,
+          2976293.0052101663,
+          -669.4172336176167
+        ],
+        [
+          -186.52686194829994,
+          -669.4172336176167,
+          2868357.257011612
+        ]
+      ],
+      "raw_detected_overlap_fraction": 0.0036251536460023452,
+      "raw_detected_overlap_volume_upper_bound_mm3": 53.98950083578441,
+      "raw_volume_mm3": 14893.02416059567,
+      "remaining_or_estimated_uncertainty_fraction": 0.0,
+      "remaining_unresolved_overlap_fraction": 0.0,
+      "remaining_unresolved_overlap_volume_upper_bound_mm3": 0.0,
+      "removed_fraction": 0.0036251536460022824,
+      "removed_volume_mm3": 53.989500835783474,
+      "source_geometry_modified": false,
+      "worker": {
+        "exit_code": 0,
+        "hard_timeout_seconds": 60.0,
+        "reason": null,
+        "status": "PASS"
+      }
+    },
+    {
+      "accepted_numerical_sliver_overlaps": [],
+      "applied_frozen_com_anchor_world_mm": [
+        0.967533715140367,
+        104.08610443649177,
+        183.00825867717663
+      ],
+      "collision_proxy_used": false,
+      "component_id": "UPPER_ARM_PRINT_MEASURED",
+      "confidence_class": "ENGINEERING_ESTIMATE_REPAIRED_WATERTIGHT_INERTIA",
+      "containment_actions": [],
+      "correction_method": "REUSED_PROTECTED_CANONICAL_PRINT_PATH_A_MASS_PROPERTIES_NO_RECOMPUTE",
+      "effective_density_kg_per_mm3": 1.2038499153485525e-06,
+      "engineering_estimate_used": true,
+      "frozen_com_world_mm": [
+        0.967533715140367,
+        104.08610443649177,
+        183.00825867717663
+      ],
+      "geometry_centroid_world_mm": null,
+      "geometry_intrinsic_tensor_world_kg_m2": [
+        [
+          0.00432478422298597,
+          -4.9046473580195544e-05,
+          3.798867332027247e-06
+        ],
+        [
+          -4.9046473580195544e-05,
+          0.0007335355212080755,
+          -9.093201921859642e-06
+        ],
+        [
+          3.798867332027247e-06,
+          -9.093201921859642e-06,
+          0.004176743887665884
+        ]
+      ],
+      "geometry_recentered_to_frozen_com_for_inertia_model": true,
+      "intrinsic_tensor_reference": "ABOUT_GEOMETRY_CENTROID_THEN_TRANSLATION_ONLY_PLACED_AT_FROZEN_COMPONENT_COM_V2",
+      "mass_kg": 0.5515,
+      "mass_location_authority": "COM_V2_FROZEN_COMPONENT_COM",
+      "mass_normalization_volume_mm3": 458113.5845661652,
+      "mass_renormalization_pass": true,
+      "matching_graph_inclusion_exclusion_evidence": null,
+      "mesh_used": false,
+      "method": "REUSED_PROTECTED_CANONICAL_PRINT_PATH_A_MASS_PROPERTIES_NO_RECOMPUTE",
+      "model_limitations": [
+        "CANONICAL_PRINT_GEOMETRY_REUSED_AS_REQUIRED; GEOMETRY_CENTROID_NOT_RECOMPUTED; SMALL_INTERPART_INTERPENETRATION_REMAINS_BELOW_1_PERCENT",
+        "canonical_geometry_is_working_copy_repair",
+        "material_density_distribution_assumed_uniform"
+      ],
+      "normalized_to_frozen_mass_kg": 0.5515,
+      "occupied_centroidal_volume_inertia_matrix_mm5": [
+        [
+          3592461292.5971,
+          -40741352.35204551,
+          3155598.7865209556
+        ],
+        [
+          -40741352.35204551,
+          609324727.1572834,
+          -7553434.864201385
+        ],
+        [
+          3155598.7865209556,
+          -7553434.864201385,
+          3469488874.3308043
+        ]
+      ],
+      "occupied_volume_method": "REUSED_PROTECTED_CANONICAL_PRINT_PATH_A_MASS_PROPERTIES_NO_RECOMPUTE",
+      "occupied_volume_mm3": 458113.5845661652,
+      "overlap_fraction_limit_max_inclusive": 0.01,
+      "overlap_gate_pass": true,
+      "owner_link": "link2",
+      "pass": true,
+      "raw_centroidal_matrix_of_inertia_mm5": [
+        [
+          3592461292.5971,
+          -40741352.35204551,
+          3155598.7865209556
+        ],
+        [
+          -40741352.35204551,
+          609324727.1572834,
+          -7553434.864201385
+        ],
+        [
+          3155598.7865209556,
+          -7553434.864201385,
+          3469488874.3308043
+        ]
+      ],
+      "raw_detected_overlap_fraction": 3.4141653439970614e-05,
+      "raw_detected_overlap_volume_upper_bound_mm3": 15.640755240400683,
+      "raw_volume_mm3": 458113.5845661652,
+      "remaining_or_estimated_uncertainty_fraction": 3.4141653439970614e-05,
+      "remaining_unresolved_overlap_fraction": 3.4141653439970614e-05,
+      "remaining_unresolved_overlap_volume_upper_bound_mm3": 15.640755240400683,
+      "removed_fraction": 0.0,
+      "removed_volume_mm3": 0.0,
+      "source_geometry_modified": false,
+      "worker": null
+    },
+    {
+      "accepted_numerical_sliver_overlaps": [],
+      "applied_frozen_com_anchor_world_mm": [
+        28.41784991096007,
+        247.96911178301514,
+        182.6572732429909
+      ],
+      "collision_proxy_used": false,
+      "component_id": "J3_OUTPUT_EQ",
+      "confidence_class": "ENGINEERING_SPLIT_MASS_SCALED_CAD_RIGID_INERTIA_ESTIMATE",
+      "containment_actions": [
+        {
+          "classification": "FULL_CONTAINMENT",
+          "collapsed_atom_id": "J3_OUTPUT_EQ:J3_Output_Rotor_STEP_Display:solid_7",
+          "double_count_avoided": true,
+          "fresh_common_volume_mm3": 53.98950083578447,
+          "retained_occupied_atom_id": "J3_OUTPUT_EQ:J3_Output_Rotor_STEP_Display:solid_8",
+          "smaller_volume_mm3": 53.98950083578447
+        }
+      ],
+      "correction_method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+      "effective_density_kg_per_mm3": 4.71728799109986e-06,
+      "engineering_estimate_used": false,
+      "frozen_com_world_mm": [
+        28.41784991096007,
+        247.96911178301514,
+        182.6572732429909
+      ],
+      "geometry_centroid_world_mm": [
+        28.42826783669941,
+        247.96697467658663,
+        182.6572762535958
+      ],
+      "geometry_intrinsic_tensor_world_kg_m2": [
+        [
+          2.5747541128390997e-05,
+          -2.5165853396590107e-06,
+          -9.05610732477752e-11
+        ],
+        [
+          -2.5165853396590107e-06,
+          1.4038635569632747e-05,
+          -2.5138415664701468e-09
+        ],
+        [
+          -9.05610732477752e-11,
+          -2.5138415664701468e-09,
+          1.3531312400109011e-05
+        ]
+      ],
+      "geometry_recentered_to_frozen_com_for_inertia_model": true,
+      "intrinsic_tensor_reference": "ABOUT_GEOMETRY_CENTROID_THEN_TRANSLATION_ONLY_PLACED_AT_FROZEN_COMPONENT_COM_V2",
+      "mass_kg": 0.07,
+      "mass_location_authority": "COM_V2_FROZEN_COMPONENT_COM",
+      "mass_normalization_volume_mm3": 14839.034659759907,
+      "mass_renormalization_pass": true,
+      "matching_graph_inclusion_exclusion_evidence": null,
+      "mesh_used": false,
+      "method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+      "model_limitations": [
+        "gear_ratio_reflected_inertia_not_added",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia"
+      ],
+      "normalized_to_frozen_mass_kg": 0.07,
+      "occupied_centroidal_volume_inertia_matrix_mm5": [
+        [
+          5458123.645825539,
+          -533481.3868491959,
+          -19.197698639268452
+        ],
+        [
+          -533481.3868491959,
+          2975997.1399074085,
+          -532.8997447713664
+        ],
+        [
+          -19.197698639268452,
+          -532.8997447713664,
+          2868451.6242465232
+        ]
+      ],
+      "occupied_volume_method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+      "occupied_volume_mm3": 14839.034659759907,
+      "overlap_fraction_limit_max_inclusive": 0.01,
+      "overlap_gate_pass": true,
+      "owner_link": "link2",
+      "pass": true,
+      "raw_centroidal_matrix_of_inertia_mm5": [
+        [
+          5458123.645825539,
+          -533481.3868491959,
+          -19.197698639268452
+        ],
+        [
+          -533481.3868491959,
+          2975997.1399074085,
+          -532.8997447713664
+        ],
+        [
+          -19.197698639268452,
+          -532.8997447713664,
+          2868451.6242465232
+        ]
+      ],
+      "raw_detected_overlap_fraction": 0.0036251536460023435,
+      "raw_detected_overlap_volume_upper_bound_mm3": 53.98950083578447,
+      "raw_volume_mm3": 14893.024160595693,
+      "remaining_or_estimated_uncertainty_fraction": 0.0,
+      "remaining_unresolved_overlap_fraction": 0.0,
+      "remaining_unresolved_overlap_volume_upper_bound_mm3": 0.0,
+      "removed_fraction": 0.003625153646002399,
+      "removed_volume_mm3": 53.98950083578529,
+      "source_geometry_modified": false,
+      "worker": {
+        "exit_code": 0,
+        "hard_timeout_seconds": 60.0,
+        "reason": null,
+        "status": "PASS"
+      }
+    },
+    {
+      "accepted_numerical_sliver_overlaps": [],
+      "applied_frozen_com_anchor_world_mm": [
+        44.659931122008324,
+        244.75092560796224,
+        182.6616173018524
+      ],
+      "collision_proxy_used": false,
+      "component_id": "J3_STATOR_EQ",
+      "confidence_class": "ENGINEERING_SPLIT_MASS_SCALED_CAD_RIGID_INERTIA_ESTIMATE",
+      "containment_actions": [],
+      "correction_method": "ENGINEERING_OCCUPIED_VOLUME_ESTIMATE_PAIRWISE_IE_UPPER_BOUND_EMPIRICAL_ISOTROPIC_SIMILAR_SHAPE_TENSOR_SCALE",
+      "effective_density_kg_per_mm3": 2.628369330502151e-06,
+      "engineering_estimate_used": true,
+      "frozen_com_world_mm": [
+        44.659931122008324,
+        244.75092560796224,
+        182.6616173018524
+      ],
+      "geometry_centroid_world_mm": [
+        44.659931122008324,
+        244.75092560796224,
+        182.6616173018524
+      ],
+      "geometry_intrinsic_tensor_world_kg_m2": [
+        [
+          0.0005379428838199718,
+          -4.787481935860849e-05,
+          -8.677792253886432e-07
+        ],
+        [
+          -4.787481935860849e-05,
+          0.0003188100193824602,
+          -4.404083939480668e-06
+        ],
+        [
+          -8.677792253886432e-07,
+          -4.404083939480668e-06,
+          0.0003018235106602358
+        ]
+      ],
+      "geometry_recentered_to_frozen_com_for_inertia_model": true,
+      "intrinsic_tensor_reference": "ABOUT_GEOMETRY_CENTROID_THEN_TRANSLATION_ONLY_PLACED_AT_FROZEN_COMPONENT_COM_V2",
+      "mass_kg": 0.47,
+      "mass_location_authority": "COM_V2_FROZEN_COMPONENT_COM",
+      "mass_normalization_volume_mm3": 178818.09627956903,
+      "mass_renormalization_pass": true,
+      "matching_graph_inclusion_exclusion_evidence": null,
+      "mesh_used": false,
+      "method": "ENGINEERING_OCCUPIED_VOLUME_ESTIMATE_PAIRWISE_IE_UPPER_BOUND_EMPIRICAL_ISOTROPIC_SIMILAR_SHAPE_TENSOR_SCALE",
+      "model_limitations": [
+        "BOUNDED_OCCUPIED_VOLUME_BUT_EMPIRICAL_NONCONSERVATIVE_ISOTROPIC_SIMILAR_SHAPE_SECOND_MOMENT_ESTIMATE_AFTER_NORMAL_OCCT_WORKER_FAILURE",
+        "gear_ratio_reflected_inertia_not_added",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia"
+      ],
+      "normalized_to_frozen_mass_kg": 0.47,
+      "occupied_centroidal_volume_inertia_matrix_mm5": [
+        [
+          204667919.98261434,
+          -18214646.930711977,
+          -330158.78526586434
+        ],
+        [
+          -18214646.930711977,
+          121295746.25707243,
+          -1675595.5444965058
+        ],
+        [
+          -330158.78526586434,
+          -1675595.5444965058,
+          114832990.61421186
+        ]
+      ],
+      "occupied_volume_method": "ENGINEERING_OCCUPIED_VOLUME_ESTIMATE_PAIRWISE_IE_UPPER_BOUND_EMPIRICAL_ISOTROPIC_SIMILAR_SHAPE_TENSOR_SCALE",
+      "occupied_volume_mm3": 178818.09627956903,
+      "overlap_fraction_limit_max_inclusive": 0.01,
+      "overlap_gate_pass": true,
+      "owner_link": "link3",
+      "pass": true,
+      "raw_centroidal_matrix_of_inertia_mm5": [
+        [
+          204667919.98261434,
+          -18214646.930711977,
+          -330158.78526586434
+        ],
+        [
+          -18214646.930711977,
+          121295746.25707243,
+          -1675595.5444965058
+        ],
+        [
+          -330158.78526586434,
+          -1675595.5444965058,
+          114832990.61421186
+        ]
+      ],
+      "raw_detected_overlap_fraction": 3.678938083340637e-05,
+      "raw_detected_overlap_volume_upper_bound_mm3": 6.578848479497141,
+      "raw_volume_mm3": 178824.65892231755,
+      "remaining_or_estimated_uncertainty_fraction": 3.678938083340637e-05,
+      "remaining_unresolved_overlap_fraction": 3.678938083340637e-05,
+      "remaining_unresolved_overlap_volume_upper_bound_mm3": 6.578848479497141,
+      "removed_fraction": 3.6698757252350764e-05,
+      "removed_volume_mm3": 6.562642748524553,
+      "source_geometry_modified": false,
+      "worker": {
+        "exit_code": 2,
+        "hard_timeout_seconds": 60.0,
+        "reason": "WORKER_DID_NOT_RETURN_ONE_STRUCTURED_RESULT",
+        "status": "FAILED"
+      }
+    },
+    {
+      "accepted_numerical_sliver_overlaps": [],
+      "applied_frozen_com_anchor_world_mm": [
+        88.95476531178917,
+        337.7147095928883,
+        208.08181856591455
+      ],
+      "collision_proxy_used": false,
+      "component_id": "FOREARM_PRINT_MEASURED",
+      "confidence_class": "ENGINEERING_ESTIMATE_REPAIRED_WATERTIGHT_INERTIA",
+      "containment_actions": [],
+      "correction_method": "REUSED_PROTECTED_CANONICAL_PRINT_PATH_A_MASS_PROPERTIES_NO_RECOMPUTE",
+      "effective_density_kg_per_mm3": 7.45213422784584e-07,
+      "engineering_estimate_used": false,
+      "frozen_com_world_mm": [
+        88.95476531178917,
+        337.7147095928883,
+        208.08181856591455
+      ],
+      "geometry_centroid_world_mm": null,
+      "geometry_intrinsic_tensor_world_kg_m2": [
+        [
+          0.001080091131036395,
+          -0.00019266618236734134,
+          -4.613760431098566e-05
+        ],
+        [
+          -0.00019266618236734134,
+          0.00017702806017873683,
+          -0.00022842912547090847
+        ],
+        [
+          -4.613760431098566e-05,
+          -0.00022842912547090847,
+          0.0009883295581710446
+        ]
+      ],
+      "geometry_recentered_to_frozen_com_for_inertia_model": true,
+      "intrinsic_tensor_reference": "ABOUT_GEOMETRY_CENTROID_THEN_TRANSLATION_ONLY_PLACED_AT_FROZEN_COMPONENT_COM_V2",
+      "mass_kg": 0.135,
+      "mass_location_authority": "COM_V2_FROZEN_COMPONENT_COM",
+      "mass_normalization_volume_mm3": 181156.15724627647,
+      "mass_renormalization_pass": true,
+      "matching_graph_inclusion_exclusion_evidence": null,
+      "mesh_used": false,
+      "method": "REUSED_PROTECTED_CANONICAL_PRINT_PATH_A_MASS_PROPERTIES_NO_RECOMPUTE",
+      "model_limitations": [
+        "PROTECTED_V2_INTRINSIC_REUSED; GEOMETRY_CENTROID_NOT_RECOMPUTED",
+        "canonical_geometry_is_working_copy_repair",
+        "material_density_distribution_assumed_uniform"
+      ],
+      "normalized_to_frozen_mass_kg": 0.135,
+      "occupied_centroidal_volume_inertia_matrix_mm5": [
+        [
+          1449371546.476576,
+          -258538260.9553916,
+          -61911934.085388154
+        ],
+        [
+          -258538260.9553916,
+          237553504.4943892,
+          -306528463.50694305
+        ],
+        [
+          -61911934.085388154,
+          -306528463.50694305,
+          1326236924.823531
+        ]
+      ],
+      "occupied_volume_method": "REUSED_PROTECTED_CANONICAL_PRINT_PATH_A_MASS_PROPERTIES_NO_RECOMPUTE",
+      "occupied_volume_mm3": 181156.15724627647,
+      "overlap_fraction_limit_max_inclusive": 0.01,
+      "overlap_gate_pass": true,
+      "owner_link": "link3",
+      "pass": true,
+      "raw_centroidal_matrix_of_inertia_mm5": [
+        [
+          1449371546.476576,
+          -258538260.9553916,
+          -61911934.085388154
+        ],
+        [
+          -258538260.9553916,
+          237553504.4943892,
+          -306528463.50694305
+        ],
+        [
+          -61911934.085388154,
+          -306528463.50694305,
+          1326236924.823531
+        ]
+      ],
+      "raw_detected_overlap_fraction": 0.0,
+      "raw_detected_overlap_volume_upper_bound_mm3": 0.0,
+      "raw_volume_mm3": 181156.15724627647,
+      "remaining_or_estimated_uncertainty_fraction": 0.0,
+      "remaining_unresolved_overlap_fraction": 0.0,
+      "remaining_unresolved_overlap_volume_upper_bound_mm3": 0.0,
+      "removed_fraction": 0.0,
+      "removed_volume_mm3": 0.0,
+      "source_geometry_modified": false,
+      "worker": null
+    },
+    {
+      "accepted_numerical_sliver_overlaps": [],
+      "applied_frozen_com_anchor_world_mm": [
+        85.47117271771859,
+        442.93860211126685,
+        234.6230412673082
+      ],
+      "collision_proxy_used": false,
+      "component_id": "J4_STATOR_EQ",
+      "confidence_class": "ENGINEERING_SPLIT_MASS_SCALED_CAD_RIGID_INERTIA_ESTIMATE",
+      "containment_actions": [],
+      "correction_method": "ENGINEERING_OCCUPIED_VOLUME_ESTIMATE_PAIRWISE_IE_UPPER_BOUND_EMPIRICAL_ISOTROPIC_SIMILAR_SHAPE_TENSOR_SCALE",
+      "effective_density_kg_per_mm3": 2.628369330502151e-06,
+      "engineering_estimate_used": true,
+      "frozen_com_world_mm": [
+        85.47117271771859,
+        442.93860211126685,
+        234.6230412673082
+      ],
+      "geometry_centroid_world_mm": [
+        85.47117271771859,
+        442.93860211126685,
+        234.6230412673082
+      ],
+      "geometry_intrinsic_tensor_world_kg_m2": [
+        [
+          0.0005379428838199766,
+          -4.787481935860083e-05,
+          -8.677792253912192e-07
+        ],
+        [
+          -4.787481935860083e-05,
+          0.000318810019382465,
+          -4.404083939485288e-06
+        ],
+        [
+          -8.677792253912192e-07,
+          -4.404083939485288e-06,
+          0.0003018235106602249
+        ]
+      ],
+      "geometry_recentered_to_frozen_com_for_inertia_model": true,
+      "intrinsic_tensor_reference": "ABOUT_GEOMETRY_CENTROID_THEN_TRANSLATION_ONLY_PLACED_AT_FROZEN_COMPONENT_COM_V2",
+      "mass_kg": 0.47,
+      "mass_location_authority": "COM_V2_FROZEN_COMPONENT_COM",
+      "mass_normalization_volume_mm3": 178818.09627956903,
+      "mass_renormalization_pass": true,
+      "matching_graph_inclusion_exclusion_evidence": null,
+      "mesh_used": false,
+      "method": "ENGINEERING_OCCUPIED_VOLUME_ESTIMATE_PAIRWISE_IE_UPPER_BOUND_EMPIRICAL_ISOTROPIC_SIMILAR_SHAPE_TENSOR_SCALE",
+      "model_limitations": [
+        "BOUNDED_OCCUPIED_VOLUME_BUT_EMPIRICAL_NONCONSERVATIVE_ISOTROPIC_SIMILAR_SHAPE_SECOND_MOMENT_ESTIMATE_AFTER_NORMAL_OCCT_WORKER_FAILURE",
+        "gear_ratio_reflected_inertia_not_added",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia"
+      ],
+      "normalized_to_frozen_mass_kg": 0.47,
+      "occupied_centroidal_volume_inertia_matrix_mm5": [
+        [
+          204667919.9826162,
+          -18214646.93070906,
+          -330158.78526684444
+        ],
+        [
+          -18214646.93070906,
+          121295746.25707427,
+          -1675595.5444982639
+        ],
+        [
+          -330158.78526684444,
+          -1675595.5444982639,
+          114832990.61420771
+        ]
+      ],
+      "occupied_volume_method": "ENGINEERING_OCCUPIED_VOLUME_ESTIMATE_PAIRWISE_IE_UPPER_BOUND_EMPIRICAL_ISOTROPIC_SIMILAR_SHAPE_TENSOR_SCALE",
+      "occupied_volume_mm3": 178818.09627956903,
+      "overlap_fraction_limit_max_inclusive": 0.01,
+      "overlap_gate_pass": true,
+      "owner_link": "link3",
+      "pass": true,
+      "raw_centroidal_matrix_of_inertia_mm5": [
+        [
+          204667919.9826162,
+          -18214646.93070906,
+          -330158.78526684444
+        ],
+        [
+          -18214646.93070906,
+          121295746.25707427,
+          -1675595.5444982639
+        ],
+        [
+          -330158.78526684444,
+          -1675595.5444982639,
+          114832990.61420771
+        ]
+      ],
+      "raw_detected_overlap_fraction": 3.678938083338203e-05,
+      "raw_detected_overlap_volume_upper_bound_mm3": 6.578848479492788,
+      "raw_volume_mm3": 178824.65892231755,
+      "remaining_or_estimated_uncertainty_fraction": 3.678938083338203e-05,
+      "remaining_unresolved_overlap_fraction": 3.678938083338203e-05,
+      "remaining_unresolved_overlap_volume_upper_bound_mm3": 6.578848479492788,
+      "removed_fraction": 3.6698757252351184e-05,
+      "removed_volume_mm3": 6.562642748524628,
+      "source_geometry_modified": false,
+      "worker": {
+        "exit_code": 2,
+        "hard_timeout_seconds": 60.0,
+        "reason": "WORKER_DID_NOT_RETURN_ONE_STRUCTURED_RESULT",
+        "status": "FAILED"
+      }
+    },
+    {
+      "accepted_numerical_sliver_overlaps": [],
+      "applied_frozen_com_anchor_world_mm": [
+        87.33053150200053,
+        339.1316197965705,
+        208.63727556782527
+      ],
+      "collision_proxy_used": false,
+      "component_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING",
+      "confidence_class": "ENGINEERING_ESTIMATE_RESIDUAL_PROXY_INERTIA",
+      "containment_actions": [],
+      "correction_method": "NORMAL_OCCT_PAIRWISE_INCLUSION_EXCLUSION_MATCHING_GRAPH_NO_TRIPLE_TERM",
+      "effective_density_kg_per_mm3": 4.718330302269038e-06,
+      "engineering_estimate_used": false,
+      "frozen_com_world_mm": [
+        87.33053150200053,
+        339.1316197965705,
+        208.63727556782527
+      ],
+      "geometry_centroid_world_mm": [
+        87.07086151671876,
+        339.18509161021433,
+        208.6372755678253
+      ],
+      "geometry_intrinsic_tensor_world_kg_m2": [
+        [
+          0.00018419422219927755,
+          -3.212979840934735e-05,
+          -7.5134693688714885e-06
+        ],
+        [
+          -3.212979840934735e-05,
+          3.478163535227701e-05,
+          -3.6486932974176e-05
+        ],
+        [
+          -7.5134693688714885e-06,
+          -3.6486932974176e-05,
+          0.00016366627915357596
+        ]
+      ],
+      "geometry_recentered_to_frozen_com_for_inertia_model": true,
+      "intrinsic_tensor_reference": "ABOUT_GEOMETRY_CENTROID_THEN_TRANSLATION_ONLY_PLACED_AT_FROZEN_COMPONENT_COM_V2",
+      "mass_kg": 0.015,
+      "mass_location_authority": "COM_V2_FROZEN_COMPONENT_COM",
+      "mass_normalization_volume_mm3": 3179.090703503,
+      "mass_renormalization_pass": true,
+      "matching_graph_inclusion_exclusion_evidence": {
+        "common_intersections": [
+          {
+            "com_world_mm": [
+              68.92135785887648,
+              228.83405850338235,
+              223.82096412153808
+            ],
+            "compound_volume_mm3_diagnostic": 16.663007434640935,
+            "first_moment_mm4": [
+              1148.4370984080072,
+              3813.0636181409186,
+              3729.530389185691
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                1707418.990974637,
+                -262812.74412501144,
+                -257044.2985986219
+              ],
+              [
+                -262812.74412501144,
+                913959.8268736196,
+                -853443.5752690609
+              ],
+              [
+                -257044.2985986219,
+                -853443.5752690609,
+                951769.2516655382
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J3_M35_Screw_01:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                113.08047574246302,
+                -11.221960458846297,
+                -5.820766091346741e-11
+              ],
+              [
+                -11.221960458846297,
+                60.89520771498792,
+                -1.1641532182693481e-10
+              ],
+              [
+                -5.820766091346741e-11,
+                -1.1641532182693481e-10,
+                58.584356972249225
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J3_M35_Screw_01:solid_3",
+            "volume_mm3": 16.663007434640935
+          },
+          {
+            "com_world_mm": [
+              75.41654307645393,
+              260.3759968615039,
+              219.23888527395977
+            ],
+            "compound_volume_mm3_diagnostic": 16.663007434636825,
+            "first_moment_mm4": [
+              1256.6664179775603,
+              4338.6471715042135,
+              3653.1791752814815
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                1930711.592881252,
+                -327216.99326374126,
+                -275510.14463862026
+              ],
+              [
+                -327216.99326374126,
+                895753.2623466086,
+                -951200.1694776025
+              ],
+              [
+                -275510.14463862026,
+                -951200.1694776025,
+                1224511.603711864
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J3_M35_Screw_02:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                113.08047574246302,
+                -11.221960458729882,
+                5.820766091346741e-11
+              ],
+              [
+                -11.221960458729882,
+                60.895207715104334,
+                -1.1641532182693481e-10
+              ],
+              [
+                5.820766091346741e-11,
+                -1.1641532182693481e-10,
+                58.584356972249225
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J3_M35_Screw_02:solid_3",
+            "volume_mm3": 16.663007434636825
+          },
+          {
+            "com_world_mm": [
+              78.43169086827605,
+              275.01816680808287,
+              161.02363174836785
+            ],
+            "compound_volume_mm3_diagnostic": 16.663007434638615,
+            "first_moment_mm4": [
+              1306.9078480493615,
+              4582.629758183768,
+              2683.137972975564
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                1692468.136622089,
+                -359434.62251809065,
+                -210443.04805335225
+              ],
+              [
+                -359434.62251809065,
+                534612.5084297259,
+                -737911.6866208949
+              ],
+              [
+                -210443.04805335225,
+                -737911.6866208949,
+                1362868.0119443717
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J3_M35_Screw_03:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                113.08047574176453,
+                -11.221960458729882,
+                0.0
+              ],
+              [
+                -11.221960458729882,
+                60.895207715104334,
+                1.1641532182693481e-10
+              ],
+              [
+                0.0,
+                1.1641532182693481e-10,
+                58.584356972482055
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J3_M35_Screw_03:solid_3",
+            "volume_mm3": 16.663007434638615
+          },
+          {
+            "com_world_mm": [
+              73.1854207586305,
+              249.54121382440616,
+              141.49216304865743
+            ],
+            "compound_volume_mm3_diagnostic": 16.663007434638732,
+            "first_moment_mm4": [
+              1219.4892102082238,
+              4158.107101204853,
+              2357.6849648228945
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                1371326.1191823725,
+                -304324.03972158534,
+                -172548.16616686044
+              ],
+              [
+                -304324.03972158534,
+                422903.67162750295,
+                -588339.5679374574
+              ],
+              [
+                -172548.16616686044,
+                -588339.5679374574,
+                1126926.5085632128
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J3_M35_Screw_04:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                113.0804757415317,
+                -11.22196045878809,
+                2.9103830456733704e-11
+              ],
+              [
+                -11.22196045878809,
+                60.89520771498792,
+                0.0
+              ],
+              [
+                2.9103830456733704e-11,
+                0.0,
+                58.584356972016394
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J3_M35_Screw_04:solid_3",
+            "volume_mm3": 16.663007434638732
+          },
+          {
+            "com_world_mm": [
+              66.69023554105306,
+              217.99927546628464,
+              146.0742418962356
+            ],
+            "compound_volume_mm3_diagnostic": 16.663007434640665,
+            "first_moment_mm4": [
+              1111.2598906385042,
+              3632.5235478409795,
+              2434.036178726473
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                1147550.5715747732,
+                -242265.0729743953,
+                -162326.44607471314
+              ],
+              [
+                -242265.0729743953,
+                429721.0686172014,
+                -530618.1234210953
+              ],
+              [
+                -162326.44607471314,
+                -530618.1234210953,
+                866056.2697545302
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J3_M35_Screw_05:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                113.08047574223019,
+                -11.221960458671674,
+                5.820766091346741e-11
+              ],
+              [
+                -11.221960458671674,
+                60.895207715046126,
+                -1.1641532182693481e-10
+              ],
+              [
+                5.820766091346741e-11,
+                -1.1641532182693481e-10,
+                58.584356972249225
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J3_M35_Screw_05:solid_3",
+            "volume_mm3": 16.663007434640665
+          },
+          {
+            "com_world_mm": [
+              63.675087749230904,
+              203.3571055197056,
+              204.28949542182772
+            ],
+            "compound_volume_mm3_diagnostic": 16.66300743463883,
+            "first_moment_mm4": [
+              1061.0184605667143,
+              3388.5409611614873,
+              3404.0773810325304
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                1384614.2128204962,
+                -215776.8650042798,
+                -216754.9259424185
+              ],
+              [
+                -215776.8650042798,
+                763038.5893358472,
+                -692243.3231718756
+              ],
+              [
+                -216754.9259424185,
+                -692243.3231718756,
+                756702.9097338732
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J3_M35_Screw_06:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                113.08047574269585,
+                -11.221960458875401,
+                0.0
+              ],
+              [
+                -11.221960458875401,
+                60.895207715337165,
+                -1.1641532182693481e-10
+              ],
+              [
+                0.0,
+                -1.1641532182693481e-10,
+                58.58435697259847
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J3_M35_Screw_06:solid_3",
+            "volume_mm3": 16.66300743463883
+          },
+          {
+            "com_world_mm": [
+              109.73259945458686,
+              427.0217350066847,
+              275.78238808699314
+            ],
+            "compound_volume_mm3_diagnostic": 16.66300743463889,
+            "first_moment_mm4": [
+              1828.4751205340322,
+              7115.466345168785,
+              4595.363983036034
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                4305892.317942025,
+                -780809.8403474581,
+                -504261.2352985281
+              ],
+              [
+                -780809.8403474581,
+                1468024.6765925877,
+                -1962320.3010232765
+              ],
+              [
+                -504261.2352985281,
+                -1962320.3010232765,
+                3239160.696466859
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J4_M35_Screw_01:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                113.08047574386,
+                -11.22196045878809,
+                -1.1641532182693481e-10
+              ],
+              [
+                -11.22196045878809,
+                60.89520771568641,
+                0.0
+              ],
+              [
+                -1.1641532182693481e-10,
+                0.0,
+                58.58435697294772
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J4_M35_Screw_01:solid_3",
+            "volume_mm3": 16.66300743463889
+          },
+          {
+            "com_world_mm": [
+              116.22778467216438,
+              458.5636733648063,
+              271.2003092394148
+            ],
+            "compound_volume_mm3_diagnostic": 16.663007434638775,
+            "first_moment_mm4": [
+              1936.7044401038697,
+              7641.049898533034,
+              4519.012769132704
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                4729578.650756484,
+                -888113.5242364196,
+                -525234.8430615173
+              ],
+              [
+                -888113.5242364196,
+                1450717.4222913864,
+                -2072255.095395958
+              ],
+              [
+                -525234.8430615173,
+                -2072255.095395958,
+                3729065.3608300765
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J4_M35_Screw_02:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                113.08047574106604,
+                -11.221960458671674,
+                -2.3283064365386963e-10
+              ],
+              [
+                -11.221960458671674,
+                60.89520771545358,
+                -2.3283064365386963e-10
+              ],
+              [
+                -2.3283064365386963e-10,
+                -2.3283064365386963e-10,
+                58.58435697108507
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J4_M35_Screw_02:solid_3",
+            "volume_mm3": 16.663007434638775
+          },
+          {
+            "com_world_mm": [
+              119.24293246398646,
+              473.20584331138525,
+              212.98505571382293
+            ],
+            "compound_volume_mm3_diagnostic": 16.663007434639173,
+            "first_moment_mm4": [
+              1986.9458701755832,
+              7885.032485212312,
+              3548.97156682647
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                4487234.434065614,
+                -940245.6180709703,
+                -423189.77685969713
+              ],
+              [
+                -940245.6180709703,
+                992868.0543019683,
+                -1679394.0831682486
+              ],
+              [
+                -423189.77685969713,
+                -1679394.0831682486,
+                3968231.283266478
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J4_M35_Screw_03:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                113.08047574479133,
+                -11.22196045925375,
+                -1.1641532182693481e-10
+              ],
+              [
+                -11.22196045925375,
+                60.895207715569995,
+                -6.984919309616089e-10
+              ],
+              [
+                -1.1641532182693481e-10,
+                -6.984919309616089e-10,
+                58.5843569743447
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J4_M35_Screw_03:solid_3",
+            "volume_mm3": 16.663007434639173
+          },
+          {
+            "com_world_mm": [
+              113.99666235434097,
+              447.7288903277086,
+              193.4535870141126
+            ],
+            "compound_volume_mm3_diagnostic": 16.663007434639095,
+            "first_moment_mm4": [
+              1899.5272323344261,
+              7460.50982823332,
+              3223.5185586737593
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                3964000.0951316124,
+                -850484.4418408148,
+                -367470.35672608437
+              ],
+              [
+                -850484.4418408148,
+                840201.8877270195,
+                -1443262.3872257771
+              ],
+              [
+                -367470.35672608437,
+                -1443262.3872257771,
+                3556884.1355681433
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J4_M35_Screw_04:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                113.08047574292868,
+                -11.221960458671674,
+                0.0
+              ],
+              [
+                -11.221960458671674,
+                60.89520771522075,
+                -2.3283064365386963e-10
+              ],
+              [
+                0.0,
+                -2.3283064365386963e-10,
+                58.584356972016394
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J4_M35_Screw_04:solid_3",
+            "volume_mm3": 16.663007434639095
+          },
+          {
+            "com_world_mm": [
+              107.50147713676344,
+              416.18695196958714,
+              198.0356658616907
+            ],
+            "compound_volume_mm3_diagnostic": 16.66300743463781,
+            "first_moment_mm4": [
+              1791.2979127644355,
+              6934.92627486848,
+              3299.8697725768006
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                3539830.81661617,
+                -745526.0403433726,
+                -354740.8749109618
+              ],
+              [
+                -745526.0403433726,
+                846119.9744910056,
+                -1373362.7425453132
+              ],
+              [
+                -354740.8749109618,
+                -1373362.7425453132,
+                3078851.5844424665
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J4_M35_Screw_05:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                113.08047574199736,
+                -11.22196045878809,
+                0.0
+              ],
+              [
+                -11.22196045878809,
+                60.8952077148715,
+                2.3283064365386963e-10
+              ],
+              [
+                0.0,
+                2.3283064365386963e-10,
+                58.58435697294772
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J4_M35_Screw_05:solid_3",
+            "volume_mm3": 16.66300743463781
+          },
+          {
+            "com_world_mm": [
+              104.48632934494141,
+              401.544782023008,
+              256.25091938728286
+            ],
+            "compound_volume_mm3_diagnostic": 16.66300743464065,
+            "first_moment_mm4": [
+              1741.0564826930704,
+              6690.943688190542,
+              4269.910974883796
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                3780995.218294257,
+                -699123.367793193,
+                -446147.32439528813
+              ],
+              [
+                -699123.367793193,
+                1276146.1092823502,
+                -1714560.471667364
+              ],
+              [
+                -446147.32439528813,
+                -1714560.471667364,
+                2868688.7102184785
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J4_M35_Screw_06:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                113.08047574246302,
+                -11.22196045902092,
+                5.820766091346741e-11
+              ],
+              [
+                -11.22196045902092,
+                60.89520771498792,
+                -2.3283064365386963e-10
+              ],
+              [
+                5.820766091346741e-11,
+                -2.3283064365386963e-10,
+                58.58435697341338
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING:Forearm_J4_M35_Screw_06:solid_3",
+            "volume_mm3": 16.66300743464065
+          }
+        ],
+        "matching_graph_max_degree": 1,
+        "matching_graph_no_triple_term": true,
+        "occupied_centroidal_volume_inertia_matrix_mm5": [
+          [
+            39038009.29551262,
+            -6809569.561905444,
+            -1592400.0414422601
+          ],
+          [
+            -6809569.561905444,
+            7371598.240070343,
+            -7733017.961169332
+          ],
+          [
+            -1592400.0414422601,
+            -7733017.961169332,
+            34687329.76893735
+          ]
+        ],
+        "occupied_com_world_mm": [
+          87.07086151671876,
+          339.18509161021433,
+          208.6372755678253
+        ],
+        "occupied_first_moment_mm4": [
+          276806.1663937977,
+          1078300.1715048458,
+          663276.823161867
+        ],
+        "occupied_inertia_about_world_origin_mm5": [
+          [
+            543165621.0824677,
+            -100698094.46845797,
+            -59344484.45821835
+          ],
+          [
+            -100698094.46845797,
+            169857618.95289266,
+            -232706627.98825914
+          ],
+          [
+            -59344484.45821835,
+            -232706627.98825914,
+            424532423.60516644
+          ]
+        ],
+        "occupied_volume_mm3": 3179.090703503,
+        "raw_atom_sum_first_moment_mm4": [
+          295093.95237825153,
+          1145941.6121830887,
+          704995.1168490212
+        ],
+        "raw_atom_sum_inertia_about_world_origin_mm5": [
+          [
+            577207242.2393295,
+            -107314227.6386973,
+            -63260155.89894501
+          ],
+          [
+            -107314227.6386973,
+            180691686.0048095,
+            -247305539.51518306
+          ],
+          [
+            -63260155.89894501,
+            -247305539.51518306,
+            451262139.93133235
+          ]
+        ],
+        "raw_atom_sum_volume_mm3": 3379.046792718669
+      },
+      "mesh_used": false,
+      "method": "NORMAL_OCCT_PAIRWISE_INCLUSION_EXCLUSION_MATCHING_GRAPH_NO_TRIPLE_TERM",
+      "model_limitations": [
+        "uniform_proxy_geometry_not_measured_mass_distribution",
+        "wiring_geometry_incomplete"
+      ],
+      "normalized_to_frozen_mass_kg": 0.015,
+      "occupied_centroidal_volume_inertia_matrix_mm5": [
+        [
+          39038009.29551262,
+          -6809569.561905444,
+          -1592400.0414422601
+        ],
+        [
+          -6809569.561905444,
+          7371598.240070343,
+          -7733017.961169332
+        ],
+        [
+          -1592400.0414422601,
+          -7733017.961169332,
+          34687329.76893735
+        ]
+      ],
+      "occupied_volume_method": "NORMAL_OCCT_PAIRWISE_INCLUSION_EXCLUSION_MATCHING_GRAPH_NO_TRIPLE_TERM",
+      "occupied_volume_mm3": 3179.090703503,
+      "overlap_fraction_limit_max_inclusive": 0.01,
+      "overlap_gate_pass": true,
+      "owner_link": "link3",
+      "pass": true,
+      "raw_centroidal_matrix_of_inertia_mm5": [
+        [
+          39038009.29551262,
+          -6809569.561905444,
+          -1592400.0414422601
+        ],
+        [
+          -6809569.561905444,
+          7371598.240070343,
+          -7733017.961169332
+        ],
+        [
+          -1592400.0414422601,
+          -7733017.961169332,
+          34687329.76893735
+        ]
+      ],
+      "raw_detected_overlap_fraction": 0.059175294537661884,
+      "raw_detected_overlap_volume_upper_bound_mm3": 199.95608921566898,
+      "raw_volume_mm3": 3379.046792718669,
+      "remaining_or_estimated_uncertainty_fraction": 0.0,
+      "remaining_unresolved_overlap_fraction": 0.0,
+      "remaining_unresolved_overlap_volume_upper_bound_mm3": 0.0,
+      "removed_fraction": 0.0591752945376619,
+      "removed_volume_mm3": 199.956089215669,
+      "source_geometry_modified": false,
+      "worker": {
+        "exit_code": 0,
+        "hard_timeout_seconds": 60.0,
+        "reason": null,
+        "status": "PASS"
+      }
+    },
+    {
+      "accepted_numerical_sliver_overlaps": [],
+      "applied_frozen_com_anchor_world_mm": [
+        69.2290915066704,
+        446.15678828631957,
+        234.6186972084465
+      ],
+      "collision_proxy_used": false,
+      "component_id": "J4_OUTPUT_EQ",
+      "confidence_class": "ENGINEERING_SPLIT_MASS_SCALED_CAD_RIGID_INERTIA_ESTIMATE",
+      "containment_actions": [
+        {
+          "classification": "FULL_CONTAINMENT",
+          "collapsed_atom_id": "J4_OUTPUT_EQ:J4_Output_Rotor_STEP_Display:solid_7",
+          "double_count_avoided": true,
+          "fresh_common_volume_mm3": 53.98950083578444,
+          "retained_occupied_atom_id": "J4_OUTPUT_EQ:J4_Output_Rotor_STEP_Display:solid_8",
+          "smaller_volume_mm3": 53.98950083578444
+        }
+      ],
+      "correction_method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+      "effective_density_kg_per_mm3": 4.7172879910998625e-06,
+      "engineering_estimate_used": false,
+      "frozen_com_world_mm": [
+        69.2290915066704,
+        446.15678828631957,
+        234.6186972084465
+      ],
+      "geometry_centroid_world_mm": [
+        69.23950943240975,
+        446.154651179891,
+        234.61870021905142
+      ],
+      "geometry_intrinsic_tensor_world_kg_m2": [
+        [
+          2.5747541128387934e-05,
+          -2.5165853396587253e-06,
+          -9.056107373997326e-11
+        ],
+        [
+          -2.5165853396587253e-06,
+          1.4038635569634845e-05,
+          -2.5138415665458727e-09
+        ],
+        [
+          -9.056107373997326e-11,
+          -2.5138415665458727e-09,
+          1.3531312400107602e-05
+        ]
+      ],
+      "geometry_recentered_to_frozen_com_for_inertia_model": true,
+      "intrinsic_tensor_reference": "ABOUT_GEOMETRY_CENTROID_THEN_TRANSLATION_ONLY_PLACED_AT_FROZEN_COMPONENT_COM_V2",
+      "mass_kg": 0.07,
+      "mass_location_authority": "COM_V2_FROZEN_COMPONENT_COM",
+      "mass_normalization_volume_mm3": 14839.0346597599,
+      "mass_renormalization_pass": true,
+      "matching_graph_inclusion_exclusion_evidence": null,
+      "mesh_used": false,
+      "method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+      "model_limitations": [
+        "gear_ratio_reflected_inertia_not_added",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia"
+      ],
+      "normalized_to_frozen_mass_kg": 0.07,
+      "occupied_centroidal_volume_inertia_matrix_mm5": [
+        [
+          5458123.645824887,
+          -533481.3868491352,
+          -19.197698743607646
+        ],
+        [
+          -533481.3868491352,
+          2975997.1399078513,
+          -532.899744787419
+        ],
+        [
+          -19.197698743607646,
+          -532.899744787419,
+          2868451.624246223
+        ]
+      ],
+      "occupied_volume_method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+      "occupied_volume_mm3": 14839.0346597599,
+      "overlap_fraction_limit_max_inclusive": 0.01,
+      "overlap_gate_pass": true,
+      "owner_link": "link4",
+      "pass": true,
+      "raw_centroidal_matrix_of_inertia_mm5": [
+        [
+          5458123.645824887,
+          -533481.3868491352,
+          -19.197698743607646
+        ],
+        [
+          -533481.3868491352,
+          2975997.1399078513,
+          -532.899744787419
+        ],
+        [
+          -19.197698743607646,
+          -532.899744787419,
+          2868451.624246223
+        ]
+      ],
+      "raw_detected_overlap_fraction": 0.003625153646002344,
+      "raw_detected_overlap_volume_upper_bound_mm3": 53.98950083578444,
+      "raw_volume_mm3": 14893.024160595683,
+      "remaining_or_estimated_uncertainty_fraction": 0.0,
+      "remaining_unresolved_overlap_fraction": 0.0,
+      "remaining_unresolved_overlap_volume_upper_bound_mm3": 0.0,
+      "removed_fraction": 0.003625153646002279,
+      "removed_volume_mm3": 53.989500835783474,
+      "source_geometry_modified": false,
+      "worker": {
+        "exit_code": 0,
+        "hard_timeout_seconds": 60.0,
+        "reason": null,
+        "status": "PASS"
+      }
+    },
+    {
+      "accepted_numerical_sliver_overlaps": [],
+      "applied_frozen_com_anchor_world_mm": [
+        80.02930038978639,
+        495.1771748787429,
+        222.86558987985984
+      ],
+      "collision_proxy_used": false,
+      "component_id": "WRIST_PRELINK_PRINT_MEASURED",
+      "confidence_class": "ENGINEERING_ESTIMATE_REPAIRED_WATERTIGHT_INERTIA",
+      "containment_actions": [],
+      "correction_method": "REUSED_PROTECTED_CANONICAL_PRINT_PATH_A_MASS_PROPERTIES_NO_RECOMPUTE",
+      "effective_density_kg_per_mm3": 7.887674643393571e-07,
+      "engineering_estimate_used": false,
+      "frozen_com_world_mm": [
+        80.02930038978639,
+        495.1771748787429,
+        222.86558987985984
+      ],
+      "geometry_centroid_world_mm": null,
+      "geometry_intrinsic_tensor_world_kg_m2": [
+        [
+          0.00020145849861580048,
+          -8.328115639482918e-05,
+          1.9013372517568363e-05
+        ],
+        [
+          -8.328115639482918e-05,
+          0.00010386727629560078,
+          3.511277425820455e-05
+        ],
+        [
+          1.9013372517568363e-05,
+          3.511277425820455e-05,
+          0.0002688684088046859
+        ]
+      ],
+      "geometry_recentered_to_frozen_com_for_inertia_model": true,
+      "intrinsic_tensor_reference": "ABOUT_GEOMETRY_CENTROID_THEN_TRANSLATION_ONLY_PLACED_AT_FROZEN_COMPONENT_COM_V2",
+      "mass_kg": 0.089,
+      "mass_location_authority": "COM_V2_FROZEN_COMPONENT_COM",
+      "mass_normalization_volume_mm3": 112834.26868341122,
+      "mass_renormalization_pass": true,
+      "matching_graph_inclusion_exclusion_evidence": null,
+      "mesh_used": false,
+      "method": "REUSED_PROTECTED_CANONICAL_PRINT_PATH_A_MASS_PROPERTIES_NO_RECOMPUTE",
+      "model_limitations": [
+        "PROTECTED_V2_INTRINSIC_REUSED; GEOMETRY_CENTROID_NOT_RECOMPUTED",
+        "canonical_geometry_is_working_copy_repair",
+        "material_density_distribution_assumed_uniform"
+      ],
+      "normalized_to_frozen_mass_kg": 0.089,
+      "occupied_centroidal_volume_inertia_matrix_mm5": [
+        [
+          255409240.01541415,
+          -105583914.34740838,
+          24105168.35084377
+        ],
+        [
+          -105583914.34740838,
+          131683013.04440369,
+          44516002.30191256
+        ],
+        [
+          24105168.35084377,
+          44516002.30191256,
+          340871576.17470986
+        ]
+      ],
+      "occupied_volume_method": "REUSED_PROTECTED_CANONICAL_PRINT_PATH_A_MASS_PROPERTIES_NO_RECOMPUTE",
+      "occupied_volume_mm3": 112834.26868341122,
+      "overlap_fraction_limit_max_inclusive": 0.01,
+      "overlap_gate_pass": true,
+      "owner_link": "link4",
+      "pass": true,
+      "raw_centroidal_matrix_of_inertia_mm5": [
+        [
+          255409240.01541415,
+          -105583914.34740838,
+          24105168.35084377
+        ],
+        [
+          -105583914.34740838,
+          131683013.04440369,
+          44516002.30191256
+        ],
+        [
+          24105168.35084377,
+          44516002.30191256,
+          340871576.17470986
+        ]
+      ],
+      "raw_detected_overlap_fraction": 0.0,
+      "raw_detected_overlap_volume_upper_bound_mm3": 0.0,
+      "raw_volume_mm3": 112834.26868341122,
+      "remaining_or_estimated_uncertainty_fraction": 0.0,
+      "remaining_unresolved_overlap_fraction": 0.0,
+      "remaining_unresolved_overlap_volume_upper_bound_mm3": 0.0,
+      "removed_fraction": 0.0,
+      "removed_volume_mm3": 0.0,
+      "source_geometry_modified": false,
+      "worker": null
+    },
+    {
+      "accepted_numerical_sliver_overlaps": [],
+      "applied_frozen_com_anchor_world_mm": [
+        106.52971880350708,
+        538.3673337703788,
+        234.92348959933966
+      ],
+      "collision_proxy_used": false,
+      "component_id": "J5_STATOR_EQ",
+      "confidence_class": "ENGINEERING_SPLIT_MASS_SCALED_CAD_RIGID_INERTIA_ESTIMATE",
+      "containment_actions": [],
+      "correction_method": "ENGINEERING_OCCUPIED_VOLUME_ESTIMATE_PAIRWISE_IE_UPPER_BOUND_EMPIRICAL_ISOTROPIC_SIMILAR_SHAPE_TENSOR_SCALE",
+      "effective_density_kg_per_mm3": 2.628369330502148e-06,
+      "engineering_estimate_used": true,
+      "frozen_com_world_mm": [
+        106.52971880350708,
+        538.3673337703788,
+        234.92348959933966
+      ],
+      "geometry_centroid_world_mm": [
+        106.52971880350708,
+        538.3673337703788,
+        234.92348959933966
+      ],
+      "geometry_intrinsic_tensor_world_kg_m2": [
+        [
+          0.0003101202201463608,
+          -3.0360375333998016e-06,
+          -3.6452075197918217e-07
+        ],
+        [
+          -3.0360375333998016e-06,
+          0.0003006016165653868,
+          -4.73706759692492e-06
+        ],
+        [
+          -3.6452075197918217e-07,
+          -4.73706759692492e-06,
+          0.0005478545771508808
+        ]
+      ],
+      "geometry_recentered_to_frozen_com_for_inertia_model": true,
+      "intrinsic_tensor_reference": "ABOUT_GEOMETRY_CENTROID_THEN_TRANSLATION_ONLY_PLACED_AT_FROZEN_COMPONENT_COM_V2",
+      "mass_kg": 0.47,
+      "mass_location_authority": "COM_V2_FROZEN_COMPONENT_COM",
+      "mass_normalization_volume_mm3": 178818.09627956923,
+      "mass_renormalization_pass": true,
+      "matching_graph_inclusion_exclusion_evidence": null,
+      "mesh_used": false,
+      "method": "ENGINEERING_OCCUPIED_VOLUME_ESTIMATE_PAIRWISE_IE_UPPER_BOUND_EMPIRICAL_ISOTROPIC_SIMILAR_SHAPE_TENSOR_SCALE",
+      "model_limitations": [
+        "BOUNDED_OCCUPIED_VOLUME_BUT_EMPIRICAL_NONCONSERVATIVE_ISOTROPIC_SIMILAR_SHAPE_SECOND_MOMENT_ESTIMATE_AFTER_NORMAL_OCCT_WORKER_FAILURE",
+        "gear_ratio_reflected_inertia_not_added",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia"
+      ],
+      "normalized_to_frozen_mass_kg": 0.47,
+      "occupied_centroidal_volume_inertia_matrix_mm5": [
+        [
+          117989590.17951736,
+          -1155103.089267812,
+          -138687.03600705185
+        ],
+        [
+          -1155103.089267812,
+          114368103.85698615,
+          -1802283.8502760595
+        ],
+        [
+          -138687.03600705185,
+          -1802283.8502760595,
+          208438962.8173806
+        ]
+      ],
+      "occupied_volume_method": "ENGINEERING_OCCUPIED_VOLUME_ESTIMATE_PAIRWISE_IE_UPPER_BOUND_EMPIRICAL_ISOTROPIC_SIMILAR_SHAPE_TENSOR_SCALE",
+      "occupied_volume_mm3": 178818.09627956923,
+      "overlap_fraction_limit_max_inclusive": 0.01,
+      "overlap_gate_pass": true,
+      "owner_link": "link4",
+      "pass": true,
+      "raw_centroidal_matrix_of_inertia_mm5": [
+        [
+          117989590.17951736,
+          -1155103.089267812,
+          -138687.03600705185
+        ],
+        [
+          -1155103.089267812,
+          114368103.85698615,
+          -1802283.8502760595
+        ],
+        [
+          -138687.03600705185,
+          -1802283.8502760595,
+          208438962.8173806
+        ]
+      ],
+      "raw_detected_overlap_fraction": 3.678938083325264e-05,
+      "raw_detected_overlap_volume_upper_bound_mm3": 6.578848479469658,
+      "raw_volume_mm3": 178824.65892231776,
+      "remaining_or_estimated_uncertainty_fraction": 3.678938083325264e-05,
+      "remaining_unresolved_overlap_fraction": 3.678938083325264e-05,
+      "remaining_unresolved_overlap_volume_upper_bound_mm3": 6.578848479469658,
+      "removed_fraction": 3.66987572523507e-05,
+      "removed_volume_mm3": 6.562642748524549,
+      "source_geometry_modified": false,
+      "worker": {
+        "exit_code": 2,
+        "hard_timeout_seconds": 60.0,
+        "reason": "WORKER_DID_NOT_RETURN_ONE_STRUCTURED_RESULT",
+        "status": "FAILED"
+      }
+    },
+    {
+      "accepted_numerical_sliver_overlaps": [],
+      "applied_frozen_com_anchor_world_mm": [
+        75.57501363204001,
+        481.1644172425118,
+        226.49623001230717
+      ],
+      "collision_proxy_used": false,
+      "component_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING",
+      "confidence_class": "ENGINEERING_ESTIMATE_RESIDUAL_PROXY_INERTIA",
+      "containment_actions": [],
+      "correction_method": "NORMAL_OCCT_PAIRWISE_INCLUSION_EXCLUSION_MATCHING_GRAPH_NO_TRIPLE_TERM",
+      "effective_density_kg_per_mm3": 1.032622369789338e-05,
+      "engineering_estimate_used": false,
+      "frozen_com_world_mm": [
+        75.57501363204001,
+        481.1644172425118,
+        226.49623001230717
+      ],
+      "geometry_centroid_world_mm": [
+        75.13932565449015,
+        480.7524274185973,
+        226.70263560500283
+      ],
+      "geometry_intrinsic_tensor_world_kg_m2": [
+        [
+          0.0001109825413434582,
+          -4.498219600804907e-05,
+          1.1392777306867002e-05
+        ],
+        [
+          -4.498219600804907e-05,
+          5.715859138384051e-05,
+          2.099053108318776e-05
+        ],
+        [
+          1.1392777306867002e-05,
+          2.099053108318776e-05,
+          0.00014771890093437354
+        ]
+      ],
+      "geometry_recentered_to_frozen_com_for_inertia_model": true,
+      "intrinsic_tensor_reference": "ABOUT_GEOMETRY_CENTROID_THEN_TRANSLATION_ONLY_PLACED_AT_FROZEN_COMPONENT_COM_V2",
+      "mass_kg": 0.046,
+      "mass_location_authority": "COM_V2_FROZEN_COMPONENT_COM",
+      "mass_normalization_volume_mm3": 4454.677851825379,
+      "mass_renormalization_pass": true,
+      "matching_graph_inclusion_exclusion_evidence": {
+        "common_intersections": [
+          {
+            "com_world_mm": [
+              68.56770645182647,
+              461.63455924269823,
+              243.0866230715202
+            ],
+            "compound_volume_mm3_diagnostic": 19.16999837221168,
+            "first_moment_mm4": [
+              1314.4428210678016,
+              8849.53374923918,
+              4659.970168587476
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                5218185.498855395,
+                -606808.0041972747,
+                -319523.4665939744
+              ],
+              [
+                -606808.0041972747,
+                1222989.873020672,
+                -2151203.2748600016
+              ],
+              [
+                -319523.4665939744,
+                -2151203.2748600016,
+                4175460.825185396
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:J4_Output_M4_Screw_01:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                158.47512603085488,
+                -15.771843911148608,
+                -5.820766091346741e-11
+              ],
+              [
+                -15.771843911148608,
+                85.13162203249522,
+                0.0
+              ],
+              [
+                -5.820766091346741e-11,
+                0.0,
+                81.88384929625317
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:J4_Output_M4_Screw_01:solid_3",
+            "volume_mm3": 19.16999837221168
+          },
+          {
+            "com_world_mm": [
+              68.53139978550702,
+              461.4582466984904,
+              225.8375623552816
+            ],
+            "compound_volume_mm3_diagnostic": 19.16999837220021,
+            "first_moment_mm4": [
+              1313.7468223327714,
+              8846.153838048425,
+              4329.305702732412
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                5060008.961852888,
+                -606255.0770833052,
+                -296693.37990763027
+              ],
+              [
+                -606255.0770833052,
+                1067837.8869161662,
+                -1997793.8190046744
+              ],
+              [
+                -296693.37990763027,
+                -1997793.8190046744,
+                4172245.4326784723
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:J4_Output_M4_Screw_02:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                158.4751260317862,
+                -15.771843911265023,
+                5.820766091346741e-11
+              ],
+              [
+                -15.771843911265023,
+                85.13162203226238,
+                2.3283064365386963e-10
+              ],
+              [
+                5.820766091346741e-11,
+                2.3283064365386963e-10,
+                81.8838492971845
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:J4_Output_M4_Screw_02:solid_3",
+            "volume_mm3": 19.16999837220021
+          },
+          {
+            "com_world_mm": [
+              65.50037072709588,
+              446.73895409649975,
+              217.36892687913289
+            ],
+            "compound_volume_mm3_diagnostic": 19.169998372215208,
+            "first_moment_mm4": [
+              1255.6420002179207,
+              8563.985022835024,
+              4166.961974443144
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                4731792.239856299,
+                -560959.9657409023,
+                -272937.5541317375
+              ],
+              [
+                -560959.9657409023,
+                988098.2008676777,
+                -1861544.2342226156
+              ],
+              [
+                -272937.5541317375,
+                -1861544.2342226156,
+                3908192.6123634903
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:J4_Output_M4_Screw_03:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                158.47512603271753,
+                -15.771843911497854,
+                -1.1641532182693481e-10
+              ],
+              [
+                -15.771843911497854,
+                85.13162203284446,
+                2.3283064365386963e-10
+              ],
+              [
+                -1.1641532182693481e-10,
+                2.3283064365386963e-10,
+                81.88384929671884
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:J4_Output_M4_Screw_03:solid_3",
+            "volume_mm3": 19.169998372215208
+          },
+          {
+            "com_world_mm": [
+              62.50564832516128,
+              432.1959739909221,
+              226.14935205040013
+            ],
+            "compound_volume_mm3_diagnostic": 19.16999837220169,
+            "first_moment_mm4": [
+              1198.233176646753,
+              8285.1961178781,
+              4335.282710680637
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                4561408.256973895,
+                -517887.3266929916,
+                -270979.65650395595
+              ],
+              [
+                -517887.3266929916,
+                1055402.849148784,
+                -1873691.733668624
+              ],
+              [
+                -270979.65650395595,
+                -1873691.733668624,
+                3655806.631272453
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:J4_Output_M4_Screw_04:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                158.47512603458017,
+                -15.771843911556061,
+                -1.1641532182693481e-10
+              ],
+              [
+                -15.771843911556061,
+                85.13162203296088,
+                -9.313225746154785e-10
+              ],
+              [
+                -1.1641532182693481e-10,
+                -9.313225746154785e-10,
+                81.88384929858148
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:J4_Output_M4_Screw_04:solid_3",
+            "volume_mm3": 19.16999837220169
+          },
+          {
+            "com_world_mm": [
+              62.541954974538505,
+              432.37228645285535,
+              243.39841277448684
+            ],
+            "compound_volume_mm3_diagnostic": 19.169998372201263,
+            "first_moment_mm4": [
+              1198.929175056188,
+              8288.576027486175,
+              4665.947176683284
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                4719593.180462863,
+                -518399.5205579909,
+                -291817.458237701
+              ],
+              [
+                -518399.5205579909,
+                1210752.6430003662,
+                -2017426.2492507962
+              ],
+              [
+                -291817.458237701,
+                -2017426.2492507962,
+                3658815.826775845
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:J4_Output_M4_Screw_05:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                158.4751260317862,
+                -15.771843911265023,
+                0.0
+              ],
+              [
+                -15.771843911265023,
+                85.13162203202955,
+                4.656612873077393e-10
+              ],
+              [
+                0.0,
+                4.656612873077393e-10,
+                81.88384929811582
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:J4_Output_M4_Screw_05:solid_3",
+            "volume_mm3": 19.169998372201263
+          },
+          {
+            "com_world_mm": [
+              65.57298404279203,
+              447.09157910264,
+              251.86704831945818
+            ],
+            "compound_volume_mm3_diagnostic": 19.16999837219963,
+            "first_moment_mm4": [
+              1257.0339973605955,
+              8570.744843621771,
+              4828.290906294738
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                5048153.700342838,
+                -562025.0867095639,
+                -316605.44255242276
+              ],
+              [
+                -562025.0867095639,
+                1298599.980868343,
+                -2158688.2056622314
+              ],
+              [
+                -316605.44255242276,
+                -2158688.2056622314,
+                3914417.2003201386
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:J4_Output_M4_Screw_06:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                158.47512603271753,
+                -15.771843911381438,
+                0.0
+              ],
+              [
+                -15.771843911381438,
+                85.13162203202955,
+                0.0
+              ],
+              [
+                0.0,
+                0.0,
+                81.88384929811582
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:J4_Output_M4_Screw_06:solid_3",
+            "volume_mm3": 19.16999837219963
+          },
+          {
+            "com_world_mm": [
+              64.98417939508703,
+              547.4798326843724,
+              207.9558107671599
+            ],
+            "compound_volume_mm3_diagnostic": 16.663007434640143,
+            "first_moment_mm4": [
+              1082.831864394324,
+              9122.660522335238,
+              3465.1692208898044
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                5715133.316261373,
+                -592828.6044259126,
+                -225181.3811146106
+              ],
+              [
+                -592828.6044259126,
+                791027.6163471517,
+                -1897111.250259326
+              ],
+              [
+                -225181.3811146106,
+                -1897111.250259326,
+                5064954.970052875
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:Wrist_Prelink_J5_M35_Screw_01:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                58.58508140221238,
+                0.0035179988481104374,
+                -0.202829973626649
+              ],
+              [
+                0.0035179988481104374,
+                58.60144108743407,
+                -0.9849835392087698
+              ],
+              [
+                -0.202829973626649,
+                -0.9849835392087698,
+                115.3735179323703
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:Wrist_Prelink_J5_M35_Screw_01:solid_3",
+            "volume_mm3": 16.663007434640143
+          },
+          {
+            "com_world_mm": [
+              71.10510058249058,
+              515.5964271638051,
+              207.4246685062667
+            ],
+            "compound_volume_mm3_diagnostic": 16.663007434639447,
+            "first_moment_mm4": [
+              1184.8248196468262,
+              8591.38709910402,
+              3456.3187934475445
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                5146672.857743483,
+                -610891.4403069046,
+                -245762.09828321377
+              ],
+              [
+                -610891.4403069046,
+                801231.4693975431,
+                -1782066.6060242073
+              ],
+              [
+                -245762.09828321377,
+                -1782066.6060242073,
+                4514050.954170795
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:Wrist_Prelink_J5_M35_Screw_02:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                58.58508140593767,
+                0.0035179986152797937,
+                -0.202829973626649
+              ],
+              [
+                0.0035179986152797937,
+                58.601441087550484,
+                -0.9849835396744311
+              ],
+              [
+                -0.202829973626649,
+                -0.9849835396744311,
+                115.3735179360956
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:Wrist_Prelink_J5_M35_Screw_02:solid_3",
+            "volume_mm3": 16.663007434639447
+          },
+          {
+            "com_world_mm": [
+              129.86881526732643,
+              503.49564504956,
+              207.42466800442506
+            ],
+            "compound_volume_mm3_diagnostic": 16.66300743463992,
+            "first_moment_mm4": [
+              2164.0050343273383,
+              8389.75167676964,
+              3456.3187850854515
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                4941187.793895969,
+                -1089567.1071311398,
+                -448868.22863522626
+              ],
+              [
+                -1089567.1071311398,
+                998021.1479955167,
+                -1740242.4411770506
+              ],
+              [
+                -448868.22863522626,
+                -1740242.4411770506,
+                4505355.575859314
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:Wrist_Prelink_J5_M35_Screw_03:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                58.58508140407503,
+                0.0035179986152797937,
+                -0.20282997359754518
+              ],
+              [
+                0.0035179986152797937,
+                58.60144108743407,
+                -0.9849835396744311
+              ],
+              [
+                -0.20282997359754518,
+                -0.9849835396744311,
+                115.37351793516427
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:Wrist_Prelink_J5_M35_Screw_03:solid_3",
+            "volume_mm3": 16.66300743463992
+          },
+          {
+            "com_world_mm": [
+              148.0886216778051,
+              530.366742503084,
+              207.95581005744864
+            ],
+            "compound_volume_mm3_diagnostic": 16.66300743463943,
+            "first_moment_mm4": [
+              2467.601804002772,
+              8837.504973414383,
+              3465.1692090637316
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                5407779.379542978,
+                -1308733.9270656859,
+                -513152.33488059195
+              ],
+              [
+                -1308733.9270656859,
+                1086084.4213024997,
+                -1837811.49061666
+              ],
+              [
+                -513152.33488059195,
+                -1837811.49061666,
+                5052657.848126966
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:Wrist_Prelink_J5_M35_Screw_04:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                58.585081410594285,
+                0.003517997683957219,
+                -0.20282997388858348
+              ],
+              [
+                0.003517997683957219,
+                58.6014410876669,
+                -0.9849835408385843
+              ],
+              [
+                -0.20282997388858348,
+                -0.9849835408385843,
+                115.37351793982089
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:Wrist_Prelink_J5_M35_Screw_04:solid_3",
+            "volume_mm3": 16.66300743463943
+          },
+          {
+            "com_world_mm": [
+              141.9677004904015,
+              562.2501480236515,
+              208.48695231834193
+            ],
+            "compound_volume_mm3_diagnostic": 16.66300743463969,
+            "first_moment_mm4": [
+              2365.6088487502616,
+              9368.778396645372,
+              3474.019636505903
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                5991943.391705243,
+                -1330063.9218578953,
+                -493198.782083217
+              ],
+              [
+                -1330063.9218578953,
+                1060186.4162670977,
+                -1953269.0398460552
+              ],
+              [
+                -493198.782083217,
+                -1953269.0398460552,
+                5603552.462349406
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:Wrist_Prelink_J5_M35_Screw_05:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                58.58508140407503,
+                0.003517999080941081,
+                -0.20282997348112985
+              ],
+              [
+                0.003517999080941081,
+                58.60144108720124,
+                -0.9849835396744311
+              ],
+              [
+                -0.20282997348112985,
+                -0.9849835396744311,
+                115.3735179360956
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:Wrist_Prelink_J5_M35_Screw_05:solid_3",
+            "volume_mm3": 16.66300743463969
+          },
+          {
+            "com_world_mm": [
+              83.2039858055658,
+              574.3509301378964,
+              208.48695282018352
+            ],
+            "compound_volume_mm3_diagnostic": 16.663007434640093,
+            "first_moment_mm4": [
+              1386.4286340698316,
+              9570.41381898022,
+              3474.0196448681763
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                6221122.433613293,
+                -796296.5720298225,
+                -289052.4840498422
+              ],
+              [
+                -796296.5720298225,
+                839702.7596266852,
+                -1995307.3993309007
+              ],
+              [
+                -289052.4840498422,
+                -1995307.3993309007,
+                5612247.840643378
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:Wrist_Prelink_J5_M35_Screw_06:solid_1",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                58.58508140407503,
+                0.003517998498864472,
+                -0.20282997377216816
+              ],
+              [
+                0.003517998498864472,
+                58.60144108743407,
+                -0.9849835389759392
+              ],
+              [
+                -0.20282997377216816,
+                -0.9849835389759392,
+                115.37351793516427
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING:Wrist_Prelink_J5_M35_Screw_06:solid_3",
+            "volume_mm3": 16.663007434640093
+          }
+        ],
+        "matching_graph_max_degree": 1,
+        "matching_graph_no_triple_term": true,
+        "occupied_centroidal_volume_inertia_matrix_mm5": [
+          [
+            10747640.62743473,
+            -4356112.875728786,
+            1103285.9291234612
+          ],
+          [
+            -4356112.875728786,
+            5535285.023459375,
+            2032740.3024854064
+          ],
+          [
+            1103285.9291234612,
+            2032740.3024854064,
+            14305219.919311762
+          ]
+        ],
+        "occupied_com_world_mm": [
+          75.13932565449015,
+          480.7524274185973,
+          226.70263560500283
+        ],
+        "occupied_first_moment_mm4": [
+          334721.48979415174,
+          2141597.1906329133,
+          1009887.2097800456
+        ],
+        "occupied_inertia_about_world_origin_mm5": [
+          [
+            1269269780.697975,
+            -165274281.60343647,
+            -74778958.0008438
+          ],
+          [
+            -165274281.60343647,
+            259630124.16957697,
+            -483472987.2182657
+          ],
+          [
+            -74778958.0008438,
+            -483472987.2182657,
+            1069034014.894132
+          ]
+        ],
+        "occupied_volume_mm3": 4454.677851825379,
+        "raw_atom_sum_first_moment_mm4": [
+          352910.81879202515,
+          2246881.876719271,
+          1057663.9837093279
+        ],
+        "raw_atom_sum_inertia_about_world_origin_mm5": [
+          [
+            1332032761.7090814,
+            -174374998.15723586,
+            -78762730.26781791
+          ],
+          [
+            -174374998.15723586,
+            272050059.4343355,
+            -506739142.96218884
+          ],
+          [
+            -78762730.26781791,
+            -506739142.96218884,
+            1122871773.0739305
+          ]
+        ],
+        "raw_atom_sum_volume_mm3": 4669.675886666447
+      },
+      "mesh_used": false,
+      "method": "NORMAL_OCCT_PAIRWISE_INCLUSION_EXCLUSION_MATCHING_GRAPH_NO_TRIPLE_TERM",
+      "model_limitations": [
+        "uniform_proxy_geometry_not_measured_mass_distribution",
+        "wiring_geometry_incomplete"
+      ],
+      "normalized_to_frozen_mass_kg": 0.046,
+      "occupied_centroidal_volume_inertia_matrix_mm5": [
+        [
+          10747640.62743473,
+          -4356112.875728786,
+          1103285.9291234612
+        ],
+        [
+          -4356112.875728786,
+          5535285.023459375,
+          2032740.3024854064
+        ],
+        [
+          1103285.9291234612,
+          2032740.3024854064,
+          14305219.919311762
+        ]
+      ],
+      "occupied_volume_method": "NORMAL_OCCT_PAIRWISE_INCLUSION_EXCLUSION_MATCHING_GRAPH_NO_TRIPLE_TERM",
+      "occupied_volume_mm3": 4454.677851825379,
+      "overlap_fraction_limit_max_inclusive": 0.01,
+      "overlap_gate_pass": true,
+      "owner_link": "link4",
+      "pass": true,
+      "raw_centroidal_matrix_of_inertia_mm5": [
+        [
+          10747640.62743473,
+          -4356112.875728786,
+          1103285.9291234612
+        ],
+        [
+          -4356112.875728786,
+          5535285.023459375,
+          2032740.3024854064
+        ],
+        [
+          1103285.9291234612,
+          2032740.3024854064,
+          14305219.919311762
+        ]
+      ],
+      "raw_detected_overlap_fraction": 0.04604131851098334,
+      "raw_detected_overlap_volume_upper_bound_mm3": 214.9980348410684,
+      "raw_volume_mm3": 4669.675886666447,
+      "remaining_or_estimated_uncertainty_fraction": 0.0,
+      "remaining_unresolved_overlap_fraction": 0.0,
+      "remaining_unresolved_overlap_volume_upper_bound_mm3": 0.0,
+      "removed_fraction": 0.04604131851098334,
+      "removed_volume_mm3": 214.9980348410684,
+      "source_geometry_modified": false,
+      "worker": {
+        "exit_code": 0,
+        "hard_timeout_seconds": 60.0,
+        "reason": null,
+        "status": "PASS"
+      }
+    },
+    {
+      "accepted_numerical_sliver_overlaps": [],
+      "applied_frozen_com_anchor_world_mm": [
+        106.38183043726168,
+        538.1666309285903,
+        251.47944896733915
+      ],
+      "collision_proxy_used": false,
+      "component_id": "J5_OUTPUT_EQ",
+      "confidence_class": "ENGINEERING_SPLIT_MASS_SCALED_CAD_RIGID_INERTIA_ESTIMATE",
+      "containment_actions": [
+        {
+          "classification": "FULL_CONTAINMENT",
+          "collapsed_atom_id": "J5_OUTPUT_EQ:J5_Output_Rotor_STEP_Display:solid_7",
+          "double_count_avoided": true,
+          "fresh_common_volume_mm3": 53.98950083578462,
+          "retained_occupied_atom_id": "J5_OUTPUT_EQ:J5_Output_Rotor_STEP_Display:solid_8",
+          "smaller_volume_mm3": 53.98950083578462
+        }
+      ],
+      "correction_method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+      "effective_density_kg_per_mm3": 4.7172879910998625e-06,
+      "engineering_estimate_used": false,
+      "frozen_com_world_mm": [
+        106.38183043726168,
+        538.1666309285903,
+        251.47944896733915
+      ],
+      "geometry_centroid_world_mm": [
+        106.38187232075767,
+        538.1668077463511,
+        251.46881565219695
+      ],
+      "geometry_intrinsic_tensor_world_kg_m2": [
+        [
+          1.3528109049664799e-05,
+          6.334190950542297e-09,
+          -4.599125124284383e-08
+        ],
+        [
+          6.334190950542297e-09,
+          1.352782458037812e-05,
+          -2.197904775841696e-07
+        ],
+        [
+          -4.599125124284383e-08,
+          -2.197904775841696e-07,
+          2.626155546809732e-05
+        ]
+      ],
+      "geometry_recentered_to_frozen_com_for_inertia_model": true,
+      "intrinsic_tensor_reference": "ABOUT_GEOMETRY_CENTROID_THEN_TRANSLATION_ONLY_PLACED_AT_FROZEN_COMPONENT_COM_V2",
+      "mass_kg": 0.07,
+      "mass_location_authority": "COM_V2_FROZEN_COMPONENT_COM",
+      "mass_normalization_volume_mm3": 14839.0346597599,
+      "mass_renormalization_pass": true,
+      "matching_graph_inclusion_exclusion_evidence": null,
+      "mesh_used": false,
+      "method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+      "model_limitations": [
+        "gear_ratio_reflected_inertia_not_added",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia"
+      ],
+      "normalized_to_frozen_mass_kg": 0.07,
+      "occupied_centroidal_volume_inertia_matrix_mm5": [
+        [
+          2867772.558128393,
+          1342.7611293804948,
+          -9749.511017689787
+        ],
+        [
+          1342.7611293804948,
+          2867712.254562612,
+          -46592.550210809626
+        ],
+        [
+          -9749.511017689787,
+          -46592.550210809626,
+          5567087.5972900465
+        ]
+      ],
+      "occupied_volume_method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+      "occupied_volume_mm3": 14839.0346597599,
+      "overlap_fraction_limit_max_inclusive": 0.01,
+      "overlap_gate_pass": true,
+      "owner_link": "link5",
+      "pass": true,
+      "raw_centroidal_matrix_of_inertia_mm5": [
+        [
+          2867772.558128393,
+          1342.7611293804948,
+          -9749.511017689787
+        ],
+        [
+          1342.7611293804948,
+          2867712.254562612,
+          -46592.550210809626
+        ],
+        [
+          -9749.511017689787,
+          -46592.550210809626,
+          5567087.5972900465
+        ]
+      ],
+      "raw_detected_overlap_fraction": 0.003625153646002356,
+      "raw_detected_overlap_volume_upper_bound_mm3": 53.98950083578462,
+      "raw_volume_mm3": 14893.024160595683,
+      "remaining_or_estimated_uncertainty_fraction": 0.0,
+      "remaining_unresolved_overlap_fraction": 0.0,
+      "remaining_unresolved_overlap_volume_upper_bound_mm3": 0.0,
+      "removed_fraction": 0.003625153646002279,
+      "removed_volume_mm3": 53.989500835783474,
+      "source_geometry_modified": false,
+      "worker": {
+        "exit_code": 0,
+        "hard_timeout_seconds": 60.0,
+        "reason": null,
+        "status": "PASS"
+      }
+    },
+    {
+      "accepted_numerical_sliver_overlaps": [],
+      "applied_frozen_com_anchor_world_mm": [
+        176.0220201871249,
+        579.4043482794352,
+        235.5172400585977
+      ],
+      "collision_proxy_used": false,
+      "component_id": "J6_DM_STATOR_EQ",
+      "confidence_class": "ENGINEERING_SPLIT_MASS_SCALED_CAD_RIGID_INERTIA_ESTIMATE",
+      "containment_actions": [],
+      "correction_method": "REUSED_PROTECTED_V2_PATH_A_NO_KNOWN_POSITIVE_OVERLAP",
+      "effective_density_kg_per_mm3": 3.1576920445314075e-06,
+      "engineering_estimate_used": false,
+      "frozen_com_world_mm": [
+        176.0220201871249,
+        579.4043482794352,
+        235.5172400585977
+      ],
+      "geometry_centroid_world_mm": null,
+      "geometry_intrinsic_tensor_world_kg_m2": [
+        [
+          0.00021201909868736777,
+          3.1778422876222056e-05,
+          5.497125043857883e-08
+        ],
+        [
+          3.1778422876222056e-05,
+          0.00017651919110222658,
+          1.7400336811617333e-07
+        ],
+        [
+          5.497125043857883e-08,
+          1.7400336811617333e-07,
+          0.0001591788462882428
+        ]
+      ],
+      "geometry_recentered_to_frozen_com_for_inertia_model": true,
+      "intrinsic_tensor_reference": "ABOUT_GEOMETRY_CENTROID_THEN_TRANSLATION_ONLY_PLACED_AT_FROZEN_COMPONENT_COM_V2",
+      "mass_kg": 0.375,
+      "mass_location_authority": "COM_V2_FROZEN_COMPONENT_COM",
+      "mass_normalization_volume_mm3": 118757.6225646947,
+      "mass_renormalization_pass": true,
+      "matching_graph_inclusion_exclusion_evidence": null,
+      "mesh_used": false,
+      "method": "REUSED_PROTECTED_V2_PATH_A_NO_KNOWN_POSITIVE_OVERLAP",
+      "model_limitations": [
+        "gear_ratio_reflected_inertia_not_added",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia"
+      ],
+      "normalized_to_frozen_mass_kg": 0.375,
+      "occupied_centroidal_volume_inertia_matrix_mm5": [
+        [
+          67143690.92912315,
+          10063813.19902837,
+          17408.68003065081
+        ],
+        [
+          10063813.19902837,
+          55901331.926249176,
+          55104.60350860305
+        ],
+        [
+          17408.68003065081,
+          55104.60350860305,
+          50409870.26075385
+        ]
+      ],
+      "occupied_volume_method": "REUSED_PROTECTED_V2_PATH_A_NO_KNOWN_POSITIVE_OVERLAP",
+      "occupied_volume_mm3": 118757.6225646947,
+      "overlap_fraction_limit_max_inclusive": 0.01,
+      "overlap_gate_pass": true,
+      "owner_link": "link5",
+      "pass": true,
+      "raw_centroidal_matrix_of_inertia_mm5": [
+        [
+          67143690.92912315,
+          10063813.19902837,
+          17408.68003065081
+        ],
+        [
+          10063813.19902837,
+          55901331.926249176,
+          55104.60350860305
+        ],
+        [
+          17408.68003065081,
+          55104.60350860305,
+          50409870.26075385
+        ]
+      ],
+      "raw_detected_overlap_fraction": 0.0,
+      "raw_detected_overlap_volume_upper_bound_mm3": 0.0,
+      "raw_volume_mm3": 118757.6225646947,
+      "remaining_or_estimated_uncertainty_fraction": 0.0,
+      "remaining_unresolved_overlap_fraction": 0.0,
+      "remaining_unresolved_overlap_volume_upper_bound_mm3": 0.0,
+      "removed_fraction": 0.0,
+      "removed_volume_mm3": 0.0,
+      "source_geometry_modified": false,
+      "worker": null
+    },
+    {
+      "accepted_numerical_sliver_overlaps": [],
+      "applied_frozen_com_anchor_world_mm": [
+        134.46225991497477,
+        554.8448819754553,
+        247.1412098980704
+      ],
+      "collision_proxy_used": false,
+      "component_id": "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING",
+      "confidence_class": "ENGINEERING_ESTIMATE_RESIDUAL_PROXY_INERTIA",
+      "containment_actions": [],
+      "correction_method": "NORMAL_OCCT_PAIRWISE_INCLUSION_EXCLUSION_MATCHING_GRAPH_NO_TRIPLE_TERM",
+      "effective_density_kg_per_mm3": 1.0336381708831364e-06,
+      "engineering_estimate_used": false,
+      "frozen_com_world_mm": [
+        134.46225991497477,
+        554.8448819754553,
+        247.1412098980704
+      ],
+      "geometry_centroid_world_mm": [
+        134.44742580870607,
+        554.835991347897,
+        247.15319842624567
+      ],
+      "geometry_intrinsic_tensor_world_kg_m2": [
+        [
+          4.1172108282581006e-05,
+          -1.1825834014300257e-05,
+          1.374662944268904e-05
+        ],
+        [
+          -1.1825834014300257e-05,
+          5.375654633105588e-05,
+          8.133114048037995e-06
+        ],
+        [
+          1.374662944268904e-05,
+          8.133114048037995e-06,
+          5.736073533204554e-05
+        ]
+      ],
+      "geometry_recentered_to_frozen_com_for_inertia_model": true,
+      "intrinsic_tensor_reference": "ABOUT_GEOMETRY_CENTROID_THEN_TRANSLATION_ONLY_PLACED_AT_FROZEN_COMPONENT_COM_V2",
+      "mass_kg": 0.059,
+      "mass_location_authority": "COM_V2_FROZEN_COMPONENT_COM",
+      "mass_normalization_volume_mm3": 57079.935379699295,
+      "mass_renormalization_pass": true,
+      "matching_graph_inclusion_exclusion_evidence": {
+        "common_intersections": [
+          {
+            "com_world_mm": [
+              135.46108678619558,
+              586.7866606853888,
+              248.55462543442644
+            ],
+            "compound_volume_mm3_diagnostic": 19.169998372205534,
+            "first_moment_mm4": [
+              2596.7888131885616,
+              11248.699330170824,
+              4764.791764982111
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                7785039.067763124,
+                -1523726.2214219822,
+                -645443.0546690106
+              ],
+              [
+                -1523726.2214219822,
+                1536177.1444083164,
+                -2795915.77057563
+              ],
+              [
+                -645443.0546690106,
+                -2795915.77057563,
+                6952432.446849601
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING:Adapter_DM_G6220_M4x12_Screw_01:solid_2",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                141.3183400463313,
+                34.81477410788648,
+                0.8161253812722862
+              ],
+              [
+                34.81477410788648,
+                102.27720139012672,
+                0.47805946273729205
+              ],
+              [
+                0.8161253812722862,
+                0.47805946273729205,
+                81.8950559347868
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING:Adapter_DM_G6220_M4x12_Screw_01:solid_3",
+            "volume_mm3": 19.169998372205534
+          },
+          {
+            "com_world_mm": [
+              150.45813957307905,
+              562.1980924265647,
+              205.30545528413847
+            ],
+            "compound_volume_mm3_diagnostic": 19.16999837220213,
+            "first_moment_mm4": [
+              2884.282290700486,
+              10777.336516672389,
+              3935.705243601152
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                6867161.106354117,
+                -1621503.1870774282,
+                -592158.0727348602
+              ],
+              [
+                -1621503.1870774282,
+                1242087.7815654692,
+                -2212645.502246332
+              ],
+              [
+                -592158.0727348602,
+                -2212645.502246332,
+                6493043.673630678
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING:Adapter_DM_G6220_M4x12_Screw_02:solid_2",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                141.31834003701806,
+                34.81477410742082,
+                0.8161253809230402
+              ],
+              [
+                34.81477410742082,
+                102.27720138966106,
+                0.4780594636686146
+              ],
+              [
+                0.8161253809230402,
+                0.4780594636686146,
+                81.89505592919886
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING:Adapter_DM_G6220_M4x12_Screw_02:solid_3",
+            "volume_mm3": 19.16999837220213
+          },
+          {
+            "com_world_mm": [
+              161.63708385681454,
+              542.0223231540791,
+              251.86691508690416
+            ],
+            "compound_volume_mm3_diagnostic": 19.16999837220421,
+            "first_moment_mm4": [
+              3098.58263442297,
+              10390.56705256204,
+              4828.288352228048
+            ],
+            "inertia_about_world_origin_mm5": [
+              [
+                6848146.703483662,
+                -1679466.1432207176,
+                -780429.6331485851
+              ],
+              [
+                -1679466.1432207176,
+                1717034.2307445947,
+                -2617039.591472964
+              ],
+              [
+                -780429.6331485851,
+                -2617039.591472964,
+                6132847.048891336
+              ]
+            ],
+            "left_atom_id": "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING:Adapter_DM_G6220_M4x12_Screw_03:solid_2",
+            "positive_solid_count": 1,
+            "raw_centroidal_matrix_of_inertia_mm5": [
+              [
+                141.31834004167467,
+                34.814774107187986,
+                0.8161253808066249
+              ],
+              [
+                34.814774107187986,
+                102.27720138966106,
+                0.4780594636686146
+              ],
+              [
+                0.8161253808066249,
+                0.4780594636686146,
+                81.8950559310615
+              ]
+            ],
+            "right_atom_id": "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING:Adapter_DM_G6220_M4x12_Screw_03:solid_3",
+            "volume_mm3": 19.16999837220421
+          }
+        ],
+        "matching_graph_max_degree": 1,
+        "matching_graph_no_triple_term": true,
+        "occupied_centroidal_volume_inertia_matrix_mm5": [
+          [
+            39832225.088401794,
+            -11440980.36181879,
+            13299266.445379019
+          ],
+          [
+            -11440980.36181879,
+            52007121.87817764,
+            7868434.310131073
+          ],
+          [
+            13299266.445379019,
+            7868434.310131073,
+            55494018.06924057
+          ]
+        ],
+        "occupied_com_world_mm": [
+          134.44742580870607,
+          554.835991347897,
+          247.15319842624567
+        ],
+        "occupied_first_moment_mm4": [
+          7674250.377127857,
+          31670002.532469355,
+          14107488.5950561
+        ],
+        "occupied_inertia_about_world_origin_mm5": [
+          [
+            21098200404.21134,
+            -4269391296.2075257,
+            -1883416259.785593
+          ],
+          [
+            -4269391296.2075257,
+            4570501258.124409,
+            -7819473985.75697
+          ],
+          [
+            -1883416259.785593,
+            -7819473985.75697,
+            18658934477.378616
+          ]
+        ],
+        "occupied_volume_mm3": 57079.935379699295,
+        "raw_atom_sum_first_moment_mm4": [
+          7682830.030866169,
+          31702419.13536876,
+          14121017.380416911
+        ],
+        "raw_atom_sum_inertia_about_world_origin_mm5": [
+          [
+            21119700751.088943,
+            -4274215991.759246,
+            -1885434290.5461454
+          ],
+          [
+            -4274215991.759246,
+            4574996557.281127,
+            -7827099586.621265
+          ],
+          [
+            -1885434290.5461454,
+            -7827099586.621265,
+            18678512800.54799
+          ]
+        ],
+        "raw_atom_sum_volume_mm3": 57137.44537481591
+      },
+      "mesh_used": false,
+      "method": "NORMAL_OCCT_PAIRWISE_INCLUSION_EXCLUSION_MATCHING_GRAPH_NO_TRIPLE_TERM",
+      "model_limitations": [
+        "uniform_proxy_geometry_not_measured_mass_distribution",
+        "wiring_geometry_incomplete"
+      ],
+      "normalized_to_frozen_mass_kg": 0.059,
+      "occupied_centroidal_volume_inertia_matrix_mm5": [
+        [
+          39832225.088401794,
+          -11440980.36181879,
+          13299266.445379019
+        ],
+        [
+          -11440980.36181879,
+          52007121.87817764,
+          7868434.310131073
+        ],
+        [
+          13299266.445379019,
+          7868434.310131073,
+          55494018.06924057
+        ]
+      ],
+      "occupied_volume_method": "NORMAL_OCCT_PAIRWISE_INCLUSION_EXCLUSION_MATCHING_GRAPH_NO_TRIPLE_TERM",
+      "occupied_volume_mm3": 57079.935379699295,
+      "overlap_fraction_limit_max_inclusive": 0.01,
+      "overlap_gate_pass": true,
+      "owner_link": "link5",
+      "pass": true,
+      "raw_centroidal_matrix_of_inertia_mm5": [
+        [
+          39832225.088401794,
+          -11440980.36181879,
+          13299266.445379019
+        ],
+        [
+          -11440980.36181879,
+          52007121.87817764,
+          7868434.310131073
+        ],
+        [
+          13299266.445379019,
+          7868434.310131073,
+          55494018.06924057
+        ]
+      ],
+      "raw_detected_overlap_fraction": 0.0010065202379867016,
+      "raw_detected_overlap_volume_upper_bound_mm3": 57.509995116611876,
+      "raw_volume_mm3": 57137.44537481591,
+      "remaining_or_estimated_uncertainty_fraction": 0.0,
+      "remaining_unresolved_overlap_fraction": 0.0,
+      "remaining_unresolved_overlap_volume_upper_bound_mm3": 0.0,
+      "removed_fraction": 0.0010065202379867016,
+      "removed_volume_mm3": 57.509995116611876,
+      "source_geometry_modified": false,
+      "worker": {
+        "exit_code": 0,
+        "hard_timeout_seconds": 60.0,
+        "reason": null,
+        "status": "PASS"
+      }
+    },
+    {
+      "accepted_numerical_sliver_overlaps": [],
+      "applied_frozen_com_anchor_world_mm": [
+        191.80686809136373,
+        588.6352611236007,
+        235.82758860126438
+      ],
+      "collision_proxy_used": false,
+      "component_id": "J6_DM_OUTPUT_EQ",
+      "confidence_class": "ENGINEERING_SPLIT_MASS_SCALED_CAD_RIGID_INERTIA_ESTIMATE",
+      "containment_actions": [],
+      "correction_method": "REUSED_PROTECTED_V2_PATH_A_NO_KNOWN_POSITIVE_OVERLAP",
+      "effective_density_kg_per_mm3": 0.00017655332461118852,
+      "engineering_estimate_used": false,
+      "frozen_com_world_mm": [
+        191.80686809136373,
+        588.6352611236007,
+        235.82758860126438
+      ],
+      "geometry_centroid_world_mm": null,
+      "geometry_intrinsic_tensor_world_kg_m2": [
+        [
+          2.007739941282223e-05,
+          5.01363971649787e-06,
+          1.175293744965222e-07
+        ],
+        [
+          5.01363971649787e-06,
+          1.445512529700865e-05,
+          6.884485040536788e-08
+        ],
+        [
+          1.175293744965222e-07,
+          6.884485040536788e-08,
+          1.1519913548723127e-05
+        ]
+      ],
+      "geometry_recentered_to_frozen_com_for_inertia_model": true,
+      "intrinsic_tensor_reference": "ABOUT_GEOMETRY_CENTROID_THEN_TRANSLATION_ONLY_PLACED_AT_FROZEN_COMPONENT_COM_V2",
+      "mass_kg": 0.125,
+      "mass_location_authority": "COM_V2_FROZEN_COMPONENT_COM",
+      "mass_normalization_volume_mm3": 708.0013943395236,
+      "mass_renormalization_pass": true,
+      "matching_graph_inclusion_exclusion_evidence": null,
+      "mesh_used": false,
+      "method": "REUSED_PROTECTED_V2_PATH_A_NO_KNOWN_POSITIVE_OVERLAP",
+      "model_limitations": [
+        "gear_ratio_reflected_inertia_not_added",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia"
+      ],
+      "normalized_to_frozen_mass_kg": 0.125,
+      "occupied_centroidal_volume_inertia_matrix_mm5": [
+        [
+          113718.61423191738,
+          28397.311279972047,
+          665.6876881551182
+        ],
+        [
+          28397.311279972047,
+          81873.99092507716,
+          389.93800064077107
+        ],
+        [
+          665.6876881551182,
+          389.93800064077107,
+          65248.91884133395
+        ]
+      ],
+      "occupied_volume_method": "REUSED_PROTECTED_V2_PATH_A_NO_KNOWN_POSITIVE_OVERLAP",
+      "occupied_volume_mm3": 708.0013943395236,
+      "overlap_fraction_limit_max_inclusive": 0.01,
+      "overlap_gate_pass": true,
+      "owner_link": "link6",
+      "pass": true,
+      "raw_centroidal_matrix_of_inertia_mm5": [
+        [
+          113718.61423191738,
+          28397.311279972047,
+          665.6876881551182
+        ],
+        [
+          28397.311279972047,
+          81873.99092507716,
+          389.93800064077107
+        ],
+        [
+          665.6876881551182,
+          389.93800064077107,
+          65248.91884133395
+        ]
+      ],
+      "raw_detected_overlap_fraction": 0.0,
+      "raw_detected_overlap_volume_upper_bound_mm3": 0.0,
+      "raw_volume_mm3": 708.0013943395236,
+      "remaining_or_estimated_uncertainty_fraction": 0.0,
+      "remaining_unresolved_overlap_fraction": 0.0,
+      "remaining_unresolved_overlap_volume_upper_bound_mm3": 0.0,
+      "removed_fraction": 0.0,
+      "removed_volume_mm3": 0.0,
+      "source_geometry_modified": false,
+      "worker": null
+    },
+    {
+      "accepted_numerical_sliver_overlaps": [],
+      "applied_frozen_com_anchor_world_mm": [
+        222.77473786155196,
+        605.7965760351951,
+        239.64136630652658
+      ],
+      "collision_proxy_used": false,
+      "component_id": "GRIPPER_CONNECTOR_CAMERA_MEASURED_ROLLUP",
+      "confidence_class": "MEASURED_TOTAL_MASS_WITH_UNIFORM_GEOMETRIC_INERTIA_ESTIMATE",
+      "containment_actions": [],
+      "correction_method": "ENGINEERING_OCCUPIED_VOLUME_ESTIMATE_PAIRWISE_IE_UPPER_BOUND_EMPIRICAL_ISOTROPIC_SIMILAR_SHAPE_TENSOR_SCALE",
+      "effective_density_kg_per_mm3": 2.4810665929066533e-06,
+      "engineering_estimate_used": true,
+      "frozen_com_world_mm": [
+        222.77473786155196,
+        605.7965760351951,
+        239.64136630652658
+      ],
+      "geometry_centroid_world_mm": [
+        222.77473786155196,
+        605.7965760351951,
+        239.64136630652658
+      ],
+      "geometry_intrinsic_tensor_world_kg_m2": [
+        [
+          0.00040698589831373265,
+          1.725949209086757e-05,
+          3.4397938857016385e-05
+        ],
+        [
+          1.725949209086757e-05,
+          0.00038509491383026574,
+          1.2923067183191019e-05
+        ],
+        [
+          3.4397938857016385e-05,
+          1.2923067183191019e-05,
+          0.0004508205580187034
+        ]
+      ],
+      "geometry_recentered_to_frozen_com_for_inertia_model": true,
+      "intrinsic_tensor_reference": "ABOUT_GEOMETRY_CENTROID_THEN_TRANSLATION_ONLY_PLACED_AT_FROZEN_COMPONENT_COM_V2",
+      "mass_kg": 0.296,
+      "mass_location_authority": "COM_V2_FROZEN_COMPONENT_COM",
+      "mass_normalization_volume_mm3": 119303.52891222722,
+      "mass_renormalization_pass": true,
+      "matching_graph_inclusion_exclusion_evidence": null,
+      "mesh_used": false,
+      "method": "ENGINEERING_OCCUPIED_VOLUME_ESTIMATE_PAIRWISE_IE_UPPER_BOUND_EMPIRICAL_ISOTROPIC_SIMILAR_SHAPE_TENSOR_SCALE",
+      "model_limitations": [
+        "BOUNDED_OCCUPIED_VOLUME_BUT_EMPIRICAL_NONCONSERVATIVE_ISOTROPIC_SIMILAR_SHAPE_SECOND_MOMENT_ESTIMATE_AFTER_NORMAL_OCCT_WORKER_FAILURE",
+        "dynamic_gripper_inertia_not_modeled",
+        "internal_component_mass_distribution_not_measured"
+      ],
+      "normalized_to_frozen_mass_kg": 0.296,
+      "occupied_centroidal_volume_inertia_matrix_mm5": [
+        [
+          164036668.5349364,
+          6956480.789436406,
+          13864173.962665806
+        ],
+        [
+          6956480.789436406,
+          155213453.3314215,
+          5208674.051771907
+        ],
+        [
+          13864173.962665806,
+          5208674.051771907,
+          181704336.0736851
+        ]
+      ],
+      "occupied_volume_method": "ENGINEERING_OCCUPIED_VOLUME_ESTIMATE_PAIRWISE_IE_UPPER_BOUND_EMPIRICAL_ISOTROPIC_SIMILAR_SHAPE_TENSOR_SCALE",
+      "occupied_volume_mm3": 119303.52891222722,
+      "overlap_fraction_limit_max_inclusive": 0.01,
+      "overlap_gate_pass": true,
+      "owner_link": "gripper",
+      "pass": true,
+      "raw_centroidal_matrix_of_inertia_mm5": [
+        [
+          164036668.5349364,
+          6956480.789436406,
+          13864173.962665806
+        ],
+        [
+          6956480.789436406,
+          155213453.3314215,
+          5208674.051771907
+        ],
+        [
+          13864173.962665806,
+          5208674.051771907,
+          181704336.0736851
+        ]
+      ],
+      "raw_detected_overlap_fraction": 0.004279855390551456,
+      "raw_detected_overlap_volume_upper_bound_mm3": 512.7965463901311,
+      "raw_volume_mm3": 119816.32545861736,
+      "remaining_or_estimated_uncertainty_fraction": 0.004279855390551456,
+      "remaining_unresolved_overlap_fraction": 0.004279855390551456,
+      "remaining_unresolved_overlap_volume_upper_bound_mm3": 512.7965463901311,
+      "removed_fraction": 0.004279855390551456,
+      "removed_volume_mm3": 512.7965463901311,
+      "source_geometry_modified": false,
+      "worker": {
+        "exit_code": 2,
+        "hard_timeout_seconds": 60.0,
+        "reason": "WORKER_DID_NOT_RETURN_ONE_STRUCTURED_RESULT",
+        "status": "FAILED"
+      }
+    }
+  ],
+  "final_status": "V15.16 INERTIA_ENGINEERING_V1 = PASS",
+  "freeze_permitted": true,
+  "git_scope_guard": {
+    "allowed_changed_paths_if_fail": [
+      "V15_16_Engineering惯量验收_v1.json",
+      "V15_16_Engineering惯量验收_v1.md",
+      "tools/build_inertia_engineering_v15_16.py",
+      "tools/validate_inertia_engineering_v15_16.py"
+    ],
+    "allowed_changed_paths_if_pass": [
+      "V15_16_Engineering惯量验收_v1.json",
+      "V15_16_Engineering惯量验收_v1.md",
+      "V15_16_刚体惯量_Engineering_V1.json",
+      "V15_16_刚体惯量_Engineering_V1.md",
+      "tools/build_inertia_engineering_v15_16.py",
+      "tools/validate_inertia_engineering_v15_16.py"
+    ],
+    "pass": true,
+    "source_commit": "0fc439ea8b501802f72c5f28695f51fa4c5ae611",
+    "source_commit_is_ancestor": true,
+    "source_tree": "5d4b2bd85e248dcda6309cd2e4b3b4cebd4a22bb",
+    "target_branch": "agent/v15-16-inertia-engineering-v1",
+    "unexpected_changed_paths": []
+  },
+  "go_output_full_containment": {
+    "all_five_pass": true,
+    "double_count_avoided_count": 5,
+    "expected_count": 5,
+    "items": [
+      {
+        "classification": "FULL_CONTAINMENT",
+        "component_id": "J2A_OUTPUT_EQ",
+        "correction_method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+        "double_count_avoided": true,
+        "effective_density_kg_per_mm3": 4.71728799109987e-06,
+        "engineering_estimate_used": false,
+        "mass_normalization_volume_mm3": 14839.034659759876,
+        "mass_renormalization_pass": true,
+        "method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+        "normalized_to_frozen_mass_kg": 0.07,
+        "occupied_volume_mm3": 14839.034659759876,
+        "pass": true,
+        "raw_detected_overlap_fraction": 0.0036251536460023483,
+        "raw_volume_mm3": 14893.024160595662,
+        "remaining_or_estimated_uncertainty_fraction": 0.0,
+        "removed_fraction": 0.0036251536460024064,
+        "removed_volume_mm3": 53.98950083578529
+      },
+      {
+        "classification": "FULL_CONTAINMENT",
+        "component_id": "J2B_OUTPUT_EQ",
+        "correction_method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+        "double_count_avoided": true,
+        "effective_density_kg_per_mm3": 4.717287991099866e-06,
+        "engineering_estimate_used": false,
+        "mass_normalization_volume_mm3": 14839.034659759887,
+        "mass_renormalization_pass": true,
+        "method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+        "normalized_to_frozen_mass_kg": 0.07,
+        "occupied_volume_mm3": 14839.034659759887,
+        "pass": true,
+        "raw_detected_overlap_fraction": 0.0036251536460023452,
+        "raw_volume_mm3": 14893.02416059567,
+        "remaining_or_estimated_uncertainty_fraction": 0.0,
+        "removed_fraction": 0.0036251536460022824,
+        "removed_volume_mm3": 53.989500835783474
+      },
+      {
+        "classification": "FULL_CONTAINMENT",
+        "component_id": "J3_OUTPUT_EQ",
+        "correction_method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+        "double_count_avoided": true,
+        "effective_density_kg_per_mm3": 4.71728799109986e-06,
+        "engineering_estimate_used": false,
+        "mass_normalization_volume_mm3": 14839.034659759907,
+        "mass_renormalization_pass": true,
+        "method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+        "normalized_to_frozen_mass_kg": 0.07,
+        "occupied_volume_mm3": 14839.034659759907,
+        "pass": true,
+        "raw_detected_overlap_fraction": 0.0036251536460023435,
+        "raw_volume_mm3": 14893.024160595693,
+        "remaining_or_estimated_uncertainty_fraction": 0.0,
+        "removed_fraction": 0.003625153646002399,
+        "removed_volume_mm3": 53.98950083578529
+      },
+      {
+        "classification": "FULL_CONTAINMENT",
+        "component_id": "J4_OUTPUT_EQ",
+        "correction_method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+        "double_count_avoided": true,
+        "effective_density_kg_per_mm3": 4.7172879910998625e-06,
+        "engineering_estimate_used": false,
+        "mass_normalization_volume_mm3": 14839.0346597599,
+        "mass_renormalization_pass": true,
+        "method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+        "normalized_to_frozen_mass_kg": 0.07,
+        "occupied_volume_mm3": 14839.0346597599,
+        "pass": true,
+        "raw_detected_overlap_fraction": 0.003625153646002344,
+        "raw_volume_mm3": 14893.024160595683,
+        "remaining_or_estimated_uncertainty_fraction": 0.0,
+        "removed_fraction": 0.003625153646002279,
+        "removed_volume_mm3": 53.989500835783474
+      },
+      {
+        "classification": "FULL_CONTAINMENT",
+        "component_id": "J5_OUTPUT_EQ",
+        "correction_method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+        "double_count_avoided": true,
+        "effective_density_kg_per_mm3": 4.7172879910998625e-06,
+        "engineering_estimate_used": false,
+        "mass_normalization_volume_mm3": 14839.0346597599,
+        "mass_renormalization_pass": true,
+        "method": "NORMAL_OCCT_SEQUENTIAL_OCCUPIED_PARTITION_SHALLOW_VALIDITY",
+        "normalized_to_frozen_mass_kg": 0.07,
+        "occupied_volume_mm3": 14839.0346597599,
+        "pass": true,
+        "raw_detected_overlap_fraction": 0.003625153646002356,
+        "raw_volume_mm3": 14893.024160595683,
+        "remaining_or_estimated_uncertainty_fraction": 0.0,
+        "removed_fraction": 0.003625153646002279,
+        "removed_volume_mm3": 53.989500835783474
+      }
+    ],
+    "max_raw_detected_overlap_fraction": 0.003625153646002356,
+    "max_remaining_or_estimated_uncertainty_fraction": 0.0
+  },
+  "links": [
+    {
+      "com_v2_reproduction": {
+        "hard_limit_max_inclusive_m": 0.0001,
+        "max_error_m": 1.4304896245381992e-17,
+        "owner_link_error_m": 1.4304896245381992e-17,
+        "pass": true,
+        "preferred_limit_m": 1e-05,
+        "preferred_pass": true,
+        "recomputed_link_com_m": [
+          -0.09682602754229414,
+          -0.016271775643376726,
+          0.00026852096508443425
+        ],
+        "recomputed_world_com_mm": [
+          3.2502572020427363,
+          98.18953761556637,
+          182.90830296508443
+        ],
+        "world_error_m": 1.4217791915866693e-17
+      },
+      "com_world_m": [
+        0.0032502572020427366,
+        0.09818953761556638,
+        0.18290830296508442
+      ],
+      "com_xyz_m_in_link_frame": [
+        -0.09682602754229415,
+        -0.01627177564337673,
+        0.00026852096508443425
+      ],
+      "component_ids": [
+        "J2A_OUTPUT_EQ",
+        "J2B_OUTPUT_EQ",
+        "UPPER_ARM_PRINT_MEASURED",
+        "J3_OUTPUT_EQ"
+      ],
+      "confidence_class": "ENGINEERING_V1_CANDIDATE",
+      "inertia_expressed_in": "OWNER_LINK_FRAME",
+      "inertia_reference_point": "FROZEN_COM_V2",
+      "inertia_tensor_kg_m2": [
+        [
+          0.0011506145878779188,
+          -0.0009540393634177025,
+          9.404715830688318e-06
+        ],
+        [
+          -0.0009540393634177025,
+          0.007217558727290144,
+          6.257421623983668e-06
+        ],
+        [
+          9.404715830688318e-06,
+          6.257421623983668e-06,
+          0.007407791096012893
+        ]
+      ],
+      "link": "link2",
+      "mass_kg": 0.7615000000000001,
+      "model_limitations": [
+        "CANONICAL_PRINT_GEOMETRY_REUSED_AS_REQUIRED; GEOMETRY_CENTROID_NOT_RECOMPUTED; SMALL_INTERPART_INTERPENETRATION_REMAINS_BELOW_1_PERCENT",
+        "canonical_geometry_is_working_copy_repair",
+        "gear_ratio_reflected_inertia_not_added",
+        "material_density_distribution_assumed_uniform",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia"
+      ],
+      "pass": true,
+      "r_max_m": 0.19301977823848362,
+      "tensor_checks": {
+        "determinant_kg3_m6": 5.4775650721489636e-08,
+        "finite_pass": true,
+        "ixx": 0.0011506145878779188,
+        "ixy": -0.0009540393634177025,
+        "ixz": 9.404715830688318e-06,
+        "iyy": 0.007217558727290144,
+        "iyz": 6.257421623983668e-06,
+        "izz": 0.007407791096012893,
+        "matrix_kg_m2": [
+          [
+            0.0011506145878779188,
+            -0.0009540393634177025,
+            9.404715830688318e-06
+          ],
+          [
+            -0.0009540393634177025,
+            0.007217558727290144,
+            6.257421623983668e-06
+          ],
+          [
+            9.404715830688318e-06,
+            6.257421623983668e-06,
+            0.007407791096012893
+          ]
+        ],
+        "pass": true,
+        "positive_definite_pass": true,
+        "principal_axes_in_expression_frame_columns": [
+          [
+            0.9884149922825117,
+            -0.15106743140893752,
+            -0.014643571923138456
+          ],
+          [
+            0.1517670690866246,
+            0.9827320721088558,
+            0.1058509857747669
+          ],
+          [
+            -0.0015999287539971028,
+            -0.10684711327939642,
+            0.9942741747686308
+          ]
+        ],
+        "principal_moments_kg_m2": [
+          0.0010041105324102276,
+          0.007363535125872096,
+          0.007408318752898626
+        ],
+        "principal_triangle_inequality_pass": true,
+        "principal_triangle_margins_kg_m2": [
+          0.0009593269053836968,
+          0.001048894159436758,
+          0.013767743346360493
+        ],
+        "r_max_m": 0.19301977823848362,
+        "radius_of_gyration_m": [
+          0.03631247137952842,
+          0.09833502388110137,
+          0.09863359810353904
+        ],
+        "radius_of_gyration_sanity_pass": true,
+        "symmetry_max_abs_error_kg_m2": 0.0,
+        "symmetry_pass": true,
+        "trace_kg_m2": 0.015775964411180957,
+        "unit_audit_magnitude_pass": true,
+        "unit_audit_max_abs_entry_limit_strict_less_than_kg_m2": 1.0,
+        "unit_audit_max_abs_tensor_entry_kg_m2": 0.007407791096012893,
+        "unit_audit_pass": true,
+        "unit_audit_trace_bound_pass": true,
+        "unit_audit_trace_upper_bound_kg_m2": 0.056741854787048476
+      }
+    },
+    {
+      "com_v2_reproduction": {
+        "hard_limit_max_inclusive_m": 0.0001,
+        "max_error_m": 8.163514517232825e-17,
+        "owner_link_error_m": 7.88106850030428e-17,
+        "pass": true,
+        "preferred_limit_m": 1e-05,
+        "preferred_pass": true,
+        "recomputed_link_com_m": [
+          -0.10115006408445794,
+          0.03409114694136854,
+          0.025916275145654935
+        ],
+        "recomputed_world_com_mm": [
+          68.33070650852588,
+          343.02067717433596,
+          208.57283868570767
+        ],
+        "world_error_m": 8.163514517232825e-17
+      },
+      "com_world_m": [
+        0.06833070650852587,
+        0.34302067717433593,
+        0.2085728386857076
+      ],
+      "com_xyz_m_in_link_frame": [
+        -0.10115006408445788,
+        0.034091146941368534,
+        0.02591627514565488
+      ],
+      "component_ids": [
+        "J3_STATOR_EQ",
+        "FOREARM_PRINT_MEASURED",
+        "J4_STATOR_EQ",
+        "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING"
+      ],
+      "confidence_class": "ENGINEERING_V1_CANDIDATE",
+      "inertia_expressed_in": "OWNER_LINK_FRAME",
+      "inertia_reference_point": "FROZEN_COM_V2",
+      "inertia_tensor_kg_m2": [
+        [
+          0.0014953205051949686,
+          -3.464298746690975e-06,
+          0.0027501824929620057
+        ],
+        [
+          -3.464298746690975e-06,
+          0.012662694095746066,
+          2.570114870295044e-06
+        ],
+        [
+          0.0027501824929620057,
+          2.570114870295044e-06,
+          0.01145498720138968
+        ]
+      ],
+      "link": "link3",
+      "mass_kg": 1.0899999999999999,
+      "model_limitations": [
+        "BOUNDED_OCCUPIED_VOLUME_BUT_EMPIRICAL_NONCONSERVATIVE_ISOTROPIC_SIMILAR_SHAPE_SECOND_MOMENT_ESTIMATE_AFTER_NORMAL_OCCT_WORKER_FAILURE",
+        "PROTECTED_V2_INTRINSIC_REUSED; GEOMETRY_CENTROID_NOT_RECOMPUTED",
+        "canonical_geometry_is_working_copy_repair",
+        "gear_ratio_reflected_inertia_not_added",
+        "material_density_distribution_assumed_uniform",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia",
+        "uniform_proxy_geometry_not_measured_mass_distribution",
+        "wiring_geometry_incomplete"
+      ],
+      "pass": true,
+      "r_max_m": 0.21216443899883472,
+      "tensor_checks": {
+        "determinant_kg3_m6": 1.211232022715169e-07,
+        "finite_pass": true,
+        "ixx": 0.0014953205051949686,
+        "ixy": -3.464298746690975e-06,
+        "ixz": 0.0027501824929620057,
+        "iyy": 0.012662694095746066,
+        "iyz": 2.570114870295044e-06,
+        "izz": 0.01145498720138968,
+        "matrix_kg_m2": [
+          [
+            0.0014953205051949686,
+            -3.464298746690975e-06,
+            0.0027501824929620057
+          ],
+          [
+            -3.464298746690975e-06,
+            0.012662694095746066,
+            2.570114870295044e-06
+          ],
+          [
+            0.0027501824929620057,
+            2.570114870295044e-06,
+            0.01145498720138968
+          ]
+        ],
+        "pass": true,
+        "positive_definite_pass": true,
+        "principal_axes_in_expression_frame_columns": [
+          [
+            0.9683432953174584,
+            0.24962176448091836,
+            -0.000486940610706998
+          ],
+          [
+            0.00033648355779225536,
+            -0.0032560045428348117,
+            -0.9999946425922656
+          ],
+          [
+            -0.24962201263618713,
+            0.9683379436600893,
+            -0.0032369237879918966
+          ]
+        ],
+        "principal_moments_kg_m2": [
+          0.0007863702207150338,
+          0.01216393085347587,
+          0.012662700728139816
+        ],
+        "principal_triangle_inequality_pass": true,
+        "principal_triangle_margins_kg_m2": [
+          0.0002876003460510878,
+          0.0012851400953789813,
+          0.024040261360900653
+        ],
+        "r_max_m": 0.21216443899883472,
+        "radius_of_gyration_m": [
+          0.026859645743444457,
+          0.10563886401483517,
+          0.10778291437570676
+        ],
+        "radius_of_gyration_sanity_pass": true,
+        "symmetry_max_abs_error_kg_m2": 0.0,
+        "symmetry_pass": true,
+        "trace_kg_m2": 0.025613001802330716,
+        "unit_audit_magnitude_pass": true,
+        "unit_audit_max_abs_entry_limit_strict_less_than_kg_m2": 1.0,
+        "unit_audit_max_abs_tensor_entry_kg_m2": 0.012662694095746066,
+        "unit_audit_pass": true,
+        "unit_audit_trace_bound_pass": true,
+        "unit_audit_trace_upper_bound_kg_m2": 0.09812997320300475
+      }
+    },
+    {
+      "com_v2_reproduction": {
+        "hard_limit_max_inclusive_m": 0.0001,
+        "max_error_m": 1.2789769243681805e-16,
+        "owner_link_error_m": 1.1194344115245868e-16,
+        "pass": true,
+        "preferred_limit_m": 1e-05,
+        "preferred_pass": true,
+        "recomputed_link_com_m": [
+          -0.0032562880623996406,
+          0.026691901325969717,
+          0.07712273077803512
+        ],
+        "recomputed_world_com_mm": [
+          97.05787052574827,
+          519.2117834214579,
+          232.727722957266
+        ],
+        "world_error_m": 1.2789769243681805e-16
+      },
+      "com_world_m": [
+        0.09705787052574825,
+        0.5192117834214578,
+        0.23272772295726593
+      ],
+      "com_xyz_m_in_link_frame": [
+        -0.003256288062399695,
+        0.026691901325969727,
+        0.07712273077803503
+      ],
+      "component_ids": [
+        "J4_OUTPUT_EQ",
+        "WRIST_PRELINK_PRINT_MEASURED",
+        "J5_STATOR_EQ",
+        "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING"
+      ],
+      "confidence_class": "ENGINEERING_V1_CANDIDATE",
+      "inertia_expressed_in": "OWNER_LINK_FRAME",
+      "inertia_reference_point": "FROZEN_COM_V2",
+      "inertia_tensor_kg_m2": [
+        [
+          0.0017846928666986044,
+          5.576191808676761e-06,
+          3.260540608689319e-05
+        ],
+        [
+          5.576191808676761e-06,
+          0.0014691530030288575,
+          -0.0002629908074224898
+        ],
+        [
+          3.260540608689319e-05,
+          -0.0002629908074224898,
+          0.0004889558170829342
+        ]
+      ],
+      "link": "link4",
+      "mass_kg": 0.6749999999999999,
+      "model_limitations": [
+        "BOUNDED_OCCUPIED_VOLUME_BUT_EMPIRICAL_NONCONSERVATIVE_ISOTROPIC_SIMILAR_SHAPE_SECOND_MOMENT_ESTIMATE_AFTER_NORMAL_OCCT_WORKER_FAILURE",
+        "PROTECTED_V2_INTRINSIC_REUSED; GEOMETRY_CENTROID_NOT_RECOMPUTED",
+        "canonical_geometry_is_working_copy_repair",
+        "gear_ratio_reflected_inertia_not_added",
+        "material_density_distribution_assumed_uniform",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia",
+        "uniform_proxy_geometry_not_measured_mass_distribution",
+        "wiring_geometry_incomplete"
+      ],
+      "pass": true,
+      "r_max_m": 0.13982456319857503,
+      "tensor_checks": {
+        "determinant_kg3_m6": 1.156926238706004e-09,
+        "finite_pass": true,
+        "ixx": 0.0017846928666986044,
+        "ixy": 5.576191808676761e-06,
+        "ixz": 3.260540608689319e-05,
+        "iyy": 0.0014691530030288575,
+        "iyz": -0.0002629908074224898,
+        "izz": 0.0004889558170829342,
+        "matrix_kg_m2": [
+          [
+            0.0017846928666986044,
+            5.576191808676761e-06,
+            3.260540608689319e-05
+          ],
+          [
+            5.576191808676761e-06,
+            0.0014691530030288575,
+            -0.0002629908074224898
+          ],
+          [
+            3.260540608689319e-05,
+            -0.0002629908074224898,
+            0.0004889558170829342
+          ]
+        ],
+        "pass": true,
+        "positive_definite_pass": true,
+        "principal_axes_in_expression_frame_columns": [
+          [
+            -0.024196867842252667,
+            0.010142661582897484,
+            -0.999655759750645
+          ],
+          [
+            0.24364548883183756,
+            0.9698563449854933,
+            0.003942824276400792
+          ],
+          [
+            0.9695624721277732,
+            -0.2434662122500667,
+            -0.025938699545005092
+          ]
+        ],
+        "principal_moments_kg_m2": [
+          0.0004220540192107371,
+          0.0015352307613458742,
+          0.0017855169062537843
+        ],
+        "principal_triangle_inequality_pass": true,
+        "principal_triangle_margins_kg_m2": [
+          0.00017176787430282694,
+          0.0006723401641186471,
+          0.0028986936483889215
+        ],
+        "r_max_m": 0.13982456319857503,
+        "radius_of_gyration_m": [
+          0.025005303710323865,
+          0.04769083709408579,
+          0.051431607319692894
+        ],
+        "radius_of_gyration_sanity_pass": true,
+        "symmetry_max_abs_error_kg_m2": 0.0,
+        "symmetry_pass": true,
+        "trace_kg_m2": 0.0037428016868103963,
+        "unit_audit_magnitude_pass": true,
+        "unit_audit_max_abs_entry_limit_strict_less_than_kg_m2": 1.0,
+        "unit_audit_max_abs_tensor_entry_kg_m2": 0.0017846928666986044,
+        "unit_audit_pass": true,
+        "unit_audit_trace_bound_pass": true,
+        "unit_audit_trace_upper_bound_kg_m2": 0.026393726439457605
+      }
+    },
+    {
+      "com_v2_reproduction": {
+        "hard_limit_max_inclusive_m": 0.0001,
+        "max_error_m": 0.0,
+        "owner_link_error_m": 0.0,
+        "pass": true,
+        "preferred_limit_m": 1e-05,
+        "preferred_pass": true,
+        "recomputed_link_com_m": [
+          -0.007314793455186482,
+          -0.0001338266798615075,
+          0.06388991222545329
+        ],
+        "recomputed_world_com_mm": [
+          161.48464094397553,
+          570.8018706475028,
+          239.0949560191945
+        ],
+        "world_error_m": 0.0
+      },
+      "com_world_m": [
+        0.16148464094397555,
+        0.5708018706475029,
+        0.2390949560191945
+      ],
+      "com_xyz_m_in_link_frame": [
+        -0.007314793455186482,
+        -0.0001338266798615075,
+        0.06388991222545329
+      ],
+      "component_ids": [
+        "J5_OUTPUT_EQ",
+        "J6_DM_STATOR_EQ",
+        "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING"
+      ],
+      "confidence_class": "ENGINEERING_V1_CANDIDATE",
+      "inertia_expressed_in": "OWNER_LINK_FRAME",
+      "inertia_reference_point": "FROZEN_COM_V2",
+      "inertia_tensor_kg_m2": [
+        [
+          0.0006923549323153038,
+          -3.23074993999531e-07,
+          0.00011373297010931771
+        ],
+        [
+          -3.23074993999531e-07,
+          0.0007038092568726869,
+          7.950330868652517e-07
+        ],
+        [
+          0.00011373297010931771,
+          7.950330868652517e-07,
+          0.0003002790321734546
+        ]
+      ],
+      "link": "link5",
+      "mass_kg": 0.504,
+      "model_limitations": [
+        "gear_ratio_reflected_inertia_not_added",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia",
+        "uniform_proxy_geometry_not_measured_mass_distribution",
+        "wiring_geometry_incomplete"
+      ],
+      "pass": true,
+      "r_max_m": 0.13450411612152904,
+      "tensor_checks": {
+        "determinant_kg3_m6": 1.3721727875144273e-10,
+        "finite_pass": true,
+        "ixx": 0.0006923549323153038,
+        "ixy": -3.23074993999531e-07,
+        "ixz": 0.00011373297010931771,
+        "iyy": 0.0007038092568726869,
+        "iyz": 7.950330868652517e-07,
+        "izz": 0.0003002790321734546,
+        "matrix_kg_m2": [
+          [
+            0.0006923549323153038,
+            -3.23074993999531e-07,
+            0.00011373297010931771
+          ],
+          [
+            -3.23074993999531e-07,
+            0.0007038092568726869,
+            7.950330868652517e-07
+          ],
+          [
+            0.00011373297010931771,
+            7.950330868652517e-07,
+            0.0003002790321734546
+          ]
+        ],
+        "pass": true,
+        "positive_definite_pass": true,
+        "principal_axes_in_expression_frame_columns": [
+          [
+            -0.2598346007146449,
+            0.0048058208268250135,
+            -0.9656411778490194
+          ],
+          [
+            -0.001961765603146759,
+            0.9999829252534411,
+            0.005504605098430149
+          ],
+          [
+            0.9656511439164661,
+            0.0033246485155286054,
+            -0.25982073621069757
+          ]
+        ],
+        "principal_moments_kg_m2": [
+          0.0002696744802799555,
+          0.0007038103474563458,
+          0.0007229583936251443
+        ],
+        "principal_triangle_inequality_pass": true,
+        "principal_triangle_margins_kg_m2": [
+          0.000250526434111157,
+          0.00028882252644875394,
+          0.0011570942608015347
+        ],
+        "r_max_m": 0.13450411612152904,
+        "radius_of_gyration_m": [
+          0.023131545846611288,
+          0.037369092872264434,
+          0.03787401823404465
+        ],
+        "radius_of_gyration_sanity_pass": true,
+        "symmetry_max_abs_error_kg_m2": 0.0,
+        "symmetry_pass": true,
+        "trace_kg_m2": 0.0016964432213614452,
+        "unit_audit_magnitude_pass": true,
+        "unit_audit_max_abs_entry_limit_strict_less_than_kg_m2": 1.0,
+        "unit_audit_max_abs_tensor_entry_kg_m2": 0.0007038092568726869,
+        "unit_audit_pass": true,
+        "unit_audit_trace_bound_pass": true,
+        "unit_audit_trace_upper_bound_kg_m2": 0.01823608811166284
+      }
+    },
+    {
+      "com_v2_reproduction": {
+        "hard_limit_max_inclusive_m": 0.0001,
+        "max_error_m": 2.168404345412771e-22,
+        "owner_link_error_m": 2.168404345412771e-22,
+        "pass": true,
+        "preferred_limit_m": 1e-05,
+        "preferred_pass": true,
+        "recomputed_link_com_m": [
+          -1.1047638498462576e-15,
+          1.360430323081585e-16,
+          -0.0005011957785718855
+        ],
+        "recomputed_world_com_mm": [
+          191.80686809136373,
+          588.6352611236007,
+          235.82758860126438
+        ],
+        "world_error_m": 0.0
+      },
+      "com_world_m": [
+        0.19180686809136374,
+        0.5886352611236007,
+        0.23582758860126438
+      ],
+      "com_xyz_m_in_link_frame": [
+        -1.1047636330058231e-15,
+        1.360430323081585e-16,
+        -0.0005011957785718855
+      ],
+      "component_ids": [
+        "J6_DM_OUTPUT_EQ"
+      ],
+      "confidence_class": "ENGINEERING_V1_CANDIDATE",
+      "inertia_expressed_in": "OWNER_LINK_FRAME",
+      "inertia_reference_point": "FROZEN_COM_V2",
+      "inertia_tensor_kg_m2": [
+        [
+          1.1518299692789527e-05,
+          8.646775045799554e-20,
+          1.7766902612207907e-18
+        ],
+        [
+          8.646775045799554e-20,
+          1.1518299692790563e-05,
+          -5.319523438636526e-21
+        ],
+        [
+          1.7766902612207907e-18,
+          -5.319523438636526e-21,
+          2.3015838872973936e-05
+        ]
+      ],
+      "link": "link6",
+      "mass_kg": 0.125,
+      "model_limitations": [
+        "gear_ratio_reflected_inertia_not_added",
+        "motor_internal_rotor_dynamic_inertia_not_added",
+        "not_vendor_measured_subassembly_inertia"
+      ],
+      "pass": true,
+      "r_max_m": 0.025064371965255176,
+      "tensor_checks": {
+        "determinant_kg3_m6": 3.0535396024219588e-15,
+        "finite_pass": true,
+        "ixx": 1.1518299692789527e-05,
+        "ixy": 8.646775045799554e-20,
+        "ixz": 1.7766902612207907e-18,
+        "iyy": 1.1518299692790563e-05,
+        "iyz": -5.319523438636526e-21,
+        "izz": 2.3015838872973936e-05,
+        "matrix_kg_m2": [
+          [
+            1.1518299692789527e-05,
+            8.646775045799554e-20,
+            1.7766902612207907e-18
+          ],
+          [
+            8.646775045799554e-20,
+            1.1518299692790563e-05,
+            -5.319523438636526e-21
+          ],
+          [
+            1.7766902612207907e-18,
+            -5.319523438636526e-21,
+            2.3015838872973936e-05
+          ]
+        ],
+        "pass": true,
+        "positive_definite_pass": true,
+        "principal_axes_in_expression_frame_columns": [
+          [
+            0.996567147971205,
+            0.08278840247606084,
+            1.545278718669516e-13
+          ],
+          [
+            -0.08278840247606085,
+            0.996567147971205,
+            -4.440892098500626e-16
+          ],
+          [
+            -1.5404344466674047e-13,
+            -1.2323475573339238e-14,
+            0.9999999999999999
+          ]
+        ],
+        "principal_moments_kg_m2": [
+          1.151829969278952e-05,
+          1.1518299692790574e-05,
+          2.3015838872973932e-05
+        ],
+        "principal_triangle_inequality_pass": true,
+        "principal_triangle_margins_kg_m2": [
+          2.0760512606161116e-08,
+          2.3015838872972882e-05,
+          2.3015838872974986e-05
+        ],
+        "r_max_m": 0.025064371965255176,
+        "radius_of_gyration_m": [
+          0.009599291512518836,
+          0.009599291512519275,
+          0.013569329791253195
+        ],
+        "radius_of_gyration_sanity_pass": true,
+        "symmetry_max_abs_error_kg_m2": 0.0,
+        "symmetry_pass": true,
+        "trace_kg_m2": 4.6052438258554026e-05,
+        "unit_audit_magnitude_pass": true,
+        "unit_audit_max_abs_entry_limit_strict_less_than_kg_m2": 1.0,
+        "unit_audit_max_abs_tensor_entry_kg_m2": 2.3015838872973936e-05,
+        "unit_audit_pass": true,
+        "unit_audit_trace_bound_pass": true,
+        "unit_audit_trace_upper_bound_kg_m2": 0.0001570556855031674
+      }
+    },
+    {
+      "com_v2_reproduction": {
+        "hard_limit_max_inclusive_m": 0.0001,
+        "max_error_m": 0.0,
+        "owner_link_error_m": 0.0,
+        "pass": true,
+        "preferred_limit_m": 1e-05,
+        "preferred_pass": true,
+        "recomputed_link_com_m": [
+          -0.0034049824167213345,
+          -0.0007997027279568269,
+          0.03493651236222258
+        ],
+        "recomputed_world_com_mm": [
+          222.77473786155193,
+          605.7965760351951,
+          239.64136630652658
+        ],
+        "world_error_m": 0.0
+      },
+      "com_world_m": [
+        0.22277473786155194,
+        0.6057965760351951,
+        0.23964136630652658
+      ],
+      "com_xyz_m_in_link_frame": [
+        -0.0034049824167213345,
+        -0.0007997027279568269,
+        0.03493651236222258
+      ],
+      "component_ids": [
+        "GRIPPER_CONNECTOR_CAMERA_MEASURED_ROLLUP"
+      ],
+      "confidence_class": "ENGINEERING_V1_CANDIDATE",
+      "inertia_expressed_in": "OWNER_LINK_FRAME",
+      "inertia_reference_point": "FROZEN_COM_V2",
+      "inertia_tensor_kg_m2": [
+        [
+          0.00045010858437538907,
+          5.241520235144432e-06,
+          -3.6621915682408926e-05
+        ],
+        [
+          5.241520235144432e-06,
+          0.00037548194776002844,
+          -6.980811698347642e-07
+        ],
+        [
+          -3.6621915682408926e-05,
+          -6.980811698347642e-07,
+          0.0004173108380272847
+        ]
+      ],
+      "link": "gripper",
+      "mass_kg": 0.296,
+      "model_limitations": [
+        "BOUNDED_OCCUPIED_VOLUME_BUT_EMPIRICAL_NONCONSERVATIVE_ISOTROPIC_SIMILAR_SHAPE_SECOND_MOMENT_ESTIMATE_AFTER_NORMAL_OCCT_WORKER_FAILURE",
+        "dynamic_gripper_inertia_not_modeled",
+        "internal_component_mass_distribution_not_measured"
+      ],
+      "pass": true,
+      "r_max_m": 0.10311749592466463,
+      "tensor_checks": {
+        "determinant_kg3_m6": 7.001372371858045e-11,
+        "finite_pass": true,
+        "ixx": 0.00045010858437538907,
+        "ixy": 5.241520235144432e-06,
+        "ixz": -3.6621915682408926e-05,
+        "iyy": 0.00037548194776002844,
+        "iyz": -6.980811698347642e-07,
+        "izz": 0.0004173108380272847,
+        "matrix_kg_m2": [
+          [
+            0.00045010858437538907,
+            5.241520235144432e-06,
+            -3.6621915682408926e-05
+          ],
+          [
+            5.241520235144432e-06,
+            0.00037548194776002844,
+            -6.980811698347642e-07
+          ],
+          [
+            -3.6621915682408926e-05,
+            -6.980811698347642e-07,
+            0.0004173108380272847
+          ]
+        ],
+        "pass": true,
+        "positive_definite_pass": true,
+        "principal_axes_in_expression_frame_columns": [
+          [
+            -0.1058234344055725,
+            0.5337322031787339,
+            0.8390061597036007
+          ],
+          [
+            0.9915379747407524,
+            0.1204387721778375,
+            0.048445297019455213
+          ],
+          [
+            -0.07519205661250294,
+            0.8370331160989212,
+            -0.5419609923012104
+          ]
+        ],
+        "principal_moments_kg_m2": [
+          0.00037497547647326,
+          0.0003938585140950338,
+          0.0004740673795944088
+        ],
+        "principal_triangle_inequality_pass": true,
+        "principal_triangle_margins_kg_m2": [
+          0.00029476661097388505,
+          0.0004551843419726349,
+          0.0004929504172161826
+        ],
+        "r_max_m": 0.10311749592466463,
+        "radius_of_gyration_m": [
+          0.03559226098661606,
+          0.03647743258727097,
+          0.04001973244683485
+        ],
+        "radius_of_gyration_sanity_pass": true,
+        "symmetry_max_abs_error_kg_m2": 0.0,
+        "symmetry_pass": true,
+        "trace_kg_m2": 0.0012429013701627022,
+        "unit_audit_magnitude_pass": true,
+        "unit_audit_max_abs_entry_limit_strict_less_than_kg_m2": 1.0,
+        "unit_audit_max_abs_tensor_entry_kg_m2": 0.00045010858437538907,
+        "unit_audit_pass": true,
+        "unit_audit_trace_bound_pass": true,
+        "unit_audit_trace_upper_bound_kg_m2": 0.006294865035737749
+      }
+    }
+  ],
+  "prohibited_actions": {
+    "armature_added": false,
+    "collision_proxy_used": false,
+    "friction_or_damping_added": false,
+    "gravity_enabled": false,
+    "mass_or_com_v2_modified": false,
+    "source_cad_modified": false,
+    "urdf_xacro_mjcf_or_ros2_control_modified": false
+  },
+  "provenance": {
+    "runtime": {
+      "freecad": "1.1.1",
+      "numpy": "1.26.4",
+      "python": "3.11.14"
+    },
+    "source_commit": "0fc439ea8b501802f72c5f28695f51fa4c5ae611",
+    "source_tree": "5d4b2bd85e248dcda6309cd2e4b3b4cebd4a22bb",
+    "target_branch": "agent/v15-16-inertia-engineering-v1"
+  },
+  "residual_sensitivity": [
+    {
+      "candidate_final_link_point_model_tensor_kg_m2": [
+        [
+          0.0006353771593661856,
+          -3.0091718374029417e-07,
+          9.748684829978119e-05
+        ],
+        [
+          -3.0091718374029417e-07,
+          0.0006429513188120297,
+          7.143944200691777e-07
+        ],
+        [
+          9.748684829978119e-05,
+          7.143944200691777e-07,
+          0.0002658253532375525
+        ]
+      ],
+      "candidate_final_link_uniform_proxy_tensor_kg_m2": [
+        [
+          0.0006923549323153038,
+          -3.23074993999531e-07,
+          0.00011373297010931771
+        ],
+        [
+          -3.23074993999531e-07,
+          0.0007038092568726869,
+          7.950330868652517e-07
+        ],
+        [
+          0.00011373297010931771,
+          7.950330868652517e-07,
+          0.0003002790321734546
+        ]
+      ],
+      "component_id": "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING",
+      "denominator_candidate_final_uniform_link_frobenius_kg_m2": 0.0010443860250950962,
+      "difference_frobenius_kg_m2": 9.30865090240317e-05,
+      "freeze_gate_pass": true,
+      "mass_kg": 0.059,
+      "model_limitations": [
+        "RESIDUAL_SPATIAL_INERTIA_MODEL_UNCERTAINTY"
+      ],
+      "occupied_volume_method": "NORMAL_OCCT_PAIRWISE_INCLUSION_EXCLUSION_MATCHING_GRAPH_NO_TRIPLE_TERM",
+      "owner_link": "link5",
+      "point_mass_component_contribution_about_link_frozen_com_kg_m2": [
+        [
+          5.774391474083536e-05,
+          9.144460212463702e-11,
+          1.5538143859167406e-05
+        ],
+        [
+          9.144460212463702e-11,
+          6.1925029158946e-05,
+          -3.39832695350956e-10
+        ],
+        [
+          1.5538143859167406e-05,
+          -3.39832695350956e-10,
+          4.181114422110575e-06
+        ]
+      ],
+      "point_model": "POINT_MASS_AT_FROZEN_RESIDUAL_COM_INTRINSIC_INERTIA_ZERO",
+      "relative_sensitivity": 0.08913036634663485,
+      "sensitivity_percent": 8.913036634663484,
+      "status": "PASS_WITH_MODEL_LIMITATION",
+      "thresholds_percent": {
+        "fail_strictly_greater_than": 15.0,
+        "freeze_gate_strictly_less_than": 10.0,
+        "pass_high_confidence_max_inclusive": 5.0,
+        "pass_with_model_limitation_gt_5_max_inclusive": 10.0,
+        "review_required_gt_10_max_inclusive": 15.0
+      },
+      "uniform_proxy_component_contribution_about_link_frozen_com_kg_m2": [
+        [
+          0.00011472168768995351,
+          -2.2066365657112197e-08,
+          3.1784265668703913e-05
+        ],
+        [
+          -2.2066365657112197e-08,
+          0.00012278296721960307,
+          8.029883410072318e-08
+        ],
+        [
+          3.1784265668703913e-05,
+          8.029883410072318e-08,
+          3.863479335801263e-05
+        ]
+      ],
+      "uniform_proxy_geometry_model": "OCCUPIED_VOLUME_CORRECTED_TRACEABLE_CAD_UNIFORM_EFFECTIVE_DENSITY"
+    },
+    {
+      "candidate_final_link_point_model_tensor_kg_m2": [
+        [
+          0.0016378165120135564,
+          -1.8911688884108898e-06,
+          7.88372134683921e-06
+        ],
+        [
+          -1.8911688884108898e-06,
+          0.001342587906538462,
+          -0.0002324283754112676
+        ],
+        [
+          7.88372134683921e-06,
+          -0.0002324283754112676,
+          0.00044653723459669976
+        ]
+      ],
+      "candidate_final_link_uniform_proxy_tensor_kg_m2": [
+        [
+          0.0017846928666986044,
+          5.576191808676761e-06,
+          3.260540608689319e-05
+        ],
+        [
+          5.576191808676761e-06,
+          0.0014691530030288575,
+          -0.0002629908074224898
+        ],
+        [
+          3.260540608689319e-05,
+          -0.0002629908074224898,
+          0.0004889558170829342
+        ]
+      ],
+      "component_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING",
+      "denominator_candidate_final_uniform_link_frobenius_kg_m2": 0.00239230719353361,
+      "difference_frobenius_kg_m2": 0.00020637997528962887,
+      "freeze_gate_pass": true,
+      "mass_kg": 0.046,
+      "model_limitations": [
+        "RESIDUAL_SPATIAL_INERTIA_MODEL_UNCERTAINTY"
+      ],
+      "occupied_volume_method": "NORMAL_OCCT_PAIRWISE_INCLUSION_EXCLUSION_MATCHING_GRAPH_NO_TRIPLE_TERM",
+      "owner_link": "link4",
+      "point_mass_component_contribution_about_link_frozen_com_kg_m2": [
+        [
+          8.821708965774317e-05,
+          -3.3783013842990533e-06,
+          -1.0539113988892353e-05
+        ],
+        [
+          -3.3783013842990533e-06,
+          8.13857043721754e-05,
+          -2.5643028801758797e-05
+        ],
+        [
+          -1.0539113988892353e-05,
+          -2.5643028801758797e-05,
+          9.608304007081558e-06
+        ]
+      ],
+      "point_model": "POINT_MASS_AT_FROZEN_RESIDUAL_COM_INTRINSIC_INERTIA_ZERO",
+      "relative_sensitivity": 0.08626817485959686,
+      "sensitivity_percent": 8.626817485959686,
+      "status": "PASS_WITH_MODEL_LIMITATION",
+      "thresholds_percent": {
+        "fail_strictly_greater_than": 15.0,
+        "freeze_gate_strictly_less_than": 10.0,
+        "pass_high_confidence_max_inclusive": 5.0,
+        "pass_with_model_limitation_gt_5_max_inclusive": 10.0,
+        "review_required_gt_10_max_inclusive": 15.0
+      },
+      "uniform_proxy_component_contribution_about_link_frozen_com_kg_m2": [
+        [
+          0.0002350934443427912,
+          4.089059312788597e-06,
+          1.4182570751161625e-05
+        ],
+        [
+          4.089059312788597e-06,
+          0.0002079508008625709,
+          -5.620546081298103e-05
+        ],
+        [
+          1.4182570751161625e-05,
+          -5.620546081298103e-05,
+          5.2026886493315976e-05
+        ]
+      ],
+      "uniform_proxy_geometry_model": "OCCUPIED_VOLUME_CORRECTED_TRACEABLE_CAD_UNIFORM_EFFECTIVE_DENSITY"
+    },
+    {
+      "candidate_final_link_point_model_tensor_kg_m2": [
+        [
+          0.0014671551084930478,
+          -3.4642987466938537e-06,
+          0.0027129299964038017
+        ],
+        [
+          -3.4642987466938537e-06,
+          0.012471883634896432,
+          2.5701148702940857e-06
+        ],
+        [
+          0.0027129299964038017,
+          2.5701148702940857e-06,
+          0.011291320922236106
+        ]
+      ],
+      "candidate_final_link_uniform_proxy_tensor_kg_m2": [
+        [
+          0.0014953205051949686,
+          -3.464298746690975e-06,
+          0.0027501824929620057
+        ],
+        [
+          -3.464298746690975e-06,
+          0.012662694095746066,
+          2.570114870295044e-06
+        ],
+        [
+          0.0027501824929620057,
+          2.570114870295044e-06,
+          0.01145498720138968
+        ]
+      ],
+      "component_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING",
+      "denominator_candidate_final_uniform_link_frobenius_kg_m2": 0.017576222053177472,
+      "difference_frobenius_kg_m2": 0.0002583874406248111,
+      "freeze_gate_pass": true,
+      "mass_kg": 0.015,
+      "model_limitations": [],
+      "occupied_volume_method": "NORMAL_OCCT_PAIRWISE_INCLUSION_EXCLUSION_MATCHING_GRAPH_NO_TRIPLE_TERM",
+      "owner_link": "link3",
+      "point_mass_component_contribution_about_link_frozen_com_kg_m2": [
+        [
+          5.641826139365163e-06,
+          6.675380794149262e-09,
+          2.2179346227680632e-11
+        ],
+        [
+          6.675380794149262e-09,
+          7.018004139982972e-11,
+          -1.8745093020635036e-08
+        ],
+        [
+          2.2179346227680632e-11,
+          -1.8745093020635036e-08,
+          5.64177175605325e-06
+        ]
+      ],
+      "point_model": "POINT_MASS_AT_FROZEN_RESIDUAL_COM_INTRINSIC_INERTIA_ZERO",
+      "relative_sensitivity": 0.014700965875547709,
+      "sensitivity_percent": 1.470096587554771,
+      "status": "PASS_HIGH_CONFIDENCE",
+      "thresholds_percent": {
+        "fail_strictly_greater_than": 15.0,
+        "freeze_gate_strictly_less_than": 10.0,
+        "pass_high_confidence_max_inclusive": 5.0,
+        "pass_with_model_limitation_gt_5_max_inclusive": 10.0,
+        "review_required_gt_10_max_inclusive": 15.0
+      },
+      "uniform_proxy_component_contribution_about_link_frozen_com_kg_m2": [
+        [
+          3.380722284128595e-05,
+          6.675380797027839e-09,
+          3.725251873754998e-05
+        ],
+        [
+          6.675380797027839e-09,
+          0.00019081053102967523,
+          -1.8745093019676618e-08
+        ],
+        [
+          3.725251873754998e-05,
+          -1.8745093019676618e-08,
+          0.0001693080509096292
+        ]
+      ],
+      "uniform_proxy_geometry_model": "OCCUPIED_VOLUME_CORRECTED_TRACEABLE_CAD_UNIFORM_EFFECTIVE_DENSITY"
+    }
+  ],
+  "revision": "V15.16B-ENGINEERING_INERTIA_FREEZE_DECISION_V1",
+  "runtime_budget_policy": {
+    "brep_distance_scan_used": false,
+    "component_geometry_audit_hard_limit_seconds": 300.0,
+    "component_worker_hard_timeout_seconds": 60.0,
+    "forbidden_linear_deflections_mm_used": [],
+    "full_vertex_classification_used": false,
+    "mesh_convergence_used": false,
+    "mesh_used": false,
+    "ordinary_boolean_timeout_policy": "ISOLATED_COMPONENT_WORKER_TERMINATED_AT_60_SECONDS_THEN_ENGINEERING_ESTIMATE",
+    "runtime_worker_summary": [
+      {
+        "component_id": "J2A_OUTPUT_EQ",
+        "worker": {
+          "exit_code": 0,
+          "hard_timeout_seconds": 60.0,
+          "reason": null,
+          "status": "PASS"
+        }
+      },
+      {
+        "component_id": "J2B_OUTPUT_EQ",
+        "worker": {
+          "exit_code": 0,
+          "hard_timeout_seconds": 60.0,
+          "reason": null,
+          "status": "PASS"
+        }
+      },
+      {
+        "component_id": "J3_OUTPUT_EQ",
+        "worker": {
+          "exit_code": 0,
+          "hard_timeout_seconds": 60.0,
+          "reason": null,
+          "status": "PASS"
+        }
+      },
+      {
+        "component_id": "J3_STATOR_EQ",
+        "worker": {
+          "exit_code": 2,
+          "hard_timeout_seconds": 60.0,
+          "reason": "WORKER_DID_NOT_RETURN_ONE_STRUCTURED_RESULT",
+          "status": "FAILED"
+        }
+      },
+      {
+        "component_id": "J4_STATOR_EQ",
+        "worker": {
+          "exit_code": 2,
+          "hard_timeout_seconds": 60.0,
+          "reason": "WORKER_DID_NOT_RETURN_ONE_STRUCTURED_RESULT",
+          "status": "FAILED"
+        }
+      },
+      {
+        "component_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING",
+        "worker": {
+          "exit_code": 0,
+          "hard_timeout_seconds": 60.0,
+          "reason": null,
+          "status": "PASS"
+        }
+      },
+      {
+        "component_id": "J4_OUTPUT_EQ",
+        "worker": {
+          "exit_code": 0,
+          "hard_timeout_seconds": 60.0,
+          "reason": null,
+          "status": "PASS"
+        }
+      },
+      {
+        "component_id": "J5_STATOR_EQ",
+        "worker": {
+          "exit_code": 2,
+          "hard_timeout_seconds": 60.0,
+          "reason": "WORKER_DID_NOT_RETURN_ONE_STRUCTURED_RESULT",
+          "status": "FAILED"
+        }
+      },
+      {
+        "component_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING",
+        "worker": {
+          "exit_code": 0,
+          "hard_timeout_seconds": 60.0,
+          "reason": null,
+          "status": "PASS"
+        }
+      },
+      {
+        "component_id": "J5_OUTPUT_EQ",
+        "worker": {
+          "exit_code": 0,
+          "hard_timeout_seconds": 60.0,
+          "reason": null,
+          "status": "PASS"
+        }
+      },
+      {
+        "component_id": "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING",
+        "worker": {
+          "exit_code": 0,
+          "hard_timeout_seconds": 60.0,
+          "reason": null,
+          "status": "PASS"
+        }
+      },
+      {
+        "component_id": "GRIPPER_CONNECTOR_CAMERA_MEASURED_ROLLUP",
+        "worker": {
+          "exit_code": 2,
+          "hard_timeout_seconds": 60.0,
+          "reason": "WORKER_DID_NOT_RETURN_ONE_STRUCTURED_RESULT",
+          "status": "FAILED"
+        }
+      }
+    ],
+    "source_geometry_repair_used": false,
+    "target_total_minutes": [
+      10,
+      30
+    ]
+  },
+  "schema": "go-m8010-arm-v15.16-inertia-engineering-acceptance-v1/1.0",
+  "scope": "FIRST_RIGID_BODY_DYNAMICS_ENGINEERING_ACCEPTANCE_NO_DEPLOYMENT",
+  "sliver_engineering_acceptance": {
+    "accepted_count": 3,
+    "all_three_pass": true,
+    "expected_count": 3,
+    "items": [
+      {
+        "absolute_inertia_bound_kg_m2": 1.2160620121381414e-09,
+        "classification": "ACCEPTED_NUMERICAL_SLIVER_ENGINEERING_V1",
+        "com_influence_bound_mm": 1.0827659336251286e-05,
+        "common_volume_mm3": 0.016205730972588483,
+        "component_fraction": 9.062358105561015e-08,
+        "component_id": "J3_STATOR_EQ",
+        "component_mass_kg": 0.47,
+        "component_volume_mm3": 178824.65892231755,
+        "distance_bound_mm": 119.47948016273767,
+        "estimated_duplicate_mass_kg": 4.259308309613677e-08,
+        "estimated_duplicate_mass_mg": 0.04259308309613677,
+        "inertia_relative_influence_bound_percent": 0.0001742989408303546,
+        "left_atom_id": "J3_STATOR_EQ:J3_Motor_Stator_STEP_Display:solid_22",
+        "left_solid_index_one_based": 22,
+        "method": "FRESH_NORMAL_OCCT_COMMON_VOLUME_NO_MESH_NO_DISTANCE_SCAN",
+        "pass": true,
+        "reference_inertia_frobenius_kg_m2": 0.0006976875512523833,
+        "reference_inertia_frobenius_lower_bound_kg_m2": 0.0006976875512523833,
+        "right_atom_id": "J3_STATOR_EQ:J3_Motor_Stator_STEP_Display:solid_24",
+        "right_solid_index_one_based": 24,
+        "thresholds": {
+          "com_influence_strict_less_than_mm": 0.01,
+          "component_fraction_strict_less_than": 1e-06,
+          "estimated_duplicate_mass_strict_less_than_mg": 1.0,
+          "inertia_relative_influence_strict_less_than_percent": 0.01
+        },
+        "worker": {
+          "exit_code": 0,
+          "hard_timeout_seconds": 60.0,
+          "reason": null,
+          "status": "PASS"
+        }
+      },
+      {
+        "absolute_inertia_bound_kg_m2": 1.2160620118058357e-09,
+        "classification": "ACCEPTED_NUMERICAL_SLIVER_ENGINEERING_V1",
+        "com_influence_bound_mm": 1.0827659333292471e-05,
+        "common_volume_mm3": 0.016205730968160026,
+        "component_fraction": 9.06235810308459e-08,
+        "component_id": "J4_STATOR_EQ",
+        "component_mass_kg": 0.47,
+        "component_volume_mm3": 178824.65892231755,
+        "distance_bound_mm": 119.47948016273773,
+        "estimated_duplicate_mass_kg": 4.259308308449757e-08,
+        "estimated_duplicate_mass_mg": 0.04259308308449757,
+        "inertia_relative_influence_bound_percent": 0.00017429894078272492,
+        "left_atom_id": "J4_STATOR_EQ:J4_Motor_Stator_STEP_Display:solid_22",
+        "left_solid_index_one_based": 22,
+        "method": "FRESH_NORMAL_OCCT_COMMON_VOLUME_NO_MESH_NO_DISTANCE_SCAN",
+        "pass": true,
+        "reference_inertia_frobenius_kg_m2": 0.0006976875512523836,
+        "reference_inertia_frobenius_lower_bound_kg_m2": 0.0006976875512523836,
+        "right_atom_id": "J4_STATOR_EQ:J4_Motor_Stator_STEP_Display:solid_24",
+        "right_solid_index_one_based": 24,
+        "thresholds": {
+          "com_influence_strict_less_than_mm": 0.01,
+          "component_fraction_strict_less_than": 1e-06,
+          "estimated_duplicate_mass_strict_less_than_mg": 1.0,
+          "inertia_relative_influence_strict_less_than_percent": 0.01
+        },
+        "worker": {
+          "exit_code": 0,
+          "hard_timeout_seconds": 60.0,
+          "reason": null,
+          "status": "PASS"
+        }
+      },
+      {
+        "absolute_inertia_bound_kg_m2": 1.2490701652745496e-09,
+        "classification": "ACCEPTED_NUMERICAL_SLIVER_ENGINEERING_V1",
+        "com_influence_bound_mm": 1.097362561991393e-05,
+        "common_volume_mm3": 0.016205730945108243,
+        "component_fraction": 9.062358090193862e-08,
+        "component_id": "J5_STATOR_EQ",
+        "component_mass_kg": 0.47,
+        "component_volume_mm3": 178824.65892231776,
+        "distance_bound_mm": 121.09016788156883,
+        "estimated_duplicate_mass_kg": 4.259308302391115e-08,
+        "estimated_duplicate_mass_mg": 0.04259308302391115,
+        "inertia_relative_influence_bound_percent": 0.00017903002039128488,
+        "left_atom_id": "J5_STATOR_EQ:J5_Motor_Stator_STEP_Display:solid_22",
+        "left_solid_index_one_based": 22,
+        "method": "FRESH_NORMAL_OCCT_COMMON_VOLUME_NO_MESH_NO_DISTANCE_SCAN",
+        "pass": true,
+        "reference_inertia_frobenius_kg_m2": 0.0006976875512523564,
+        "reference_inertia_frobenius_lower_bound_kg_m2": 0.0006976875512523564,
+        "right_atom_id": "J5_STATOR_EQ:J5_Motor_Stator_STEP_Display:solid_24",
+        "right_solid_index_one_based": 24,
+        "thresholds": {
+          "com_influence_strict_less_than_mm": 0.01,
+          "component_fraction_strict_less_than": 1e-06,
+          "estimated_duplicate_mass_strict_less_than_mg": 1.0,
+          "inertia_relative_influence_strict_less_than_percent": 0.01
+        },
+        "worker": {
+          "exit_code": 0,
+          "hard_timeout_seconds": 60.0,
+          "reason": null,
+          "status": "PASS"
+        }
+      }
+    ],
+    "policy": "ACCEPT_IMPACT_BOUNDS_BELOW_ENGINEERING_V1_THRESHOLDS_OVERLAP_NOT_ZERO"
+  },
+  "unit_audit": {
+    "cad_length_unit": "mm",
+    "conversion": "raw_mm5*(mass_kg/volume_mm3)*1e-6",
+    "effective_density_unit": "kg/mm^3",
+    "final_inertia_unit": "kg*m^2",
+    "mass_unit": "kg",
+    "pass": true,
+    "protected_math_test_pass": true,
+    "protected_occt_semantics_pass": true,
+    "raw_volume_second_integral_unit": "mm^5"
+  },
+  "unresolved_items": [],
+  "validation": {
+    "all_component_mass_renormalization_pass": true,
+    "all_freeze_gates_pass": true,
+    "collision_proxy_used": false,
+    "com_v2_limit_max_inclusive_m": 0.0001,
+    "com_v2_reproduction_pass": true,
+    "component_count": 17,
+    "expected_total_mass_kg": 3.4515,
+    "go_full_containment_double_count_avoided_pass": true,
+    "link_count": 6,
+    "mass_closure_pass": true,
+    "max_com_v2_reproduction_error_m": 1.2789769243681805e-16,
+    "max_raw_detected_component_overlap_fraction": 0.059175294537661884,
+    "max_remaining_component_overlap_fraction": 0.004279855390551456,
+    "max_remaining_or_estimated_uncertainty_fraction": 0.004279855390551456,
+    "pass": true,
+    "principal_triangle_inequality_pass": true,
+    "print_geometry_pass": true,
+    "radius_of_gyration_sanity_pass": true,
+    "remaining_component_overlap_fraction_limit_max_inclusive": 0.01,
+    "remaining_component_overlap_pass": true,
+    "residual_a_b_c_lt_10_percent_pass": true,
+    "sliver_acceptance_pass": true,
+    "tensor_finite_pass": true,
+    "tensor_positive_definite_pass": true,
+    "tensor_symmetry_pass": true,
+    "total_mass_kg": 3.4515,
+    "total_mass_pass": true,
+    "unit_audit_pass": true,
+    "unresolved_hard_blocker_count": 0
+  }
+}
