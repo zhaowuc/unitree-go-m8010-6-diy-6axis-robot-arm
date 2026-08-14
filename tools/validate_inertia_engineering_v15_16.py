@@ -305,7 +305,7 @@ def protected_v2_component_map(audit: Mapping[str, Any]) -> dict[str, Mapping[st
 
 def git_executable() -> str:
     override = os.environ.get("V15_16_GIT_EXECUTABLE")
-    candidates = [override, shutil.which("git"), r"C:\Users\91592\.codex\tmp\mingit-v15-16a2\runtime\cmd\git.exe"]
+    candidates = [override, shutil.which("git")]
     for candidate in candidates:
         if candidate and Path(candidate).is_file():
             return str(Path(candidate).resolve())

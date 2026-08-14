@@ -162,14 +162,12 @@ def generate_launch_description() -> LaunchDescription:
                 "mujoco_model_path",
                 default_value=EnvironmentVariable(
                     "GO_M8010_V15_14_MJCF",
-                    default_value=(
-                        "/home/codex/projects/v15_14_runtime/mujoco_v15_14/"
-                        "go_m8010_arm_v15_14_kinematic.xml"
-                    ),
+                    default_value="",
                 ),
                 description=(
-                    "V15.14 derived kinematic MJCF with the audited 25-proxy "
-                    "collision layer"
+                    "Absolute path to the V15.14 production MJCF with the audited "
+                    "25-proxy collision layer. Pass mujoco_model_path:=... or set "
+                    "GO_M8010_V15_14_MJCF."
                 ),
             ),
             DeclareLaunchArgument("use_mujoco_viewer", default_value="false"),

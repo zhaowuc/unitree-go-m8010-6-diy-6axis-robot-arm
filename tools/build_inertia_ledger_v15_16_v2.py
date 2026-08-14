@@ -27,7 +27,7 @@ try:
     import numpy as np
 except ImportError as exc:  # pragma: no cover - exercised by the runtime gate
     raise SystemExit(
-        "Run with FreeCAD Python (expected D:/freecad/bin/python.exe): " + str(exc)
+        "Run with a FreeCAD Python interpreter that can import FreeCAD: " + str(exc)
     )
 
 

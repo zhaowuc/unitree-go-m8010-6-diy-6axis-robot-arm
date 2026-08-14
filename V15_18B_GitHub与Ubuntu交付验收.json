@@ -1,0 +1,101 @@
+{
+  "schema": "go-m8010-arm-v15.18b-final-simulation-github-handoff/2.0",
+  "revision": "V15.18B2_NUMERICAL_INTEGRATOR_ATTRIBUTION_AND_FINAL_HANDOFF",
+  "audit_valid": true,
+  "pass": true,
+  "status": "V15.18B FINAL_SIMULATION_AND_GITHUB_HANDOFF = PASS",
+  "physics_status": "V15.18B PASSIVE_GRAVITY_DYNAMICS = PASS_WITH_NUMERICAL_INTEGRATOR_LIMITATION",
+  "root_cause_classification": "NUMERICAL_INTEGRATOR_TRUNCATION_ERROR_CONFIRMED",
+  "continuous_time_dynamics_model": "PASS",
+  "pure_simulation_phase": "PURE_SIMULATION_PHASE = COMPLETE",
+  "next_phase": "V15.19 REAL_HARDWARE_READONLY_BRINGUP",
+  "ubuntu_runtime_verification": "PENDING_ON_TARGET_HOST",
+  "source_branch": "agent/v15-18a-static-gravity",
+  "source_commit": "6dc27f6f8196c691f9f6b1c7684202dec6af2b6a",
+  "target_branch": "agent/v15-18b-final-simulation-handoff",
+  "target_tag": "v15.18b-final-simulation-handoff",
+  "tag_message": "V15.18B final pure-simulation baseline before real hardware bring-up",
+  "commit_message": "test: freeze V15.18B final simulation and Ubuntu handoff",
+  "post_commit_binding": {
+    "self_referential_commit_sha_serialized": false,
+    "container_commit_rule": "THE_COMMIT_CONTAINING_THIS_REPORT_IS_THE_FINAL_HEAD",
+    "remote_branch_rule": "ORIGIN_TARGET_BRANCH_MUST_EQUAL_FINAL_HEAD",
+    "annotated_tag_rule": "REMOTE_ANNOTATED_TAG_MUST_PEEL_TO_FINAL_HEAD",
+    "fresh_clone_rule": "TRUE_HTTPS_GITHUB_CLONE_HEAD_MUST_EQUAL_FINAL_HEAD",
+    "verification_location": "POST_COMMIT_EXTERNAL_VERIFIER_AND_FINAL_HANDOFF_RECORD"
+  },
+  "numerical_integrator_attribution": {
+    "implicitfast_max_normalized_energy_drift": {
+      "dt_0p002": 0.015933783414194082,
+      "dt_0p001": 0.008016785126595418,
+      "dt_0p0005": 0.0040209537454217
+    },
+    "implicitfast_energy_convergence_ratios": {
+      "dt_0p001_over_dt_0p002": 0.5031312977088626,
+      "dt_0p0005_over_dt_0p001": 0.501566860271996
+    },
+    "implicitfast_full_trajectory_convergence": {
+      "q_d_h_h2_rad": 0.004432203935967438,
+      "q_d_h2_h4_rad": 0.0022151684234914537,
+      "q_ratio": 0.49978937239672355,
+      "qvel_d_h_h2_rad_s": 0.02068748344841409,
+      "qvel_d_h2_h4_rad_s": 0.010340517820967676,
+      "qvel_ratio": 0.4998441616522663
+    },
+    "rk4_reference": {
+      "dt_0p002_max_normalized_energy_drift": 8.069505973993557e-10,
+      "dt_0p001_max_normalized_energy_drift": 5.016045475439061e-11,
+      "max_final_q_difference_rad": 9.282602464466549e-10,
+      "max_final_qvel_difference_rad_s": 1.1041391800858946e-08
+    },
+    "implicitfast_0p5ms_vs_rk4_1ms_max_final_q_difference_rad": 0.002214542308768941,
+    "initial_qacc_identity_max_relative_error": 2.604371716984505e-15,
+    "early_motion_direction": "70/70 PASS",
+    "contact_count": 0,
+    "joint_limit_event_count": 0,
+    "determinism": "BITWISE_DETERMINISTIC",
+    "production_integrator_limitation": "PRODUCTION_IMPLICITFAST_DT_2MS_IS_NOT_AN_ENERGY-CONSERVATION_REFERENCE_FOR_UNACTUATED_PASSIVE_MOTION",
+    "legacy_implicitfast_fail_evidence_preserved": true
+  },
+  "frozen_artifacts": {
+    "audit_sha256": "bbba568b8b52694b8f995a63d6b0baa68840f343ccad59d0c016b6fa544a03f9",
+    "validator_sha256": "95344b1c11bf7ecfe138434de93cab8fd327b969efa8289616fc5bc5ebb8c658",
+    "physics_json_sha256": "4cde5893981e8388d76997bef3f6cd05abf427b814bb16fe2de6cab42569d730",
+    "physics_markdown_sha256": "d9e759068598b252743d37c8d7c10d732b1516d7a098b3cc3455fc95abeff5f7"
+  },
+  "protected_authorities": {
+    "production_mjcf_before_after_sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9",
+    "production_bridge_modified": false,
+    "mass_com_inertia_modified": false,
+    "urdf_mjcf_controller_moveit_ros2_control_joint_tf_collision_visual_modified": false,
+    "production_timestep_or_integrator_modified": false,
+    "all_before_after_sha256_unchanged": true
+  },
+  "repository_handoff_contract": {
+    "ordinary_git_without_lfs": true,
+    "lfs_pointer_count": 0,
+    "missing_referenced_assets": 0,
+    "runtime_windows_absolute_path_count": 0,
+    "case_collision_count": 0,
+    "unicode_nfc_collision_count": 0,
+    "broken_symlink_count": 0,
+    "largest_tracked_file_strictly_below_100mb": true,
+    "git_fsck_full_required": "PASS",
+    "repository_verifier_required": "PASS",
+    "production_mujoco_compile_required": "PASS",
+    "fresh_clone_v15_18a_required": "PASS",
+    "fresh_clone_v15_18b_required": "PASS"
+  },
+  "vmware_gui": {
+    "target": "UBUNTU_22_04_VMWARE_CONSOLE",
+    "wsl_is_not_accepted": true,
+    "visualization_is_non_authoritative": true,
+    "production_model_writeback": false
+  },
+  "hard_unresolved_items": [],
+  "notes": [
+    "Ubuntu runtime PENDING_ON_TARGET_HOST is nonblocking and is not a hard unresolved item.",
+    "Passive free-fall is not the production kinematic_position_tracking control mode.",
+    "This report intentionally does not serialize its own containing commit SHA; remote/tag/fresh-clone equality is verified after commit."
+  ]
+}

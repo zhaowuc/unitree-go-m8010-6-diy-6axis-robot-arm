@@ -31,6 +31,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE_COMMIT = "749d7e5f76cae7c1a3fd5462ce5ad92265e8a911"
 SOURCE_BRANCH = "agent/v15-17-production-hash-migration"
 TARGET_BRANCH = "agent/v15-18a-static-gravity"
+SUCCESSOR_BRANCH = "agent/v15-18b-final-simulation-handoff"
+SUCCESSOR_BASE_COMMIT = "6dc27f6f8196c691f9f6b1c7684202dec6af2b6a"
 REMOTE_SOURCE_REF = f"refs/heads/{SOURCE_BRANCH}"
 
 V14_REL = "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环"
@@ -95,6 +97,7 @@ PROTECTED_HASHES = {
     TARGET_MANIFEST_REL: TARGET_MANIFEST_SHA256,
     V15_14_FJT_EVIDENCE_REL: V15_14_FJT_EVIDENCE_SHA256,
 }
+CANONICAL_LF_HASH_RELS = {BRIDGE_REL, V15_17_REPORT_REL}
 AUDIT_PROTECTED_RELS = {
     MJCF_REL, BRIDGE_REL, MASS_REL, COM_REL, INERTIA_REL, V15_17_REPORT_REL,
     COLLISION_503_REL, COLLISION_PAIR_CONTRACT_REL, TARGET_MANIFEST_REL,
@@ -167,6 +170,19 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def canonical_lf_bytes(data: bytes) -> bytes:
+    normalized = data.replace(b"\r\n", b"\n")
+    require(b"\r" not in normalized, "frozen text contains unsupported lone CR bytes")
+    return normalized
+
+
+def authority_sha256(relative: str) -> str:
+    data = repo_path(relative).read_bytes()
+    if relative in CANONICAL_LF_HASH_RELS:
+        data = canonical_lf_bytes(data)
+    return sha256_bytes(data)
+
+
 def canonical_digest(value: Any) -> str:
     return sha256_bytes(json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8"))
 
@@ -216,7 +232,7 @@ def git_text(arguments: Sequence[str], *, timeout: float = 30.0) -> str:
     require(bool(GIT_EXECUTABLE), "git executable was not found")
     executable = Path(str(GIT_EXECUTABLE)).resolve()
     require(executable.is_file(), "git executable does not exist")
-    result = run_process([str(executable), *arguments], timeout=timeout)
+    result = run_process([str(executable), "-c", "core.quotepath=false", *arguments], timeout=timeout)
     require(result.returncode == 0, "git command failed: " + clean_error(result.stderr or result.stdout))
     return result.stdout
 
@@ -231,17 +247,28 @@ def changed_paths_from_source(head: str) -> list[str]:
 def validate_git_scope(*, allow_missing_markdown: bool = False) -> dict[str, Any]:
     branch = git_text(["branch", "--show-current"]).strip()
     head = git_text(["rev-parse", "HEAD"]).strip().lower()
-    require(branch == TARGET_BRANCH, f"target branch mismatch: {branch}")
-    if head != SOURCE_COMMIT:
-        parent = git_text(["rev-parse", "HEAD^"]).strip().lower()
-        count = int(git_text(["rev-list", "--count", f"{SOURCE_COMMIT}..HEAD"]).strip())
-        require(parent == SOURCE_COMMIT and count == 1, "HEAD must be source commit or its unique direct child")
-        require(not git_text(["status", "--porcelain=v1"]).strip(), "post-commit check requires clean worktree")
-    changed = changed_paths_from_source(head)
-    accepted = [EXACT_CHANGED_PATHS]
-    if allow_missing_markdown and not repo_path(REPORT_MD_REL).exists():
-        accepted.append(EXACT_CHANGED_PATHS - {REPORT_MD_REL})
-    require(any(set(changed) == paths for paths in accepted), f"changed paths are outside the exact V15.18A scope: {changed}")
+    if branch == TARGET_BRANCH:
+        if head != SOURCE_COMMIT:
+            parent = git_text(["rev-parse", "HEAD^"]).strip().lower()
+            count = int(git_text(["rev-list", "--count", f"{SOURCE_COMMIT}..HEAD"]).strip())
+            require(parent == SOURCE_COMMIT and count == 1, "HEAD must be source commit or its unique direct child")
+            require(not git_text(["status", "--porcelain=v1"]).strip(), "post-commit check requires clean worktree")
+        changed = changed_paths_from_source(head)
+        accepted = [EXACT_CHANGED_PATHS]
+        if allow_missing_markdown and not repo_path(REPORT_MD_REL).exists():
+            accepted.append(EXACT_CHANGED_PATHS - {REPORT_MD_REL})
+        require(any(set(changed) == paths for paths in accepted), f"changed paths are outside the exact V15.18A scope: {changed}")
+    elif branch == SUCCESSOR_BRANCH:
+        # V15.18B's handoff contract requires this frozen A validator to run
+        # directly in a clean fresh clone of the named successor branch.  The
+        # successor validator owns its larger exact-scope audit; this branch
+        # only proves that the immutable A commit remains in the ancestry and
+        # that no uncommitted bytes can influence the replay.
+        require(not git_text(["status", "--porcelain=v1"]).strip(), "V15.18B successor replay requires a clean worktree")
+        merge_base = git_text(["merge-base", SUCCESSOR_BASE_COMMIT, head]).strip().lower()
+        require(merge_base == SUCCESSOR_BASE_COMMIT, "V15.18B branch is not descended from the frozen V15.18A commit")
+    else:
+        raise ValidationError(f"target branch mismatch: {branch}")
     remote_rows = [row.split() for row in git_text(["ls-remote", "--heads", "origin", REMOTE_SOURCE_REF]).splitlines() if row.strip()]
     require(len(remote_rows) == 1 and remote_rows[0][0].lower() == SOURCE_COMMIT, "remote frozen source branch mismatch")
     return {
@@ -352,7 +379,7 @@ def model_parameter_snapshot(root: ET.Element) -> dict[str, Any]:
 
 
 def validate_protected_inputs() -> dict[str, Any]:
-    actual = {relative: sha256_file(repo_path(relative)) for relative in sorted(PROTECTED_HASHES)}
+    actual = {relative: authority_sha256(relative) for relative in sorted(PROTECTED_HASHES)}
     require(actual == PROTECTED_HASHES, "protected authority/model/bridge/503 hash mismatch")
     root = ET.parse(repo_path(MJCF_REL)).getroot()
     option = root.find("./option")
@@ -2399,7 +2426,7 @@ def main() -> int:
             validate_git_scope()
             final_hashes = watched_hash_snapshot(assets)
             require(final_hashes == initial_hashes, "repository/evidence changed during validator --check")
-        require(sha256_file(repo_path(MJCF_REL)) == MJCF_SHA256 and sha256_file(repo_path(BRIDGE_REL)) == BRIDGE_SHA256, "production model/bridge changed at final rehash")
+        require(sha256_file(repo_path(MJCF_REL)) == MJCF_SHA256 and authority_sha256(BRIDGE_REL) == BRIDGE_SHA256, "production model/bridge changed at final rehash")
         print("VALIDATION=PASS")
         print("AUDIT_VALID=YES")
         print(f"STATUS={validation['status']}")

@@ -76,6 +76,12 @@ PROTECTED_HASHES = {
     V15_14_FJT_EVIDENCE_REL: V15_14_FJT_EVIDENCE_SHA256,
 }
 
+# These two frozen text authorities are materialized as CRLF by the repository
+# EOL contract, while the original V15.18A report records their canonical LF
+# Git content hashes.  Canonicalization is limited to EOL bytes; the raw files
+# remain protected separately by the successor audit's task-start snapshot.
+CANONICAL_LF_HASH_RELS = {BRIDGE_REL, V15_17_REPORT_REL}
+
 JOINTS = ("J1", "J2", "J3", "J4", "J5", "J6")
 AUTHORITY_BODIES = ("link2", "link3", "link4", "link5", "link6", "gripper")
 AUTHORITY_TOTAL_MASS_KG = 3.4515
@@ -160,6 +166,19 @@ def sha256_file(path: Path) -> str:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def canonical_lf_bytes(data: bytes) -> bytes:
+    normalized = data.replace(b"\r\n", b"\n")
+    require(b"\r" not in normalized, "frozen text contains unsupported lone CR bytes")
+    return normalized
+
+
+def authority_sha256(relative: str) -> str:
+    data = repo_path(relative).read_bytes()
+    if relative in CANONICAL_LF_HASH_RELS:
+        data = canonical_lf_bytes(data)
+    return sha256_bytes(data)
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -941,7 +960,7 @@ def continuity_audit(model: Any, data: Any, mujoco: Any, np: Any, q_end: Sequenc
 
 
 def authority_evidence() -> dict[str, Any]:
-    actual = {relative: sha256_file(repo_path(relative)) for relative in sorted(PROTECTED_HASHES)}
+    actual = {relative: authority_sha256(relative) for relative in sorted(PROTECTED_HASHES)}
     require(actual == PROTECTED_HASHES, "protected authority/model/bridge/source hash mismatch")
     require(python_literal(repo_path(BRIDGE_REL), "ACCEPTED_MODEL_SHA256") == MJCF_SHA256, "production bridge model anchor changed")
     mass = read_json(repo_path(MASS_REL)).get("link_mass_ledger")
@@ -1069,7 +1088,7 @@ def build_report() -> dict[str, Any]:
     selection = pose_selection(limits)
     physics = run_physics(selection)
     after_hash = sha256_file(repo_path(MJCF_REL))
-    bridge_after = sha256_file(repo_path(BRIDGE_REL))
+    bridge_after = authority_sha256(BRIDGE_REL)
     require(before_hash == after_hash == MJCF_SHA256, "production model changed during runtime audit")
     require(bridge_after == BRIDGE_SHA256, "production bridge changed during runtime audit")
 
@@ -1435,7 +1454,7 @@ def main() -> int:
             path.write_bytes(payload)
         else:
             require(path.is_file(), "V15.18A JSON report is missing")
-            require(path.read_bytes() == payload, "V15.18A JSON report is stale or non-deterministic")
+            require(canonical_lf_bytes(path.read_bytes()) == payload, "V15.18A JSON report is stale or non-deterministic")
         print("AUDIT_VALID=YES")
         print(f"STATUS={report['status']}")
         print(f"FINAL_STATUS={report['final_status']}")

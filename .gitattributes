@@ -1,5 +1,21 @@
 # This repository intentionally stores model assets as ordinary Git objects.
 # Generated delivery archives and obsolete backups remain excluded by .gitignore.
+* text=auto eol=lf
+
+# Frozen runtime byte contracts.  These files intentionally remain CRLF on
+# every platform because production SHA-256 authorities are byte-exact.
+V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/mujoco_v15_14/go_m8010_arm_v15_14_kinematic.xml text eol=crlf
+V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/config/collision_pair_contract_v15_14.json text eol=crlf
+V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/mujoco_v15_14/collision_pair_contract_v15_14.json text eol=crlf
+V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/mujoco_v15_14/kinematic_guard.py text eol=crlf
+V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_v15_14_description/urdf/go_m8010_arm_v15_14.urdf.xacro text eol=crlf
+V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_mujoco_bridge/scripts/mujoco_bridge.py text eol=crlf
+V15_17_Inertial参数部署验收.json text eol=crlf
+V15_17_ProductionHash迁移与轨迹闭环验收.json text eol=crlf
+V15_18A_静态重力与重力矩验收.json text eol=crlf
+rigid_links_v15_13/rigid_link_membership.csv text eol=crlf
+rigid_links_v15_13/rigid_link_manifest.json text eol=crlf
+
 *.step binary
 *.STEP binary
 *.stp binary

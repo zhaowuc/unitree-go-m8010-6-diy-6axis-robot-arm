@@ -28,7 +28,7 @@ try:
     import Part
     import numpy as np
 except ImportError as exc:  # pragma: no cover
-    raise SystemExit("Run with FreeCAD Python (D:/freecad/bin/python.exe): " + str(exc))
+    raise SystemExit("Run with a FreeCAD Python interpreter that can import FreeCAD: " + str(exc))
 
 # The protected prior builder supplies the already-reviewed authority parser,
 # STL-to-OCCT reconstruction, signed-tetra math, and atom identity convention.

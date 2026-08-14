@@ -576,10 +576,10 @@ def validate_nested_apply_check(
     interpreter, probes = select_python(
         explicit_python,
         ("numpy", "mujoco"),
-        ("/home/codex/mujoco_arm_env/bin/python",),
+        (),
     )
     use_wsl = False
-    wsl_python = "/root/v1517_runtime/mujoco_env/bin/python"
+    wsl_python = os.environ.get("V15_17_WSL_PYTHON", "python3")
     if interpreter is None and wsl_distro:
         probe = probe_wsl_python(
             wsl_distro,
@@ -1249,7 +1249,7 @@ def validate_urdf(
     wsl_distro: str | None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     interpreter, probes = select_python(explicit_python, ("xacro", "urdf_parser_py"), ("/usr/bin/python3",))
-    wsl_python = "/root/v1517_runtime/mujoco_env/bin/python"
+    wsl_python = os.environ.get("V15_17_WSL_PYTHON", "python3")
     use_wsl = False
     if interpreter is None and wsl_distro:
         wsl_probe = probe_wsl_python(
@@ -2138,8 +2138,8 @@ def validate_mjcf(
     explicit_python: str | None,
     wsl_distro: str | None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
-    interpreter, probes = select_python(explicit_python, ("mujoco",), ("/home/codex/mujoco_arm_env/bin/python",))
-    wsl_python = "/root/v1517_runtime/mujoco_env/bin/python"
+    interpreter, probes = select_python(explicit_python, ("mujoco",), ())
+    wsl_python = os.environ.get("V15_17_WSL_PYTHON", "python3")
     use_wsl = False
     if interpreter is None and wsl_distro:
         wsl_probe = probe_wsl_python(
@@ -3001,9 +3001,9 @@ def validate_mjcf_v15_17b(
     interpreter, probes = select_python(
         explicit_python,
         ("numpy", "mujoco"),
-        ("/home/codex/mujoco_arm_env/bin/python",),
+        (),
     )
-    wsl_python = "/root/v1517_runtime/mujoco_env/bin/python"
+    wsl_python = os.environ.get("V15_17_WSL_PYTHON", "python3")
     use_wsl = False
     if interpreter is None and wsl_distro:
         wsl_probe = probe_wsl_python(
