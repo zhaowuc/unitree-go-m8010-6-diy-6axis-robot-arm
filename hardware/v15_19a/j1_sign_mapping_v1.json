@@ -1,0 +1,163 @@
+{
+  "schema_version": "1.0",
+  "task": "V15.19A-2B J1 Raw Encoder Sign Mapping",
+  "generated_at_utc": "2026-08-14T10:52:02Z",
+  "final_status": "V15.19A-2B J1_SIGN_MAPPING = PASS",
+  "execution": {
+    "orchestrator": "Windows laptop / Codex",
+    "actual_host": "car",
+    "actual_os": "Ubuntu 22.04.5 LTS",
+    "repository": "/home/car/go-m8010-robot-arm",
+    "branch": "agent/v15-19a-j1-zero-sign",
+    "baseline_commit": "46eb57fe74e0a69bcb9e640127b513000dbe9e22"
+  },
+  "hardware": {
+    "motor_type": "GO_M8010_6",
+    "motor_id": 0,
+    "serial_port": "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if03-port0",
+    "baudrate": 4000000,
+    "protocol_mode": "BRAKE",
+    "command": {
+      "kp": 0.0,
+      "kd": 0.0,
+      "q": 0.0,
+      "dq": 0.0,
+      "tau": 0.0
+    }
+  },
+  "frozen_axis_authority": {
+    "joint": "J1",
+    "parent_link": "base_link",
+    "child_link": "link1",
+    "axis_in_parent_frame": [
+      0.0,
+      -2.7755575615628914e-17,
+      1.0
+    ],
+    "canonical_axis": "+Z",
+    "authority_file": "V15_13_真实关节轴与相机上置零位.json",
+    "authority_sha256": "477be6df2a356fdf55e4b4704da4b2ed6c332446c2d651c54bad369ebf5be39f",
+    "urdf_file": "完整工程_V15_13_交付/ros2_ws/src/go_m8010_arm_description/urdf/go_m8010_arm_v15_13.urdf.xacro",
+    "urdf_sha256": "fec9863b45addbea15f66ff617e42d6c9a2c06170c240e8ce51361e2b3fe0fdf",
+    "right_hand_rule": "Positive rotation about base_link +Z.",
+    "ros_positive_direction_description": "Viewed from directly above the robot looking downward along -base_link Z, the J1 rotating part moves counterclockwise relative to the fixed base."
+  },
+  "gear_ratio_scale_authority": {
+    "sdk_repository": "/home/car/vendor/unitree_actuator_sdk",
+    "sdk_commit": "5b79a42d81cd69adac1367db79efdb972a898fd1",
+    "sdk_function": "queryGearRatio(MotorType::GO_M8010_6)",
+    "gear_ratio_motor_to_output": 6.3299999237060547,
+    "semantic_finding": "SDK data.q changes on the motor-side angular scale. Divide continuous raw angular displacement by the gear ratio to obtain J1 output displacement.",
+    "cross_check": {
+      "raw_delta_rad": 1.7186378240585327,
+      "output_delta_deg": 15.55619194580482,
+      "operator_motion_request_deg": "approximately 10 to 15"
+    }
+  },
+  "retest_scope": {
+    "authority_run": "V2",
+    "reference_witness": "J1_TEMP_REFERENCE_V2_SCREW_WITNESS",
+    "prior_run_classification": "INVALIDATED_BY_IMPRECISE_RETURN_REFERENCE",
+    "prior_run_used_for_final_authority": false
+  },
+  "reference_sample": {
+    "started_at_utc": "2026-08-14T10:45:55.056035Z",
+    "ended_at_utc": "2026-08-14T10:46:00.036915Z",
+    "sample_rate_hz": 50,
+    "sample_count": 250,
+    "valid_count": 250,
+    "valid_rate": 1.0,
+    "q_raw_reference": 1.0791579484939575,
+    "q_raw_mean": 1.0790782084465027,
+    "q_raw_std": 0.0001365151112796103,
+    "q_raw_peak_to_peak": 0.0005753040313720703,
+    "data_dq_median": -0.04908749833703041,
+    "temperature_c": {
+      "min": 33,
+      "max": 33
+    },
+    "merror_nonzero_count": 0
+  },
+  "manual_positive_sample": {
+    "started_at_utc": "2026-08-14T10:48:03.926473Z",
+    "ended_at_utc": "2026-08-14T10:48:08.906220Z",
+    "manual_requested_direction": "ROS +J1; counterclockwise when viewed directly from above",
+    "sample_rate_hz": 50,
+    "sample_count": 250,
+    "valid_count": 250,
+    "valid_rate": 1.0,
+    "q_raw_positive": 2.7977957725524902,
+    "direct_delta_raw_rad": 1.7186378240585327,
+    "minimum_unwrapped_delta_raw_rad": 1.7186378240585327,
+    "absolute_raw_delta_gate_rad": 0.05,
+    "absolute_raw_delta_gate_pass": true,
+    "j1_output_delta_rad": 0.2715067685265174,
+    "j1_output_delta_deg": 15.55619194580482,
+    "raw_to_ros_sign": 1,
+    "temperature_c": {
+      "min": 33,
+      "max": 33
+    },
+    "merror_nonzero_count": 0
+  },
+  "return_sample": {
+    "started_at_utc": "2026-08-14T10:51:08.404820Z",
+    "ended_at_utc": "2026-08-14T10:51:13.384601Z",
+    "sample_rate_hz": 50,
+    "sample_count": 250,
+    "valid_count": 250,
+    "valid_rate": 1.0,
+    "q_raw_return": 1.0979492664337158,
+    "direct_return_delta_raw_rad": 0.0187913179397583,
+    "minimum_unwrapped_return_delta_raw_rad": 0.018791317939758304,
+    "return_error_raw_rad": 0.018791317939758304,
+    "return_error_raw_limit_rad": 0.02,
+    "return_error_j1_output_rad": 0.0029686126644937563,
+    "return_error_j1_output_deg": 0.1700889766845781,
+    "return_repeatability": "PASS",
+    "temperature_c": {
+      "min": 33,
+      "max": 33
+    },
+    "merror_nonzero_count": 0
+  },
+  "mapping": {
+    "raw_position_semantics": "Persistent absolute motor-side angular position signal returned as SDK data.q.",
+    "raw_to_ros_sign": 1,
+    "relative_ros_position_formula": "q_j1_relative = raw_to_ros_sign * unwrap_continuous(q_raw - q_raw_reference) / gear_ratio_motor_to_output",
+    "q_raw_reference": 1.0791579484939575,
+    "gear_ratio_motor_to_output": 6.3299999237060547,
+    "relative_zero_semantics": "J1_TEMP_REFERENCE_V2_SCREW_WITNESS only; not CAD mechanical zero.",
+    "j1_sign_mapping": "PASS",
+    "j1_relative_position_mapping": "PASS",
+    "absolute_zero_status": "PENDING_PHYSICAL_ALIGNMENT"
+  },
+  "power_cycle_persistence": {
+    "status": "PASS_HIGH_CONFIDENCE",
+    "valid_cycles": "3/3",
+    "max_power_cycle_delta_rad": 0.00019168853759765625,
+    "evidence_file": "hardware/v15_19a/j1_power_cycle_persistence_retest.json",
+    "evidence_sha256": "bcfa9de6c17aa0d1b530d04b7a1e2d97792ae9e68478c6dc11b02ab976acce6b"
+  },
+  "velocity": {
+    "data_dq_used_as_ros_velocity": false,
+    "velocity_feedback_status": "UNTRUSTED_PENDING_SEMANTICS_VALIDATION",
+    "dq_classification": "J1_DQ_SEMANTICS_UNRESOLVED_POSITION_FD_MISMATCH",
+    "note": "Position sign and motor-to-output scale do not validate data.dq. Dynamic scale and sign validation remains required."
+  },
+  "safety": {
+    "foc_used": false,
+    "calibration_used": false,
+    "motor_internal_zero_modified": false,
+    "id_modified": false,
+    "eeprom_modified": false,
+    "active_motor_motion_used": false,
+    "ros2_started": false,
+    "serial_frames_sent_while_motor_power_off": false
+  },
+  "hard_unresolved_items": [
+    "J1 absolute CAD zero remains PENDING_PHYSICAL_ALIGNMENT.",
+    "J1 data.dq remains UNTRUSTED_PENDING_SEMANTICS_VALIDATION.",
+    "Full-range raw wrap and multi-turn behavior remains to be validated before unrestricted continuous-joint deployment."
+  ]
+}
