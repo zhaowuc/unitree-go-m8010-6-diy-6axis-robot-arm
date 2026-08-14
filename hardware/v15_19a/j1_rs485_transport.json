@@ -1,0 +1,99 @@
+{
+  "schema_version": "V15.19A-1",
+  "logical_joint": "J1",
+  "motor_model": "GO-M8010-6",
+  "usb_adapter": {
+    "usb_vid": "0403",
+    "usb_pid": "6011",
+    "manufacturer": "FTDI",
+    "product": "USB <-> Serial Converter (FT4232H Quad HS USB-UART/FIFO IC)",
+    "usb_serial": "FTASQA6F",
+    "linux_driver": "ftdi_sio",
+    "usb_parent": "3-1",
+    "channels": [
+      {"logical_channel": "CHANNEL_0", "usb_interface_number": "00", "tty_diagnostic_name": "/dev/ttyUSB0", "stable_by_id": "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if00-port0", "stable_by_path": "/dev/serial/by-path/pci-0000:00:14.0-usb-0:1:1.0-port0"},
+      {"logical_channel": "CHANNEL_1", "usb_interface_number": "01", "tty_diagnostic_name": "/dev/ttyUSB1", "stable_by_id": "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if01-port0", "stable_by_path": "/dev/serial/by-path/pci-0000:00:14.0-usb-0:1:1.1-port0"},
+      {"logical_channel": "CHANNEL_2", "usb_interface_number": "02", "tty_diagnostic_name": "/dev/ttyUSB2", "stable_by_id": "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if02-port0", "stable_by_path": "/dev/serial/by-path/pci-0000:00:14.0-usb-0:1:1.2-port0"},
+      {"logical_channel": "CHANNEL_3", "usb_interface_number": "03", "tty_diagnostic_name": "/dev/ttyUSB3", "stable_by_id": "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if03-port0", "stable_by_path": "/dev/serial/by-path/pci-0000:00:14.0-usb-0:1:1.3-port0"}
+    ]
+  },
+  "selected_channel": {
+    "logical_channel": "CHANNEL_3",
+    "usb_interface_number": "03",
+    "tty_diagnostic_name": "/dev/ttyUSB3",
+    "stable_port_path": "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if03-port0",
+    "stable_by_path": "/dev/serial/by-path/pci-0000:00:14.0-usb-0:1:1.3-port0"
+  },
+  "serial_transport": {
+    "baudrate": 4000000,
+    "recv_length_bytes": 16,
+    "timeout_us": 20000,
+    "data_bits": 8,
+    "parity": "none",
+    "stop_bits": 1,
+    "flow_control": "none",
+    "adapter_4mbaud_supported": true,
+    "serial_permission": "dialout_read_write",
+    "port_occupied_during_preflight": false
+  },
+  "sdk": {
+    "repository": "https://github.com/unitreerobotics/unitree_actuator_sdk.git",
+    "commit": "5b79a42d81cd69adac1367db79efdb972a898fd1",
+    "motor_type": "GO_M8010_6",
+    "build": "PASS"
+  },
+  "probe_command": {
+    "mode": "BRAKE",
+    "protocol_mode_value": 0,
+    "motor_id": 0,
+    "kp": 0.0,
+    "kd": 0.0,
+    "q": 0.0,
+    "dq": 0.0,
+    "tau": 0.0
+  },
+  "first_valid_feedback": {
+    "timestamp_utc": "2026-08-14T08:57:23Z",
+    "data_correct": true,
+    "motor_id": 0,
+    "mode": 0,
+    "q_raw_motor_position": 5.0669422149658203,
+    "dq": -0.24543750286102295,
+    "tau": 0.0,
+    "temperature_c": 33,
+    "merror": 0,
+    "unexpected_motion": false
+  },
+  "stability_test": {
+    "requested_rate_hz": 20,
+    "requested_duration_seconds": 10,
+    "sent": 200,
+    "received": 200,
+    "valid": 200,
+    "invalid": 0,
+    "timeout": 0,
+    "bad_correct": 0,
+    "wrong_id": 0,
+    "merror_nonzero": 0,
+    "valid_response_rate": 1.0,
+    "q_first": 5.067133903503418,
+    "q_last": 5.0669422149658203,
+    "q_min": 5.066750526428223,
+    "q_max": 5.067325592041016,
+    "q_max_single_step_change": 0.0003833770751953125,
+    "temperature_min_c": 33,
+    "temperature_max_c": 33,
+    "unexpected_motion": false
+  },
+  "scope": {
+    "raw_motor_position_only": true,
+    "foc_used": false,
+    "calibration_used": false,
+    "motor_id_modified": false,
+    "ros2_started": false,
+    "motor_motion_control": "NOT_STARTED",
+    "production_simulation_authority_modified": false
+  },
+  "hard_unresolved_items": [],
+  "final_status": "V15.19A-1 J1_RS485_COMMUNICATION = PASS"
+}
