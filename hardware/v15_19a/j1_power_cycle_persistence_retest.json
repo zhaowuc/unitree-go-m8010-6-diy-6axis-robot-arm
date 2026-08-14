@@ -1,0 +1,130 @@
+{
+  "schema_version": "1.0",
+  "task": "V15.19A-2A-R1 J1 Power-Cycle Position Persistence Retest",
+  "execution_host": "car",
+  "execution_os": "Ubuntu 22.04.5 LTS",
+  "transport_authority_commit": "7329157f98bf575d57c497b037ab8fb1c11fafbe",
+  "motor": {
+    "motor_type": "GO_M8010_6",
+    "motor_id": 0,
+    "stable_port": "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if03-port0",
+    "baudrate": 4000000,
+    "protocol_mode": "BRAKE",
+    "command": {
+      "kp": 0.0,
+      "kd": 0.0,
+      "q": 0.0,
+      "dq": 0.0,
+      "tau": 0.0
+    }
+  },
+  "previous_test": {
+    "classification": "INVALIDATED_BY_OPERATOR_MOTION",
+    "q_raw_ref_A_rad": 2.4511153697967529,
+    "q_raw_ref_B_rad": 2.6242637634277344,
+    "direct_delta_rad": 0.17314839363098145,
+    "reason": "Operator confirmed that J1 was manually moved while power was off; this delta is excluded from persistence authority."
+  },
+  "witness": {
+    "method": "J1_POWER_CYCLE_WITNESS_MARK between the fixed base and J1 rotating part",
+    "mark_established": true,
+    "purpose": "Temporary no-physical-movement witness only; not CAD zero."
+  },
+  "A0": {
+    "sample_count": 500,
+    "valid_count": 500,
+    "valid_rate": 1.0,
+    "q_median_rad": 2.6240720748901367,
+    "q_mean_rad": 2.624150667190552,
+    "q_std_rad": 0.0001227255828401311,
+    "q_min_rad": 2.623880386352539,
+    "q_max_rad": 2.624455451965332,
+    "q_peak_to_peak_rad": 0.0005750656127929688,
+    "q_max_single_step_rad": 0.0005750656127929688,
+    "qdot_fd_median_rad_s": 0.0,
+    "data_dq_median_rad_s": -0.24543750286102295,
+    "temperature_min_c": 33,
+    "temperature_max_c": 33,
+    "merror_nonzero_count": 0,
+    "position_stable": true
+  },
+  "cycle_1": {
+    "pre_q_median_rad": 2.6240720748901367,
+    "post_q_median_rad": 2.6240720748901367,
+    "direct_delta_rad": 0.0,
+    "wrapped_delta_rad": 0.0,
+    "witness_unchanged": true,
+    "valid": true,
+    "post_sample_count": 500,
+    "post_valid_count": 500,
+    "post_valid_rate": 1.0,
+    "post_q_std_rad": 0.00011620500022170116,
+    "post_q_peak_to_peak_rad": 0.0005750656127929688,
+    "post_qdot_fd_median_rad_s": 0.0,
+    "post_data_dq_median_rad_s": -0.24543750286102295,
+    "post_temperature_min_c": 32,
+    "post_temperature_max_c": 32,
+    "post_merror_nonzero_count": 0
+  },
+  "cycle_2": {
+    "pre_q_median_rad": 2.6240720748901367,
+    "post_q_median_rad": 2.6242637634277344,
+    "direct_delta_rad": 0.00019168853759765625,
+    "wrapped_delta_rad": 0.00019168853759765625,
+    "witness_unchanged": true,
+    "valid": true,
+    "post_sample_count": 500,
+    "post_valid_count": 500,
+    "post_valid_rate": 1.0,
+    "post_q_std_rad": 0.00011481551360467995,
+    "post_q_peak_to_peak_rad": 0.0005750656127929688,
+    "post_qdot_fd_median_rad_s": 0.0,
+    "post_data_dq_median_rad_s": -0.024543749168515205,
+    "post_temperature_min_c": 33,
+    "post_temperature_max_c": 33,
+    "post_merror_nonzero_count": 0
+  },
+  "cycle_3": {
+    "pre_q_median_rad": 2.6242637634277344,
+    "post_q_median_rad": 2.6242637634277344,
+    "direct_delta_rad": 0.0,
+    "wrapped_delta_rad": 0.0,
+    "witness_unchanged": true,
+    "valid": true,
+    "post_sample_count": 500,
+    "post_valid_count": 500,
+    "post_valid_rate": 1.0,
+    "post_q_std_rad": 0.00012310364093555794,
+    "post_q_peak_to_peak_rad": 0.0007669925689697266,
+    "post_qdot_fd_median_rad_s": 0.0,
+    "post_data_dq_median_rad_s": -0.024543749168515205,
+    "post_temperature_min_c": 33,
+    "post_temperature_max_c": 33,
+    "post_merror_nonzero_count": 0
+  },
+  "aggregate": {
+    "valid_cycles": 3,
+    "required_cycles": 3,
+    "max_power_cycle_delta_rad": 0.00019168853759765625,
+    "persistence_classification": "PASS_HIGH_CONFIDENCE",
+    "repeated_boot_offset_pattern": false,
+    "qdot_fd_median_rad_s": 0.0,
+    "data_dq_median_rad_s": -0.14726249873638153,
+    "dq_classification": "J1_DQ_SEMANTICS_UNRESOLVED_POSITION_FD_MISMATCH"
+  },
+  "safety": {
+    "foc_used": false,
+    "calibration_used": false,
+    "motor_internal_zero_modified": false,
+    "manual_j1_rotation_performed": false,
+    "ros2_started": false,
+    "active_motion_command_used": false,
+    "serial_frames_sent_while_power_off": false
+  },
+  "hard_unresolved_items": [
+    "J1_DQ_SEMANTICS_UNRESOLVED_POSITION_FD_MISMATCH",
+    "J1 raw_to_ros_sign not tested in this task",
+    "J1 absolute zero remains PENDING_PHYSICAL_ALIGNMENT"
+  ],
+  "final_status": "V15.19A-2A-R1 J1_POWER_CYCLE_PERSISTENCE = PASS"
+}
