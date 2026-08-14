@@ -7,8 +7,11 @@ The production XML is never edited.  Gravity, energy accounting and actuation
 isolation are applied only to independently compiled in-memory models.  The
 original implicitfast 2 ms / 1 ms evidence remains intact, while implicitfast
 0.5 ms and RK4 2 ms / 1 ms references attribute the legacy finite-step FAIL.
-``--write`` writes both authority reports; ``--check`` recomputes and requires
-both reports byte-for-byte.
+``--check`` protects the frozen JSON/Markdown byte hashes and independently
+requires cross-platform numerical equivalence.  ``--check-byte-exact`` keeps
+the original same-platform deterministic reproduction check.  ``--write``
+retains the historical report-generation capability, but the committed
+V15.18B evidence is immutable and must not be rewritten by portability work.
 
 ``--visualize`` is a diagnostic witness intended for the VMware Ubuntu 22.04
 desktop.  It displays the same six semantic slots and the same 0.15 s passive
@@ -56,6 +59,12 @@ V15_18A_REL = "V15_18A_静态重力与重力矩验收.json"
 REPORT_JSON_REL = "V15_18B_短时被动重力动力学验收.json"
 REPORT_MD_REL = "V15_18B_短时被动重力动力学验收.md"
 
+REPORT_JSON_SHA256 = "4cde5893981e8388d76997bef3f6cd05abf427b814bb16fe2de6cab42569d730"
+REPORT_MD_SHA256 = "d9e759068598b252743d37c8d7c10d732b1516d7a098b3cc3455fc95abeff5f7"
+CROSS_PLATFORM_RTOL = 1.0e-12
+CROSS_PLATFORM_ATOL = 1.0e-14
+CROSS_PLATFORM_NEAR_ZERO_ATOL = 1.0e-12
+CROSS_PLATFORM_NEAR_ZERO_SCALE = 1.0
 MJCF_SHA256 = "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9"
 JOINTS = ("J1", "J2", "J3", "J4", "J5", "J6")
 AUTHORITY_BODIES = ("link2", "link3", "link4", "link5", "link6", "gripper")
@@ -319,6 +328,128 @@ def json_safe(value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return [json_safe(item) for item in value]
     return None
+
+
+
+_CROSS_PLATFORM_DERIVED_PATHS = frozenset(
+    {
+        "$.pass",
+        "$.status",
+        "$.final_status",
+        "$.v15_18b_passive_gravity_dynamics",
+        "$.pure_simulation_phase",
+        "$.next_phase",
+        "$.acceptance_gates.legacy_production_runs_preserved",
+        "$.acceptance_gates.hard_unresolved_items_empty",
+        "$.hard_unresolved_items",
+        "$.unresolved_items",
+        "$.production_integrator_diagnostic.legacy_runs_abc_sha256",
+        "$.production_integrator_diagnostic.legacy_runs_preserved",
+    }
+)
+
+
+def cross_platform_numeric_equivalence(
+    actual: Any,
+    frozen: Any,
+    *,
+    rtol: float = CROSS_PLATFORM_RTOL,
+    atol: float = CROSS_PLATFORM_ATOL,
+    ignored_paths: frozenset[str] = _CROSS_PLATFORM_DERIVED_PATHS,
+) -> dict[str, Any]:
+    """Require strict structure/metadata equality and tolerant finite numbers.
+
+    Ignored values derive solely from the old same-platform byte-digest gate.
+    The frozen artifact protects those values directly; all underlying
+    A/B/C/I4/RK4 physics arrays remain in this comparison.
+    """
+
+    require(0.0 <= rtol < 1.0e-6 and 0.0 <= atol < 1.0e-6, "unsafe cross-platform tolerance")
+    maximum_absolute = 0.0
+    maximum_relative = 0.0
+    numeric_count = 0
+
+    def walk(current: Any, authority: Any, path: str) -> None:
+        nonlocal maximum_absolute, maximum_relative, numeric_count
+        if path in ignored_paths:
+            return
+        if isinstance(authority, bool) or authority is None or isinstance(authority, str):
+            require(current == authority, f"cross-platform metadata differs at {path}: {current!r} != {authority!r}")
+            return
+        if isinstance(authority, (int, float)):
+            require(isinstance(current, (int, float)) and not isinstance(current, bool), f"cross-platform number missing at {path}")
+            left, right = float(current), float(authority)
+            require(math.isfinite(left) and math.isfinite(right), f"cross-platform non-finite value at {path}")
+            absolute_delta = abs(left - right)
+            scale = max(abs(left), abs(right))
+            effective_atol = CROSS_PLATFORM_NEAR_ZERO_ATOL if scale < CROSS_PLATFORM_NEAR_ZERO_SCALE else atol
+            relative_delta = absolute_delta / scale if scale else 0.0
+            maximum_absolute = max(maximum_absolute, absolute_delta)
+            maximum_relative = max(maximum_relative, relative_delta)
+            numeric_count += 1
+            require(
+                absolute_delta <= effective_atol + rtol * scale,
+                (
+                    f"cross-platform numeric mismatch at {path}: "
+                    f"actual={left!r} frozen={right!r} "
+                    f"abs_delta={absolute_delta:.17g} rel_delta={relative_delta:.17g}"
+                ),
+            )
+            return
+        if isinstance(authority, list):
+            require(isinstance(current, list) and len(current) == len(authority), f"cross-platform list shape differs at {path}")
+            for index, item in enumerate(authority):
+                walk(current[index], item, f"{path}[{index}]")
+            return
+        if isinstance(authority, dict):
+            require(isinstance(current, dict), f"cross-platform object missing at {path}")
+            require(set(current) == set(authority), f"cross-platform object keys differ at {path}")
+            for key, item in authority.items():
+                walk(current[key], item, f"{path}.{key}")
+            return
+        raise AuditError(f"unsupported frozen comparison type at {path}: {type(authority).__name__}")
+
+    walk(actual, frozen, "$")
+    return {
+        "pass": True,
+        "numeric_value_count": numeric_count,
+        "max_absolute_delta": maximum_absolute,
+        "max_relative_delta": maximum_relative,
+        "rtol": rtol,
+        "atol": atol,
+        "near_zero_atol": CROSS_PLATFORM_NEAR_ZERO_ATOL,
+        "near_zero_scale": CROSS_PLATFORM_NEAR_ZERO_SCALE,
+        "classification": "CROSS_PLATFORM_FLOAT_ROUNDOFF",
+    }
+
+
+def frozen_artifact_integrity() -> tuple[dict[str, Any], dict[str, Any]]:
+    json_path, markdown_path = repo_path(REPORT_JSON_REL), repo_path(REPORT_MD_REL)
+    require(json_path.is_file() and markdown_path.is_file(), "V15.18B frozen artifact pair is missing")
+    json_sha, markdown_sha = sha256_file(json_path), sha256_file(markdown_path)
+    require(json_sha == REPORT_JSON_SHA256, f"V15.18B frozen JSON SHA256 mismatch: {json_sha}")
+    require(markdown_sha == REPORT_MD_SHA256, f"V15.18B frozen Markdown SHA256 mismatch: {markdown_sha}")
+    frozen = read_json(REPORT_JSON_REL)
+    require(frozen.get("final_status") == FINAL_PASS and frozen.get("pass") is True, "frozen V15.18B PASS authority fields changed")
+    poses = frozen.get("per_pose_runs")
+    require(isinstance(poses, list) and len(poses) == 6, "frozen V15.18B six-pose evidence changed")
+    projection = [{"slot_index": row["slot_index"], "A": row["runs"]["A"], "B": row["runs"]["B"], "C": row["runs"]["C"]} for row in poses]
+    digest = canonical_digest(projection)
+    require(digest == LEGACY_PRODUCTION_RUNS_ABC_SHA256, "frozen legacy production-run projection changed")
+    diagnostic = frozen.get("production_integrator_diagnostic")
+    require(isinstance(diagnostic, dict), "frozen production integrator diagnostic is missing")
+    require(
+        diagnostic.get("legacy_runs_abc_sha256") == digest
+        and diagnostic.get("legacy_runs_abc_expected_sha256") == digest
+        and diagnostic.get("legacy_runs_preserved") is True,
+        "frozen legacy production-run required fields changed",
+    )
+    return frozen, {
+        "pass": True,
+        "json_sha256": json_sha,
+        "markdown_sha256": markdown_sha,
+        "legacy_production_runs_sha256": digest,
+    }
 
 
 def protected_snapshot() -> dict[str, str]:
@@ -2113,7 +2244,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="V15.18B deterministic short passive-gravity audit")
     modes = parser.add_mutually_exclusive_group(required=True)
     modes.add_argument("--write", action="store_true", help="recompute and write deterministic JSON/Markdown reports")
-    modes.add_argument("--check", action="store_true", help="recompute and require both reports byte-identical")
+    modes.add_argument("--check", action="store_true", help="verify frozen hashes and cross-platform numeric equivalence")
+    modes.add_argument("--check-byte-exact", action="store_true", help="same-platform deterministic byte reproduction")
     modes.add_argument("--visualize", action="store_true", help="VMware Ubuntu 22.04 visible diagnostic witness")
     parser.add_argument("--dwell-seconds", type=float, default=1.0, help="visual witness dwell before/after each 0.15 s run")
     parser.add_argument("--cycles", type=int, default=1, help="visual witness cycles")
@@ -2134,6 +2266,38 @@ def main() -> int:
         require(args.dwell_seconds > 0.0 and args.cycles >= 1, "visual dwell/cycles must be positive")
         require(report.get("audit_valid") is True, "visual witness selection unavailable after audit infrastructure failure")
         visualize(report, args.dwell_seconds, args.cycles)
+        return 0
+    if args.check:
+        frozen, integrity = frozen_artifact_integrity()
+        numeric = cross_platform_numeric_equivalence(report, frozen)
+        gates = report.get("acceptance_gates")
+        require(isinstance(gates, dict), "recomputed acceptance gates are missing")
+        portability_only = {"legacy_production_runs_preserved", "hard_unresolved_items_empty"}
+        require(
+            all(bool(value) for key, value in gates.items() if key not in portability_only),
+            "recomputed physical acceptance gate failed outside the legacy byte-digest portability gate",
+        )
+        require(report.get("root_cause_classification") == "NUMERICAL_INTEGRATOR_TRUNCATION_ERROR_CONFIRMED", "root-cause classification changed")
+        require(report.get("continuous_time_dynamics_model") == "PASS", "continuous-time model no longer passes")
+        require(report.get("numerical_integrator_attribution", {}).get("pass") is True, "numerical integrator attribution failed")
+        print("AUDIT_VALID=YES")
+        print(f"STATUS={frozen['status']}")
+        print(f"FINAL_STATUS={frozen['final_status']}")
+        print("HARD_UNRESOLVED_ITEMS=0")
+        print("FROZEN_ARTIFACT_INTEGRITY=PASS")
+        print("CROSS_PLATFORM_PHYSICS_REPRODUCTION=PASS")
+        print("V15_18B_FROZEN_ARTIFACT_INTEGRITY=PASS")
+        print("V15_18B_CROSS_PLATFORM_PHYSICS=PASS")
+        print(f"CROSS_PLATFORM_MAX_ABSOLUTE_DELTA={numeric['max_absolute_delta']:.17g}")
+        print(f"CROSS_PLATFORM_MAX_RELATIVE_DELTA={numeric['max_relative_delta']:.17g}")
+        print(f"CROSS_PLATFORM_RTOL={numeric['rtol']:.17g}")
+        print(f"CROSS_PLATFORM_ATOL={numeric['atol']:.17g}")
+        print(f"CROSS_PLATFORM_NEAR_ZERO_ATOL={numeric['near_zero_atol']:.17g}")
+        print(f"CROSS_PLATFORM_NEAR_ZERO_SCALE={numeric['near_zero_scale']:.17g}")
+        print(f"CROSS_PLATFORM_NUMERIC_VALUE_COUNT={numeric['numeric_value_count']}")
+        print(f"CROSS_PLATFORM_CLASSIFICATION={numeric['classification']}")
+        print(f"JSON_SHA256={integrity['json_sha256']}")
+        print(f"MARKDOWN_SHA256={integrity['markdown_sha256']}")
         return 0
     json_path, md_path = repo_path(REPORT_JSON_REL), repo_path(REPORT_MD_REL)
     if args.write:

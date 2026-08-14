@@ -128,7 +128,16 @@ assert numpy.__version__ == "2.2.6", numpy.__version__
 print(f"PYTHON={__import__('sys').version.split()[0]}")
 print(f"MUJOCO={mujoco.__version__}")
 print(f"NUMPY={numpy.__version__}")
+print("MUJOCO_RUNTIME_ENVIRONMENT=PASS")
 PY
+
+# ROS 2 Humble's ament/colcon toolchain belongs to Ubuntu's system Python.
+# Leaving the isolated MuJoCo venv active here makes CMake select the venv
+# interpreter, where ROS build-time modules such as catkin_pkg are absent.
+deactivate
+hash -r
+[[ "$(command -v python3)" == "/usr/bin/python3" ]] || \
+  die "ROS build requires Ubuntu system Python after leaving the MuJoCo venv"
 
 note "Resolving ROS dependencies"
 rosdep install \
@@ -139,7 +148,7 @@ rosdep install \
 
 note "Building the self-contained ROS 2 workspace"
 pushd "${ROS_WS}" >/dev/null
-colcon build --symlink-install
+colcon build --symlink-install --cmake-clean-cache
 popd >/dev/null
 
 set +u
@@ -156,6 +165,11 @@ for package_name in \
   ros2 pkg prefix "${package_name}" >/dev/null || \
     die "ROS package was not discoverable after build: ${package_name}"
 done
+
+set +u
+# shellcheck disable=SC1090
+source "${VENV_DIR}/bin/activate"
+set -u
 
 note "Running fail-closed repository and MuJoCo compile/readback verification"
 python "${REPO_ROOT}/tools/verify_repository_handoff_v15_18b.py" || \
@@ -185,10 +199,11 @@ fi
 
 note "Checking V15.18B numerical-integrator attribution evidence (headless, no ROS nodes)"
 python "${REPO_ROOT}/tools/audit_passive_gravity_v15_18b.py" --check || die \
-  "V15.18B audit evidence did not reproduce byte-for-byte"
+  "V15.18B frozen integrity or cross-platform numeric equivalence failed"
 python "${REPO_ROOT}/tools/validate_passive_gravity_v15_18b.py" \
   --check --mujoco-python "${VENV_DIR}/bin/python" || die \
   "V15.18B independent validator evidence check failed"
+ubuntu_runtime_status=PASS
 
 if ((vm_gui)); then
   note "Probing VMware Ubuntu console GUI"
@@ -247,6 +262,9 @@ printf 'HEAD=%s\n' "$(git rev-parse HEAD)"
 printf 'BRANCH=%s\n' "$(git branch --show-current)"
 printf 'VMWARE_GUI=%s\n' "$([[ ${vm_gui} -eq 1 ]] && printf PASS || printf NOT_REQUESTED)"
 print_frozen_status
+printf '%s\n' 'MUJOCO_RUNTIME_ENVIRONMENT=PASS'
+printf '%s\n' 'V15_18B_FROZEN_ARTIFACT_INTEGRITY=PASS'
+printf '%s\n' 'V15_18B_CROSS_PLATFORM_PHYSICS=PASS'
 printf 'UBUNTU_RUNTIME_VERIFICATION=%s\n' "${ubuntu_runtime_status}"
 printf '%s\n' 'BOOTSTRAP=PASS'
 trap - ERR

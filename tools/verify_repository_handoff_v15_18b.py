@@ -24,8 +24,9 @@ import xml.etree.ElementTree as ET
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGET_BRANCH = "agent/v15-18b-final-simulation-handoff"
+TARGET_BRANCH = "agent/v15-18b-ubuntu-portability"
 TARGET_TAG = "v15.18b-final-simulation-handoff"
+FROZEN_TAG_COMMIT = "cd8642764a7e7b580d1c001f63b3360cd6ddae14"
 SOURCE_COMMIT = "6dc27f6f8196c691f9f6b1c7684202dec6af2b6a"
 EXPECTED_REMOTE_URL = "https://github.com/zhaowuc/go-m8010-robot-arm.git"
 MAX_TRACKED_BYTES = 100_000_000
@@ -48,8 +49,8 @@ EXPECTED_AUTHORITIES = {
 }
 
 EXPECTED_V15_18B_ARTIFACTS = {
-    "tools/audit_passive_gravity_v15_18b.py": "bbba568b8b52694b8f995a63d6b0baa68840f343ccad59d0c016b6fa544a03f9",
-    "tools/validate_passive_gravity_v15_18b.py": "95344b1c11bf7ecfe138434de93cab8fd327b969efa8289616fc5bc5ebb8c658",
+    "tools/audit_passive_gravity_v15_18b.py": "35876caa2ea6da1e1c2236594f3073d45e7555b6978197f02d44533faed00864",
+    "tools/validate_passive_gravity_v15_18b.py": "87b1eac938bbdab06a7c55118727df6e2e8f1d6ee01940fd7fb755c5b978e4e4",
     "V15_18B_短时被动重力动力学验收.json": "4cde5893981e8388d76997bef3f6cd05abf427b814bb16fe2de6cab42569d730",
     "V15_18B_短时被动重力动力学验收.md": "d9e759068598b252743d37c8d7c10d732b1516d7a098b3cc3455fc95abeff5f7",
 }
@@ -279,8 +280,10 @@ def check_git_identity(
 
     ancestry = run_process(["git", "merge-base", "--is-ancestor", SOURCE_COMMIT, head])
     require(ancestry.returncode == 0, f"HEAD is not a descendant of {SOURCE_COMMIT}")
+    frozen_ancestry = run_process(["git", "merge-base", "--is-ancestor", FROZEN_TAG_COMMIT, head])
+    require(frozen_ancestry.returncode == 0, f"HEAD is not a descendant of frozen tag commit {FROZEN_TAG_COMMIT}")
     if not allow_dirty:
-        require(head != SOURCE_COMMIT, "final handoff branch still points at the V15.18A source commit")
+        require(head != FROZEN_TAG_COMMIT, "Ubuntu portability branch still points at the frozen tag commit")
 
     if expected_commit:
         expected = expected_commit.strip().lower()
@@ -310,7 +313,7 @@ def check_git_identity(
         local_tag_type = git_text(["cat-file", "-t", f"refs/tags/{TARGET_TAG}"]).strip()
         require(local_tag_type == "tag", f"target tag is not annotated: {TARGET_TAG}")
         local_tag_head = git_text(["rev-parse", f"refs/tags/{TARGET_TAG}^{{}}"]).strip().lower()
-        require(local_tag_head == head, f"local annotated tag does not peel to HEAD: {local_tag_head}")
+        require(local_tag_head == FROZEN_TAG_COMMIT, f"local frozen annotated tag moved: {local_tag_head}")
 
         remote = run_process(
             [
@@ -334,8 +337,8 @@ def check_git_identity(
             remote_refs[fields[1]] = fields[0].lower()
         remote_branch_head = remote_refs.get(f"refs/heads/{TARGET_BRANCH}")
         remote_tag_head = remote_refs.get(f"refs/tags/{TARGET_TAG}^{{}}")
-        require(remote_branch_head == head, f"remote branch does not equal HEAD: {remote_branch_head}")
-        require(remote_tag_head == head, f"remote annotated tag does not peel to HEAD: {remote_tag_head}")
+        require(remote_branch_head == head, f"remote portability branch does not equal HEAD: {remote_branch_head}")
+        require(remote_tag_head == FROZEN_TAG_COMMIT, f"remote frozen annotated tag moved: {remote_tag_head}")
         require(
             f"refs/tags/{TARGET_TAG}" in remote_refs,
             f"remote annotated tag object is missing: {TARGET_TAG}",
@@ -344,6 +347,8 @@ def check_git_identity(
         "branch": branch,
         "commit": head,
         "source_commit_is_ancestor": True,
+        "frozen_tag_commit_is_ancestor": True,
+        "frozen_tag_commit": FROZEN_TAG_COMMIT,
         "dirty_entry_count": len(dirty_rows),
         "tracked_file_count": len(entries),
         "origin": remote_url,

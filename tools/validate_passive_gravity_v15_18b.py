@@ -50,6 +50,11 @@ VALIDATOR_REL = "tools/validate_passive_gravity_v15_18b.py"
 REPORT_JSON_REL = "V15_18B_短时被动重力动力学验收.json"
 REPORT_MD_REL = "V15_18B_短时被动重力动力学验收.md"
 
+CROSS_PLATFORM_RTOL = 1.0e-12
+CROSS_PLATFORM_ATOL = 1.0e-14
+CROSS_PLATFORM_NEAR_ZERO_ATOL = 1.0e-12
+CROSS_PLATFORM_NEAR_ZERO_SCALE = 1.0
+
 MJCF_SHA256 = "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9"
 BRIDGE_SHA256 = "d3273ae0ecfe3ee2bf427a5732f4106206593a2c23fd0bc39aea1f3381f7a5a0"
 BRIDGE_ENTRY_SHA256 = "59dc2b9f1d069d0d3a6819d332cdf2f882f7feb2dc8cfb4368b883277818989b"
@@ -64,7 +69,7 @@ V15_18A_JSON_SHA256 = "640e9104cabd0e2548e07bdd54d5cdb2c66dbdf86a7981eff4d8c12e5
 V15_18A_MD_SHA256 = "c4752895ddce399a13ce7e54e909e91410894bc26c7de0342cdf1ea554d13abc"
 V15_18A_AUDIT_SHA256 = "ecb8bd60631f3ae482d411155aada691cb77e7528ea78c2a6aaf5a5de0357da9"
 V15_18A_VALIDATOR_SHA256 = "04df0861e717bdf4ae78fc048300bfa16578940cf8588632d8b61c510afafe32"
-AUDIT_SHA256 = "bbba568b8b52694b8f995a63d6b0baa68840f343ccad59d0c016b6fa544a03f9"
+AUDIT_SHA256 = "35876caa2ea6da1e1c2236594f3073d45e7555b6978197f02d44533faed00864"
 REPORT_JSON_SHA256 = "4cde5893981e8388d76997bef3f6cd05abf427b814bb16fe2de6cab42569d730"
 REPORT_MD_SHA256 = "d9e759068598b252743d37c8d7c10d732b1516d7a098b3cc3455fc95abeff5f7"
 
@@ -280,13 +285,31 @@ def same_vector(left: Sequence[float], right: Sequence[float], tolerance: float 
     return len(left) == len(right) and max_abs(a - b for a, b in zip(left, right)) <= tolerance
 
 
-def require_close(actual: Any, expected: Any, label: str, *, absolute: float = 2.0e-12, relative: float = 2.0e-10) -> None:
+def require_close(
+    actual: Any,
+    expected: Any,
+    label: str,
+    *,
+    absolute: float = CROSS_PLATFORM_ATOL,
+    relative: float = CROSS_PLATFORM_RTOL,
+) -> None:
     if isinstance(expected, bool) or expected is None or isinstance(expected, str):
         require(actual == expected, f"{label}: {actual!r} != {expected!r}")
         return
     if isinstance(expected, (int, float)):
         a, e = finite(actual, label), finite(expected, label + ".expected")
-        require(abs(a - e) <= absolute + relative * max(abs(a), abs(e)), f"{label}: {a!r} != {e!r}")
+        scale = max(abs(a), abs(e))
+        effective_absolute = absolute
+        if (
+            absolute == CROSS_PLATFORM_ATOL
+            and relative == CROSS_PLATFORM_RTOL
+            and scale < CROSS_PLATFORM_NEAR_ZERO_SCALE
+        ):
+            effective_absolute = CROSS_PLATFORM_NEAR_ZERO_ATOL
+        require(
+            abs(a - e) <= effective_absolute + relative * scale,
+            f"{label}: {a!r} != {e!r}",
+        )
         return
     if isinstance(expected, list):
         require(isinstance(actual, list) and len(actual) == len(expected), f"{label}: list shape differs")
@@ -909,17 +932,38 @@ def select_mujoco_python(explicit: str | None) -> Path:
         shutil.which("python"),
     )
     seen: set[Path] = set()
+    probe = (
+        "import json,sys,mujoco,numpy;"
+        "print(json.dumps({"
+        "'executable':sys.executable,'prefix':sys.prefix,'base_prefix':sys.base_prefix,"
+        "'mujoco':mujoco.__version__,'numpy':numpy.__version__"
+        "},sort_keys=True))"
+    )
     for candidate in candidates:
         if not candidate:
             continue
-        path = Path(candidate).expanduser().resolve()
+        lexical = Path(candidate).expanduser()
+        path = lexical if lexical.is_absolute() else Path(os.path.abspath(lexical))
         if path in seen or not path.is_file():
             continue
         seen.add(path)
-        result = run_process([str(path), "-c", "import mujoco,numpy; print(mujoco.__version__, numpy.__version__)"], timeout=30.0)
-        if result.returncode == 0 and result.stdout.strip() == "3.11.0 2.2.6":
+        result = run_process([str(path), "-c", probe], timeout=30.0)
+        if result.returncode != 0:
+            continue
+        try:
+            runtime = json.loads(result.stdout.strip())
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if (
+            isinstance(runtime, dict)
+            and runtime.get("mujoco") == "3.11.0"
+            and runtime.get("numpy") == "2.2.6"
+            and runtime.get("prefix")
+            and runtime.get("base_prefix")
+            and runtime["prefix"] != runtime["base_prefix"]
+        ):
             return path
-    raise ValidationError("no MuJoCo 3.11.0 + NumPy 2.2.6 interpreter is available")
+    raise ValidationError("no active venv with MuJoCo 3.11.0 + NumPy 2.2.6 is available")
 
 
 def run_physics_request(interpreter: Path, model: Path, request: Mapping[str, Any], directory: Path, stem: str) -> dict[str, Any]:
@@ -1954,7 +1998,7 @@ def validate_status_semantics(report: Mapping[str, Any], independent_pass: bool 
 
 def compare_run_report(actual: Mapping[str, Any], expected: Mapping[str, Any], label: str) -> None:
     require(set(actual) == RUN_CORE_KEYS, f"{label}: exact run schema differs: missing={sorted(RUN_CORE_KEYS-set(actual))}, extra={sorted(set(actual)-RUN_CORE_KEYS)}")
-    require_close(actual, expected, label, absolute=3.0e-12, relative=3.0e-10)
+    require_close(actual, expected, label, absolute=CROSS_PLATFORM_ATOL, relative=CROSS_PLATFORM_RTOL)
 
 
 def validate_audit_report(report: Mapping[str, Any], independent: Mapping[str, Any]) -> dict[str, Any]:
@@ -1979,7 +2023,7 @@ def validate_audit_report(report: Mapping[str, Any], independent: Mapping[str, A
 
     audit_selection = report.get("pose_selection")
     require(isinstance(audit_selection, dict), "pose_selection object missing")
-    require_close(audit_selection, independent["pose_selection"], "pose_selection", absolute=3.0e-12, relative=3.0e-10)
+    require_close(audit_selection, independent["pose_selection"], "pose_selection", absolute=CROSS_PLATFORM_ATOL, relative=CROSS_PLATFORM_RTOL)
     audit_poses = report.get("per_pose_runs")
     expected_poses = independent["per_pose_runs"]
     require(isinstance(audit_poses, list) and len(audit_poses) == len(expected_poses) == 6, "per_pose_runs must contain exact six rows")
@@ -1987,13 +2031,13 @@ def validate_audit_report(report: Mapping[str, Any], independent: Mapping[str, A
     for index, (actual, expected) in enumerate(zip(audit_poses, expected_poses), 1):
         require(isinstance(actual, dict) and set(actual) == required_pose_keys, f"per_pose_runs[{index}] schema differs")
         for key in ("slot_index", "category", "selected_pose_id", "selected_q_rad", "initial_state", "early_motion_direction", "energy", "convergence", "determinism", "safety", "pass", "failure_codes"):
-            require_close(actual[key], expected[key], f"per_pose_runs[{index}].{key}", absolute=3.0e-12, relative=3.0e-10)
+            require_close(actual[key], expected[key], f"per_pose_runs[{index}].{key}", absolute=CROSS_PLATFORM_ATOL, relative=CROSS_PLATFORM_RTOL)
         require(isinstance(actual["runs"], dict) and set(actual["runs"]) == {"A", "B", "C"}, f"per_pose_runs[{index}].runs differs")
         for label in ("A", "B", "C"):
             compare_run_report(actual["runs"][label], expected["runs"][label], f"per_pose_runs[{index}].runs.{label}")
 
     for key in ("initial_acceleration_identity", "early_motion_direction", "energy_audit", "timestep_convergence", "determinism", "contacts", "joint_limit_margin", "stability", "trajectory_continuity"):
-        require_close(report.get(key), independent[key], key, absolute=3.0e-12, relative=3.0e-10)
+        require_close(report.get(key), independent[key], key, absolute=CROSS_PLATFORM_ATOL, relative=CROSS_PLATFORM_RTOL)
     gates = report.get("acceptance_gates")
     require(isinstance(gates, dict) and set(gates) == GATE_KEYS, "acceptance gate identity set differs")
     require_close(gates, independent["acceptance_gates"], "acceptance_gates", absolute=0.0, relative=0.0)
@@ -2067,10 +2111,10 @@ def validate_audit_report_b2(report: Mapping[str, Any], independent: Mapping[str
         require(isinstance(actual["runs"], dict) and set(actual["runs"]) == run_labels, f"B2 per_pose_runs[{index}] run labels differ")
         for label in run_labels:
             require(set(actual["runs"][label]) == RUN_CORE_KEYS, f"B2 pose {index} run {label} schema differs")
-        require_close(actual, expected, f"B2 per_pose_runs[{index}]", absolute=3.0e-12, relative=3.0e-10)
+        require_close(actual, expected, f"B2 per_pose_runs[{index}]", absolute=CROSS_PLATFORM_ATOL, relative=CROSS_PLATFORM_RTOL)
     validate_frozen_legacy_authority(report)
     for key in ("initial_acceleration_identity", "early_motion_direction", "energy_audit", "timestep_convergence", "production_integrator_diagnostic", "numerical_integrator_attribution", "determinism", "contacts", "joint_limit_margin", "stability", "trajectory_continuity"):
-        require_close(report.get(key), independent[key], "B2 " + key, absolute=3.0e-12, relative=3.0e-10)
+        require_close(report.get(key), independent[key], "B2 " + key, absolute=CROSS_PLATFORM_ATOL, relative=CROSS_PLATFORM_RTOL)
     gates = report.get("acceptance_gates")
     require(isinstance(gates, dict) and set(gates) == GATE_KEYS, "B2 acceptance gate identity set differs")
     require_close(gates, independent["acceptance_gates"], "B2 acceptance gates", absolute=0.0, relative=0.0)
@@ -2179,6 +2223,8 @@ def run_nested_audit_check(interpreter: Path, report: Mapping[str, Any]) -> dict
     require(sha256_file(json_path) == before, "nested audit --check changed JSON")
     lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
     require("AUDIT_VALID=YES" in lines, "nested audit did not emit AUDIT_VALID=YES")
+    require("FROZEN_ARTIFACT_INTEGRITY=PASS" in lines, "nested audit frozen artifact integrity failed")
+    require("CROSS_PLATFORM_PHYSICS_REPRODUCTION=PASS" in lines, "nested audit cross-platform physics failed")
     require(f"STATUS={report.get('status')}" in lines, "nested audit STATUS differs")
     require(f"FINAL_STATUS={report.get('final_status')}" in lines, "nested audit FINAL_STATUS differs")
     return {"pass": True, "stdout_contract_lines": lines}
@@ -2325,6 +2371,11 @@ def main() -> int:
         require(validate_protected_inputs() == protected, "protected authority changed at final rehash")
         print("VALIDATION=PASS")
         print("AUDIT_VALID=YES")
+        print("PYTHON_RUNTIME_AUTHORITY=PASS")
+        print("STANDARD_VENV_PYTHON_ACCEPTED=YES")
+        print("FORWARDING_WRAPPER_REQUIRED=NO")
+        print("V15_18B_FROZEN_ARTIFACT_INTEGRITY=PASS")
+        print("V15_18B_CROSS_PLATFORM_PHYSICS=PASS")
         print(f"STATUS={validation['status']}")
         print(f"FINAL_STATUS={validation['final_status']}")
         print("SELECTED_POSE_SLOTS=6")
