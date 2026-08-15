@@ -1,0 +1,116 @@
+schema_version: "1.0"
+revision: V15.19D-J1-FINAL
+scope:
+  joint: J1
+  motor_type: GO-M8010-6
+  motor_id: 0
+  j2_enabled: false
+
+usage:
+  role: frozen_post_run_configuration_record
+  consumed_by_runner: false
+  runner_parameter_authority: compile_time_constants_in_v15_19d_j1_final_motion_cpp
+
+transport:
+  serial_port: /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if03-port0
+  baudrate: 4000000
+  sdk_repository: /home/car/vendor/unitree_actuator_sdk
+  sdk_commit: 5b79a42d81cd69adac1367db79efdb972a898fd1
+  sdk_library_sha256: d51bc5f10cd757458ff4c34fa3bf6ecb0bb28c6c331de335aaaa527c68850c68
+
+mapping:
+  gear_ratio_motor_to_output: 6.3299999237060547
+  raw_to_ros_sign: 1
+  absolute_cad_zero: PENDING_PHYSICAL_ALIGNMENT
+  runtime_zero:
+    mode: SESSION_LOCAL_ZERO
+    brake_baseline_s: 0.5
+    estimator_warmup_valid_frames: 11
+    statistic: median
+  q_motor_command: q_raw_session_zero + gear_ratio_motor_to_output * q_joint_command_rad
+  dq_motor_command: gear_ratio_motor_to_output * dq_joint_command_rad_s
+  sdk_dq_feedback_used_as_control_authority: false
+
+position_control:
+  sdk_mode: FOC
+  tau_feedforward_nm: 0.0
+  kp_sdk_literal: 0.50
+  kd_sdk_literal: 0.05
+  foc_entry:
+    command_current_position: true
+    command_velocity_deg_s: 0.0
+    hold_s: 0.300
+    require_session_zero_abs_lt_deg: 1.0
+    displacement_brake_abs_gt_deg: 1.0
+    slow_speed_brake_abs_gt_deg_s: 10.0
+
+trajectory:
+  generator: integer_interval_rest_to_rest_trapezoid
+  command_rate_hz: 100
+  max_velocity_deg_s: 12.0
+  max_acceleration_deg_s2: 40.0
+  command_lead_clamp: false
+  step_commands: false
+  route_deg: [0.0, 10.0, 0.0, -10.0, 0.0]
+  target_bands_deg:
+    positive_10: [9.0, 11.0]
+    zero_abs_lt: 1.0
+    negative_10: [-11.0, -9.0]
+  holds_s:
+    positive_10: 0.300
+    first_zero: 0.200
+    negative_10: 0.300
+    final_zero: 0.200
+  active_sequence_deadline_s: 15.0
+
+safety:
+  position:
+    warning_abs_gt_deg: 15.0
+    brake_abs_gte_deg: 18.0
+    emergency_abs_gte_deg: 20.0
+    emergency_requires_manual_power_off: true
+  tracking_error:
+    sustained_brake_abs_gt_deg: 5.0
+    sustained_brake_duration_s: 0.300
+    immediate_brake_abs_gte_deg: 8.0
+  velocity:
+    trend_authority: qdot_slow
+    fast_authority: qdot_fast
+    single_cycle_role: diagnostic_only
+    slow_warning_abs_gt_deg_s: 20.0
+    slow_warning_duration_s: 0.150
+    slow_brake_abs_gte_deg_s: 30.0
+    slow_brake_duration_s: 0.100
+    fast_brake_abs_gte_deg_s: 35.0
+    fast_brake_consecutive_windows: 2
+    fast_emergency_abs_gte_deg_s: 40.0
+  stall:
+    target_distance_abs_gt_deg: 5.0
+    slow_speed_abs_lt_deg_s: 0.5
+    tracking_error_abs_gt_deg: 5.0
+    duration_s: 1.0
+  torque_feedback:
+    warning_abs_gt: 2.0
+    brake_abs_gte: 5.0
+  temperature:
+    normal_lt_c: 60
+    warning_gte_c: 60
+    brake_gte_c: 70
+    negative_feedback_is_invalid: true
+  communication:
+    invalid_consecutive_brake_frames: 5
+    merror_nonzero_brake_immediate: true
+    expected_response_id: 0
+    active_feedback_mode: FOC
+  terminal_brake:
+    timeout_s: 0.5
+    required_consecutive_valid_frames: 5
+    required_feedback_mode: BRAKE
+
+logging:
+  rate_hz: 100
+  continuous_csv: true
+  emergency_ring_rows: 200
+  fsync_after_first_brake_attempt: true
+  fsync_after_final_brake_confirmation: true
+  raw_csv_policy: preserve_outside_git
