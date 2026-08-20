@@ -1,0 +1,258 @@
+{
+  "schema_version": "1.0",
+  "task": "V15.21B J6 DM-G6220 MIT small-motion commissioning",
+  "source_head": "b9a604eaee7d02837db9234e30fe1ccd434a6f15",
+  "work_branch": "agent/v15-21b-j6-dmg6220-motion",
+  "host": "car",
+  "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.35",
+  "created_at_utc": "2026-08-20T09:03:56.242391+00:00",
+  "status": "BLOCKED",
+  "control": {
+    "mode": "MIT",
+    "kp": 10.0,
+    "kd": 2.0,
+    "torque_ff": 0.0,
+    "target_tx_rate_hz": 100.0,
+    "max_velocity_deg_s": 10.0,
+    "max_acceleration_deg_s2": 29.999999999999996
+  },
+  "temporary_guards": {
+    "feedback_watchdog_ms": 150.0,
+    "feedback_envelope_deg": 8.0,
+    "command_envelope_deg": 6.000000000000001,
+    "velocity_rad_s": 0.7,
+    "mos_temperature_c": 60,
+    "coil_temperature_c": 60,
+    "classification": "V15_21B_TEMPORARY_COMMISSIONING_GUARDS"
+  },
+  "safety": {
+    "ctrl_mode_modified": false,
+    "parameter_write_used": false,
+    "set_zero_used": false,
+    "id_write_used": false,
+    "ready_pose_modified": false,
+    "j1_authority_modified": false,
+    "j345_authority_modified": false,
+    "simulation_authority_modified": false,
+    "operator_abort": false,
+    "watchdog_trips": 0,
+    "emergency_disable_events": [
+      {
+        "phase": "sign_probe",
+        "reason": "velocity guard exceeded: -6.032967033 rad/s",
+        "at_utc": "2026-08-20T09:05:26.760708+00:00"
+      }
+    ]
+  },
+  "calibration": {
+    "protocol_to_ros_sign": "PENDING",
+    "cad_zero": "PENDING",
+    "ros_zero": "PENDING",
+    "motor_internal_zero": "UNCHANGED",
+    "physical_limits": "PENDING",
+    "ready_reference": "PENDING"
+  },
+  "authority": {
+    "communication": "PASS",
+    "feedback": "PASS",
+    "local_motion": "NOT_GRANTED",
+    "full_joint_motion": false,
+    "physical_limits": false,
+    "ready_pose": false,
+    "full_commissioning": false
+  },
+  "evidence": [
+    {
+      "path": "hardware/v15_21b/j6_session_capture_20260820T090404Z.csv",
+      "sha256": "e9825074d5cd87127f2b6970e969b6cf83369ed3c0568443879a6603b7bbf68d"
+    }
+  ],
+  "preflight": {
+    "usb": {
+      "sysfs": "/sys/bus/usb/devices/3-2",
+      "vid": "34b7",
+      "pid": "6877",
+      "serial": "EEE8D71AB573449FCAFE7B39BD222C75",
+      "manufacturer": "DaMiao-Tech",
+      "product": "DM-USB2FDCAN",
+      "busnum": "3",
+      "devnum": "108"
+    },
+    "adapter_count": 1,
+    "can_channel": 0,
+    "can_bitrate": 1000000,
+    "canfd": false,
+    "motor": {
+      "motor_id": 1,
+      "requested_ids": [
+        1
+      ],
+      "ctrl_mode": 1,
+      "pmax": 12.5,
+      "wrapper_can_ids": [
+        0
+      ],
+      "ctrl_mode_name": "MIT"
+    },
+    "initial_feedback": {
+      "can_id": 0,
+      "state": 0,
+      "state_name": "DISABLED",
+      "position_rad": 1.0542076752880138,
+      "velocity_rad_s": -0.010989010989007397,
+      "torque_protocol": -0.0024420024420024333,
+      "mos_temperature_c": 41,
+      "coil_temperature_c": 37
+    }
+  },
+  "session": {
+    "sample_count": 100,
+    "target_rate_hz": 100.0,
+    "q_session_median_rad": 1.0542076752880138,
+    "q_session_mean_rad": 1.0540245670252535,
+    "q_session_std_rad": 0.0002441443503471419,
+    "q_session_min_rad": 1.053444724193179,
+    "q_session_max_rad": 1.0545891508354313,
+    "semantics": "SESSION_LOCAL_ONLY",
+    "motor_state_distribution": {
+      "DISABLED": 100
+    },
+    "csv_path": "hardware/v15_21b/j6_session_capture_20260820T090404Z.csv",
+    "csv_sha256": "e9825074d5cd87127f2b6970e969b6cf83369ed3c0568443879a6603b7bbf68d"
+  },
+  "sign_probe_preflight": {
+    "usb": {
+      "sysfs": "/sys/bus/usb/devices/3-2",
+      "vid": "34b7",
+      "pid": "6877",
+      "serial": "EEE8D71AB573449FCAFE7B39BD222C75",
+      "manufacturer": "DaMiao-Tech",
+      "product": "DM-USB2FDCAN",
+      "busnum": "3",
+      "devnum": "108"
+    },
+    "adapter_count": 1,
+    "can_channel": 0,
+    "can_bitrate": 1000000,
+    "canfd": false,
+    "motor": {
+      "motor_id": 1,
+      "requested_ids": [
+        1
+      ],
+      "ctrl_mode": 1,
+      "pmax": 12.5,
+      "wrapper_can_ids": [
+        0
+      ],
+      "ctrl_mode_name": "MIT"
+    },
+    "feedback": {
+      "can_id": 0,
+      "state": 0,
+      "state_name": "DISABLED",
+      "position_rad": 1.0542076752880138,
+      "velocity_rad_s": 0.010989010989007397,
+      "torque_protocol": -0.0024420024420024333,
+      "mos_temperature_c": 41,
+      "coil_temperature_c": 37
+    },
+    "checked_at_utc": "2026-08-20T09:05:26.544813+00:00"
+  },
+  "sign_probe": {
+    "status": "FAIL",
+    "started_at_utc": "2026-08-20T09:05:26.645881+00:00",
+    "enable_attempted": true,
+    "final_fd_disable_sent": true,
+    "final_disabled_verification": {
+      "status": "PASS",
+      "valid_frames": 5,
+      "states": [
+        "DISABLED",
+        "DISABLED",
+        "DISABLED",
+        "DISABLED",
+        "DISABLED"
+      ],
+      "feedback": [
+        {
+          "can_id": 0,
+          "state": 0,
+          "state_name": "DISABLED",
+          "position_rad": 1.0545891508354313,
+          "velocity_rad_s": 0.010989010989007397,
+          "torque_protocol": -0.0024420024420024333,
+          "mos_temperature_c": 41,
+          "coil_temperature_c": 37
+        },
+        {
+          "can_id": 0,
+          "state": 0,
+          "state_name": "DISABLED",
+          "position_rad": 1.0545891508354313,
+          "velocity_rad_s": -0.0329670329670364,
+          "torque_protocol": -0.0073260073260073,
+          "mos_temperature_c": 41,
+          "coil_temperature_c": 37
+        },
+        {
+          "can_id": 0,
+          "state": 0,
+          "state_name": "DISABLED",
+          "position_rad": 1.0542076752880138,
+          "velocity_rad_s": -0.010989010989007397,
+          "torque_protocol": -0.0024420024420024333,
+          "mos_temperature_c": 41,
+          "coil_temperature_c": 37
+        },
+        {
+          "can_id": 0,
+          "state": 0,
+          "state_name": "DISABLED",
+          "position_rad": 1.0545891508354313,
+          "velocity_rad_s": -0.0329670329670364,
+          "torque_protocol": -0.0024420024420024333,
+          "mos_temperature_c": 41,
+          "coil_temperature_c": 37
+        },
+        {
+          "can_id": 0,
+          "state": 0,
+          "state_name": "DISABLED",
+          "position_rad": 1.0545891508354313,
+          "velocity_rad_s": -0.010989010989007397,
+          "torque_protocol": -0.0024420024420024333,
+          "mos_temperature_c": 41,
+          "coil_temperature_c": 37
+        }
+      ]
+    },
+    "telemetry_metrics": {
+      "target_tx_rate_hz": 100.0,
+      "actual_tx_rate_hz": 100.17766629239041,
+      "maximum_tx_jitter_ms": 0.3024640027433634,
+      "maximum_callback_gap_ms": 0.05690706893801689,
+      "maximum_feedback_age_ms": 90.57153202593327,
+      "maximum_abs_feedback_velocity_rad_s": 6.032967032967029,
+      "torque_protocol": {
+        "min": 0.0512820512820511,
+        "max": 0.0512820512820511
+      },
+      "mos_temperature_c": {
+        "min": 41.0,
+        "max": 41.0
+      },
+      "coil_temperature_c": {
+        "min": 37.0,
+        "max": 37.0
+      },
+      "fault_states_observed": []
+    },
+    "completed_at_utc": "2026-08-20T09:05:27.169713+00:00",
+    "failure_reason": "velocity guard exceeded: -6.032967033 rad/s",
+    "sign_probe": {
+      "status": "FAIL"
+    }
+  },
+  "block_reason": "current q differs from session reference by 2.710260 deg"
+}
