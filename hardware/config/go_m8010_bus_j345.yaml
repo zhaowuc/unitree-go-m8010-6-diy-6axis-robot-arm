@@ -1,5 +1,5 @@
 schema_version: "1.0"
-revision: V15.22A-J5-LOCAL-MOTION
+revision: V15.22B-J4-J5-LOCAL-MOTION
 
 scope:
   joints: [J3, J4, J5]
@@ -7,10 +7,10 @@ scope:
   j1_modified: false
 
 usage:
-  role: cumulative_shared_bus_and_j5_local_motion_authority
+  role: cumulative_shared_bus_and_j4_j5_local_motion_authority
   consumed_by_runner: false
   motion_authority: true
-  motion_authority_scope: J5_LOCAL_5DEG_ONLY
+  motion_authority_scope: J4_J5_LOCAL_5DEG_ONLY
 
 bus:
   channel: CHANNEL_2
@@ -41,9 +41,35 @@ motors:
     gear_ratio: 6.3299999237060547
     mode: normal
     factory_mode_exit: PASS
-    sign: PENDING
+    sign: +1
+    raw_to_ros_sign: +1
+    sign_authority:
+      - V15_22B_OPERATOR_PHYSICAL_CONFIRMATION
+      - URDF_MUJOCO_J4_AXIS_REVIEW
     cad_zero: PENDING
-    motion_authority: false
+    ros_zero: PENDING
+    physical_limits: PENDING
+    full_range: NOT_TESTED
+    motion_authority: true
+    motion:
+      mode: FOC_MIXED_POSITION
+      kp: 0.50
+      kd: 0.05
+      tau_ff: 0.0
+      command_rate_hz: 100
+      local_range_tested_deg: 5
+      velocity_deg_s: 10
+      acceleration_deg_s2: 30
+      gravity_compensation: NOT_REQUIRED_FOR_LOCAL_TEST
+    authority:
+      communication: PASS
+      local_motion: PASS
+      bidirectional_5deg: PASS
+      full_range: false
+      cad_zero: false
+      ros_zero: false
+      physical_limits: false
+      full_commissioning: false
   J5:
     original_id: 4
     id: 5
@@ -84,8 +110,9 @@ safety:
   brake_only_validation: false
   foc_trajectory_used: true
   active_motor_motion_used: true
-  active_motor_motion_scope: J5_LOCAL_PLUS_MINUS_5_DEG_ONLY
-  j3_j4_left_brake: true
+  active_motor_motion_scope: J4_J5_LOCAL_PLUS_MINUS_5_DEG_ONLY
+  j3_left_brake_during_j4: true
+  j5_left_brake_during_j4: true
   ready_pose_modified: false
   motor_internal_zero_modified: false
   gravity_feedforward_used: false
@@ -105,4 +132,7 @@ evidence:
   sdk_library_sha256: d51bc5f10cd757458ff4c34fa3bf6ecb0bb28c6c331de335aaaa527c68850c68
   v15_22a_inventory:
     path: hardware/v15_22a/j5_motion_inventory.json
+    status: PASS
+  v15_22b_inventory:
+    path: hardware/v15_22b/j4_motion_inventory.json
     status: PASS
