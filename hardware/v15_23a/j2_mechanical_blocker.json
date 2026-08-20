@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "task": "V15.23A J2 mechanical blocker freeze",
+  "source_head": "61fa37db12bae247cbf987687b088771465eb4d0",
+  "branch": "agent/v15-23a-j2-mechanical-blocker",
+  "status": "PASS",
+  "blocker_classification": "BLOCKED_BY_MECHANICAL_CONFIGURATION",
+  "operator_finding": {
+    "authority": "OPERATOR_CONFIRMED_MECHANICAL_REQUIREMENT",
+    "current_commissioning_path": "MECHANICALLY_BLOCKED_WITH_UPPER_ARM_INSTALLED",
+    "upper_arm_removal_required": true,
+    "reason": "safe and reliable J2A/J2B individual commissioning is not feasible with the current upper-arm assembly installed",
+    "motor_failure_established": false,
+    "rs485_failure_established": false,
+    "software_failure_established": false
+  },
+  "authority": {
+    "j2_communication": "NOT_REASSESSED",
+    "j2_passive_mapping": "NOT_COMPLETED",
+    "j2_individual_motor_motion": "NOT_TESTED",
+    "j2_dual_motor_hold": "NOT_TESTED",
+    "j2_dual_motor_motion": "NOT_GRANTED",
+    "j2_active_motion_authority": "NOT_GRANTED"
+  },
+  "safety": {
+    "hardware_motion_used": false,
+    "j2a_foc_used": false,
+    "j2b_foc_used": false,
+    "j2_dual_motor_enable_used": false,
+    "manual_forced_test_used": false,
+    "upper_arm_disassembled": false,
+    "motor_id_modified": false,
+    "motor_zero_modified": false,
+    "motor_tools_used": false,
+    "calibrate_used": false
+  },
+  "frozen_authority_modified": {
+    "j1": false,
+    "j345": false,
+    "j5": false,
+    "j6": false,
+    "ready_pose_v1": false,
+    "simulation": false
+  },
+  "future_route_record_only": [
+    "PRE_DISASSEMBLY_BASELINE",
+    "RECORD_WHOLE_ARM_POSE",
+    "RECORD_J2A_J2B_RAW",
+    "MARK_FLANGE_AND_MOUNTING_HOLES",
+    "PHOTOGRAPH_ASSEMBLY_ORIENTATION",
+    "REMOVE_UPPER_ARM",
+    "J2A_SINGLE_MOTOR_COMMISSIONING",
+    "J2B_SINGLE_MOTOR_COMMISSIONING",
+    "ESTABLISH_AB_SIGN_AND_ZERO_RELATION",
+    "DUAL_MOTOR_MECHANICAL_MAPPING",
+    "REASSEMBLY",
+    "SIMULTANEOUS_CURRENT_POSITION_HOLD",
+    "SYNC_ERROR_VALIDATION",
+    "PLUS_2_DEG_DUAL_MOTOR_TEST",
+    "PLUS_MINUS_5_DEG_DUAL_MOTOR_TEST"
+  ],
+  "future_route_executed": false
+}
