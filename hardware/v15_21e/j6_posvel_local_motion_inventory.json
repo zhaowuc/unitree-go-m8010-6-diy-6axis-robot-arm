@@ -1,0 +1,273 @@
+{
+  "schema_version": "1.0",
+  "task": "V15.21E J6 POS_VEL local motion commissioning",
+  "source_head": "eb07deabed72f131a64f8dafd3543c7898c4e1d8",
+  "work_branch": "agent/v15-21e-j6-posvel-local-motion",
+  "created_at_utc": "2026-08-20T10:07:41.133586+00:00",
+  "status": "PASS",
+  "frozen_authority": {
+    "v15_21a_communication_feedback": "PASS",
+    "v15_21b_mit_hold": "FAIL",
+    "v15_21c_root_cause": "REAL_ENABLE_TRANSIENT",
+    "v15_21d_posvel_enable_hold": "PASS"
+  },
+  "command_contract": {
+    "mode": "POS_VEL",
+    "can_id": 257,
+    "payload": "<ff absolute_position_rad positive_velocity_limit_rad_s",
+    "tx_refresh_target_hz": 100.0,
+    "velocity_limit_deg_s": 10.0,
+    "velocity_limit_rad_s": 0.17453292519943295
+  },
+  "guards": {
+    "command_envelope_deg": 6.0,
+    "feedback_envelope_deg": 8.0,
+    "velocity_abs_rad_s": 0.7,
+    "temperature_c_exclusive_upper": 60,
+    "feedback_age_ms": 150.0
+  },
+  "safety": {
+    "mit_retested": false,
+    "set_zero_used": false,
+    "parameter_write_other_than_optional_rid10": false,
+    "flash_eeprom_save_used": false,
+    "ready_pose_modified": false,
+    "j1_j345_simulation_modified": false
+  },
+  "authority": {
+    "j6_posvel_local_motion": "PASS",
+    "j6_bidirectional_5deg": "PASS",
+    "j6_local_motion_authority": "PASS",
+    "j6_full_range": "NOT_TESTED",
+    "j6_physical_limits": "PENDING",
+    "j6_cad_zero": "PENDING",
+    "j6_ros_zero": "PENDING",
+    "j6_ready_reference": "PENDING",
+    "j6_full_commissioning": "NOT_COMPLETE"
+  },
+  "evidence": [
+    {
+      "path": "hardware/v15_21e/j6_session_capture_20260820T100742Z.csv",
+      "sha256": "7ef304123567c034c9d238f292265121d6a7b4fdfe77f576914594a7165b3afe"
+    },
+    {
+      "path": "hardware/v15_21e/j6_posvel_sign_probe_20260820T100839Z.csv",
+      "sha256": "7d594fba93e698122e3a3933146d9bf0b3e4429600bd938d78c7b7818afa5b18"
+    },
+    {
+      "path": "hardware/v15_21e/j6_posvel_sign_probe_raw_20260820T100839Z.csv",
+      "sha256": "4ee95c739a7cd72c244e86b3e6e31d5c8d2eac4ca66189e4ad8eb1f78b8e3b58"
+    },
+    {
+      "path": "hardware/v15_21e/j6_session_capture_sign_repeat_20260820T101029Z.csv",
+      "sha256": "6f8d8631d49697dcb1e873207e887a7365d3aae06caa1e1764c458aaf0bac448"
+    },
+    {
+      "path": "hardware/v15_21e/j6_posvel_sign_probe_20260820T101031Z.csv",
+      "sha256": "85967c4ad5c7bd5d0de17768a309b02276353b19cde8b77acd2afc6523ed4d86"
+    },
+    {
+      "path": "hardware/v15_21e/j6_posvel_sign_probe_raw_20260820T101031Z.csv",
+      "sha256": "15e50ab29f1946b0d1680da0ac84c59da2c19cdc068413762225429ee78205d5"
+    },
+    {
+      "path": "hardware/v15_21e/j6_session_capture_bidirectional_20260820T101124Z.csv",
+      "sha256": "f36672ec588fa3189095009d11dec77a7c30a8d9f1e1cec3e41487460ad47207"
+    },
+    {
+      "path": "hardware/v15_21e/j6_posvel_bidirectional_5deg_20260820T101139Z.csv",
+      "sha256": "cde826914405852accf8b43a9e82ca9d1165dfcb969bd940d7ef3d3110f9618a"
+    },
+    {
+      "path": "hardware/v15_21e/j6_posvel_bidirectional_5deg_raw_20260820T101139Z.csv",
+      "sha256": "d03d9eb208ad6f2764f3e03d35af92b7e74712201a7971150a55d6f21a73b157"
+    }
+  ],
+  "usb": {
+    "sysfs": "/sys/bus/usb/devices/3-2",
+    "vid": "34b7",
+    "pid": "6877",
+    "serial": "EEE8D71AB573449FCAFE7B39BD222C75",
+    "manufacturer": "DaMiao-Tech",
+    "product": "DM-USB2FDCAN",
+    "busnum": "3",
+    "devnum": "108"
+  },
+  "motor": {
+    "master_id": 0,
+    "esc_id": 1,
+    "ctrl_mode": 2,
+    "pmax": 12.5,
+    "allowed_normal_feedback_can_ids": [
+      0,
+      1
+    ]
+  },
+  "ctrl_mode_initial": 2,
+  "runtime_mode_write_required": false,
+  "runtime_mode_write_count": 0,
+  "session": {
+    "valid_frames": 100,
+    "total_required": 100,
+    "q_median_rad": 1.0976958876935985,
+    "q_mean_rad": 1.097730220492866,
+    "q_std_rad": 0.00020254160299776054,
+    "q_min_rad": 1.097314412146181,
+    "q_max_rad": 1.098077363241016,
+    "semantics": "SESSION_LOCAL_ONLY"
+  },
+  "operator_motion_gate": "PASS",
+  "sign_probe": {
+    "status": "PASS",
+    "q_session_rad": 1.1110475318532078,
+    "initial_hold": "PASS",
+    "target_absolute_rad": 1.1634074094130378,
+    "plus_3deg": "PASS",
+    "endpoint_median_rad": 1.1648355840390625,
+    "endpoint_actual_delta_deg": 3.0818283784788965,
+    "endpoint_error_deg": 0.0818283784788921,
+    "return_error_deg": 0.6119942879248872,
+    "ctrl_mode_final": 2,
+    "tx_samples": 162,
+    "actual_tx_rate_hz": 99.98830092848273,
+    "mean_tx_period_ms": 10.001170044036014,
+    "max_tx_jitter_ms": 0.385132385417819,
+    "maximum_feedback_age_ms": 100.18720990046859,
+    "maximum_abs_feedback_velocity_rad_s": 0.1868131868131826,
+    "torque_protocol_min": -0.017094017094017033,
+    "torque_protocol_max": 0.0073260073260073,
+    "mos_temperature_min_c": 41,
+    "mos_temperature_max_c": 41,
+    "coil_temperature_min_c": 38,
+    "coil_temperature_max_c": 38,
+    "watchdog_trips": 0,
+    "fault_states": [],
+    "unexpected_rx_count": 0,
+    "final_fd_sent": true,
+    "final_five_frame_disabled": "PASS",
+    "telemetry_csv_path": "hardware/v15_21e/j6_posvel_sign_probe_20260820T101031Z.csv",
+    "raw_csv_path": "hardware/v15_21e/j6_posvel_sign_probe_raw_20260820T101031Z.csv"
+  },
+  "sign_probe_repeat_session": {
+    "valid_frames": 100,
+    "total_required": 100,
+    "q_median_rad": 1.1110475318532078,
+    "q_mean_rad": 1.111161974517433,
+    "q_std_rad": 0.00017481405718149933,
+    "q_min_rad": 1.1110475318532078,
+    "q_max_rad": 1.1114290074006252,
+    "semantics": "SESSION_LOCAL_ONLY",
+    "difference_from_original_session_deg": 0.764992859906109
+  },
+  "sign_probe_attempts": [
+    {
+      "status": "PASS",
+      "q_session_rad": 1.0976958876935985,
+      "initial_hold": "PASS",
+      "target_absolute_rad": 1.1500557652534285,
+      "plus_3deg": "PASS",
+      "endpoint_median_rad": 1.1480506599526965,
+      "endpoint_actual_delta_deg": 2.8851159287887542,
+      "endpoint_error_deg": 0.11488407121125022,
+      "return_error_deg": 0.5901373490704269,
+      "ctrl_mode_final": 2,
+      "tx_samples": 162,
+      "actual_tx_rate_hz": 99.98912584487285,
+      "mean_tx_period_ms": 10.001087533772825,
+      "max_tx_jitter_ms": 0.36315666511654854,
+      "maximum_feedback_age_ms": 100.01061600632966,
+      "maximum_abs_feedback_velocity_rad_s": 0.2087912087912116,
+      "torque_protocol_min": -0.017094017094017033,
+      "torque_protocol_max": 0.012210012210012167,
+      "mos_temperature_min_c": 41,
+      "mos_temperature_max_c": 41,
+      "coil_temperature_min_c": 38,
+      "coil_temperature_max_c": 38,
+      "watchdog_trips": 0,
+      "fault_states": [],
+      "unexpected_rx_count": 0,
+      "final_fd_sent": true,
+      "final_five_frame_disabled": "PASS",
+      "telemetry_csv_path": "hardware/v15_21e/j6_posvel_sign_probe_20260820T100839Z.csv",
+      "raw_csv_path": "hardware/v15_21e/j6_posvel_sign_probe_raw_20260820T100839Z.csv",
+      "operator_observation": "NOT_OBSERVED_CLEARLY"
+    }
+  ],
+  "explicit_same_plus_3deg_observation_repeat": true,
+  "operator_ros_direction_answer": "NO",
+  "protocol_to_ros_sign": -1,
+  "sign_authority": [
+    "OPERATOR_PHYSICAL_DIRECTION_CONFIRMATION",
+    "URDF_MUJOCO_AXIS_REVIEW"
+  ],
+  "bidirectional_session": {
+    "valid_frames": 100,
+    "total_required": 100,
+    "q_median_rad": 1.1259250782024868,
+    "q_mean_rad": 1.125974670023651,
+    "q_std_rad": 0.0001919167044801285,
+    "q_min_rad": 1.1255436026550694,
+    "q_max_rad": 1.1263065537499042,
+    "semantics": "SESSION_LOCAL_ONLY",
+    "difference_from_sign_session_deg": 1.617413475230059
+  },
+  "bidirectional_5deg": {
+    "status": "PASS",
+    "q_session_rad": 1.1259250782024868,
+    "initial_hold": "PASS",
+    "second_hold": "PASS",
+    "plus_5deg": "PASS",
+    "plus_5_endpoint_median_rad": 1.2117570763714056,
+    "plus_5_endpoint_delta_deg": 4.91781124225366,
+    "plus_5_endpoint_error_deg": 0.08218875774633458,
+    "first_center_return_error_deg": 0.0,
+    "minus_5deg": "PASS",
+    "minus_5_endpoint_median_rad": 1.0389486533913175,
+    "minus_5_endpoint_delta_deg": -4.983382058816939,
+    "minus_5_endpoint_error_deg": 0.01661794118305559,
+    "final_return_error_deg": 0.7212789821971886,
+    "ctrl_mode_final": 2,
+    "tx_samples": 383,
+    "actual_tx_rate_hz": 99.9954257070911,
+    "mean_tx_period_ms": 10.000457450216002,
+    "max_tx_jitter_ms": 0.3187633119523525,
+    "maximum_feedback_age_ms": 99.9332049395889,
+    "maximum_abs_feedback_velocity_rad_s": 0.2087912087912116,
+    "torque_protocol_min": -0.026862026862026767,
+    "torque_protocol_max": 0.012210012210012167,
+    "mos_temperature_min_c": 41,
+    "mos_temperature_max_c": 41,
+    "coil_temperature_min_c": 38,
+    "coil_temperature_max_c": 38,
+    "watchdog_trips": 0,
+    "fault_states": [],
+    "unexpected_rx_count": 0,
+    "final_fd_sent": true,
+    "final_five_frame_disabled": "PASS",
+    "telemetry_csv_path": "hardware/v15_21e/j6_posvel_bidirectional_5deg_20260820T101139Z.csv",
+    "raw_csv_path": "hardware/v15_21e/j6_posvel_bidirectional_5deg_raw_20260820T101139Z.csv"
+  },
+  "operator_safe_observation": "YES",
+  "final_task_result": "PASS",
+  "ctrl_mode_final": 2,
+  "ctrl_mode_persistence": "NOT_TESTED",
+  "completed_at_utc": "2026-08-20T10:12:47.633181+00:00",
+  "operator_direction_observation": {
+    "viewpoint": "from J5 side looking toward gripper along J6 +Z",
+    "protocol_positive_rotation": "COUNTERCLOCKWISE",
+    "ros_positive_rotation_from_same_viewpoint": "CLOCKWISE",
+    "derived_protocol_to_ros_sign": -1
+  },
+  "urdf_mujoco_axis_review": {
+    "urdf_axis_xyz": [-1.59232002583387e-13, 6.09321620936853e-17, 1.0],
+    "mujoco_axis_xyz": [-1.59232002583387e-13, 6.09321620936853e-17, 1.0],
+    "tcp_offset_from_gripper_xyz_m": [-0.0011877264, 0.000060729026, 0.092493513872]
+  },
+  "hard_unresolved_items": [
+    "J6 initialization angle/reference requested by the operator is not established in V15.21E.",
+    "Full range and physical limits remain untested.",
+    "CAD zero, ROS zero, and READY reference remain pending.",
+    "CTRL_MODE persistence across power cycle remains untested.",
+    "J6 full commissioning is not complete."
+  ]
+}

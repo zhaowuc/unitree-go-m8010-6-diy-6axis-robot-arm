@@ -1,9 +1,9 @@
 schema_version: "1.0"
-revision: "V15.21A-J6-DMG6220-READONLY"
+revision: "V15.21E-J6-POSVEL-LOCAL-MOTION"
 
 joint: "J6"
 motor_type: "DM_G6220"
-role: "frozen post-run read-only transport authority"
+role: "J6 POS_VEL local-motion commissioning authority"
 
 transport:
   type: "dmcan_sdk"
@@ -33,8 +33,8 @@ motor:
   discovered_count: 1
   id: 1
   control_mode_at_capture:
-    value: 1
-    name: "MIT"
+    value: 2
+    name: "POS_VEL"
   pmax_at_capture_rad: 12.5
   initial_state:
     value: 0
@@ -47,8 +47,15 @@ protocol_mapping:
   torque: 10.0
   note: "These values describe protocol encoding/decoding and are not commissioned physical limits."
 
+control:
+  preferred_mode: "POS_VEL"
+  preferred_mode_authority: "V15_21E"
+
 calibration:
-  sign: "PENDING"
+  protocol_to_ros_sign: -1
+  sign_authority:
+    - "OPERATOR_PHYSICAL_DIRECTION_CONFIRMATION"
+    - "URDF_MUJOCO_AXIS_REVIEW"
   cad_zero: "PENDING"
   ros_zero: "PENDING"
   motor_internal_zero: "UNCHANGED"
@@ -57,38 +64,57 @@ calibration:
   safe_torque: "PENDING"
   ready_reference: "PENDING"
 
+commissioning:
+  local_motion_mode: "POS_VEL"
+  local_motion_range_deg: 5
+  bidirectional: "PASS"
+  velocity_limit_deg_s: 10
+  command_refresh_hz: 100
+
 authority:
   communication: "PASS"
   feedback: "PASS"
-  motion: false
+  posvel_enable_hold: "PASS"
+  local_motion: "PASS"
+  full_joint_motion: false
+  physical_limits: false
+  ready_pose: false
+  full_commissioning: false
+  motion: true
   zero_write: false
   windows_reference_motion: "OPERATOR_VERIFIED_PASS"
   ubuntu_communication: "PASS"
   ubuntu_feedback_100hz: "PASS"
-  ubuntu_motion: "NOT_TESTED"
-  current_motion_authority: false
+  ubuntu_motion: "POS_VEL_LOCAL_5DEG_PASS"
+  current_motion_authority: true
   zero_write_authority: false
   mode_write_authority: false
   parameter_write_authority: false
   id_write_authority: false
 
 safety:
-  active_enable_used: false
-  motor_motion_used: false
-  parameter_write_used: false
+  active_enable_used: true
+  motor_motion_used: true
+  parameter_write_used: true
   set_zero_used: false
-  switch_mode_used: false
+  switch_mode_used: true
   id_write_used: false
-  safety_fd_disable_used: false
+  safety_fd_disable_used: true
   ready_pose_modified: false
   j1_authority_modified: false
   j345_authority_modified: false
   simulation_authority_modified: false
 
 evidence:
-  inventory: "hardware/v15_21a/j6_dmg6220_readonly_inventory.json"
-  pass_csv: "hardware/v15_21a/j6_feedback100_20260820T081810Z.csv"
-  pass_csv_sha256: "d82d52c6c432e976db472bf2d551a13af890a2685d6950afb87801d76a712d96"
+  inventory: "hardware/v15_21e/j6_posvel_local_motion_inventory.json"
+  session_csv: "hardware/v15_21e/j6_session_capture_20260820T100742Z.csv"
+  session_csv_sha256: "7ef304123567c034c9d238f292265121d6a7b4fdfe77f576914594a7165b3afe"
+  sign_probe_csv: "hardware/v15_21e/j6_posvel_sign_probe_20260820T101031Z.csv"
+  sign_probe_csv_sha256: "85967c4ad5c7bd5d0de17768a309b02276353b19cde8b77acd2afc6523ed4d86"
+  bidirectional_csv: "hardware/v15_21e/j6_posvel_bidirectional_5deg_20260820T101139Z.csv"
+  bidirectional_csv_sha256: "cde826914405852accf8b43a9e82ca9d1165dfcb969bd940d7ef3d3110f9618a"
+  v15_21a_pass_csv: "hardware/v15_21a/j6_feedback100_20260820T081810Z.csv"
+  v15_21a_pass_csv_sha256: "d82d52c6c432e976db472bf2d551a13af890a2685d6950afb87801d76a712d96"
   preserved_failed_csv: "hardware/v15_21a/j6_feedback100_20260820T081327Z.csv"
   preserved_failed_csv_sha256: "f0b8bbab16aca0240278f4e67a9e90d6b8fd111135e27c233a8ee32eee0ded75"
 
@@ -96,4 +122,4 @@ consumption_policy:
   consumed_by_ros2_control: false
   consumed_by_moveit2: false
   consumed_by_ready_pose: false
-  note: "This file freezes read-only transport evidence only; it must not be interpreted as motion commissioning authority."
+  note: "V15.21E grants only J6 POS_VEL local +/-5 degree motion authority; full range, limits, zero, READY, ROS2 and full commissioning remain outside this authority."
