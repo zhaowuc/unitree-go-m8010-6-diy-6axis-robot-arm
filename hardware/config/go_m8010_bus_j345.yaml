@@ -1,0 +1,73 @@
+schema_version: "1.0"
+revision: V15.20A-R2-J345-SHARED-BUS
+
+scope:
+  joints: [J3, J4, J5]
+  motor_type: GO_M8010_6
+  j1_modified: false
+
+usage:
+  role: frozen_post_run_configuration_record
+  consumed_by_runner: false
+  motion_authority: false
+
+bus:
+  channel: CHANNEL_2
+  ftdi_serial: FTASQA6F
+  ftdi_interface: "02"
+  port: /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if02-port0
+  by_path: /dev/serial/by-path/pci-0000:00:14.0-usb-0:1:1.2-port0
+  resolved_tty_at_capture: /dev/ttyUSB2
+  baudrate: 4000000
+  topology: LINEAR_MULTIDROP_OPERATOR_CONFIRMED
+  polarity_correction: YES
+  polarity_evidence: R1_J3_GOLDEN_PATH_AFTER_POWER_OFF_A_B_SWAP_AND_R2_HOST_ENTRY_MAPPING_CONFIRMATION
+  termination_status: UNKNOWN
+
+motors:
+  J3:
+    original_id: 0
+    id: 3
+    gear_ratio: 6.3299999237060547
+    mode: normal
+    factory_mode_exit: PASS
+    sign: PENDING
+    cad_zero: PENDING
+    motion_authority: false
+  J4:
+    original_id: 0
+    id: 4
+    gear_ratio: 6.3299999237060547
+    mode: normal
+    factory_mode_exit: PASS
+    sign: PENDING
+    cad_zero: PENDING
+    motion_authority: false
+  J5:
+    original_id: 4
+    id: 5
+    gear_ratio: 6.3299999237060547
+    mode: normal
+    factory_mode_exit: PASS
+    sign: PENDING
+    cad_zero: PENDING
+    motion_authority: false
+
+safety:
+  brake_only_validation: true
+  foc_trajectory_used: false
+  active_motor_motion_used: false
+  id15_used: false
+  j1_authority_modified: false
+
+evidence:
+  shared_discovery_csv:
+    path: /tmp/v15_20a_r2_j345_shared_discovery_20260820T060343Z.csv
+    sha256: 3bf5c8601f2d372152352fe20ae1f3eab720ca5b8f1790fcf2484d1fd6aa5a98
+  perf100_csv:
+    path: /tmp/v15_20a_r2_j345_perf100_20260820T061201Z.csv
+    sha256: 1954b37b7592fde7251f0f93f69e1888acf9ee9752316e9e1bfa84441ab14280
+  ready_pose_csv:
+    path: /tmp/v15_20a_r2_j345_ready_pose_v1_20260820T061733Z.csv
+    sha256: f8532b1bf67c0fc9d2151ea5a195b6d9dd76bc0da8c7a41287254c3f82070b54
+  sdk_library_sha256: d51bc5f10cd757458ff4c34fa3bf6ecb0bb28c6c331de335aaaa527c68850c68

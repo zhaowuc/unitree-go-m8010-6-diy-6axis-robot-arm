@@ -1,0 +1,82 @@
+schema_version: "1.0"
+name: READY_POSE_V1
+semantics: READY_POSE_V1_RAW_REFERENCE
+capture_timestamp_utc: "2026-08-20T06:17:33Z"
+motion_target_authorized: false
+not_cad_zero: true
+not_ros_zero: true
+not_motor_internal_zero: true
+
+transport:
+  channel: CHANNEL_2
+  port: /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if02-port0
+  resolved_tty_at_capture: /dev/ttyUSB2
+  baudrate: 4000000
+
+capture:
+  rate_target_hz_per_motor: 100
+  duration_target_s: 2
+  planned_frames_per_motor: 200
+  total_planned_transactions: 600
+  total_completed_transactions: 600
+  evidence_csv: /tmp/v15_20a_r2_j345_ready_pose_v1_20260820T061733Z.csv
+  evidence_sha256: f8532b1bf67c0fc9d2151ea5a195b6d9dd76bc0da8c7a41287254c3f82070b54
+  unwrap_method: LOCAL_NEAREST_TURN
+  reference_unit: MOTOR_SDK_RAD
+
+J3:
+  motor_id: 3
+  raw_reference_rad: 2.1399083137512207
+  wrapped_equivalent_rad: 2.1399083137512207
+  raw_mean_rad: 2.1399734568595887
+  raw_population_std_rad: 0.00014659267438217439
+  raw_min_rad: 2.1397163867950439
+  raw_max_rad: 2.140291690826416
+  output_joint_span_rad: 0.00009088531410838380
+  valid_frames: 200
+  planned_frames: 200
+  actual_rate_hz: 99.8071337479865
+  temperature_min_c: 34
+  temperature_max_c: 34
+  merror_nonzero_frames: 0
+  sign: PENDING
+  cad_zero: PENDING
+
+J4:
+  motor_id: 4
+  raw_reference_rad: 0.49758619070053101
+  wrapped_equivalent_rad: 0.49758619070053101
+  raw_mean_rad: 0.49765042632818224
+  raw_population_std_rad: 0.00011549145169938258
+  raw_min_rad: 0.49739444255828857
+  raw_max_rad: 0.49796968698501587
+  output_joint_span_rad: 0.00009087589789266599
+  valid_frames: 200
+  planned_frames: 200
+  actual_rate_hz: 99.8139984196254
+  temperature_min_c: 34
+  temperature_max_c: 34
+  merror_nonzero_frames: 0
+  sign: PENDING
+  cad_zero: PENDING
+
+J5:
+  motor_id: 5
+  raw_reference_rad: 4.3298625946044922
+  wrapped_equivalent_rad: 4.3298625946044922
+  raw_mean_rad: 4.329929685592651
+  raw_population_std_rad: 0.00009727130911748581
+  raw_min_rad: 4.3298625946044922
+  raw_max_rad: 4.3302459716796875
+  output_joint_span_rad: 0.00006056509949700836
+  valid_frames: 200
+  planned_frames: 200
+  actual_rate_hz: 99.8118698228696
+  temperature_min_c: 34
+  temperature_max_c: 34
+  merror_nonzero_frames: 0
+  sign: PENDING
+  cad_zero: PENDING
+
+J1:
+  use_existing_frozen_configuration: true

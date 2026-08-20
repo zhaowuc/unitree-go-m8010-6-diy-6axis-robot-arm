@@ -1,0 +1,123 @@
+{
+  "schema_version": "1.0",
+  "task": "V15.20A-R2 J3/J4/J5 Fast ID Assignment + Shared Bus Bring-up + READY_POSE Freeze",
+  "status": "PASS",
+  "source_base_commit": "d7a35c82f6c7d0e9f5b323caa084027d154ab246",
+  "branch": "agent/v15-20a-j345-shared-bus-ready-pose",
+  "bus": {
+    "channel": "CHANNEL_2",
+    "ftdi_serial": "FTASQA6F",
+    "ftdi_interface": "02",
+    "stable_port": "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if02-port0",
+    "by_path": "/dev/serial/by-path/pci-0000:00:14.0-usb-0:1:1.2-port0",
+    "resolved_tty_at_capture": "/dev/ttyUSB2",
+    "baudrate": 4000000,
+    "topology": "LINEAR_MULTIDROP_OPERATOR_CONFIRMED",
+    "ab_polarity_corrected": true,
+    "termination_status": "UNKNOWN"
+  },
+  "motors": {
+    "J3": {
+      "motor_type": "GO_M8010_6",
+      "original_id": 0,
+      "final_id": 3,
+      "id_assignment": "PASS",
+      "factory_mode_exit": "PASS",
+      "motor_mode_brake_verified": true,
+      "assignment_evidence": {
+        "csv_sha256": "e2adfb960d96e231da2dec117ab62273ba844771836fd14fc9f26b6aaa5095e2",
+        "journal_sha256": "1000cb4a396990adf54a2d531988ddf47a05d0b3f01d1548e4a0f5e2e0b9537b"
+      }
+    },
+    "J4": {
+      "motor_type": "GO_M8010_6",
+      "original_id": 0,
+      "final_id": 4,
+      "id_assignment": "PASS_AFTER_FAIL_CLOSED_RECOVERY_AND_COMPLETION_VALIDATION",
+      "factory_mode_exit": "PASS",
+      "motor_mode_brake_verified": true,
+      "atomic_fail_evidence": {
+        "csv_sha256": "cc61eff64e52647a1534a5a8ab0383fc050d80898243ce78a4fb657c0ccd2338",
+        "journal_sha256": "050037b48ee60ea122b2a43e02ca9ae87f81941b7119f076639de86770656b5b"
+      },
+      "recovery_evidence": {
+        "csv_sha256": "fdedda1684aa61cf7cd22f81d674bf06d052566b34ef8be9799baad619fe2740",
+        "journal_sha256": "69648ebc6be8a33eb11dce39a8a198142a0a146eec2d2b863fade269a0f16b2e"
+      },
+      "completion_evidence": {
+        "csv_sha256": "91ab21dea54ed1746d7bc507cf824cea6b4e9ce079161b94e638144bac7e5e08",
+        "journal_sha256": "64b0a58ad07968753c89be9df5e71421ce75bba3037226f490c3bcd3fbd8be7a"
+      }
+    },
+    "J5": {
+      "motor_type": "GO_M8010_6",
+      "original_id": 4,
+      "final_id": 5,
+      "id_assignment": "PASS_AFTER_FAIL_CLOSED_RECOVERY_CLASSIFICATION",
+      "factory_mode_exit": "PASS",
+      "motor_mode_brake_verified": true,
+      "atomic_fail_evidence": {
+        "csv_sha256": "246bb10fccb085a4c928b71769282d8d070ea043155fbc9162e717d452decef5",
+        "journal_sha256": "33150bc34026c477e35efe9bd72c6561f0bd049f72f52dd467d7068f7d41c850"
+      },
+      "recovery_evidence": {
+        "csv_sha256": "a4d9a0aca2d9c2eaa728249b6b21f58c83b5ffed352ca20faeeff27f827bae2d",
+        "journal_sha256": "4ae78e6800f6f19c3f30c54861d8d94647ff4305634fb23a1db2bfc9210ec2b2"
+      }
+    }
+  },
+  "shared_discovery": {
+    "status": "PASS",
+    "planned_transactions": 9,
+    "completed_transactions": 9,
+    "valid_by_motor": {"J3": 3, "J4": 3, "J5": 3},
+    "crc_verified_frames": 9,
+    "csv_path": "/tmp/v15_20a_r2_j345_shared_discovery_20260820T060343Z.csv",
+    "csv_sha256": "3bf5c8601f2d372152352fe20ae1f3eab720ca5b8f1790fcf2484d1fd6aa5a98"
+  },
+  "perf100": {
+    "status": "PASS",
+    "planned_transactions": 1500,
+    "completed_transactions": 1500,
+    "crc_verified_frames": 1500,
+    "motors": {
+      "J3": {"valid": 500, "planned": 500, "actual_hz": 99.9401820157541, "max_rtt_ms": 1.584172, "temperature_c": [33, 33], "joint_span_rad": 0.00012116786385688799},
+      "J4": {"valid": 500, "planned": 500, "actual_hz": 99.9421520803818, "max_rtt_ms": 1.359348, "temperature_c": [33, 34], "joint_span_rad": 0.00009087589789266599},
+      "J5": {"valid": 500, "planned": 500, "actual_hz": 99.9412011865315, "max_rtt_ms": 1.6415, "temperature_c": [34, 34], "joint_span_rad": 0.00012113019899401671}
+    },
+    "csv_path": "/tmp/v15_20a_r2_j345_perf100_20260820T061201Z.csv",
+    "csv_sha256": "1954b37b7592fde7251f0f93f69e1888acf9ee9752316e9e1bfa84441ab14280"
+  },
+  "ready_pose_v1": {
+    "status": "FROZEN",
+    "semantics": "READY_POSE_V1_RAW_REFERENCE",
+    "motion_target_authorized": false,
+    "capture_timestamp_utc": "2026-08-20T06:17:33Z",
+    "motors": {
+      "J3": {"id": 3, "median_rad": 2.1399083137512207, "population_std_rad": 0.00014659267438217439, "min_rad": 2.1397163867950439, "max_rad": 2.140291690826416, "actual_hz": 99.8071337479865, "valid": 200, "planned": 200},
+      "J4": {"id": 4, "median_rad": 0.49758619070053101, "population_std_rad": 0.00011549145169938258, "min_rad": 0.49739444255828857, "max_rad": 0.49796968698501587, "actual_hz": 99.8139984196254, "valid": 200, "planned": 200},
+      "J5": {"id": 5, "median_rad": 4.3298625946044922, "population_std_rad": 0.00009727130911748581, "min_rad": 4.3298625946044922, "max_rad": 4.3302459716796875, "actual_hz": 99.8118698228696, "valid": 200, "planned": 200}
+    },
+    "csv_path": "/tmp/v15_20a_r2_j345_ready_pose_v1_20260820T061733Z.csv",
+    "csv_sha256": "f8532b1bf67c0fc9d2151ea5a195b6d9dd76bc0da8c7a41287254c3f82070b54"
+  },
+  "safety": {
+    "foc_trajectory_used": false,
+    "active_motor_motion_used": false,
+    "motor_tools_used_only_for_isolated_id_assignment": true,
+    "id15_used": false,
+    "j1_authority_modified": false,
+    "sign_mapping_performed": false,
+    "cad_zero_written": false,
+    "motor_internal_zero_written": false
+  },
+  "unresolved": [
+    "TERMINATION_STATUS_UNKNOWN",
+    "J3_J4_J5_SIGN_MAPPING_PENDING",
+    "CAD_ROS_AND_MOTOR_INTERNAL_ZERO_NOT_ESTABLISHED",
+    "READY_POSE_REFERENCE_IS_NOT_A_MOTION_TARGET",
+    "J1_REMAINS_PHYSICALLY_DISCONNECTED_DURING_J345_R2",
+    "FULL_BUS_COLLISION_ABSENCE_IS_NOT_MATHEMATICALLY_PROVEN",
+    "FOC_LOAD_AND_DYNAMIC_BEHAVIOR_NOT_TESTED"
+  ]
+}
