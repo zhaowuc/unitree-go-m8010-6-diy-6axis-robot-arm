@@ -1,0 +1,213 @@
+{
+  "schema_version": "1.0",
+  "task": "V15.21D J6 POS_VEL safe enable/current-position hold diagnosis",
+  "source_head": "349fa982726e73cb799113f96cbb462e98fc85ca",
+  "work_branch": "agent/v15-21d-j6-posvel-enable-hold",
+  "created_at_utc": "2026-08-20T09:50:04.902178+00:00",
+  "status": "PASS",
+  "windows_reference": {
+    "motion": "OPERATOR_VERIFIED_PASS",
+    "default_mode": "POS_VEL",
+    "switch_mode_default_enabled": true,
+    "command_can_id": 257,
+    "payload_format": "<ff position_rad velocity_rad_s"
+  },
+  "frozen_authority": {
+    "v15_21a_communication": "PASS",
+    "v15_21b_mit_hold": "FAIL",
+    "v15_21c_root_cause": "REAL_ENABLE_TRANSIENT"
+  },
+  "safety": {
+    "local_motion_authority": "NOT_GRANTED",
+    "mit_tested": false,
+    "kp_kd": "NOT_APPLICABLE_TO_POSVEL_TEST",
+    "flash_eeprom_save_used": false,
+    "set_zero_used": false,
+    "id_write_used": false,
+    "other_rid_write_used": false,
+    "ready_pose_modified": false,
+    "j1_j345_simulation_modified": false
+  },
+  "evidence": [
+    {
+      "path": "hardware/v15_21d/j6_posvel_disabled_baseline_20260820T095219Z.csv",
+      "sha256": "6494aeb1a1264ff4dba1c1221b61ac7bf249d02088a3ab8f54eb361f2592f8cd"
+    },
+    {
+      "path": "hardware/v15_21d/j6_posvel_micro_enable_raw_20260820T095325Z.csv",
+      "sha256": "b99889c224b5c34279ccc5f52bfa0d2df16c0b8b295ab0c294f9e798ff90c093"
+    },
+    {
+      "path": "hardware/v15_21d/j6_posvel_post_disable_20260820T095325Z.csv",
+      "sha256": "c6049cb6112a3f83f2a0aa0b14dc678587544ab10d586e45950819dc5717b7ae"
+    },
+    {
+      "path": "hardware/v15_21d/j6_posvel_micro_enable_raw_20260820T095429Z.csv",
+      "sha256": "c75c33373987cf605680372822135a94a14244c6edbb0776d03074bdd2c751a4"
+    },
+    {
+      "path": "hardware/v15_21d/j6_posvel_post_disable_20260820T095429Z.csv",
+      "sha256": "2f502f59a6be67349f44f18004dc143bf03344d2b84bbd66886169574d5c8475"
+    }
+  ],
+  "usb": {
+    "sysfs": "/sys/bus/usb/devices/3-2",
+    "vid": "34b7",
+    "pid": "6877",
+    "serial": "EEE8D71AB573449FCAFE7B39BD222C75",
+    "manufacturer": "DaMiao-Tech",
+    "product": "DM-USB2FDCAN",
+    "busnum": "3",
+    "devnum": "108"
+  },
+  "motor": {
+    "master_id_rid7": 0,
+    "esc_id_rid8": 1,
+    "ctrl_mode_rid10": 1,
+    "pmax_rid21": 12.5,
+    "allowed_normal_feedback_can_ids": [
+      0,
+      1
+    ]
+  },
+  "ctrl_mode_initial": 1,
+  "initial_readonly": {
+    "valid_frames": 5,
+    "states": [
+      "DISABLED",
+      "DISABLED",
+      "DISABLED",
+      "DISABLED",
+      "DISABLED"
+    ],
+    "q_median_rad": 1.0976958876935985
+  },
+  "runtime_mode_write": {
+    "operator_gate": "PASS",
+    "rid10_write_count": 1,
+    "requested_value": 2,
+    "flash_eeprom_save_used": false
+  },
+  "ctrl_mode_after_write": 2,
+  "posvel_disabled_baseline": {
+    "valid_frames": 100,
+    "total_required": 100,
+    "q_median_rad": 1.0976958876935985,
+    "q_mean_rad": 1.097661554894331,
+    "q_std_rad": 0.0002164348508812731,
+    "q_min_rad": 1.097314412146181,
+    "q_max_rad": 1.098077363241016,
+    "velocity_min_rad_s": -0.0549450549450512,
+    "velocity_max_rad_s": 0.0329670329670364,
+    "mos_temperature_min_c": 41,
+    "mos_temperature_max_c": 41,
+    "coil_temperature_min_c": 38,
+    "coil_temperature_max_c": 38,
+    "states": [
+      "DISABLED"
+    ],
+    "status": "PASS",
+    "q_before_switch_median_rad": 1.0976958876935985,
+    "mode_switch_only_delta_rad": 0.0,
+    "mode_switch_only_delta_deg": 0.0,
+    "session_reference_semantics": "SESSION_LOCAL_ONLY_NOT_ZERO_OR_READY"
+  },
+  "j6_posvel_session_reference_rad": 1.0976958876935985,
+  "ctrl_mode_before_enable": 2,
+  "micro_enable": {
+    "status": "PASS",
+    "attempt_number": 2,
+    "explicit_operator_repeat_after_missed_observation": true,
+    "operator_gate": "PASS",
+    "pre_enable_disabled_valid_frames": 100,
+    "preload": {
+      "sent_while_disabled": true,
+      "timestamp_monotonic_s": 1812647.919800437,
+      "can_id": 257,
+      "payload_hex": "4D818C3F00000000",
+      "position_target_rad": 1.0976958876935985,
+      "velocity_target_rad_s": 0.0
+    },
+    "fc_sent": true,
+    "actual_enabled_window_ms": 12.00195006094873,
+    "maximum_allowed_window_ms": 15.0,
+    "fd_sent": true,
+    "final_five_frame_disabled": "PASS",
+    "first_active_feedback": {
+      "can_id": 0,
+      "payload_hex": "118B3D7FE7FF2926",
+      "classification": "NORMAL_FEEDBACK",
+      "state": "ENABLED",
+      "position_rad": 1.0976958876935985,
+      "velocity_rad_s": -0.0329670329670364
+    },
+    "active_normal_feedback_count": 3,
+    "max_active_velocity_rad_s": -0.0329670329670364,
+    "fault_states": [],
+    "unexpected_rx_count": 0,
+    "q_post_median_rad": 1.0976958876935985,
+    "q_post_minus_q_session_rad": 0.0,
+    "q_post_minus_q_session_deg": 0.0,
+    "operator_visible_jerk": "NO",
+    "raw_csv_path": "hardware/v15_21d/j6_posvel_micro_enable_raw_20260820T095429Z.csv",
+    "post_csv_path": "hardware/v15_21d/j6_posvel_post_disable_20260820T095429Z.csv",
+    "pre_operator_hard_acceptance": "PASS"
+  },
+  "ctrl_mode_final": 2,
+  "ctrl_mode_persistence": "NOT_TESTED",
+  "micro_enable_attempts": [
+    {
+      "status": "OPERATOR_DID_NOT_OBSERVE_CLEARLY",
+      "operator_gate": "PASS",
+      "preload": {
+        "sent_while_disabled": true,
+        "timestamp_monotonic_s": 1812583.95512166,
+        "can_id": 257,
+        "payload_hex": "4D818C3F00000000",
+        "position_target_rad": 1.0976958876935985,
+        "velocity_target_rad_s": 0.0
+      },
+      "fc_sent": true,
+      "actual_enabled_window_ms": 12.001164024695754,
+      "maximum_allowed_window_ms": 15.0,
+      "fd_sent": true,
+      "final_five_frame_disabled": "PASS",
+      "first_active_feedback": {
+        "can_id": 0,
+        "payload_hex": "118B3D7FF7FF2926",
+        "classification": "NORMAL_FEEDBACK",
+        "state": "ENABLED",
+        "position_rad": 1.0976958876935985,
+        "velocity_rad_s": -0.010989010989007397
+      },
+      "active_normal_feedback_count": 3,
+      "max_active_velocity_rad_s": -0.010989010989007397,
+      "fault_states": [],
+      "unexpected_rx_count": 0,
+      "q_post_median_rad": 1.0976958876935985,
+      "q_post_minus_q_session_rad": 0.0,
+      "q_post_minus_q_session_deg": 0.0,
+      "operator_visible_jerk": "NOT_OBSERVED_CLEARLY",
+      "raw_csv_path": "hardware/v15_21d/j6_posvel_micro_enable_raw_20260820T095325Z.csv",
+      "post_csv_path": "hardware/v15_21d/j6_posvel_post_disable_20260820T095325Z.csv",
+      "pre_operator_hard_acceptance": "PASS"
+    }
+  ],
+  "j6_posvel_enable_hold": "PASS",
+  "final_task_result": "PASS",
+  "completed_at_utc": "2026-08-20T09:55:24.210443+00:00",
+  "zero_limits_ready_authority": {
+    "motor_internal_zero": "UNCHANGED",
+    "cad_zero": "PENDING",
+    "ros_zero": "PENDING",
+    "physical_limits": "PENDING",
+    "ready_reference": "PENDING",
+    "ready_pose_v1_modified": false
+  },
+  "hard_unresolved_items": [
+    "No commanded-displacement, sign, or bidirectional motion test has been authorized or run.",
+    "CTRL_MODE runtime-write persistence across a power cycle is not tested.",
+    "CAD zero, ROS zero, physical limits, and a J6 READY reference remain pending.",
+    "The exact controller-level cause of the MIT enable transient remains unresolved."
+  ]
+}
