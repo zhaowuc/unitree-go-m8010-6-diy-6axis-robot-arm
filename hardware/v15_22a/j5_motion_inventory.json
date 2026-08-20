@@ -1,0 +1,180 @@
+{
+  "schema_version": "1.0",
+  "task": "V15.22A J5 gravity-loaded single-joint local motion commissioning",
+  "source_head": "acb346020317cc47d8d1fa5aeb0285d1473bf285",
+  "work_branch": "agent/v15-22a-j5-local-motion",
+  "completed_at_utc": "2026-08-20T10:56:17Z",
+  "status": "PASS",
+  "final_task_result": "PASS",
+  "bus": {
+    "channel": "CHANNEL_2",
+    "ftdi_serial": "FTASQA6F",
+    "ftdi_interface": "02",
+    "stable_port": "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if02-port0",
+    "resolved_tty": "/dev/ttyUSB2",
+    "baudrate": 4000000,
+    "identity_verified": true
+  },
+  "motors": {
+    "J3": {"id": 3, "initial_brake_valid": 200, "health": "PASS", "left_brake": true},
+    "J4": {"id": 4, "initial_brake_valid": 200, "health": "PASS", "left_brake": true},
+    "J5": {"id": 5, "initial_brake_valid": 200, "health": "PASS", "final_brake": "PASS"}
+  },
+  "controller": {
+    "mode": "FOC_MIXED_POSITION",
+    "kp_sdk_literal": 0.5,
+    "kd_sdk_literal": 0.05,
+    "tau_ff": 0.0,
+    "target_command_rate_hz": 100.0,
+    "gear_ratio": 6.3299999237060547,
+    "output_velocity_deg_s": 10.0,
+    "output_acceleration_deg_s2": 30.0,
+    "trajectory": "REST_TO_REST_TRAPEZOID",
+    "position_step_used": false,
+    "gravity_feedforward_used": false,
+    "friction_feedforward_used": false
+  },
+  "session": {
+    "semantics": "SESSION_LOCAL_ONLY",
+    "valid_frames": 200,
+    "total_frames": 200,
+    "q_raw_median_rad": 4.4880547523498535,
+    "q_raw_mean_rad": 4.487964658737183,
+    "q_raw_std_rad": 0.00012702168299342685,
+    "q_raw_min_rad": 4.487671375274658,
+    "q_raw_max_rad": 4.488246440887451
+  },
+  "hold_current": {
+    "status": "PASS",
+    "q_start_raw_rad": 4.4880547523498535,
+    "max_output_drift_deg": 0.02776962884646172,
+    "final_median_error_deg": 0.024299504259493242,
+    "maximum_qdot_slow_deg_s": 0.1783798955315092,
+    "operator_physical_observation_safe": "YES",
+    "gravity_sag_observed": "NO",
+    "gravity_observation_scope": "CURRENT_POSTURE_NOT_SAG_PRONE"
+  },
+  "sign_probe": {
+    "status": "PASS",
+    "first_attempt": {
+      "numeric_status": "PASS",
+      "operator_observation": "REPEAT_REQUESTED_TO_DISTINGUISH_DIRECTION",
+      "actual_delta_deg": 2.469761905041609,
+      "endpoint_error_deg": 0.5302380949583911,
+      "return_error_deg": 0.37836443008955867
+    },
+    "authoritative_repeat": {
+      "numeric_status": "PASS",
+      "q_session_raw_rad": 4.5313897132873535,
+      "actual_delta_deg": 2.9817649764076664,
+      "endpoint_error_deg": 0.018235023592333643,
+      "return_error_deg": 0.2256271553586623,
+      "actual_command_rate_hz": 99.99800351476381,
+      "max_tx_jitter_ms": 0.17359400000004577
+    },
+    "operator_direction": "COUNTERCLOCKWISE",
+    "operator_viewpoint": "UPPER_OUTPUT_FLANGE_SIDE_LOOKING_TOWARD_JOINT_CENTER",
+    "urdf_axis_xyz": [1.0, 0.0, -1.59232002583387e-13],
+    "mujoco_axis_xyz": [1.0, 0.0, -1.59232002583387e-13],
+    "viewpoint_geometry_review": "VISIBLE_J5_OUTPUT_FLANGE_AND_LINK5_ARE_ON_JOINT_PLUS_X_SIDE",
+    "operator_ros_direction_answer": "YES",
+    "raw_to_ros_sign": 1,
+    "sign_authority": [
+      "V15_22A_OPERATOR_PHYSICAL_CONFIRMATION",
+      "URDF_MUJOCO_J5_AXIS_REVIEW"
+    ],
+    "final_brake": "PASS"
+  },
+  "session_2": {
+    "valid_frames": 100,
+    "total_frames": 100,
+    "q_raw_median_rad": 4.556509017944336,
+    "q_raw_mean_rad": 4.55642828464508,
+    "q_raw_std_rad": 0.00012497405593940147,
+    "q_raw_min_rad": 4.556125164031982,
+    "q_raw_max_rad": 4.556700706481934
+  },
+  "bidirectional_5deg": {
+    "status": "PASS",
+    "q_session_raw_rad": 4.55631685256958,
+    "second_hold": "PASS",
+    "second_hold_max_drift_deg": 0.013884814423230861,
+    "second_hold_final_error_deg": 0.010414689836262378,
+    "plus_5deg": "PASS",
+    "plus_5_endpoint_delta_deg": 4.564633820655985,
+    "plus_5_endpoint_error_deg": 0.43536617934401534,
+    "center_return_error_deg": 0.23257172060795617,
+    "minus_5deg": "PASS",
+    "minus_5_endpoint_delta_deg": -4.958609495311545,
+    "minus_5_endpoint_error_deg": 0.04139050468845529,
+    "final_return_error_deg": 0.19438308584987515,
+    "actual_command_rate_hz": 99.99623298263204,
+    "max_tx_jitter_ms": 0.25439599999999984,
+    "maximum_qdot_fast_deg_s": 15.580329317598716,
+    "maximum_qdot_slow_deg_s": 13.481965505603865,
+    "torque_feedback_min": -0.0546875,
+    "torque_feedback_max": 0.0703125,
+    "temperature_min_c": 36,
+    "temperature_max_c": 36,
+    "merror_nonzero_frames": 0,
+    "invalid_feedback_frames": 0,
+    "operator_observation_safe": "YES",
+    "final_j5_brake_sent": true,
+    "final_five_frame_brake": "PASS",
+    "j3_j4_left_brake": true
+  },
+  "aggregate": {
+    "actual_command_rate_hz_authoritative": 99.99623298263204,
+    "maximum_tx_jitter_ms": 0.2774420000000255,
+    "maximum_qdot_fast_deg_s": 15.580329317598716,
+    "maximum_qdot_slow_deg_s": 13.481965505603865,
+    "torque_feedback_min": -0.0546875,
+    "torque_feedback_max": 0.0703125,
+    "temperature_min_c": 36,
+    "temperature_max_c": 36,
+    "merror_nonzero_frames": 0,
+    "invalid_feedback_frames": 0
+  },
+  "gravity_compensation": {
+    "classification": "NOT_REQUIRED_FOR_LOCAL_TEST",
+    "scope_limit": "CURRENT_TESTED_POSTURE_AND_PLUS_MINUS_5_DEG_ONLY",
+    "global_need_for_gravity_feedforward": "NOT_ESTABLISHED"
+  },
+  "safety": {
+    "ready_pose_modified": false,
+    "motor_internal_zero_modified": false,
+    "cad_zero_modified": false,
+    "ros_zero_modified": false,
+    "physical_limits_modified": false,
+    "j1_authority_modified": false,
+    "j6_authority_modified": false,
+    "simulation_authority_modified": false,
+    "j3_j4_foc_used": false,
+    "automatic_retry_used": false,
+    "operator_authorized_single_sign_repeat": true
+  },
+  "authority": {
+    "j5_local_motion": "PASS",
+    "j5_bidirectional_5deg": "PASS",
+    "j5_local_motion_authority": "PASS",
+    "j5_full_range": "NOT_TESTED",
+    "j5_physical_limits": "PENDING",
+    "j5_cad_zero": "PENDING",
+    "j5_ros_zero": "PENDING",
+    "j5_full_commissioning": "NOT_COMPLETE"
+  },
+  "evidence": [
+    {"path": "hardware/v15_22a/j5_session_capture_20260820T103600Z.csv", "sha256": "d91aa7149ef29af675bc3910965309da6f9fc5e018ebbc57e807231e690f0b97"},
+    {"path": "hardware/v15_22a/j5_hold_current_20260820T104000Z.csv", "sha256": "0f85ebb086951c0dcd3d8ae9642673541ccd55d25e0f3d9b761a6f3e99f93382"},
+    {"path": "hardware/v15_22a/j5_sign_probe_20260820T104300Z.csv", "sha256": "e63fb9c9cb4a8bbc8edfa3177c3279bbff9fe396d5507a9f3ca6e908de508a56"},
+    {"path": "hardware/v15_22a/j5_sign_probe_repeat_20260820T104700Z.csv", "sha256": "1cc00d7ac166a2ad4de0efbd11d7db346462b1083d01553fab7732eb649efb4e"},
+    {"path": "hardware/v15_22a/j5_session_2_capture_20260820T105000Z.csv", "sha256": "4d8f2047944c524b04d6e73aef15b720d16d96225d0d85620ed262d22e4d791b"},
+    {"path": "hardware/v15_22a/j5_bidirectional_5deg_20260820T105100Z.csv", "sha256": "368635ac9af73e5e85f1a06a65ce76b97fa1f11bf5d10362f16f60885325d714"}
+  ],
+  "hard_unresolved_items": [
+    "Gravity compensation outside the current tested posture and local plus/minus 5 degree range is not established.",
+    "J5 full range and physical limits remain untested.",
+    "J5 CAD zero and ROS zero remain pending.",
+    "J5 full commissioning is not complete."
+  ]
+}
