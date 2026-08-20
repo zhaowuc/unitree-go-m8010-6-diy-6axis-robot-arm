@@ -16,6 +16,10 @@ V15_18A_静态重力与重力矩验收.json text eol=crlf
 rigid_links_v15_13/rigid_link_membership.csv text eol=crlf
 rigid_links_v15_13/rigid_link_manifest.json text eol=crlf
 
+# V15.21A external source and hardware captures are byte-exact evidence.
+tools/hardware/j6_dm_g6220/reference_windows_known_good/** binary
+hardware/v15_21a/*.csv binary
+
 *.step binary
 *.STEP binary
 *.stp binary

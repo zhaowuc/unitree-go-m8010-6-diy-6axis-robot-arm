@@ -1,0 +1,2 @@
+# V15.21A: allow the car operator to access the DaMiao DM-USB2FDCAN via libusb.
+SUBSYSTEM=="usb", ATTR{idVendor}=="34b7", ATTR{idProduct}=="6877", MODE="0666"

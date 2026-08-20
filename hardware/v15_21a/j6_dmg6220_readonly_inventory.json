@@ -1,0 +1,260 @@
+{
+  "schema_version": "1.0",
+  "task": "V15.21A J6 DM-G6220 read-only bring-up",
+  "status": "PASS",
+  "source_gate": {
+    "branch": "agent/v15-20a-j345-shared-bus-ready-pose",
+    "head": "6040c1d5c35c4e67efaa9cb5729970a7b674fb36",
+    "work_branch": "agent/v15-21a-j6-dmg6220-readonly",
+    "clean_before_branch": true
+  },
+  "physical_gate": "OPERATOR_CONFIRMED",
+  "captured_at_utc": "2026-08-20T08:18:02.740144+00:00",
+  "host": "car",
+  "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.35",
+  "python": "3.13.15",
+  "reference_zip_sha256": "b6329bb0c3f1dea74a856b460e360ac86515e02a50820d72ffc62d69395ded89",
+  "python_modules": {
+    "pyserial": true,
+    "dmcan": true,
+    "dmcan_sdk_version": "1.0.4"
+  },
+  "native_runtime": {
+    "dm_device_version": "v1.1.0",
+    "upstream_commit": "36a8b3971dc35608701d128f353a32cad3ee6cdb",
+    "upstream_path": "C&C++/lib/v1.1.0/linux/x86_64/libdm_device.so",
+    "sha256": "bec4ca4421f5366c90fa11cc34f2f683ed71a6372e15c265e7e4b17e720607dd",
+    "binary_redistributed_in_repo": false
+  },
+  "usb_devices": [
+    {
+      "sysfs": "/sys/bus/usb/devices/3-1",
+      "vid_pid": "0403:6011",
+      "manufacturer": "FTDI",
+      "product": "USB <-> Serial Converter",
+      "serial": "FTASQA6F",
+      "busnum": "3",
+      "devnum": "101"
+    },
+    {
+      "sysfs": "/sys/bus/usb/devices/3-10",
+      "vid_pid": "8087:0026",
+      "manufacturer": null,
+      "product": null,
+      "serial": null,
+      "busnum": "3",
+      "devnum": "8"
+    },
+    {
+      "sysfs": "/sys/bus/usb/devices/3-2",
+      "vid_pid": "34b7:6877",
+      "manufacturer": "DaMiao-Tech",
+      "product": "DM-USB2FDCAN",
+      "serial": "EEE8D71AB573449FCAFE7B39BD222C75",
+      "busnum": "3",
+      "devnum": "108"
+    },
+    {
+      "sysfs": "/sys/bus/usb/devices/3-7",
+      "vid_pid": "2b7e:b567",
+      "manufacturer": "Kingcome",
+      "product": "HD Camera",
+      "serial": "0001",
+      "busnum": "3",
+      "devnum": "5"
+    },
+    {
+      "sysfs": "/sys/bus/usb/devices/usb1",
+      "vid_pid": "1d6b:0002",
+      "manufacturer": "Linux 6.8.0-124-generic xhci-hcd",
+      "product": "xHCI Host Controller",
+      "serial": "0000:00:0d.0",
+      "busnum": "1",
+      "devnum": "1"
+    },
+    {
+      "sysfs": "/sys/bus/usb/devices/usb2",
+      "vid_pid": "1d6b:0003",
+      "manufacturer": "Linux 6.8.0-124-generic xhci-hcd",
+      "product": "xHCI Host Controller",
+      "serial": "0000:00:0d.0",
+      "busnum": "2",
+      "devnum": "1"
+    },
+    {
+      "sysfs": "/sys/bus/usb/devices/usb3",
+      "vid_pid": "1d6b:0002",
+      "manufacturer": "Linux 6.8.0-124-generic xhci-hcd",
+      "product": "xHCI Host Controller",
+      "serial": "0000:00:14.0",
+      "busnum": "3",
+      "devnum": "1"
+    },
+    {
+      "sysfs": "/sys/bus/usb/devices/usb4",
+      "vid_pid": "1d6b:0003",
+      "manufacturer": "Linux 6.8.0-124-generic xhci-hcd",
+      "product": "xHCI Host Controller",
+      "serial": "0000:00:14.0",
+      "busnum": "4",
+      "devnum": "1"
+    }
+  ],
+  "serial_ports": [
+    {
+      "device": "/dev/ttyUSB3",
+      "description": "USB <-> Serial Converter - USB <-> Serial Converter",
+      "hwid": "USB VID:PID=0403:6011 SER=FTASQA6F LOCATION=3-1:1.3",
+      "vid_pid": "0403:6011",
+      "serial": "FTASQA6F",
+      "location": "3-1:1.3"
+    },
+    {
+      "device": "/dev/ttyUSB2",
+      "description": "USB <-> Serial Converter - USB <-> Serial Converter",
+      "hwid": "USB VID:PID=0403:6011 SER=FTASQA6F LOCATION=3-1:1.2",
+      "vid_pid": "0403:6011",
+      "serial": "FTASQA6F",
+      "location": "3-1:1.2"
+    },
+    {
+      "device": "/dev/ttyUSB1",
+      "description": "USB <-> Serial Converter - USB <-> Serial Converter",
+      "hwid": "USB VID:PID=0403:6011 SER=FTASQA6F LOCATION=3-1:1.1",
+      "vid_pid": "0403:6011",
+      "serial": "FTASQA6F",
+      "location": "3-1:1.1"
+    },
+    {
+      "device": "/dev/ttyUSB0",
+      "description": "USB <-> Serial Converter - USB <-> Serial Converter",
+      "hwid": "USB VID:PID=0403:6011 SER=FTASQA6F LOCATION=3-1:1.0",
+      "vid_pid": "0403:6011",
+      "serial": "FTASQA6F",
+      "location": "3-1:1.0"
+    }
+  ],
+  "socketcan_interfaces": [],
+  "safety": {
+    "active_enable_used": false,
+    "motor_motion_used": false,
+    "parameter_write_used": false,
+    "set_zero_used": false,
+    "switch_mode_used": false,
+    "id_write_used": false,
+    "ready_pose_modified": false,
+    "j1_authority_modified": false,
+    "j345_authority_modified": false,
+    "simulation_authority_modified": false,
+    "safety_fd_disable_used": false
+  },
+  "transport": {
+    "type": "dmcan_sdk",
+    "device": "DM-USB2FDCAN",
+    "usb_vid_pid": "34b7:6877",
+    "usb_serial": "EEE8D71AB573449FCAFE7B39BD222C75",
+    "adapter_version": "app v1.0.0.5",
+    "can_channel": 0,
+    "can_bitrate": 1000000,
+    "canfd": false,
+    "cdc_node_observed": "/dev/ttyACM0",
+    "cdc_node_usage": "diagnostic enumeration only",
+    "forbidden_ftdi_serial": "FTASQA6F"
+  },
+  "motor": {
+    "motor_id": 1,
+    "requested_ids": [
+      1
+    ],
+    "ctrl_mode": 1,
+    "pmax": 12.5,
+    "wrapper_can_ids": [
+      0
+    ],
+    "ctrl_mode_name": "MIT"
+  },
+  "initial_feedback": {
+    "can_id": 0,
+    "state": 0,
+    "state_name": "DISABLED",
+    "position_rad": 1.0542076752880138,
+    "velocity_rad_s": -0.010989010989007397,
+    "torque_protocol": -0.0024420024420024333,
+    "mos_temperature_c": 39,
+    "coil_temperature_c": 35
+  },
+  "pre_validation_feedback": {
+    "can_id": 0,
+    "state": 0,
+    "state_name": "DISABLED",
+    "position_rad": 1.0542076752880138,
+    "velocity_rad_s": -0.010989010989007397,
+    "torque_protocol": -0.0024420024420024333,
+    "mos_temperature_c": 39,
+    "coil_temperature_c": 35
+  },
+  "safety_disable_used": false,
+  "feedback100": {
+    "target_hz": 100.0,
+    "planned_frames": 500,
+    "valid_frames": 500,
+    "valid_rate": 1.0,
+    "send_elapsed_s": 5.000191860124469,
+    "feedback_elapsed_s": 4.913044719025493,
+    "actual_hz": 101.56634603134188,
+    "mean_rtt_ms": 50.50493649626151,
+    "p95_rtt_ms": 95.31706804409623,
+    "max_rtt_ms": 100.4592189565301,
+    "max_consecutive_timeout": 0,
+    "extra_unmatched_feedback": 0,
+    "state_distribution": {
+      "DISABLED": 500
+    },
+    "position_rad": {
+      "min": 1.053444724193179,
+      "max": 1.0545891508354313,
+      "span": 0.0011444266422522276
+    },
+    "velocity_rad_s": {
+      "min": -0.0769230769230802,
+      "max": 0.0329670329670364
+    },
+    "torque_protocol": {
+      "min": -0.0024420024420024333,
+      "max": -0.0024420024420024333
+    },
+    "mos_temperature_c": {
+      "min": 39,
+      "max": 39
+    },
+    "coil_temperature_c": {
+      "min": 35,
+      "max": 35
+    },
+    "csv_path": "hardware/v15_21a/j6_feedback100_20260820T081810Z.csv",
+    "csv_sha256": "d82d52c6c432e976db472bf2d551a13af890a2685d6950afb87801d76a712d96",
+    "status": "PASS"
+  },
+  "calibration": {
+    "sign": "PENDING",
+    "cad_zero": "PENDING",
+    "ros_zero": "PENDING",
+    "motor_internal_zero": "UNCHANGED",
+    "physical_limits": "PENDING",
+    "ready_reference": "PENDING"
+  },
+  "protocol_mapping": {
+    "classification": "PROTOCOL_ENCODING_RANGE",
+    "position_rad": 12.5,
+    "velocity_rad_s": 45.0,
+    "torque": 10.0
+  },
+  "preserved_failed_run": {
+    "reason": "first probe implementation discarded SDK batched callbacks during per-request queue clearing",
+    "planned_frames": 500,
+    "valid_frames": 42,
+    "csv_path": "hardware/v15_21a/j6_feedback100_20260820T081327Z.csv",
+    "csv_sha256": "f0b8bbab16aca0240278f4e67a9e90d6b8fd111135e27c233a8ee32eee0ded75",
+    "hardware_fault_indicated": false
+  }
+}

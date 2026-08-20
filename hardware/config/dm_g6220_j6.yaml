@@ -1,0 +1,99 @@
+schema_version: "1.0"
+revision: "V15.21A-J6-DMG6220-READONLY"
+
+joint: "J6"
+motor_type: "DM_G6220"
+role: "frozen post-run read-only transport authority"
+
+transport:
+  type: "dmcan_sdk"
+  adapter: "DM-USB2FDCAN"
+  usb_vid: "34b7"
+  usb_pid: "6877"
+  serial: "EEE8D71AB573449FCAFE7B39BD222C75"
+  usb_serial: "EEE8D71AB573449FCAFE7B39BD222C75"
+  can_channel: 0
+  can_bitrate: 1000000
+  canfd: false
+  adapter_version: "app v1.0.0.5"
+  cdc_node_observed: "/dev/ttyACM0"
+  cdc_node_usage: "diagnostic enumeration only; not the production CAN transport"
+  forbidden_ftdi_serial: "FTASQA6F"
+
+runtime:
+  python: "3.13.15"
+  dmcan_sdk: "1.0.4"
+  dm_device_runtime: "v1.1.0"
+  dm_device_upstream_commit: "36a8b3971dc35608701d128f353a32cad3ee6cdb"
+  dm_device_upstream_path: "C&C++/lib/v1.1.0/linux/x86_64/libdm_device.so"
+  dm_device_sha256: "bec4ca4421f5366c90fa11cc34f2f683ed71a6372e15c265e7e4b17e720607dd"
+  binary_redistributed_in_repo: false
+
+motor:
+  discovered_count: 1
+  id: 1
+  control_mode_at_capture:
+    value: 1
+    name: "MIT"
+  pmax_at_capture_rad: 12.5
+  initial_state:
+    value: 0
+    name: "DISABLED"
+
+protocol_mapping:
+  classification: "PROTOCOL_ENCODING_RANGE_ONLY"
+  position_rad: 12.5
+  velocity_rad_s: 45.0
+  torque: 10.0
+  note: "These values describe protocol encoding/decoding and are not commissioned physical limits."
+
+calibration:
+  sign: "PENDING"
+  cad_zero: "PENDING"
+  ros_zero: "PENDING"
+  motor_internal_zero: "UNCHANGED"
+  physical_limits: "PENDING"
+  safe_velocity: "PENDING"
+  safe_torque: "PENDING"
+  ready_reference: "PENDING"
+
+authority:
+  communication: "PASS"
+  feedback: "PASS"
+  motion: false
+  zero_write: false
+  windows_reference_motion: "OPERATOR_VERIFIED_PASS"
+  ubuntu_communication: "PASS"
+  ubuntu_feedback_100hz: "PASS"
+  ubuntu_motion: "NOT_TESTED"
+  current_motion_authority: false
+  zero_write_authority: false
+  mode_write_authority: false
+  parameter_write_authority: false
+  id_write_authority: false
+
+safety:
+  active_enable_used: false
+  motor_motion_used: false
+  parameter_write_used: false
+  set_zero_used: false
+  switch_mode_used: false
+  id_write_used: false
+  safety_fd_disable_used: false
+  ready_pose_modified: false
+  j1_authority_modified: false
+  j345_authority_modified: false
+  simulation_authority_modified: false
+
+evidence:
+  inventory: "hardware/v15_21a/j6_dmg6220_readonly_inventory.json"
+  pass_csv: "hardware/v15_21a/j6_feedback100_20260820T081810Z.csv"
+  pass_csv_sha256: "d82d52c6c432e976db472bf2d551a13af890a2685d6950afb87801d76a712d96"
+  preserved_failed_csv: "hardware/v15_21a/j6_feedback100_20260820T081327Z.csv"
+  preserved_failed_csv_sha256: "f0b8bbab16aca0240278f4e67a9e90d6b8fd111135e27c233a8ee32eee0ded75"
+
+consumption_policy:
+  consumed_by_ros2_control: false
+  consumed_by_moveit2: false
+  consumed_by_ready_pose: false
+  note: "This file freezes read-only transport evidence only; it must not be interpreted as motion commissioning authority."

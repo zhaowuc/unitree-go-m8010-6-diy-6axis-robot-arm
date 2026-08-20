@@ -1,0 +1,17 @@
+V15.21A J6 DM-G6220 known-good Windows reference
+
+reference role = operator-verified Windows motor-control baseline
+production motion authority = NO
+
+SHA256  file
+b6329bb0c3f1dea74a856b460e360ac86515e02a50820d72ffc62d69395ded89  DM.zip
+5cf231746f733c53f7590d269525c7b77e7d110d0a572a3c3bfdf98c24c3b60d  README.md
+99bb2fc8bae882617635e568e4127ffad0a70165770f5b485830d9ae615c4d08  dm_g6220_run_100_cycle.py
+de312ebeaead126707344639a581a5e320d525f3f6b5a975cb8063a317091641  dm_g6220_memory_gui.py
+81a8ee1a1a5bc37accdc52c919ece185040fb0cf36e0914d31558ea21b9475c0  dm_g6220_position_memory.json
+0fe36138f63fbe0970573dfe5c9b89ab3e7fc796ca0110d3fbb0e48677ee4159  requirements.txt
+599563e5857ff4ae16d5a371bd55a16fbafd85fcd76bfdaac34e646b3a030166  start_gui.bat
+
+The position-memory JSON is preserved as reference evidence only. Its value is
+not J6 CAD zero, ROS zero, motor internal zero, READY pose, a joint limit, or a
+motion target.

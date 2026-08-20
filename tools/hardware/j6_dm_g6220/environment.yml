@@ -1,0 +1,11 @@
+name: j6-dm-g6220
+channels:
+  - conda-forge
+dependencies:
+  - python=3.13
+  - libusb=1.0.29
+  - pip
+  - pyserial=3.5
+  - pyusb
+  - pip:
+      - dmcan-sdk==1.0.4

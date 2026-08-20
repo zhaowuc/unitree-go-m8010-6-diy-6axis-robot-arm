@@ -1,0 +1,14 @@
+DM Device SDK runtime provenance for V15.21A
+
+Upstream repository: https://github.com/dmBots/dm-device-sdk.git
+Upstream commit: 36a8b3971dc35608701d128f353a32cad3ee6cdb
+Upstream commit date: 2026-07-01T15:24:43+08:00
+Runtime path: C&C++/lib/v1.1.0/linux/x86_64/libdm_device.so
+Runtime SHA256: bec4ca4421f5366c90fa11cc34f2f683ed71a6372e15c265e7e4b17e720607dd
+Python distribution: dmcan-sdk==1.0.4
+Python requirement: >=3.13
+
+The upstream repository did not contain a license file at capture time. The
+binary is therefore not redistributed by this project. Install it from the
+recorded upstream revision into the dmcan package's dlls directory and verify
+the SHA256 before use.
