@@ -1,0 +1,232 @@
+{
+  "schema_version": "1.0",
+  "task": "V15.21C J6 enable transient root-cause diagnosis",
+  "source_head": "1583a0f84d35e8b0fcf0849b5f737a1fc5369dd5",
+  "work_branch": "agent/v15-21c-j6-enable-transient-diagnosis",
+  "created_at_utc": "2026-08-20T09:31:58.515459+00:00",
+  "status": "DIAGNOSIS_COMPLETE",
+  "completed_at_utc": "2026-08-20T09:37:41+00:00",
+  "windows_reference_correction": {
+    "windows_reference_motion": "OPERATOR_VERIFIED_PASS",
+    "default_reference_motion_mode": "POS_VEL",
+    "switch_mode_default_enabled": true,
+    "windows_mit_kp10_kd2": "NOT_VERIFIED"
+  },
+  "static_audit": {
+    "sdk_recv_and_sent_callbacks_are_separate": true,
+    "installed_python_sdk_dir_zero_is_rx": true,
+    "installed_python_sdk_dir_one_is_tx": true,
+    "v15_21b_registered_callback": "RECV_ONLY",
+    "v15_21b_decoder_bug_found": true,
+    "decoder_bug": "CAN ID, exact DLC, and response type were not constrained",
+    "decoder_bug_proven_as_v15_21b_root_cause": false,
+    "official_motor_sdk_normal_feedback_mapping": "SlaveID_or_MasterID; CAN_ID_0 fallback uses payload low nibble",
+    "parameter_response_signature": "payload[0:2]=SlaveID and payload[2] in {0x33,0x55}",
+    "enable_reply_semantics": "official enable path reads the ordinary motor-status receive path; no distinct acknowledgement format established",
+    "installed_python_sdk": "dmcan-sdk 1.0.4",
+    "official_dm_device_sdk_commit": "36a8b3971dc35608701d128f353a32cad3ee6cdb",
+    "official_motor_sdk_commit": "0b2ede457bdbf0882e29ab9958ab8fda047b7f4a"
+  },
+  "safety": {
+    "kp_kd_modified": false,
+    "ctrl_mode_modified": false,
+    "sign_probe_run": false,
+    "bidirectional_5deg_run": false,
+    "set_zero_used": false,
+    "parameter_write_used": false,
+    "id_write_used": false,
+    "ready_pose_modified": false,
+    "j1_j345_simulation_modified": false,
+    "local_motion_authority": "NOT_GRANTED"
+  },
+  "evidence": [
+    {
+      "path": "hardware/v15_21c/j6_raw_disabled_baseline_20260820T093200Z.csv",
+      "sha256": "d6c318ecbf5dcd6f8051d3aad9a40282b46bbfbf67adb069581b562c0fcbd9f7"
+    },
+    {
+      "path": "hardware/v15_21c/j6_micro_enable_raw_20260820T093250Z.csv",
+      "sha256": "7d4ffb81d121d82de060ccae49aa480dd1873f8489a51401cf4b170ffd9b00cd"
+    },
+    {
+      "path": "hardware/v15_21c/j6_post_disable_position_20260820T093250Z.csv",
+      "sha256": "3d1ea9c049c60b703e83e5842a4af08130e5fe3166411b64cf9988502e467aa3"
+    },
+    {
+      "path": "hardware/v15_21c/j6_micro_enable_raw_20260820T093509Z.csv",
+      "sha256": "de1d67611891e780fb11fb0c1e86cf4176a0372b18fbf1236d7121591e74df5f"
+    },
+    {
+      "path": "hardware/v15_21c/j6_post_disable_position_20260820T093509Z.csv",
+      "sha256": "502361cd4a4fbf11d7b813d71339502423b1309a1cb1252b63a77b833848bef3"
+    }
+  ],
+  "usb": {
+    "sysfs": "/sys/bus/usb/devices/3-2",
+    "vid": "34b7",
+    "pid": "6877",
+    "serial": "EEE8D71AB573449FCAFE7B39BD222C75",
+    "manufacturer": "DaMiao-Tech",
+    "product": "DM-USB2FDCAN",
+    "busnum": "3",
+    "devnum": "108"
+  },
+  "motor": {
+    "motor_id": 1,
+    "master_id_rid7": 0,
+    "esc_id_rid8": 1,
+    "ctrl_mode_rid10": 1,
+    "pmax_rid21": 12.5,
+    "allowed_normal_feedback_can_ids": [
+      0,
+      1
+    ]
+  },
+  "disabled_baseline": {
+    "status": "PASS",
+    "valid_frames": 100,
+    "state": "DISABLED",
+    "normal_feedback_observed_can_ids": [
+      0
+    ],
+    "normal_feedback_observed_dlc_bytes": [
+      8
+    ],
+    "strict_vs_v15_21a_decoder_disagreements": 0,
+    "q_median_rad": 1.0828183413443195,
+    "q_mean_rad": 1.0827496757457844,
+    "q_std_rad": 0.00024354756541561474,
+    "q_min_rad": 1.0820553902494847,
+    "q_max_rad": 1.0835812924391544,
+    "classifications_after_baseline_start": {
+      "UNKNOWN": 200,
+      "NORMAL_FEEDBACK": 100
+    },
+    "csv_path": "hardware/v15_21c/j6_raw_disabled_baseline_20260820T093200Z.csv"
+  },
+  "micro_enable": {
+    "status": "DIAGNOSIS_COMPLETE",
+    "attempt_number": 2,
+    "explicit_operator_repeat_after_missed_observation": true,
+    "operator_gate": "PASS",
+    "motor": {
+      "motor_id": 1,
+      "master_id_rid7": 0,
+      "esc_id_rid8": 1,
+      "ctrl_mode_rid10": 1,
+      "pmax_rid21": 12.5,
+      "allowed_normal_feedback_can_ids": [
+        0,
+        1
+      ]
+    },
+    "session": {
+      "valid_frames": 100,
+      "q_session_median_rad": 1.0835812924391544,
+      "q_session_std_rad": 0.0001995376032749214,
+      "semantics": "SESSION_LOCAL_ONLY"
+    },
+    "preload_mit_sent_while_disabled": true,
+    "fc_enable_sent": true,
+    "first_fd_disable_sent": true,
+    "actual_enabled_window_ms": 12.00306392274797,
+    "maximum_allowed_enabled_window_ms": 15.0,
+    "enabled_window_acceptance": "PASS",
+    "final_five_frame_disabled": "PASS",
+    "first_active_feedback": {
+      "callback_monotonic_s": 1811488.640312718,
+      "sdk_timestamp": 22987539228564,
+      "can_id": 0,
+      "dlc": 8,
+      "payload_hex": "118B188007FF2926",
+      "classification": "NORMAL_FEEDBACK",
+      "state": 1,
+      "position_rad": 1.0835812924391544,
+      "velocity_rad_s": 0.010989010989007397,
+      "torque_protocol": -0.0024420024420024333,
+      "mos_temperature_c": 41,
+      "coil_temperature_c": 38
+    },
+    "active_normal_feedback_count": 3,
+    "q_post_median_rad": 1.0976958876935985,
+    "q_post_minus_q_session_rad": 0.01411459525444414,
+    "q_post_minus_q_session_deg": 0.8087067376150295,
+    "operator_visible_jerk": "YES",
+    "operator_observation": "visible jerk and audible sound",
+    "raw_csv_path": "hardware/v15_21c/j6_micro_enable_raw_20260820T093509Z.csv",
+    "post_csv_path": "hardware/v15_21c/j6_post_disable_position_20260820T093509Z.csv"
+  },
+  "micro_enable_attempts": [
+    {
+      "status": "OPERATOR_DID_NOT_OBSERVE_CLEARLY",
+      "operator_gate": "PASS",
+      "motor": {
+        "motor_id": 1,
+        "master_id_rid7": 0,
+        "esc_id_rid8": 1,
+        "ctrl_mode_rid10": 1,
+        "pmax_rid21": 12.5,
+        "allowed_normal_feedback_can_ids": [
+          0,
+          1
+        ]
+      },
+      "session": {
+        "valid_frames": 100,
+        "q_session_median_rad": 1.0828183413443195,
+        "q_session_std_rad": 0.0002351573206290133,
+        "semantics": "SESSION_LOCAL_ONLY"
+      },
+      "preload_mit_sent_while_disabled": true,
+      "fc_enable_sent": true,
+      "first_fd_disable_sent": true,
+      "actual_enabled_window_ms": 12.000916991382837,
+      "maximum_allowed_enabled_window_ms": 15.0,
+      "enabled_window_acceptance": "PASS",
+      "final_five_frame_disabled": "PASS",
+      "first_active_feedback": {
+        "callback_monotonic_s": 1811348.848945814,
+        "sdk_timestamp": 22411216692024,
+        "can_id": 0,
+        "dlc": 8,
+        "payload_hex": "118B167FF7FF2926",
+        "classification": "NORMAL_FEEDBACK",
+        "state": 1,
+        "position_rad": 1.0828183413443195,
+        "velocity_rad_s": -0.010989010989007397,
+        "torque_protocol": -0.0024420024420024333,
+        "mos_temperature_c": 41,
+        "coil_temperature_c": 38
+      },
+      "active_normal_feedback_count": 3,
+      "q_post_median_rad": 1.0835812924391544,
+      "q_post_minus_q_session_rad": 0.0007629510948348184,
+      "q_post_minus_q_session_deg": 0.04371387770892052,
+      "operator_visible_jerk": "NOT_OBSERVED_CLEARLY",
+      "raw_csv_path": "hardware/v15_21c/j6_micro_enable_raw_20260820T093250Z.csv",
+      "post_csv_path": "hardware/v15_21c/j6_post_disable_position_20260820T093250Z.csv"
+    }
+  ],
+  "diagnosis": {
+    "status": "DIAGNOSIS_COMPLETE",
+    "root_cause": "REAL_ENABLE_TRANSIENT",
+    "real_physical_transient_proven": true,
+    "feedback_frame_misclassification_proven": false,
+    "sdk_callback_batching_proven": true,
+    "stale_frame_origin_proven": false,
+    "callback_batching_is_root_cause": false,
+    "basis": [
+      "The active frames are strict NORMAL_FEEDBACK on standard Classic CAN ID 0x000 with DLC 8, not parameter or TX-echo frames.",
+      "The second bounded micro-enable produced a q_post minus q_session displacement of +0.8087067376150295 deg.",
+      "The operator observed a visible jerk and audible sound.",
+      "FD was sent at 12.00306392274797 ms and the final five feedback frames were DISABLED."
+    ],
+    "remaining_unresolved": [
+      "The controller-level mechanism that creates the enable transient is not yet established.",
+      "The relationship between the approximately +/-6 rad/s V15.21B feedback and the smaller bounded V15.21C transient is not fully quantified.",
+      "Whether future J6 control should use the Windows-reference POS_VEL path remains undecided.",
+      "Startup filtering and position-derived velocity authority have not been designed or authorized."
+    ],
+    "local_motion_authority": "NOT_GRANTED"
+  }
+}

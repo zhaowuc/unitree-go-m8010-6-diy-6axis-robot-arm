@@ -20,6 +20,7 @@ rigid_links_v15_13/rigid_link_manifest.json text eol=crlf
 tools/hardware/j6_dm_g6220/reference_windows_known_good/** binary
 hardware/v15_21a/*.csv binary
 hardware/v15_21b/*.csv binary
+hardware/v15_21c/*.csv binary
 
 *.step binary
 *.STEP binary
