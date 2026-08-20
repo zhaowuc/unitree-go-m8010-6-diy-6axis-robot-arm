@@ -123,3 +123,44 @@ consumption_policy:
   consumed_by_moveit2: false
   consumed_by_ready_pose: false
   note: "V15.21E grants only J6 POS_VEL local +/-5 degree motion authority; full range, limits, zero, READY, ROS2 and full commissioning remain outside this authority."
+
+startup_authority:
+  revision: "V15.21F"
+  status: "PASS"
+  required_motor_state_at_power_on: "DISABLED"
+  required_control_mode:
+    value: 2
+    name: "POS_VEL"
+  read_identity_before_enable: true
+  read_ctrl_mode_before_enable: true
+  current_position_capture_before_enable: true
+  preload_current_position_before_enable: true
+  preload_velocity_target_rad_s: 0.0
+  blind_saved_raw_command_forbidden: true
+  policy_file: "hardware/config/dm_g6220_j6_startup.yaml"
+
+power_cycle_mode_behavior:
+  test_revision: "V15.21F"
+  pre_power_ctrl_mode:
+    value: 2
+    name: "POS_VEL"
+  post_power_ctrl_mode:
+    value: 1
+    name: "MIT"
+  classification: "DOES_NOT_PERSIST"
+  runtime_mode_write_performed_during_test: false
+  startup_action_if_not_posvel: "GATED_RUNTIME_MODE_SWITCH"
+  require_authority: true
+  require_readback_verification: true
+
+ready_reference_status:
+  name: "J6_READY_REFERENCE_V1"
+  status: "FROZEN"
+  config_file: "hardware/config/j6_ready_reference_v1.yaml"
+  capture_state: "DISABLED"
+  protocol_position_rad: 1.0381857022964827
+  protocol_to_ros_sign: -1
+  ready_recovery_motion: "NOT_TESTED"
+  cad_zero: "PENDING"
+  ros_zero: "PENDING"
+  physical_limits: "PENDING"

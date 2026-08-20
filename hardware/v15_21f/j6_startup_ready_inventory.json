@@ -1,0 +1,234 @@
+{
+  "schema_version": "1.0",
+  "task": "V15.21F J6 startup and READY reference authority",
+  "source_head": "b0c72afdb4b5bdf88aa8a87582beab0760719eca",
+  "work_branch": "agent/v15-21f-j6-startup-ready-reference",
+  "created_at_utc": "2026-08-20T10:24:55.553947+00:00",
+  "status": "PASS",
+  "frozen_authority": {
+    "j6_posvel_local_motion": "PASS",
+    "j6_bidirectional_5deg": "PASS",
+    "j6_local_motion_authority": "PASS",
+    "j6_protocol_to_ros_sign": -1,
+    "mit_path": "FAILED_NOT_PREFERRED"
+  },
+  "safety": {
+    "active_motor_motion_used": false,
+    "fc_enable_used": false,
+    "set_zero_used": false,
+    "id_write_used": false,
+    "parameter_write_used": false,
+    "eeprom_flash_write_used": false,
+    "original_ready_pose_v1_modified": false,
+    "j1_j345_simulation_modified": false
+  },
+  "authority": {
+    "j6_startup_state_authority": "PASS",
+    "j6_ready_reference": "FROZEN",
+    "j6_ready_recovery_motion": "NOT_TESTED",
+    "j6_cad_zero": "PENDING",
+    "j6_ros_zero": "PENDING",
+    "j6_physical_limits": "PENDING",
+    "j6_full_commissioning": "NOT_COMPLETE"
+  },
+  "evidence": [
+    {
+      "path": "hardware/v15_21f/j6_pre_powercycle_baseline_20260820T102458Z.csv",
+      "sha256": "9b9fc28774ede107da63ef85beefa3ddfcf494258dae5213653edf3f8ff3ab3d"
+    },
+    {
+      "path": "hardware/v15_21f/j6_pre_powercycle_baseline_raw_20260820T102458Z.csv",
+      "sha256": "b7de218812b4c6e4b2ca7bea79aa27d4c16a0de60b55e67639c360d4b62b3e4e"
+    },
+    {
+      "path": "hardware/v15_21f/j6_power_off_feedback_probe_raw_20260820T102551Z.csv",
+      "sha256": "64713a0374b2c96c82e02ae582cd9502ca157a2c1e143462a3387dec7864a5f3"
+    },
+    {
+      "path": "hardware/v15_21f/j6_post_powercycle_baseline_20260820T102640Z.csv",
+      "sha256": "4cae2e90a11c270713282d335e09a33b168a9a785b7f09ea42868250e751615f"
+    },
+    {
+      "path": "hardware/v15_21f/j6_post_powercycle_baseline_raw_20260820T102640Z.csv",
+      "sha256": "36aa37c0cdac8aec9fb6eac174d526c33e4bbe0262af1a3e255330cacd1bde21"
+    },
+    {
+      "path": "hardware/v15_21f/j6_ready_reference_capture_20260820T102904Z.csv",
+      "sha256": "1f0ef15a730a2c3c6ca69e984f218d90dea25bd17fec021f4bc4ad09a537baf9"
+    },
+    {
+      "path": "hardware/v15_21f/j6_ready_reference_capture_raw_20260820T102904Z.csv",
+      "sha256": "33208947ad286b441b76cd275e82e6f825e0341525cf08e192ba38497c5ae3c1"
+    }
+  ],
+  "usb_pre_power": {
+    "sysfs": "/sys/bus/usb/devices/3-2",
+    "vid": "34b7",
+    "pid": "6877",
+    "serial": "EEE8D71AB573449FCAFE7B39BD222C75",
+    "manufacturer": "DaMiao-Tech",
+    "product": "DM-USB2FDCAN",
+    "busnum": "3",
+    "devnum": "108"
+  },
+  "pre_power_motor": {
+    "master_id_rid7": 0,
+    "esc_id_rid8": 1,
+    "ctrl_mode_rid10": 2,
+    "pmax_rid21": 12.5,
+    "allowed_normal_feedback_can_ids": [
+      0,
+      1
+    ]
+  },
+  "pre_power_baseline": {
+    "valid_frames": 200,
+    "total_required": 200,
+    "state_values": [
+      0
+    ],
+    "state_names": [
+      "DISABLED"
+    ],
+    "q_median_rad": 1.110284580758373,
+    "q_mean_rad": 1.1104295414663916,
+    "q_std_rad": 0.00023379191952459767,
+    "q_min_rad": 1.1099031052109556,
+    "q_max_rad": 1.1110475318532078,
+    "velocity_min_rad_s": -0.0549450549450512,
+    "velocity_max_rad_s": 0.0329670329670364,
+    "mos_temperature_min_c": 41,
+    "mos_temperature_max_c": 42,
+    "coil_temperature_min_c": 38,
+    "coil_temperature_max_c": 38,
+    "semantics": "POWER_CYCLE_LOCAL_COMPARISON_ONLY",
+    "decoded_csv_path": "hardware/v15_21f/j6_pre_powercycle_baseline_20260820T102458Z.csv",
+    "raw_csv_path": "hardware/v15_21f/j6_pre_powercycle_baseline_raw_20260820T102458Z.csv",
+    "status": "PASS"
+  },
+  "power_off_operator_confirmation": "YES",
+  "usb_while_motor_off": {
+    "sysfs": "/sys/bus/usb/devices/3-2",
+    "vid": "34b7",
+    "pid": "6877",
+    "serial": "EEE8D71AB573449FCAFE7B39BD222C75",
+    "manufacturer": "DaMiao-Tech",
+    "product": "DM-USB2FDCAN",
+    "busnum": "3",
+    "devnum": "108"
+  },
+  "power_off_probe": {
+    "probe_duration_s": 3.3012375701218843,
+    "refresh_requests": 31,
+    "normal_feedback_frames": 0,
+    "feedback_disappeared_while_motor_off": true,
+    "raw_csv_path": "hardware/v15_21f/j6_power_off_feedback_probe_raw_20260820T102551Z.csv"
+  },
+  "power_on_operator_confirmation": "YES",
+  "physical_pose_moved_while_off": false,
+  "usb_post_power": {
+    "sysfs": "/sys/bus/usb/devices/3-2",
+    "vid": "34b7",
+    "pid": "6877",
+    "serial": "EEE8D71AB573449FCAFE7B39BD222C75",
+    "manufacturer": "DaMiao-Tech",
+    "product": "DM-USB2FDCAN",
+    "busnum": "3",
+    "devnum": "109"
+  },
+  "post_power_motor": {
+    "master_id_rid7": 0,
+    "esc_id_rid8": 1,
+    "ctrl_mode_rid10": 1,
+    "pmax_rid21": 12.5,
+    "allowed_normal_feedback_can_ids": [
+      0,
+      1
+    ]
+  },
+  "post_power_baseline": {
+    "valid_frames": 200,
+    "total_required": 200,
+    "state_values": [
+      0
+    ],
+    "state_names": [
+      "DISABLED"
+    ],
+    "q_median_rad": 1.1099031052109556,
+    "q_mean_rad": 1.1099584191653311,
+    "q_std_rad": 0.00023014549716026607,
+    "q_min_rad": 1.1095216296635382,
+    "q_max_rad": 1.110284580758373,
+    "velocity_min_rad_s": -0.0549450549450512,
+    "velocity_max_rad_s": 0.0329670329670364,
+    "mos_temperature_min_c": 39,
+    "mos_temperature_max_c": 39,
+    "coil_temperature_min_c": 38,
+    "coil_temperature_max_c": 38,
+    "semantics": "POWER_CYCLE_LOCAL_COMPARISON_ONLY",
+    "decoded_csv_path": "hardware/v15_21f/j6_post_powercycle_baseline_20260820T102640Z.csv",
+    "raw_csv_path": "hardware/v15_21f/j6_post_powercycle_baseline_raw_20260820T102640Z.csv",
+    "status": "PASS"
+  },
+  "ctrl_mode_power_cycle_persistence": "DOES_NOT_PERSIST",
+  "power_cycle_position_behavior": {
+    "q_after_minus_q_before_rad": -0.0003814755474174092,
+    "q_after_minus_q_before_deg": -0.02185693885446026,
+    "physical_pose_moved_while_off": false,
+    "classification": "LOCAL_REPEATABILITY_OBSERVED_IN_THIS_TEST",
+    "claim_limit": "OBSERVED_POWER_CYCLE_POSITION_BEHAVIOR_ONLY"
+  },
+  "runtime_mode_write_performed": false,
+  "ready_operator_pose_gate": "YES",
+  "j6_ready_reference_v1": {
+    "valid_frames": 200,
+    "total_required": 200,
+    "state_values": [
+      0
+    ],
+    "state_names": [
+      "DISABLED"
+    ],
+    "q_median_rad": 1.0381857022964827,
+    "q_mean_rad": 1.0383287556267642,
+    "q_std_rad": 0.00024556330948317094,
+    "q_min_rad": 1.0378042267490653,
+    "q_max_rad": 1.0389486533913175,
+    "velocity_min_rad_s": -0.0549450549450512,
+    "velocity_max_rad_s": 0.0329670329670364,
+    "mos_temperature_min_c": 41,
+    "mos_temperature_max_c": 41,
+    "coil_temperature_min_c": 38,
+    "coil_temperature_max_c": 38,
+    "semantics": "DM_G6220_PROTOCOL_PHYSICAL_POSE_REFERENCE",
+    "decoded_csv_path": "hardware/v15_21f/j6_ready_reference_capture_20260820T102904Z.csv",
+    "raw_csv_path": "hardware/v15_21f/j6_ready_reference_capture_raw_20260820T102904Z.csv",
+    "status": "PASS",
+    "name": "J6_READY_REFERENCE_V1",
+    "protocol_to_ros_sign": -1,
+    "capture_state": "DISABLED",
+    "cad_zero": false,
+    "ros_zero": false,
+    "motor_internal_zero": false,
+    "blind_motion_target": false
+  },
+  "startup_policy": {
+    "status": "SAVED",
+    "path": "hardware/config/dm_g6220_j6_startup.yaml",
+    "required_control_mode": "POS_VEL",
+    "if_ctrl_mode_not_posvel": "GATED_RUNTIME_MODE_SWITCH",
+    "require_readback_verification": true,
+    "blind_saved_raw_command_forbidden": true
+  },
+  "ready_reference_config": "hardware/config/j6_ready_reference_v1.yaml",
+  "final_task_result": "PASS",
+  "completed_at_utc": "2026-08-20T10:29:27Z",
+  "hard_unresolved_items": [
+    "J6 READY recovery motion is not tested.",
+    "J6 CAD zero and ROS zero remain pending.",
+    "J6 physical limits and full range remain untested.",
+    "J6 powers up in MIT mode in this test; every future startup must verify RID10 and use a gated runtime switch to POS_VEL before any authorized enable.",
+    "J6 full commissioning is not complete."
+  ]
+}

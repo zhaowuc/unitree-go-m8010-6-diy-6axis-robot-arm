@@ -1,0 +1,47 @@
+schema_version: "1.0"
+
+name: "J6_READY_REFERENCE_V1"
+joint: "J6"
+
+motor:
+  type: "DM_G6220"
+  id: 1
+  master_id: 0
+
+reference:
+  protocol_position_rad: 1.0381857022964827
+  protocol_position_mean_rad: 1.0383287556267642
+  protocol_position_std_rad: 0.00024556330948317094
+  protocol_position_min_rad: 1.0378042267490653
+  protocol_position_max_rad: 1.0389486533913175
+  protocol_to_ros_sign: -1
+  capture_state: "DISABLED"
+  valid_frames: 200
+  total_required: 200
+
+semantics:
+  physical_ready_reference: true
+  protocol_position_physical_pose_reference: true
+  cad_zero: false
+  ros_zero: false
+  motor_internal_zero: false
+  blind_motion_target: false
+
+authority:
+  communication: "PASS"
+  local_motion: "PASS"
+  sign: "PASS"
+  ready_reference_capture: "PASS"
+  ready_reference: "FROZEN"
+  ready_motion_recovery: "NOT_TESTED"
+
+safety:
+  startup_must_capture_current_position_first: true
+  startup_must_verify_ctrl_mode_posvel: true
+  saved_raw_must_not_be_sent_blindly: true
+
+evidence:
+  capture_csv: "hardware/v15_21f/j6_ready_reference_capture_20260820T102904Z.csv"
+  capture_csv_sha256: "1f0ef15a730a2c3c6ca69e984f218d90dea25bd17fec021f4bc4ad09a537baf9"
+  raw_csv: "hardware/v15_21f/j6_ready_reference_capture_raw_20260820T102904Z.csv"
+  raw_csv_sha256: "33208947ad286b441b76cd275e82e6f825e0341525cf08e192ba38497c5ae3c1"

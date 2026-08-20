@@ -23,6 +23,7 @@ hardware/v15_21b/*.csv binary
 hardware/v15_21c/*.csv binary
 hardware/v15_21d/*.csv binary
 hardware/v15_21e/*.csv binary
+hardware/v15_21f/*.csv binary
 
 *.step binary
 *.STEP binary

@@ -1,0 +1,77 @@
+schema_version: "1.0"
+revision: "V15.21F"
+
+joint: "J6"
+
+required_control_mode:
+  value: 2
+  name: "POS_VEL"
+
+observed_power_cycle_behavior:
+  pre_power_ctrl_mode:
+    value: 2
+    name: "POS_VEL"
+  post_power_ctrl_mode:
+    value: 1
+    name: "MIT"
+  classification: "DOES_NOT_PERSIST"
+  scope: "OBSERVED_IN_V15_21F_TEST"
+
+startup:
+  power_on:
+    require_motor_state: "DISABLED"
+
+  read_identity:
+    master_id: 0
+    esc_id: 1
+    pmax_rad: 12.5
+
+  read_ctrl_mode:
+    required_value: 2
+    required_name: "POS_VEL"
+
+  if_ctrl_mode_not_posvel:
+    action: "GATED_RUNTIME_MODE_SWITCH"
+    require_operator_or_system_authority: true
+    require_motor_state_disabled: true
+    require_readback_verification: true
+    flash_or_eeprom_save: false
+
+  before_enable:
+    require_current_position_capture: true
+    require_strict_feedback_validation: true
+    preload_current_position: true
+    velocity_target_rad_s: 0.0
+
+  enable_policy:
+    current_position_first: true
+    require_motion_authority: true
+    hold_current_before_ready_motion: true
+
+  blind_saved_raw_command:
+    forbidden: true
+
+future_sequence:
+  - "discover DM adapter"
+  - "discover J6 ID1"
+  - "require DISABLED"
+  - "read RID10"
+  - "ensure POS_VEL through gated runtime switch if required"
+  - "read current q using strict feedback validation"
+  - "preload current q with velocity target zero"
+  - "enable only under motion authority"
+  - "HOLD CURRENT and validate"
+  - "future smooth movement toward J6_READY_REFERENCE_V1"
+
+forbidden_sequence: "POWER ON -> blindly send saved READY raw"
+
+authority:
+  startup_state: "PASS"
+  ready_reference: "FROZEN"
+  ready_recovery_motion: "NOT_TESTED"
+  full_commissioning: "NOT_COMPLETE"
+
+evidence:
+  inventory: "hardware/v15_21f/j6_startup_ready_inventory.json"
+  pre_power_baseline: "hardware/v15_21f/j6_pre_powercycle_baseline_20260820T102458Z.csv"
+  post_power_baseline: "hardware/v15_21f/j6_post_powercycle_baseline_20260820T102640Z.csv"
