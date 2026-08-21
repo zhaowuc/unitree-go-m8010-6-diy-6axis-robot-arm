@@ -1,0 +1,125 @@
+{
+  "task": "V15.23B J3/J2 pre-disassembly authority freeze",
+  "final_task_result": "PASS",
+  "source": {
+    "branch": "agent/v15-22b-j4-local-motion",
+    "head": "ae21327983e0567bf8a7ce4c3cb83442ae03b71e"
+  },
+  "working_branch": "agent/v15-23b-j3-j2-pre-disassembly-freeze",
+  "j345_bus": {
+    "identity": "FTDI FTASQA6F CHANNEL_2 interface 02",
+    "stable_port": "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if02-port0",
+    "baud": 4000000,
+    "active_motion_used": false,
+    "baseline_result": "PASS",
+    "initial_capture": {
+      "result": "FAIL",
+      "reason": "196/200 valid per joint after transient reconnect timeouts; one J5 returned-ID mismatch",
+      "evidence": "j345_pre_disassembly_baseline_20260821T022122Z.csv"
+    },
+    "authorized_retry": {
+      "operator_authorization": "J345_PRE_DISASSEMBLY_BRAKE_BASELINE_RETRY=YES",
+      "result": "PASS",
+      "evidence": "j345_pre_disassembly_baseline_retry_20260821T022213Z.csv",
+      "J3": {
+        "id": 3,
+        "valid": 200,
+        "attempts": 200,
+        "raw_median_rad": 2.1815176010131836,
+        "raw_mean_rad": 2.1814312291145326,
+        "raw_std_rad": 0.0001254396791324235,
+        "raw_min_rad": 2.1811339855194092,
+        "raw_max_rad": 2.1817092895507812,
+        "temperature_max_c": 33,
+        "merror_nonzero": 0
+      },
+      "J4": {
+        "id": 4,
+        "valid": 200,
+        "attempts": 200,
+        "raw_median_rad": 0.75567907094955444,
+        "raw_mean_rad": 0.75572604924440379,
+        "raw_std_rad": 0.00011262245151247535,
+        "raw_min_rad": 0.75529557466506958,
+        "raw_max_rad": 0.75606256723403931,
+        "temperature_max_c": 33,
+        "merror_nonzero": 0
+      },
+      "J5": {
+        "id": 5,
+        "valid": 200,
+        "attempts": 200,
+        "raw_median_rad": 5.0590806007385254,
+        "raw_mean_rad": 5.0589885807037351,
+        "raw_std_rad": 0.00011007519035668067,
+        "raw_min_rad": 5.0586967468261719,
+        "raw_max_rad": 5.059272289276123,
+        "temperature_max_c": 33,
+        "merror_nonzero": 0
+      }
+    }
+  },
+  "j2": {
+    "pre_disassembly_raw_status": "NOT_CAPTURED_SAFE_PATH_NOT_ESTABLISHED",
+    "j2a_raw_median": null,
+    "j2b_raw_median": null,
+    "reason": "repository and existing wiring authority do not establish a safe J2 read-only bus path, IDs, or A/B mapping",
+    "active_discovery_used": false,
+    "foc_used": false,
+    "blocker_preserved": true
+  },
+  "j3_blocker": {
+    "classification": "BLOCKED_BY_UPPER_ASSEMBLY",
+    "upper_assembly_removal_required": true,
+    "local_motion": "NOT_TESTED_MECHANICALLY_BLOCKED",
+    "active_motion_authority": "NOT_GRANTED",
+    "motor_failure_established": false,
+    "communication_failure_established": false,
+    "controller_failure_established": false
+  },
+  "mechanical_reference": {
+    "configuration_name": "PRE_DISASSEMBLY_PHYSICAL_CONFIGURATION_V1",
+    "j3_flange_index_marked": true,
+    "j2_flange_index_marked": true,
+    "j3_unique_hole_reference_marked": true,
+    "j2_unique_hole_reference_marked": true,
+    "upper_arm_orientation_marked": true,
+    "cable_routing_reference_marked": true,
+    "cable_routing_reference_complete": true,
+    "fastener_groups_labeled": true,
+    "fastener_hardware_grouping_ready": true,
+    "fastener_torque_spec": "PENDING"
+  },
+  "photos": {
+    "set_captured": true,
+    "authority_location": "OPERATOR_LOCAL",
+    "stored_in_repo": false
+  },
+  "operator_final_gates": {
+    "PRE_DISASSEMBLY_ENCODER_REFERENCE_COMPLETE": "YES",
+    "PRE_DISASSEMBLY_MECHANICAL_MARKING_COMPLETE": "YES",
+    "PRE_DISASSEMBLY_PHOTO_REFERENCE_COMPLETE": "YES",
+    "PRE_DISASSEMBLY_CABLE_REFERENCE_COMPLETE": "YES",
+    "PRE_DISASSEMBLY_HARDWARE_GROUPING_COMPLETE": "YES"
+  },
+  "safety": {
+    "active_motor_motion_used_in_v15_23b": false,
+    "upper_arm_disassembled": false,
+    "structural_fasteners_loosened": false,
+    "ready_pose_modified": false,
+    "cad_zero_modified": false,
+    "ros_zero_modified": false,
+    "motor_internal_zero_modified": false,
+    "existing_authority_modified": false,
+    "simulation_modified": false
+  },
+  "readiness": {
+    "PRE_DISASSEMBLY_REFERENCE_V1": "FROZEN",
+    "READY_FOR_UPPER_ARM_DISASSEMBLY": "YES",
+    "note": "Readiness is an authority result only. No disassembly is performed in V15.23B."
+  },
+  "evidence_sha256": {
+    "j345_pre_disassembly_baseline_20260821T022122Z.csv": "1a6784a5b70ad2dcb910206421bdd83af4f5e5248ad321f08622f83470df8111",
+    "j345_pre_disassembly_baseline_retry_20260821T022213Z.csv": "f62d17e88bd915dfefd2536a07afb67cf0206938aff2c49489778f1cc9c73209"
+  }
+}

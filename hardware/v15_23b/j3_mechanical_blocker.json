@@ -1,0 +1,46 @@
+{
+  "task": "V15.23B J3/J2 pre-disassembly authority freeze",
+  "status": "PASS",
+  "classification": "BLOCKED_BY_MECHANICAL_CONFIGURATION",
+  "operator_finding": {
+    "J3_CURRENT_COMMISSIONING_PATH": "BLOCKED_BY_UPPER_ASSEMBLY",
+    "J3_UPPER_ASSEMBLY_REMOVAL_REQUIRED": "YES",
+    "reason": "safe and reliable J3 local commissioning cannot be completed with the current upper assembly installed"
+  },
+  "authority": {
+    "J3_COMMUNICATION": "PASS",
+    "J3_LOCAL_MOTION": "NOT_TESTED_MECHANICALLY_BLOCKED",
+    "J3_ACTIVE_MOTION_AUTHORITY": "NOT_GRANTED",
+    "J3_RAW_TO_ROS_SIGN": "PENDING",
+    "J3_CAD_ZERO": "PENDING",
+    "J3_ROS_ZERO": "PENDING",
+    "J3_PHYSICAL_LIMITS": "PENDING",
+    "J3_FULL_COMMISSIONING": "NOT_COMPLETE"
+  },
+  "failure_classification": {
+    "motor_failure_established": false,
+    "communication_failure_established": false,
+    "controller_failure_established": false
+  },
+  "v15_22c_traceability": {
+    "full_assembly_route_status": "SUPERSEDED_BY_MECHANICAL_REQUIREMENT",
+    "accepted_local_motion_test_completed": false,
+    "partial_active_attempts_historically_occurred": true,
+    "partial_attempts_accepted": false,
+    "evidence_branch": "agent/v15-22c-j3-local-motion",
+    "evidence_commit": "b1c9c7988fc28ff0ce3627553f36a8d8eb5b0e3e",
+    "note": "The historical partial attempts are preserved and must not be represented as J3 motion authority. V15.23B itself used no active motion."
+  },
+  "v15_23b_execution": {
+    "j3_foc_used": false,
+    "active_motor_motion_used": false,
+    "disassembly_performed": false,
+    "j345_brake_only_baseline": "PASS"
+  },
+  "future_low_load_authority_layers": {
+    "J3_LOW_LOAD_HOLD": "PENDING",
+    "J3_LOW_LOAD_SIGN": "PENDING",
+    "J3_LOW_LOAD_BIDIRECTIONAL_5DEG": "PENDING",
+    "J3_INSTALLED_LOAD_LOCAL_MOTION": "PENDING"
+  }
+}

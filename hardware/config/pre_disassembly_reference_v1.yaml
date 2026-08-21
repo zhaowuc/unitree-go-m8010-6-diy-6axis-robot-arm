@@ -1,0 +1,82 @@
+schema_version: "1.0"
+name: "PRE_DISASSEMBLY_REFERENCE_V1"
+source_revision: "V15.23B"
+source_head: "ae21327983e0567bf8a7ce4c3cb83442ae03b71e"
+
+mechanical_state:
+  name: "PRE_DISASSEMBLY_PHYSICAL_CONFIGURATION_V1"
+  upper_arm_installed: true
+  j2_disassembly_required: true
+  j3_upper_assembly_removal_required: true
+
+j3:
+  motor_id: 3
+  raw_position_rad: 2.1815176010131836
+  raw_mean_rad: 2.1814312291145326
+  raw_std_rad: 0.0001254396791324235
+  raw_min_rad: 2.1811339855194092
+  raw_max_rad: 2.1817092895507812
+  state: "BRAKE"
+  semantics: "PRE_DISASSEMBLY_REFERENCE_ONLY"
+  active_motion_authority: "NOT_GRANTED"
+
+j4:
+  motor_id: 4
+  raw_position_rad: 0.75567907094955444
+  raw_mean_rad: 0.75572604924440379
+  raw_std_rad: 0.00011262245151247535
+  raw_min_rad: 0.75529557466506958
+  raw_max_rad: 0.75606256723403931
+  state: "BRAKE"
+  raw_to_ros_sign: 1
+  semantics: "PRE_DISASSEMBLY_REFERENCE_ONLY"
+
+j5:
+  motor_id: 5
+  raw_position_rad: 5.0590806007385254
+  raw_mean_rad: 5.0589885807037351
+  raw_std_rad: 0.00011007519035668067
+  raw_min_rad: 5.0586967468261719
+  raw_max_rad: 5.059272289276123
+  state: "BRAKE"
+  raw_to_ros_sign: 1
+  semantics: "PRE_DISASSEMBLY_REFERENCE_ONLY"
+
+j2:
+  raw_capture_status: "NOT_CAPTURED_SAFE_PATH_NOT_ESTABLISHED"
+  active_motion_authority: "NOT_GRANTED"
+  disassembly_required: true
+
+mechanical_marking:
+  j3_flange_index_marked: true
+  j2_flange_index_marked: true
+  j3_unique_hole_reference_marked: true
+  j2_unique_hole_reference_marked: true
+  upper_arm_orientation_marked: true
+  cable_routing_reference_complete: true
+  fastener_groups_labeled: true
+  fastener_hardware_grouping_ready: true
+  fastener_torque_spec: "PENDING"
+
+photos:
+  operator_photo_set_captured: true
+  authority_location: "OPERATOR_LOCAL"
+  stored_in_repo: false
+
+semantics:
+  cad_zero: false
+  ros_zero: false
+  motor_zero: false
+  ready_pose: false
+  blind_motion_target: false
+
+traceability:
+  j345_baseline_evidence: "hardware/v15_23b/j345_pre_disassembly_baseline_retry_20260821T022213Z.csv"
+  prior_unaccepted_j3_attempt_evidence_branch: "agent/v15-22c-j3-local-motion"
+  prior_unaccepted_j3_attempt_evidence_commit: "b1c9c7988fc28ff0ce3627553f36a8d8eb5b0e3e"
+  prior_attempts_established_motion_authority: false
+
+readiness:
+  pre_disassembly_reference_frozen: true
+  ready_for_upper_arm_disassembly: true
+  upper_arm_disassembled_in_this_task: false
