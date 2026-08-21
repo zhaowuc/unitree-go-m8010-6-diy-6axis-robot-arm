@@ -1,0 +1,121 @@
+{
+  "task": "V15.23E-R1-FT J2 dual Kp 0.60 fast-track recovery",
+  "source_head": "3d59099456ee20da40c80d04cef4361da0f9e712",
+  "status": "FAIL",
+  "failure_classification": "COMMON_AND_SYNC_CONTROL_INSUFFICIENT",
+  "inherited_authority": {
+    "j2a": {
+      "id": 0,
+      "raw_to_ros_sign": -1,
+      "communication": "PASS",
+      "physical_direction": "ESTABLISHED"
+    },
+    "j2b": {
+      "id": 1,
+      "raw_to_ros_sign": 1,
+      "communication": "PASS",
+      "physical_direction": "ESTABLISHED"
+    },
+    "j2_ab_sign_relation": "OPPOSITE",
+    "ids_unique": true,
+    "j2_dual_hold": "PASS"
+  },
+  "historical_failure_preserved": {
+    "controller_kp": 0.5,
+    "j2_dual_bidirectional_5deg": "FAIL",
+    "plus_5_logical_actual_deg": 3.27594867273574,
+    "plus_5_logical_error_deg": 1.72405132726426,
+    "first_center_error_deg": 1.37502985396381,
+    "minus_5_logical_actual_deg": -3.87689796456675,
+    "minus_5_logical_error_deg": 1.12310203543325,
+    "final_center_error_deg": "NOT_COMPLETED",
+    "hard_abort_e_sync": "GREATER_THAN_1_DEG",
+    "maximum_logged_e_sync_deg": 0.994497135516813
+  },
+  "controlled_variable": {
+    "only_kp_changed": true,
+    "old_kp": 0.5,
+    "new_kp_j2a": 0.6,
+    "new_kp_j2b": 0.6,
+    "kd": 0.05,
+    "tff": 0.0,
+    "velocity_deg_s": 10,
+    "acceleration_deg_s2": 30,
+    "rate_hz": 100,
+    "gear_ratio_motor_to_output": 6.329999923706055,
+    "hold_duration_s": 1.5,
+    "route": "0_TO_PLUS5_TO_0_TO_MINUS5_TO_0",
+    "position_thresholds_unchanged": true,
+    "sync_thresholds_unchanged": true
+  },
+  "run1": {
+    "executed": true,
+    "session_valid_j2a": "50/50",
+    "session_valid_j2b": "50/50",
+    "a0_raw_rad": 0.3268345594406128,
+    "b0_raw_rad": 1.3058042526245117,
+    "dual_hold": {
+      "result": "PASS",
+      "final_e_sync_deg": 0.09285442670064659,
+      "maximum_e_sync_deg": 0.09632563030645429
+    },
+    "plus_5": {
+      "logical_actual_deg": 3.381384138768109,
+      "logical_error_deg": 1.618615861231891,
+      "e_sync_deg": 0.4191465877857486,
+      "position_result": "FAIL",
+      "sync_result": "FAIL"
+    },
+    "first_center_error_deg": 0.8543495154086817,
+    "first_center_result": "FAIL",
+    "minus_5": {
+      "logical_actual_deg": -4.062608166741592,
+      "logical_error_deg": 0.9373918332584084,
+      "e_sync_deg": 0.8565197594877635,
+      "position_result": "PASS",
+      "sync_result": "FAIL"
+    },
+    "final_center_error_deg": 1.409741890021884,
+    "final_center_result": "FAIL",
+    "maximum_motion_e_sync_deg": 0.859990963093571,
+    "maximum_common_mode_error_deg": 1.6246904675420544,
+    "merror_nonzero_frames_j2a": 0,
+    "merror_nonzero_frames_j2b": 0,
+    "invalid_feedback_frames_j2a": 0,
+    "invalid_feedback_frames_j2b": 0,
+    "operator_observation": "SAFE",
+    "operator_report": "NO_ABNORMAL_SOUND_VIBRATION_OR_FIGHTING",
+    "final_both_brake": "PASS",
+    "result": "FAIL"
+  },
+  "run2": {
+    "executed": false,
+    "reason": "RUN1_FAILED",
+    "evidence_file_generated": false,
+    "result": "NOT_EXECUTED"
+  },
+  "authority": {
+    "j2_dual_kp060_repeatability": "FAIL",
+    "j2_dual_hold": "PASS",
+    "j2_dual_bidirectional_5deg": "FAIL",
+    "j2_local_motion_authority": "NOT_GRANTED",
+    "cad_zero": "PENDING",
+    "ros_zero": "PENDING",
+    "physical_limits": "PENDING"
+  },
+  "final_safety_state": {
+    "both_final_brake": "PASS",
+    "operator_confirmed_24v_power_off": true,
+    "motor_internal_zero_modified": false,
+    "upper_arm_reassembled": false
+  },
+  "scope_preservation": {
+    "id_scan_repeated": false,
+    "id_modified": false,
+    "isolated_motion_repeated": false,
+    "direction_test_repeated": false,
+    "ready_pose_modified": false,
+    "simulation_authority_modified": false,
+    "j1_j3_j4_j5_j6_authority_modified": false
+  }
+}
