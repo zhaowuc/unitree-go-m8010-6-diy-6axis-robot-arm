@@ -1,0 +1,157 @@
+{
+  "task": "V15.23E-FT J2 final fast-track dual commissioning",
+  "source_head": "acbc756bc791d8f1415d42b0cae78f81124c1077",
+  "status": "FAIL",
+  "failure_classification": "DUAL_MOTION_SYNC_HARD_ABORT_GT_1DEG",
+  "visible_motion_policy": {
+    "minimum_commanded_joint_excursion_deg": 5,
+    "preserved": true
+  },
+  "bus": {
+    "ftdi_serial": "FTASQA6F",
+    "channel": 1,
+    "interface": "01",
+    "stable_port": "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if01-port0",
+    "baud": 4000000,
+    "physical_daisy_chain_order_affects_logical_addressing": false
+  },
+  "j2a": {
+    "physical_label": "MARKED_MOTOR",
+    "id": 0,
+    "communication": "PASS",
+    "existing_current_position_hold": "PASS",
+    "isolated_tracking_history": "FAIL_AT_KP050_060",
+    "isolated_tracking_history_preserved": true,
+    "isolated_tracking_required_for_final_dual_operation": false,
+    "protocol_positive_actual_deg": 8.940080806717786,
+    "protocol_positive_photo_direction": "COUNTERCLOCKWISE",
+    "protocol_negative_actual_deg": -8.049716845792734,
+    "protocol_negative_photo_direction": "CLOCKWISE",
+    "protocol_physical_direction": "ESTABLISHED",
+    "j2_axis_urdf_mujoco": [0.0, 1.0, -2.77555756156289e-17],
+    "photo_side_ros_positive_direction": "CLOCKWISE",
+    "protocol_positive_is_ros_positive": false,
+    "raw_to_ros_sign": -1,
+    "direction_test_repeated_in_this_task": false
+  },
+  "j2b": {
+    "physical_label": "OTHER_MOTOR",
+    "original_id": 0,
+    "final_id": 1,
+    "duplicate_id_confirmed": true,
+    "id_reassignment": "ID0_TO_ID1",
+    "id_write_used": true,
+    "official_changeid_result": "PASS",
+    "normal_motor_mode_restore": "PASS",
+    "id1_brake_verification": "50/50_VALID",
+    "isolated_controller": {
+      "kp": 0.5,
+      "kd": 0.05,
+      "tff": 0.0,
+      "rate_hz": 100
+    },
+    "hold": {
+      "numeric_result": "PASS",
+      "physical_observation": "SAFE",
+      "session_raw_rad": 1.5169187784194946,
+      "max_output_drift_deg": 0.005207344918131189,
+      "final_median_error_deg": 0.0017361413123234734,
+      "merror_nonzero_frames": 0,
+      "invalid_feedback_frames": 0
+    },
+    "visible_direction_route": {
+      "route": "0_TO_PLUS10_TO_0_TO_MINUS10_TO_0",
+      "plus_10_actual_deg": 9.420842270086784,
+      "plus_10_photo_direction": "CLOCKWISE",
+      "minus_10_actual_deg": -9.646470504464283,
+      "minus_10_photo_direction": "COUNTERCLOCKWISE",
+      "minimum_5deg_result": "PASS",
+      "physical_observation": "SAFE",
+      "merror_nonzero_frames": 0,
+      "invalid_feedback_frames": 0,
+      "final_5_frame_brake": "PASS"
+    },
+    "protocol_positive_is_ros_positive": true,
+    "raw_to_ros_sign": 1
+  },
+  "combined_mapping": {
+    "j2_ab_sign_relation": "OPPOSITE",
+    "both_ids_unique": true,
+    "j2a_id": 0,
+    "j2b_id": 1
+  },
+  "dual_brake_communication": {
+    "j2a_valid": "100/100",
+    "j2b_valid": "100/100",
+    "both_merror_zero": true,
+    "final_dual_5_frame_brake": "PASS"
+  },
+  "dual_controller": {
+    "kp": 0.5,
+    "kd": 0.05,
+    "tff": 0.0,
+    "rate_hz": 100,
+    "velocity_deg_s": 10,
+    "acceleration_deg_s2": 30,
+    "gear_ratio_motor_to_output": 6.329999923706055,
+    "hold_accept_sync_deg": 0.3,
+    "motion_accept_sync_deg": 0.7,
+    "hard_abort_sync_deg": 1.0
+  },
+  "dual_hold": {
+    "session_a0_raw_rad": 6.263450145721436,
+    "session_b0_raw_rad": 1.516343593597412,
+    "numeric_result": "PASS",
+    "operator_observation": "SAFE",
+    "final_e_sync_deg": 0.005205186880452726,
+    "maximum_e_sync_deg": 0.00867639048626044,
+    "maximum_logical_motion_deg": 0.0017356018029038576,
+    "final_logical_position_deg": 0.0,
+    "final_dual_5_frame_brake": "PASS"
+  },
+  "dual_bidirectional_5deg": {
+    "session_a0_raw_rad": 6.26364183425903,
+    "session_b0_raw_rad": 1.51653528213501,
+    "route": "0_TO_PLUS5_TO_0_TO_MINUS5_TO_0",
+    "plus_5_logical_actual_deg": 3.27594867273574,
+    "plus_5_logical_error_deg": 1.72405132726426,
+    "plus_5_e_sync_deg": 0.3141412287785,
+    "first_center_error_deg": 1.37502985396381,
+    "minus_5_logical_actual_deg": -3.87689796456675,
+    "minus_5_logical_error_deg": 1.12310203543325,
+    "minus_5_e_sync_deg": 0.124964408827917,
+    "final_center_error_deg": "NOT_COMPLETED",
+    "maximum_logged_motion_e_sync_deg": 0.994497135516813,
+    "hard_abort_e_sync": "GREATER_THAN_1_DEG",
+    "hard_abort_phase": "FINAL_CENTER_PROFILE",
+    "last_logged_logical_position_deg": -2.57129110370026,
+    "numeric_result": "FAIL",
+    "operator_observation": "NO_ABNORMAL_SOUND_VIBRATION_OR_FIGHTING",
+    "merror_nonzero_frames_j2a": 0,
+    "merror_nonzero_frames_j2b": 0,
+    "invalid_feedback_frames_j2a": 0,
+    "invalid_feedback_frames_j2b": 0
+  },
+  "final_safety_state": {
+    "post_abort_j2a_brake_valid": "100/100",
+    "post_abort_j2b_brake_valid": "100/100",
+    "post_abort_final_dual_5_frame_brake": "PASS",
+    "operator_confirmed_24v_power_off": true,
+    "motor_internal_zero_modified": false,
+    "upper_arm_reassembled": false
+  },
+  "authority": {
+    "j2_dual_hold": "PASS",
+    "j2_dual_bidirectional_5deg": "FAIL",
+    "j2_local_motion_authority": "NOT_GRANTED",
+    "cad_zero": "PENDING",
+    "ros_zero": "PENDING",
+    "physical_limits": "PENDING",
+    "full_range": "NOT_TESTED"
+  },
+  "scope_preservation": {
+    "ready_pose_modified": false,
+    "simulation_authority_modified": false,
+    "j1_j3_j4_j5_j6_authority_modified": false
+  }
+}
