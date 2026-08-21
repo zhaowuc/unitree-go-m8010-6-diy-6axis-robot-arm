@@ -1,0 +1,29 @@
+{
+  "task": "V15.23C upper-arm removal for J3 low-load commissioning",
+  "status": "PASS",
+  "source_pre_disassembly_reference": "PRE_DISASSEMBLY_REFERENCE_V1",
+  "source_pre_disassembly_commit": "6a974bf716e04e774630bb60511634fb9999d96a",
+  "pre_disassembly_reference_verified": true,
+  "go_24v_off_before_disassembly": true,
+  "go_feedback_disappeared_after_power_off": true,
+  "upper_arm_external_support_secure": true,
+  "upper_arm_removed": true,
+  "j3_flange_marks_preserved": true,
+  "j3_unique_hole_reference_preserved": true,
+  "j2_marks_preserved": true,
+  "removed_fasteners_grouped": true,
+  "removed_cables_labeled": true,
+  "connector_orientation_preserved": true,
+  "strain_relief_released_safely": true,
+  "post_photo_set_captured": true,
+  "photo_authority_location": "OPERATOR_LOCAL",
+  "unexpected_hardware_found": false,
+  "fastener_torque_spec": "PENDING",
+  "j2_disassembled_beyond_required_stage": false,
+  "post_disassembly_topology": {
+    "j3": "CONNECTED",
+    "j4": "PHYSICALLY_DISCONNECTED",
+    "j5": "PHYSICALLY_DISCONNECTED"
+  },
+  "reassembly_performed": false
+}

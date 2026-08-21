@@ -1,0 +1,111 @@
+{
+  "task": "V15.23C J3 low-load commissioning",
+  "status": "FAIL",
+  "source_head": "6a974bf716e04e774630bb60511634fb9999d96a",
+  "branch": "agent/v15-23c-j3-low-load-commissioning",
+  "topology": {
+    "j3": "CONNECTED",
+    "j4": "PHYSICALLY_DISCONNECTED",
+    "j5": "PHYSICALLY_DISCONNECTED",
+    "j2_active_foc_used": false
+  },
+  "traceability": {
+    "pre_disassembly_raw_reference_rad": 2.1815176010131836,
+    "post_disassembly_raw_median_rad": 2.6286740303039551,
+    "raw_difference_rad": 0.44715642929077148,
+    "output_equivalent_difference_deg": 4.0474212463341175,
+    "meaning": "TRACEABILITY_ONLY_NOT_TARGET_NOT_ZERO_NOT_READY"
+  },
+  "communication": {
+    "brake_baseline_valid": 200,
+    "brake_baseline_total": 200,
+    "low_load_session_median_rad": 2.6286740303039551,
+    "low_load_session_std_rad": 0.00013108668599592783
+  },
+  "control": {
+    "mode": "FOC_MIXED_POSITION",
+    "kp_sdk_literal": 0.50,
+    "kd_sdk_literal": 0.05,
+    "tau_ff": 0.0,
+    "command_rate_hz_nominal": 100,
+    "velocity_deg_s": 10,
+    "acceleration_deg_s2": 30,
+    "gear_ratio": 6.3299999237060547
+  },
+  "hold_1": {
+    "result": "PASS",
+    "max_output_drift_deg": 0.012149752129746621,
+    "final_median_error_deg": 0.0086774695050996723,
+    "max_qdot_slow_deg_s": 0.031600168234817504,
+    "operator_observation": "SAFE"
+  },
+  "sign_probe": {
+    "result": "PASS",
+    "actual_delta_deg": 2.4333126486523691,
+    "endpoint_error_deg": 0.56668735134763093,
+    "return_error_deg": 0.4043946805671792,
+    "operator_observation": "CLOCKWISE_UP_THEN_RETURN_NO_ABNORMAL_SOUND",
+    "urdf_axis": [0.0, 1.0, -2.77555756156289e-17],
+    "mujoco_axis": [0.0, 1.0, -2.77555756156289e-17],
+    "protocol_positive_is_ros_positive": true,
+    "raw_to_ros_sign": 1
+  },
+  "bidirectional_5deg": {
+    "result": "FAIL",
+    "hold_2_result": "PASS",
+    "hold_2_max_drift_deg": 0.010412531798583915,
+    "hold_2_final_error_deg": 0.0086774695050996723,
+    "plus_5_actual_deg": 4.7086849937310671,
+    "plus_5_error_deg": 0.29131500626893292,
+    "first_center_return_error_deg": 0.84350139719243566,
+    "first_center_limit_deg": 0.75,
+    "minus_5_actual_deg": -4.516034812136998,
+    "minus_5_error_deg": 0.48396518786300202,
+    "final_return_error_deg": 0.16748530422551247,
+    "actual_command_rate_hz": 99.999042815932199,
+    "max_tx_jitter_ms": 0.18945900000001181,
+    "max_qdot_fast_deg_s": 15.864272620628434,
+    "max_qdot_slow_deg_s": 13.097649715995761,
+    "max_sdk_dq_rad_s": 2.0125875473022461,
+    "tau_min": -0.06640625,
+    "tau_max": 0.05859375,
+    "temperature_min_c": 34,
+    "temperature_max_c": 34,
+    "merror_nonzero_frames": 0,
+    "invalid_feedback_frames": 0,
+    "operator_observation": "CLOCKWISE_PLUS_5_RETURN_COUNTERCLOCKWISE_MINUS_5_RETURN_NO_ABNORMALITY",
+    "failure_reason": "FIRST_CENTER_RETURN_ERROR_0.8435013972_DEG_EXCEEDS_0.75_DEG_LIMIT"
+  },
+  "final_state": {
+    "j3_final_5_frame_brake": "PASS",
+    "go_24v_off_after_test_operator_confirmed": true,
+    "automatic_retry_used": false,
+    "gain_tuning_used": false
+  },
+  "authority": {
+    "j3_low_load_hold": "PASS",
+    "j3_low_load_sign": "PASS",
+    "j3_low_load_bidirectional_5deg": "FAIL",
+    "j3_low_load_motion_authority": "NOT_GRANTED",
+    "j3_low_load_control_template": "FAIL",
+    "j3_installed_load_hold": "NOT_TESTED",
+    "j3_installed_load_local_motion": "NOT_TESTED",
+    "j3_installed_load_gravity_behavior": "NOT_TESTED",
+    "j3_final_local_motion_authority": "NOT_GRANTED_FOR_FINAL_ASSEMBLY",
+    "j3_cad_zero": "PENDING",
+    "j3_ros_zero": "PENDING",
+    "j3_physical_limits": "PENDING",
+    "j3_full_range": "NOT_TESTED",
+    "j3_full_commissioning": "NOT_COMPLETE",
+    "motor_internal_zero": "UNCHANGED",
+    "j2_motion_authority": "NOT_GRANTED"
+  },
+  "evidence_sha256": {
+    "j3_post_disassembly_brake_baseline_20260820_224603.csv": "9bbf168e5f2a29bbc7ba6ec152d36a58e5f5b660c204a020e8a3ca3dd176436c",
+    "j3_low_load_session_20260820_224616.csv": "7c22a9481777bba19f39586d6fa863ae9aef91782105ad697a551b1dfe206e3c",
+    "j3_low_load_hold_20260820_224803.csv": "6bc92dd3b1330555a9e5a777c6fb3592d7b1ac2555444d2573bc35b56d068d51",
+    "j3_low_load_sign_probe_20260820_224837.csv": "f05ff9e68005f10a02cb617c794175779e5e27dced398bfe95731ccf407350e2",
+    "j3_low_load_session_2_20260820_225159.csv": "a4a42ed8debfd109eb77d8346fb01dde34f1eb38b8e7d98cf320c5f02eebe00c",
+    "j3_low_load_bidirectional_5deg_20260820_225219.csv": "1092689e67cd9efe7251a80615c6e62a5326719877c8a385f8c55d0f7603f9be"
+  }
+}
