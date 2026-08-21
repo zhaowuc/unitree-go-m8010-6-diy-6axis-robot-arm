@@ -1,0 +1,144 @@
+{
+  "task": "V15.24A-FT J2 big-arm-installed mechanical coupling gate",
+  "source_head": "63fec2ab8772608ca50780629f56e3979bd9697d",
+  "status": "PASS",
+  "mechanical_state_before_test": "BIG_ARM_INSTALLED_FOREARM_REMOVED",
+  "inherited_authority": {
+    "j2a": {
+      "id": 0,
+      "raw_to_ros_sign": -1
+    },
+    "j2b": {
+      "id": 1,
+      "raw_to_ros_sign": 1
+    },
+    "j2_ab_sign_relation": "OPPOSITE"
+  },
+  "controller": {
+    "kp_j2a": 0.60,
+    "kp_j2b": 0.60,
+    "kd_j2a": 0.05,
+    "kd_j2b": 0.05,
+    "tff_j2a": 0.0,
+    "tff_j2b": 0.0,
+    "velocity_deg_s": 10,
+    "acceleration_deg_s2": 30,
+    "rate_hz": 100,
+    "route": "0_TO_PLUS5_TO_0_TO_MINUS5_TO_0"
+  },
+  "acceptance_thresholds_deg": {
+    "plus_5_position_error_max": 1.0,
+    "first_center_error_max": 0.75,
+    "minus_5_position_error_max": 1.0,
+    "final_center_error_max": 0.75,
+    "hold_sync_max": 0.3,
+    "endpoint_sync_max": 0.3,
+    "motion_sync_max": 0.7,
+    "sync_hard_abort": 1.0
+  },
+  "assembly_preflight": {
+    "big_arm_reassembled_using_frozen_marks": true,
+    "j2_flange_marks_aligned": true,
+    "j2_fasteners_installed": true,
+    "j2_cable_routing_restored": true,
+    "forearm_installed_before_test": false,
+    "manual_reposition_with_power_on_completed": true,
+    "manual_reposition_abnormal_resistance_sound_or_motion": false,
+    "plus_minus_5deg_clear": true,
+    "cables_clear": true,
+    "operator_clear": true
+  },
+  "run_policy_deviation": {
+    "original_contract_allowed_runs": 1,
+    "run1_executed_under_original_contract": true,
+    "run2_explicitly_authorized_by_operator_after_run1": true,
+    "operator_override_text": "我允许你再次执行，再次测试！合同是我定制的优先执行我的命令！",
+    "intermediate_cli_rejection": {
+      "result": "PHASE_NOT_ALLOWED",
+      "hardware_motion_used": false
+    },
+    "authority_run": "RUN2_OPERATOR_OVERRIDE"
+  },
+  "run1": {
+    "evidence_file": "j2_big_arm_coupling_run.csv",
+    "sha256": "ff70e215d6f243177f933f6d4a62f4962c72afc7732d28e893c597f1ab512509",
+    "rows": 715,
+    "a0_raw_rad": 12.029122352600098,
+    "b0_raw_rad": -4.2163476943969727,
+    "dual_hold": "PASS",
+    "hold_final_e_sync_deg": 0.0034701245869684836,
+    "hold_max_e_sync_deg": 0.006940249173936968,
+    "plus_5_logical_actual_deg": 4.866626376323577,
+    "plus_5_logical_error_deg": 0.13337362367642244,
+    "plus_5_e_sync_deg": 0.13537154553230463,
+    "first_center_error_deg": 1.2348809525208047,
+    "first_center_e_sync_deg": 0.10586469635468045,
+    "minus_5_logical_actual_deg": -3.762780392620206,
+    "minus_5_logical_error_deg": 1.237219607379794,
+    "minus_5_e_sync_deg": 0.06768469374731319,
+    "final_center_error_deg": 0.3445156091028667,
+    "final_center_e_sync_deg": 0.02602593440226363,
+    "maximum_motion_e_sync_deg": 0.22736221765214654,
+    "maximum_common_mode_error_deg": 2.0253976755099,
+    "merror_nonzero_frames_j2a": 0,
+    "merror_nonzero_frames_j2b": 0,
+    "invalid_feedback_frames_j2a": 0,
+    "invalid_feedback_frames_j2b": 0,
+    "partial_load_tracking": "FAIL",
+    "mechanical_coupling_numeric": "PASS",
+    "final_both_brake": "PASS"
+  },
+  "run2_operator_override": {
+    "evidence_file": "j2_big_arm_coupling_run2_operator_override.csv",
+    "sha256": "dd1c6e48f8a80f32ceb8cb89c07abd8e592e179416530544f6e9f5ba6dce08ab",
+    "rows": 715,
+    "a0_raw_rad": 11.869587898254395,
+    "b0_raw_rad": -4.046267509460449,
+    "dual_hold": "PASS",
+    "hold_final_e_sync_deg": 0.009547158689520255,
+    "hold_max_e_sync_deg": 0.012149752129746618,
+    "plus_5_logical_actual_deg": 5.012850693340873,
+    "plus_5_logical_error_deg": 0.012850693340873106,
+    "plus_5_e_sync_deg": 0.12323042555327181,
+    "first_center_error_deg": 1.2314097489149967,
+    "first_center_e_sync_deg": 0.020827221634846158,
+    "minus_5_logical_actual_deg": -4.660085985212081,
+    "minus_5_logical_error_deg": 0.3399140147879189,
+    "minus_5_e_sync_deg": 0.11628801834165682,
+    "final_center_error_deg": 0.21781505896262626,
+    "final_center_e_sync_deg": 0.026034566552977485,
+    "maximum_motion_e_sync_deg": 0.17703246291503247,
+    "maximum_common_mode_error_deg": 1.8598724912368139,
+    "merror_nonzero_frames_j2a": 0,
+    "merror_nonzero_frames_j2b": 0,
+    "invalid_feedback_frames_j2a": 0,
+    "invalid_feedback_frames_j2b": 0,
+    "partial_load_tracking": "FAIL",
+    "mechanical_coupling_numeric": "PASS",
+    "operator_mechanical_observation": "SAFE",
+    "final_both_brake": "PASS"
+  },
+  "authority": {
+    "j2_big_arm_installed_hold": "PASS",
+    "j2_big_arm_mechanical_coupling": "PASS",
+    "j2_big_arm_partial_load_motion": "TRACKING_NOT_ACCEPTED",
+    "common_mode_control_tuning_pending": true,
+    "ready_for_forearm_installation": true,
+    "j2_local_motion_authority": "NOT_GRANTED_FOR_FINAL_ASSEMBLY"
+  },
+  "final_assembly_state": {
+    "final_both_brake": "PASS",
+    "operator_confirmed_24v_power_off": true,
+    "forearm_reassembled_in_this_task": true,
+    "j3_flange_reference_aligned": true,
+    "cable_routing_restored": true,
+    "motion_after_forearm_reassembly": false
+  },
+  "scope_preservation": {
+    "id_modified": false,
+    "motor_internal_zero_modified": false,
+    "ready_pose_modified": false,
+    "simulation_authority_modified": false,
+    "j1_j3_j4_j5_j6_authority_modified": false
+  }
+}
