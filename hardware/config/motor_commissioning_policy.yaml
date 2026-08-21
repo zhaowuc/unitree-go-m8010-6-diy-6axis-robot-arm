@@ -1,0 +1,15 @@
+visible_motion_policy:
+  minimum_commanded_joint_excursion_deg: 5
+
+  applies_to:
+    - sign_observation
+    - visible_direction_validation
+    - local_bidirectional_motion
+
+  exceptions:
+    - current_position_hold
+    - enable_hold_test
+    - communication_test
+    - read_only_diagnostic
+
+  note: "Do not use +2 or +3 degree motion as visual sign authority."

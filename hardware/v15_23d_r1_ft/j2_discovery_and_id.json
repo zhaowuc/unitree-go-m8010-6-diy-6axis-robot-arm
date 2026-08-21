@@ -1,0 +1,30 @@
+{
+  "task": "V15.23D-R1-FT J2 isolated commissioning recovery",
+  "source_head": "8110f98f535483f41af876b2f1c6c4be29b7183d",
+  "bus": {
+    "ftdi_serial": "FTASQA6F",
+    "channel": 1,
+    "interface": "01",
+    "stable_port": "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if01-port0",
+    "baud": 4000000
+  },
+  "j2a": {
+    "physical_label": "MARKED_MOTOR",
+    "original_id": 0,
+    "final_id": 0,
+    "id_write_used": false,
+    "communication_authority_preserved": "PASS",
+    "r1_session_valid_frames": 100,
+    "r1_session_total_frames": 100
+  },
+  "j2b": {
+    "physical_label": "OTHER_MOTOR",
+    "original_id": "NOT_DISCOVERED",
+    "final_id": "NOT_ESTABLISHED",
+    "id_write_used": false,
+    "reason": "J2A RUN-B tracking failure stopped the task before J2B"
+  },
+  "duplicate_original_id": "UNKNOWN",
+  "id_reassignment_used": false,
+  "motor_internal_zero_modified": false
+}

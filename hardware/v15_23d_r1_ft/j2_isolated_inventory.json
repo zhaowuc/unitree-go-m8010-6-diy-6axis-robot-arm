@@ -1,0 +1,116 @@
+{
+  "task": "V15.23D-R1-FT J2 isolated commissioning recovery",
+  "source_head": "8110f98f535483f41af876b2f1c6c4be29b7183d",
+  "status": "FAIL",
+  "failure_classification": "J2A_RUN_B_TRACKING_ACCEPTANCE_FAILED",
+  "visible_motion_policy": {
+    "minimum_commanded_joint_excursion_deg": 5,
+    "historical_3deg_probe_preserved": true,
+    "historical_3deg_probe_status": "FAIL",
+    "three_deg_probe_not_reused_for_visual_direction_authority": true
+  },
+  "j2a": {
+    "physical_label": "MARKED_MOTOR",
+    "final_id": 0,
+    "communication": "PASS",
+    "historical_hold": "PASS",
+    "run_a": {
+      "kp": 0.5,
+      "kd": 0.05,
+      "tff": 0.0,
+      "session_valid_total": "100/100",
+      "session_raw_median_rad": 0.15186445415019989,
+      "session_raw_std_rad": 0.0001149849515337167,
+      "hold": "PASS",
+      "plus_5_actual_deg": 3.6534397719522969,
+      "plus_5_error_deg": 1.3465602280477031,
+      "first_center_error_deg": 1.7911401164552967,
+      "minus_5_actual_deg": -3.2351601420845322,
+      "minus_5_error_deg": 1.7648398579154678,
+      "final_center_error_deg": 0.86780046310052539,
+      "numeric_result": "FAIL",
+      "merror_nonzero_frames": 0,
+      "invalid_feedback_frames": 0,
+      "final_5_frame_brake": "PASS"
+    },
+    "operator_requested_visible_direction_diagnostics": {
+      "authority_scope": "DIRECTION_OBSERVATION_ONLY_NOT_COMMISSIONING_AUTHORITY",
+      "kp": 0.5,
+      "positive_route": {
+        "route": "0_TO_PLUS10_TO_0",
+        "actual_deg": 8.9400808067177859,
+        "endpoint_error_deg": 1.0599191932822141,
+        "return_error_deg": 2.4871162708230501,
+        "physical_direction_from_photo": "COUNTERCLOCKWISE",
+        "final_5_frame_brake": "PASS"
+      },
+      "negative_route": {
+        "route": "0_TO_MINUS10_TO_0",
+        "actual_deg": -8.0497168457927337,
+        "endpoint_error_deg": 1.9502831542072663,
+        "return_error_deg": 1.3659178096212068,
+        "physical_direction_from_photo": "CLOCKWISE",
+        "final_5_frame_brake": "PASS"
+      },
+      "physical_direction": "ESTABLISHED",
+      "physical_observation_safe": true
+    },
+    "run_b": {
+      "kp": 0.6,
+      "kd": 0.05,
+      "tff": 0.0,
+      "session_valid_total": "100/100",
+      "session_raw_median_rad": 0.17947617173194885,
+      "session_raw_std_rad": 0.00010660575923238532,
+      "hold": "PASS",
+      "plus_5_actual_deg": 3.6716637257601423,
+      "plus_5_error_deg": 1.3283362742398577,
+      "first_center_error_deg": 1.5342711845028809,
+      "minus_5_actual_deg": -3.4816154632195251,
+      "minus_5_error_deg": 1.5183845367804749,
+      "final_center_error_deg": 0.70465399478557889,
+      "numeric_result": "FAIL",
+      "physical_observation_safe": true,
+      "merror_nonzero_frames": 0,
+      "invalid_feedback_frames": 0,
+      "final_5_frame_brake": "PASS"
+    },
+    "protocol_positive_photo_direction": "COUNTERCLOCKWISE",
+    "protocol_negative_photo_direction": "CLOCKWISE",
+    "protocol_positive_is_ros_positive": "NOT_ESTABLISHED",
+    "raw_to_ros_sign": "NOT_ESTABLISHED",
+    "validated_kp": "NOT_ESTABLISHED",
+    "isolated_motion_authority": "FAIL"
+  },
+  "j2b": {
+    "physical_label": "OTHER_MOTOR",
+    "original_id": "NOT_DISCOVERED",
+    "final_id": "NOT_ESTABLISHED",
+    "hold": "NOT_TESTED",
+    "route": "NOT_TESTED",
+    "raw_to_ros_sign": "NOT_ESTABLISHED",
+    "isolated_motion_authority": "NOT_GRANTED",
+    "reason": "J2A RUN-B failure requires task stop"
+  },
+  "combined": {
+    "j2_ab_sign_relation": "NOT_ESTABLISHED",
+    "both_motors_ever_active_simultaneously": false,
+    "j2_dual_ready_for_hold_stage": false,
+    "j2_dual_hold": "NOT_TESTED",
+    "j2_dual_motion": "NOT_TESTED",
+    "j2_local_motion_authority": "NOT_GRANTED",
+    "motor_internal_zero_modified": false
+  },
+  "final_state": {
+    "j2a_final_5_frame_brake": "PASS",
+    "j2a_24v_off_and_isolated_operator_confirmed": true,
+    "j2b_remained_isolated": true,
+    "upper_arm": "REMOVED_FOR_J2_INDIVIDUAL_ACCESS"
+  },
+  "scope_preservation": {
+    "j3_j4_j5_j6_authority_modified": false,
+    "ready_pose_modified": false,
+    "simulation_authority_modified": false,
+    "reassembly_performed": false
+  }
+}
