@@ -1,0 +1,173 @@
+{
+  "task": "V15.22C J3 GO-M8010-6 single-joint local motion commissioning",
+  "final_task_result": "FAIL",
+  "source": {
+    "branch": "agent/v15-22b-j4-local-motion",
+    "head": "ae21327983e0567bf8a7ce4c3cb83442ae03b71e"
+  },
+  "working_branch": "agent/v15-22c-j3-local-motion",
+  "hardware": {
+    "joint": "J3",
+    "motor": "GO-M8010-6",
+    "id": 3,
+    "port": "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if02-port0",
+    "baud": 4000000,
+    "gear_ratio": 6.3299999237060547
+  },
+  "shared_bus_preflight": {
+    "result": "PASS",
+    "foc_used": false,
+    "J3": {"valid": 500, "attempts": 500, "merror_nonzero": 0, "max_temperature_c": 34},
+    "J4": {"valid": 500, "attempts": 500, "merror_nonzero": 0, "max_temperature_c": 35},
+    "J5": {"valid": 500, "attempts": 500, "merror_nonzero": 0, "max_temperature_c": 35}
+  },
+  "session_reference": {
+    "name": "J3_SESSION_REFERENCE_V15_22C",
+    "semantics": "local continuous-unwrapped session reference only; not READY, CAD zero, ROS zero, or motor zero",
+    "valid_frames": 100,
+    "raw_median_rad": 2.1947481632232666,
+    "raw_mean_rad": 2.194659957885742,
+    "raw_std_rad": 0.00013940117967902569,
+    "raw_min_rad": 2.1943645477294922,
+    "raw_max_rad": 2.1949398517608643
+  },
+  "operator_gates": {
+    "upper_arm_safety_support_ready": true,
+    "physical_clearance_plus_minus_10deg_initial_answer": true,
+    "emergency_brake_ready": true,
+    "gravity_sag_observed": false,
+    "post_probe_clearance_correction": {
+      "positive_3deg_allowed": false,
+      "negative_3deg_only": true,
+      "classification": "OPERATOR_CORRECTED_MECHANICAL_CLEARANCE_CONSTRAINT"
+    },
+    "pretest_direction_statement": "J3 physical rotation convention is the same as J4"
+  },
+  "controller": {
+    "mode": "FOC_MIXED_POSITION",
+    "kp": 0.5,
+    "kd": 0.05,
+    "tau_ff": 0.0,
+    "command_rate_hz": 100,
+    "velocity_deg_s": 10,
+    "acceleration_deg_s2": 30
+  },
+  "hold1": {
+    "result": "PASS",
+    "start_raw_rad": 2.1946523189544678,
+    "max_output_drift_deg": 0.016487407863457225,
+    "final_median_error_deg": 0.01475234556997298,
+    "max_qdot_fast_deg_s": 0.13896691860885246,
+    "max_qdot_slow_deg_s": 0.07576630676515314,
+    "actual_command_rate_hz": 99.98784705500968,
+    "max_tx_jitter_ms": 0.16344399999979942,
+    "gravity_sag_observed": false,
+    "final_five_frame_brake": "PASS"
+  },
+  "sign_probe": {
+    "commanded_protocol_delta_deg": 3.0,
+    "result": "FAIL",
+    "session_raw_rad": 2.196282148361206,
+    "actual_delta_deg": 0.9797458689656786,
+    "endpoint_error_deg": 2.0202541310343216,
+    "endpoint_acceptance_deg": 1.5,
+    "return_error_deg": 0.8487087421105668,
+    "actual_command_rate_hz": 99.99344158845698,
+    "max_tx_jitter_ms": 0.19149600000000433,
+    "max_qdot_fast_deg_s": 2.835248874408879,
+    "max_qdot_slow_deg_s": 2.4482822310610675,
+    "max_sdk_dq_rad_s": 0.7117687463760376,
+    "torque_min": -0.05859375,
+    "torque_max": 0.15234375,
+    "temperature_min_c": 34,
+    "temperature_max_c": 34,
+    "merror_nonzero_frames": 0,
+    "invalid_feedback_frames": 0,
+    "final_five_frame_brake": "PASS",
+    "failure_trigger": "SIGN_PLUS_3_ENDPOINT_ERROR_EXCEEDED_1P5_DEG"
+  },
+  "operator_authorized_retry_r1": {
+    "authorization": "J3_V15_22C_R1_MANUAL_RETRY_AUTHORIZED=YES",
+    "new_pose_positive_3deg_clearance": true,
+    "gravity_sag_observed": false,
+    "hold": {
+      "result": "PASS",
+      "start_raw_rad": 9.656047821044922,
+      "max_output_drift_deg": 0.005213819031166577,
+      "final_median_error_deg": 0.003470124586968484,
+      "max_qdot_fast_deg_s": 0.08697505332919384,
+      "max_qdot_slow_deg_s": 0.03624667528234589,
+      "actual_command_rate_hz": 99.98761042967709,
+      "max_tx_jitter_ms": 0.24521900000019414,
+      "final_five_frame_brake": "PASS"
+    },
+    "sign_probe": {
+      "result": "FAIL",
+      "session_raw_rad": 9.464875221252441,
+      "actual_delta_deg": 1.6158436599752326,
+      "endpoint_error_deg": 1.3841563400247674,
+      "endpoint_acceptance": "PASS",
+      "return_error_deg": 1.3468313151287503,
+      "return_acceptance": "FAIL_GT_1P0_DEG",
+      "actual_command_rate_hz": 99.99310615095999,
+      "max_tx_jitter_ms": 0.24091599999986002,
+      "max_qdot_fast_deg_s": 4.204569335287016,
+      "max_qdot_slow_deg_s": 3.841113554391462,
+      "max_sdk_dq_rad_s": 0.8344874978065491,
+      "torque_min": -0.08984375,
+      "torque_max": 0.12109375,
+      "temperature_min_c": 34,
+      "temperature_max_c": 34,
+      "merror_nonzero_frames": 0,
+      "invalid_feedback_frames": 0,
+      "final_five_frame_brake": "PASS"
+    },
+    "final_result": "FAIL",
+    "additional_retry_performed": false
+  },
+  "axis_review": {
+    "urdf_j3_axis": [0.0, 1.0, -2.77555756156289e-17],
+    "mujoco_j3_axis": [0.0, 1.0, -2.77555756156289e-17],
+    "j3_and_j4_local_axis_convention": "same +Y convention",
+    "operator_ros_direction_answer": "INCONCLUSIVE_AFTER_FAILED_PROBE",
+    "raw_to_ros_sign": "PENDING_NOT_FROZEN"
+  },
+  "not_executed_after_failure": {
+    "session_2": true,
+    "hold_2": true,
+    "bidirectional_5deg": true,
+    "automatic_retry": false,
+    "gain_change": false,
+    "gravity_compensation": false
+  },
+  "authority": {
+    "communication": "PASS",
+    "hold_current": "PASS_AT_TESTED_POSE",
+    "local_motion": "FAIL",
+    "bidirectional_5deg": "NOT_TESTED",
+    "local_motion_authority": "NOT_GRANTED",
+    "full_range": "NOT_TESTED",
+    "physical_limits": "PENDING",
+    "cad_zero": "PENDING",
+    "ros_zero": "PENDING",
+    "full_commissioning": "NOT_COMPLETE"
+  },
+  "final_state": {
+    "j3_brake_sent": true,
+    "j3_final_five_frame_brake": "PASS",
+    "j4_j5_left_in_brake": true,
+    "ready_pose_modified": false,
+    "motor_internal_zero_modified": false,
+    "other_joint_authority_modified": false,
+    "simulation_authority_modified": false
+  },
+  "evidence_sha256": {
+    "j3_shared_bus_preflight_20260820T120200Z.csv": "7095ccf9e367f8905bd51d46ff53fb81920c9c67fc22f7d3dd7d153f116560fd",
+    "j3_session_capture_20260820T120405Z.csv": "4d47f150240ee7ac57170bdb04d0a750f12c4015de059b146c30bc7199a5ee8b",
+    "j3_hold_current_20260820T120439Z.csv": "a3d800933ec9344415ee3ed15f91f686eb43f4b305eba201ca590b1b4f0395d8",
+    "j3_sign_probe_20260820T120556Z.csv": "b6ba6dcb6a76cdade015b3e68d4445d769262f94ee2b83b3aa9d6ea5152875bb",
+    "j3_hold_current_r1_20260820T120932Z.csv": "ad9c395df67b3091305e99677365b11f9b91b7ed17f0f20be1065b93ac866fb9",
+    "j3_sign_probe_r1_20260820T121033Z.csv": "c638bd96edf61a7f837244144ee20f55eabe81c7a614b2eeef9c7e588aeaa484",
+    "tools/hardware/v15_22c_j3_local_motion.cpp": "fa8e85c6d2a39ea853d6ebf446f2799ad2d273213a070348949b31a7a96b6f82"
+  }
+}
