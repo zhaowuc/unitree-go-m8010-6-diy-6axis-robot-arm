@@ -1,0 +1,122 @@
+{
+  "task": "V15.23D-FT isolated J2A/J2B commissioning",
+  "source_head": "d878eb96f21d392116ed055a0777b0c0803c4ba7",
+  "status": "FAIL",
+  "failure_classification": "J2A_SIGN_PROBE_NUMERIC_ACCEPTANCE_FAILED",
+  "fast_track": true,
+  "j2a": {
+    "physical_label": "MARKED_MOTOR",
+    "original_id": 0,
+    "final_id": 0,
+    "id_modified": false,
+    "communication": {
+      "status": "PASS",
+      "valid_frames": 200,
+      "total_frames": 200,
+      "temperature_c": {
+        "min": 33,
+        "max": 33
+      },
+      "merror_nonzero_frames": 0,
+      "final_5_frame_brake": "PASS"
+    },
+    "session_reference": {
+      "scope": "SESSION_LOCAL_ONLY",
+      "valid_frames": 100,
+      "total_frames": 100,
+      "raw_rotor_median_rad": 0.34744745492935181,
+      "raw_rotor_mean_rad": 0.34735733330249785,
+      "raw_rotor_std_rad": 0.00013132998100228715,
+      "raw_rotor_min_rad": 0.34706395864486694,
+      "raw_rotor_max_rad": 0.34763920307159424
+    },
+    "controller": {
+      "motor": "GO-M8010-6",
+      "gear_ratio": 6.3299999237060547,
+      "kp_sdk_literal": 0.5,
+      "kd_sdk_literal": 0.05,
+      "tff": 0.0,
+      "command_rate_hz": 100,
+      "velocity_deg_s": 10,
+      "acceleration_deg_s2": 30
+    },
+    "hold": {
+      "numeric_status": "PASS",
+      "physical_observation_safe": true,
+      "duration_s": 1.5,
+      "max_output_drift_deg": 0.0034712036058077152,
+      "final_median_error_deg": 0.0017356018029038576,
+      "merror_nonzero_frames": 0,
+      "invalid_feedback_frames": 0,
+      "final_5_frame_brake": "PASS"
+    },
+    "sign_probe": {
+      "status": "FAIL",
+      "protocol_positive_photo_direction": "NOT_OBSERVABLE",
+      "protocol_positive_is_ros_positive": "NOT_ESTABLISHED",
+      "raw_to_ros_sign": "NOT_ESTABLISHED",
+      "run_1": {
+        "target_output_deg": 3.0,
+        "actual_delta_deg": 1.8570928500882884,
+        "endpoint_error_deg": 1.1429071499117116,
+        "return_error_deg": 1.393687708222378,
+        "numeric_status": "FAIL",
+        "final_5_frame_brake": "PASS"
+      },
+      "operator_authorized_retry_1": true,
+      "retry_1": {
+        "target_output_deg": 3.0,
+        "actual_delta_deg": 1.0483029410146758,
+        "endpoint_error_deg": 1.9516970589853242,
+        "return_error_deg": 1.3450907144338804,
+        "numeric_status": "FAIL",
+        "physical_observation_safe": true,
+        "final_5_frame_brake": "PASS"
+      }
+    },
+    "bidirectional_5deg": "NOT_RUN_DUE_TO_J2A_SIGN_FAILURE",
+    "isolated_motion_authority": "FAIL"
+  },
+  "j2b": {
+    "physical_label": "OTHER_MOTOR",
+    "original_id": "NOT_DISCOVERED",
+    "final_id": "NOT_ESTABLISHED",
+    "communication": "NOT_TESTED",
+    "hold": "NOT_TESTED",
+    "sign_probe": "NOT_TESTED",
+    "bidirectional_5deg": "NOT_TESTED",
+    "isolated_motion_authority": "NOT_GRANTED",
+    "reason": "J2A active test failure requires task stop before J2B active testing"
+  },
+  "combined_authority": {
+    "duplicate_original_id": "UNKNOWN",
+    "id_reassignment_used": false,
+    "j2_ab_sign_relation": "NOT_ESTABLISHED",
+    "j2a_j2b_both_active_simultaneously": false,
+    "dual_hold": "NOT_TESTED",
+    "dual_motion": "NOT_TESTED",
+    "dual_ready_for_reassembly_mapping": false,
+    "j2_local_motion_authority": "NOT_GRANTED",
+    "j2_full_commissioning": "NOT_COMPLETE"
+  },
+  "persistent_state": {
+    "motor_internal_zero_modified": false,
+    "id_modified": false,
+    "calibrate_used": false,
+    "eeprom_write_used": false,
+    "cad_zero": "PENDING",
+    "ros_zero": "PENDING",
+    "physical_limits": "PENDING"
+  },
+  "scope_preservation": {
+    "j3_low_load_authority_preserved": true,
+    "j3_j4_j5_j6_authority_modified": false,
+    "ready_pose_modified": false,
+    "simulation_authority_modified": false,
+    "reassembly_performed": false
+  },
+  "final_power": {
+    "go_24v_off_operator_confirmed": true,
+    "operator_gate": "J2_D_FINAL_24V_OFF_CONFIRMED=YES"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "task": "V15.23D-FT J2 dual motor fast-track access",
+  "source_head": "d878eb96f21d392116ed055a0777b0c0803c4ba7",
+  "status": "PASS",
+  "upper_arm": {
+    "current_state": "REMOVED_FOR_J2_INDIVIDUAL_ACCESS",
+    "external_support_secure": true,
+    "access_completed": true,
+    "access_photo_set_captured": true,
+    "photo_authority": "OPERATOR_LOCAL"
+  },
+  "mechanical_authority": {
+    "j2_flange_marks_preserved": true,
+    "j2_unique_hole_reference_clear": true,
+    "j3_reference_marks_preserved": true,
+    "removed_fasteners_grouped": true,
+    "j2a_physical_label": "MARKED_MOTOR",
+    "j2b_physical_label": "OTHER_MOTOR",
+    "fixed_observation_direction": "PHOTO_SIDE_VIEW_V1",
+    "individual_wiring_accessible": true,
+    "individual_low_load_rotation_accessible": true
+  },
+  "bus": {
+    "ftdi_serial": "FTASQA6F",
+    "channel": 1,
+    "interface": "01",
+    "stable_port": "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if01-port0",
+    "resolved_port": "/dev/ttyUSB1",
+    "baud": 4000000
+  },
+  "isolation_used": {
+    "active_motor": "J2A",
+    "j2a_only_bus_connected": true,
+    "j2b_power_and_signal_isolated": true,
+    "both_active_simultaneously": false
+  }
+}
