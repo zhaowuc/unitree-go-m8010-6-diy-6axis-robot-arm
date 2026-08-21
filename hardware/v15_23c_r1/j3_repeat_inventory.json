@@ -1,0 +1,108 @@
+{
+  "task": "V15.23C-R1 J3 low-load bidirectional one authorized exact repeat",
+  "status": "FAIL",
+  "authoritative_source_commit": "5fbb4bec58d4a06293912eb07f147e9e11c19c9d",
+  "source_tree_sha": "b12d1b12ee21efd502e35c6826258a9df819ab73",
+  "branch": "agent/v15-23c-r1-j3-low-load-repeat",
+  "mechanical_state": {
+    "upper_arm_still_removed": true,
+    "low_load_configuration_unchanged": true,
+    "j3_flange_reference_intact": true,
+    "j2_reference_marks_intact": true
+  },
+  "topology": {
+    "j3_id": 3,
+    "j3": "CONNECTED",
+    "j4": "PHYSICALLY_DISCONNECTED",
+    "j5": "PHYSICALLY_DISCONNECTED"
+  },
+  "inherited_authority": {
+    "j3_low_load_hold": "PASS",
+    "j3_low_load_sign": "PASS",
+    "raw_to_ros_sign": 1,
+    "sign_still_applicable_to_unchanged_configuration": true
+  },
+  "protocol": {
+    "matches_v15_23c": true,
+    "source_sha256": "150f1b8b384aab96c27df2a23827df32e1e8513946af43afceb90522986624b2",
+    "mode": "FOC_MIXED_POSITION",
+    "kp_sdk_literal": 0.50,
+    "kd_sdk_literal": 0.05,
+    "tau_ff": 0.0,
+    "gear_ratio": 6.3299999237060547,
+    "command_rate_hz_nominal": 100,
+    "velocity_deg_s": 10,
+    "acceleration_deg_s2": 30,
+    "preflight_hold_s": 2.0,
+    "endpoint_hold_s": 0.4,
+    "first_center_hold_s": 0.4,
+    "final_center_hold_s": 0.5,
+    "thresholds_changed": false,
+    "hold_durations_changed": false,
+    "gain_changes": false
+  },
+  "brake_baseline": {
+    "valid": 100,
+    "total": 100,
+    "session_median_rad": 2.7884001731872559,
+    "session_mean_rad": 2.7883713674545287,
+    "session_std_rad": 0.00011308245927179865,
+    "session_min_rad": 2.7880165576934814,
+    "session_max_rad": 2.7885918617248535,
+    "final_5_frame_brake": "PASS"
+  },
+  "repeat_result": {
+    "active_route_executions": 1,
+    "automatic_retry_count": 0,
+    "preflight_hold": "PASS",
+    "preflight_hold_max_drift_deg": 0.003470124586968484,
+    "preflight_hold_final_error_deg": 0.001735062293484242,
+    "plus_5_actual_delta_deg": 4.82670591632853,
+    "plus_5_error_deg": 0.17329408367147003,
+    "plus_5_result": "PASS",
+    "first_center_return_error_deg": 0.52762294808277277,
+    "first_center_limit_deg": 0.75,
+    "first_center_result": "PASS",
+    "minus_5_actual_delta_deg": -4.3945416069148893,
+    "minus_5_error_deg": 0.60545839308511074,
+    "minus_5_result": "PASS",
+    "final_center_return_error_deg": 0.89557053029839062,
+    "final_center_limit_deg": 0.75,
+    "final_center_result": "FAIL",
+    "overall_bidirectional_result": "FAIL",
+    "repeatability_classification": "J3_LOW_LOAD_BIDIRECTIONAL_REPEATABILITY_INCONSISTENT",
+    "actual_command_rate_hz": 99.998691639121134,
+    "max_tx_jitter_ms": 0.24593899999981517,
+    "max_qdot_fast_deg_s": 15.506397986977934,
+    "max_qdot_slow_deg_s": 12.812877305332808,
+    "max_sdk_dq_rad_s": 2.208937406539917,
+    "tau_min": -0.06640625,
+    "tau_max": 0.06640625,
+    "temperature_min_c": 33,
+    "temperature_max_c": 33,
+    "merror_nonzero_frames": 0,
+    "invalid_feedback_frames": 0,
+    "operator_observation_safe": true,
+    "final_5_frame_brake": "PASS",
+    "go_24v_off_after_test_operator_confirmed": true
+  },
+  "comparison": {
+    "v15_23c_failure_location": "FIRST_CENTER_RETURN",
+    "v15_23c_r1_failure_location": "FINAL_CENTER_RETURN",
+    "first_center_failure_reproduced": false,
+    "specific_physical_cause_established": false
+  },
+  "authority": {
+    "j3_low_load_bidirectional_5deg": "FAIL",
+    "j3_low_load_motion_authority": "NOT_GRANTED",
+    "j3_installed_load_hold": "NOT_TESTED",
+    "j3_installed_load_local_motion": "NOT_TESTED",
+    "j3_installed_load_gravity_behavior": "NOT_TESTED",
+    "j3_final_assembly_authority": "NOT_GRANTED_FOR_FINAL_ASSEMBLY",
+    "j2_active_work": "NO"
+  },
+  "evidence_sha256": {
+    "j3_repeat_brake_baseline_20260820_230936.csv": "4901172b4327518a76fd120c5401d26f4c94c482f9510a597d1b672f05ed7e19",
+    "j3_repeat_bidirectional_5deg_20260820_231013.csv": "cdedb58c6528eb0fd23a8575af3c6d13e6d9b765a07abb2bf299e802bcaabe11"
+  }
+}
