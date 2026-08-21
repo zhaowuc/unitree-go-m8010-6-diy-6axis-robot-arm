@@ -1,0 +1,35 @@
+motor:
+  model: GO-M8010-6
+  id: 3
+  gear_ratio: 6.3299999237060547
+
+conversion:
+  raw_to_ros_sign: 1
+
+low_load_verified:
+  kp: 0.60
+  kd: 0.05
+  tau_ff: 0.0
+  velocity_deg_s: 10
+  acceleration_deg_s2: 30
+  command_rate_hz: 100
+
+authority:
+  low_load_hold: PASS
+  low_load_sign: PASS
+  low_load_bidirectional_5deg: PASS
+  low_load_motion: PASS
+  installed_load_hold: NOT_TESTED
+  installed_load_motion: NOT_TESTED
+  installed_load_gravity_behavior: NOT_TESTED
+  final_local_motion: NOT_GRANTED_FOR_FINAL_ASSEMBLY
+
+evidence:
+  task: V15.23C-D3-FT
+  branch: agent/v15-23c-d3-ft-j3-kp-diagnostic
+  run_1: hardware/v15_23c_d3_ft/j3_kp060_run1_20260821T041917Z.csv
+  run_2: hardware/v15_23c_d3_ft/j3_kp060_run2_20260821T042034Z.csv
+
+safety:
+  installed_load_parameters_must_not_be_inferred: true
+  final_assembly_motion_authority_granted: false

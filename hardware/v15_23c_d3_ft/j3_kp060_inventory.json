@@ -1,0 +1,256 @@
+{
+  "task": "V15.23C-D3-FT J3 Kp fast-track single-variable diagnostic and conditional exact repeat",
+  "status": "PASS",
+  "source_authority": {
+    "source_branch": "agent/v15-23c-d2-j3-low-speed-diagnostic",
+    "source_head": "dc6d329fae400c9ffc216f946c4113e45de9c6d7",
+    "branch": "agent/v15-23c-d3-ft-j3-kp-diagnostic"
+  },
+  "fast_track_stage": true,
+  "static_audit": {
+    "kp_0_60_sdk_encoding_valid": true,
+    "kp_encoded_count": 768,
+    "kp_relative_increase_percent": 20,
+    "torque_increase_percent_claimed": false,
+    "sdk_header_k_pos_nominal_range": "0.0-1.0",
+    "j1_j4_j5_historical_kp_sdk_literal": 0.5,
+    "kp_0_60_historically_verified_before_d3": false,
+    "frozen_j1_driver_fast_authority_max_kp": 0.5,
+    "frozen_j1_driver_modified": false,
+    "d3_j3_runner_uses_frozen_sdk_directly": true,
+    "controller_self_test": "PASS",
+    "serial_port_constructed_during_self_test": false
+  },
+  "mechanical_state": {
+    "upper_arm_still_removed": true,
+    "low_load_configuration_unchanged": true,
+    "j3_flange_reference_intact": true,
+    "j2_reference_marks_intact": true
+  },
+  "topology": {
+    "j3_id": 3,
+    "j3": "CONNECTED",
+    "j4": "PHYSICALLY_DISCONNECTED",
+    "j5": "PHYSICALLY_DISCONNECTED",
+    "j2_active_work": "NO"
+  },
+  "controller": {
+    "base_source": "tools/hardware/v15_23c_j3_low_load.cpp",
+    "base_controller_source_sha256": "150f1b8b384aab96c27df2a23827df32e1e8513946af43afceb90522986624b2",
+    "d3_source": "tools/hardware/v15_23c_d3_ft_j3_kp.cpp",
+    "d3_controller_source_sha256": "66b9751bf296c4560613cd2d94fbb1bb92d120118ebba3e7bb7ce13f4f13cd26",
+    "only_kp_changed": true,
+    "only_control_variable_changed": "KP_SDK_LITERAL",
+    "non_control_changes": [
+      "D3 operator-gate token namespace",
+      "D3 evidence output directory",
+      "D3 baseline/self-test/failure labels",
+      "offline Kp packet encoding assertion"
+    ],
+    "kp_old_sdk_literal": 0.5,
+    "kp_new_sdk_literal": 0.6,
+    "kd_sdk_literal": 0.05,
+    "tau_ff": 0.0,
+    "velocity_deg_s": 10.0,
+    "acceleration_deg_s2": 30.0,
+    "command_rate_hz_nominal": 100.0,
+    "gear_ratio": 6.329999923706055,
+    "raw_to_ros_sign": 1
+  },
+  "brake_baseline_run_1": {
+    "valid": 100,
+    "total": 100,
+    "median_rad": 2.629441022872925,
+    "mean_rad": 2.6293509197235108,
+    "std_rad": 0.0001226285823451973,
+    "min_rad": 2.6290574073791504,
+    "max_rad": 2.6296327114105225,
+    "temperature_min_c": 32,
+    "temperature_max_c": 32,
+    "merror_nonzero_frames": 0,
+    "invalid_frames": 0,
+    "final_5_frame_brake": "PASS"
+  },
+  "run_1": {
+    "row_count": 765,
+    "session_reference_motor_rad": 2.629441022872925,
+    "preflight_hold": {
+      "max_drift_deg": 0.003470124586968484,
+      "final_median_error_deg": 0.000867531146742121,
+      "result": "PASS"
+    },
+    "plus_5": {
+      "actual_delta_deg": 4.75901690650586,
+      "median_abs_error_deg": 0.24098309349414038,
+      "final_signed_error_deg": -0.24271815578762457,
+      "last100ms_slope_deg_s": -0.002104812630954492,
+      "last200ms_slope_deg_s": 0.00365575524568943,
+      "hold_std_deg": 0.001398179255227843,
+      "behavior": "WITHIN_THRESHOLD",
+      "result": "PASS"
+    },
+    "first_center": {
+      "actual_delta_deg": 0.20132980913684748,
+      "median_abs_error_deg": 0.20132980913684748,
+      "final_signed_error_deg": 0.20132980913684748,
+      "last100ms_slope_deg_s": 0.00737735282631877,
+      "last200ms_slope_deg_s": -0.0029997990546098523,
+      "hold_std_deg": 0.0037983232748096886,
+      "behavior": "WITHIN_THRESHOLD",
+      "result": "PASS"
+    },
+    "minus_5": {
+      "actual_delta_deg": -4.752076657331923,
+      "median_abs_error_deg": 0.24792334266807714,
+      "final_signed_error_deg": 0.24966056299923967,
+      "last100ms_slope_deg_s": -0.0063306042001811886,
+      "last200ms_slope_deg_s": 0.0028684230018710104,
+      "hold_std_deg": 0.011707442196692001,
+      "behavior": "WITHIN_THRESHOLD",
+      "result": "PASS"
+    },
+    "final_center": {
+      "actual_delta_deg": -0.03471203605807715,
+      "median_abs_error_deg": 0.03471203605807715,
+      "final_signed_error_deg": -0.02950469113994596,
+      "last100ms_slope_deg_s": 0.02426176769467538,
+      "last200ms_slope_deg_s": 0.007311500153417138,
+      "hold_std_deg": 0.0062574248287048185,
+      "behavior": "WITHIN_THRESHOLD",
+      "result": "PASS"
+    },
+    "plateau_reproduced": false,
+    "actual_command_rate_hz": 99.99858697342222,
+    "max_tx_jitter_ms": 0.2603329999997328,
+    "max_qdot_fast_deg_s": 14.87532800958846,
+    "max_qdot_slow_deg_s": 12.945915659446612,
+    "max_sdk_dq_rad_s": 1.914412498474121,
+    "tau_min": -0.0703125,
+    "tau_max": 0.05859375,
+    "temperature_min_c": 32,
+    "temperature_max_c": 32,
+    "merror_nonzero_frames": 0,
+    "invalid_feedback_frames": 0,
+    "final_5_frame_brake": "PASS",
+    "numeric_result": "PASS",
+    "operator_observation_safe": true,
+    "result": "PASS"
+  },
+  "brake_baseline_run_2": {
+    "valid": 100,
+    "total": 100,
+    "median_rad": 2.6259894371032715,
+    "mean_rad": 2.625907027721405,
+    "std_rad": 0.00012204240397496529,
+    "min_rad": 2.625606060028076,
+    "max_rad": 2.6261813640594482,
+    "temperature_min_c": 33,
+    "temperature_max_c": 33,
+    "merror_nonzero_frames": 0,
+    "invalid_frames": 0,
+    "final_5_frame_brake": "PASS"
+  },
+  "run_2": {
+    "row_count": 765,
+    "session_reference_motor_rad": 2.625797748565674,
+    "preflight_hold": {
+      "max_drift_deg": 0.0034722826246469467,
+      "final_median_error_deg": 0.000867531146742121,
+      "result": "PASS"
+    },
+    "plus_5": {
+      "actual_delta_deg": 4.776374003553738,
+      "median_abs_error_deg": 0.2236259964462617,
+      "final_signed_error_deg": -0.2218909341527775,
+      "last100ms_slope_deg_s": -0.009421076436051333,
+      "last200ms_slope_deg_s": 0.003530704305806104,
+      "hold_std_deg": 0.001835942088931425,
+      "behavior": "WITHIN_THRESHOLD",
+      "result": "PASS"
+    },
+    "first_center": {
+      "actual_delta_deg": 0.22042196847820955,
+      "median_abs_error_deg": 0.22042196847820955,
+      "final_signed_error_deg": 0.22042196847820955,
+      "last100ms_slope_deg_s": 0.002118368418702922,
+      "last200ms_slope_deg_s": 0.0006560863337516868,
+      "hold_std_deg": 0.0036442815210800403,
+      "behavior": "WITHIN_THRESHOLD",
+      "result": "PASS"
+    },
+    "minus_5": {
+      "actual_delta_deg": -4.713892338649199,
+      "median_abs_error_deg": 0.2861076613508011,
+      "final_signed_error_deg": 0.28437259905731693,
+      "last100ms_slope_deg_s": -0.005279814268768198,
+      "last200ms_slope_deg_s": 0.0007791124979759181,
+      "hold_std_deg": 0.00416875883617755,
+      "behavior": "WITHIN_THRESHOLD",
+      "result": "PASS"
+    },
+    "final_center": {
+      "actual_delta_deg": -0.005207344918131188,
+      "median_abs_error_deg": 0.005207344918131188,
+      "final_signed_error_deg": 0.0,
+      "last100ms_slope_deg_s": 0.01785597204571039,
+      "last200ms_slope_deg_s": 0.01030650120887988,
+      "hold_std_deg": 0.019148415728733444,
+      "behavior": "WITHIN_THRESHOLD",
+      "result": "PASS"
+    },
+    "plateau_reproduced": false,
+    "actual_command_rate_hz": 99.99698982263129,
+    "max_tx_jitter_ms": 0.27065700000040493,
+    "max_qdot_fast_deg_s": 14.626861638136507,
+    "max_qdot_slow_deg_s": 12.724472065120642,
+    "max_sdk_dq_rad_s": 2.3316562175750732,
+    "tau_min": -0.06640625,
+    "tau_max": 0.06640625,
+    "temperature_min_c": 33,
+    "temperature_max_c": 33,
+    "merror_nonzero_frames": 0,
+    "invalid_feedback_frames": 0,
+    "final_5_frame_brake": "PASS",
+    "numeric_result": "PASS",
+    "operator_observation_safe": true,
+    "result": "PASS"
+  },
+  "execution_limits": {
+    "active_route_executions": 2,
+    "run_3_executed": false,
+    "automatic_parameter_search": false
+  },
+  "result_classification": {
+    "j3_kp_060_effect": "SUPPORTED_REPEATABLE",
+    "j3_kp_060_repeatability": "PASS",
+    "plateau_reproduced_run_1": false,
+    "plateau_reproduced_run_2": false,
+    "interpretation": "Two independently referenced 10 deg/s Kp=0.60 runs passed all endpoint and center thresholds without reproducing a greater-than-0.75-degree center plateau."
+  },
+  "authority": {
+    "j3_low_load_hold": "PASS",
+    "j3_low_load_sign": "PASS",
+    "j3_raw_to_ros_sign": 1,
+    "j3_low_load_bidirectional_5deg": "PASS",
+    "j3_low_load_motion_authority": "PASS",
+    "j3_installed_load_hold": "NOT_TESTED",
+    "j3_installed_load_local_motion": "NOT_TESTED",
+    "j3_installed_load_gravity_behavior": "NOT_TESTED",
+    "j3_final_assembly_authority": "NOT_GRANTED_FOR_FINAL_ASSEMBLY",
+    "j2_active_work": "NO"
+  },
+  "final_safe_state": {
+    "final_brake": "PASS",
+    "go_24v_off_operator_confirmed": true
+  },
+  "evidence_sha256": {
+    "hardware/v15_23c_d3_ft/j3_kp060_brake_baseline_run1_20260821T041859Z.csv": "4f0ebe3fce10da87dc176caa9d883b424c0fad6eb2f314d4b4870583297d8758",
+    "hardware/v15_23c_d3_ft/j3_kp060_run1_20260821T041917Z.csv": "9b779e30a4470abf595c54f64bc3b941ce79fdeaca0f63bdc1a6a3116d26db4c",
+    "hardware/v15_23c_d3_ft/j3_kp060_brake_baseline_run2_20260821T042020Z.csv": "43baf538ac159c4fbddd68fc231ed9a95739cdec142ce512465736bd76119b33",
+    "hardware/v15_23c_d3_ft/j3_kp060_run2_20260821T042034Z.csv": "dd3298e47076bfea351f5040c6da6fbb7cb0dfc4536f57797eb9b20607d64e63",
+    "hardware/v15_23c_d3_ft/j3_kp060_comparison.csv": "8e78ff960bfa55dc3bfc5d1ba1fbcd5d56481388e16483d6dd2542105fca8ef7",
+    "tools/hardware/v15_23c_d3_ft_j3_kp.cpp": "66b9751bf296c4560613cd2d94fbb1bb92d120118ebba3e7bb7ce13f4f13cd26",
+    "hardware/config/go_m8010_j3.yaml": "3682803f38874532566e8636e544cff1cbd029e58fa6ba6cfa88843bc8a5754e",
+    "docs/V15_23C_D3_FT_J3_KP_DIAGNOSTIC.md": "761671534f5aee7ac67a615f580c07703f37c8437b1b98c9e3bb021f5f59d979"
+  }
+}

@@ -31,6 +31,7 @@ hardware/v15_23c/*.csv binary
 hardware/v15_23c_r1/*.csv binary
 hardware/v15_23c_d1/*.csv binary
 hardware/v15_23c_d2/*.csv binary
+hardware/v15_23c_d3_ft/*.csv binary
 
 *.step binary
 *.STEP binary
