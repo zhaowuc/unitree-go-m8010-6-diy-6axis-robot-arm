@@ -1,0 +1,91 @@
+{
+  "schema": "SESSION_LOCAL_GRAVITY_ANCHOR_V1",
+  "scope": "SESSION_ONLY_NOT_PERMANENT_ZERO",
+  "anchor_method": "OPERATOR_VISUAL_MUJOCO_BOUNDARY_B_POSE_MATCH_PLUS_PER_RUN_50_VALID_BRAKE_FRAMES",
+  "model_anchor_role": "STABLE_BOUNDARY_B",
+  "test_center_role": "C_EQUALS_BOUNDARY_B_PLUS_5_DEG_RELATIVE_COMMAND",
+  "boundary_to_test_center_j2_offset_deg": 5.0,
+  "formal_test_route_center_relative_deg": [
+    0.0,
+    5.0,
+    0.0,
+    -5.0,
+    0.0
+  ],
+  "full_planned_route_boundary_relative_deg": [
+    0.0,
+    5.0,
+    10.0,
+    5.0,
+    0.0,
+    5.0,
+    0.0
+  ],
+  "no_additional_boundary_margin": true,
+  "additional_command_margin_deg": 0.0,
+  "actual_no_boundary_crossing_absolute_guarantee": false,
+  "operator_gate": "MUJOCO_PHYSICAL_POSE_MATCHED=YES",
+  "operator_gate_entry_method": "USER_CHAT_EXPLICIT_BOUNDARY_B_PLUS_5DEG_STAGE_ROUTE_AUTHORIZATION",
+  "slider_screenshot_sha256": "3d54a459b79150287507cf7bd60e5fc407e781039d52f99710e31ec113cfa87d",
+  "model_anchor_source_path": "/tmp/v15_24e_model_anchor.json",
+  "model_anchor_source_sha256": "fb3edbfbf4cd1a44a58c4322de4ec6b1b7e8938c234de4173a9b1d76777ae595",
+  "model": {
+    "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/mujoco_v15_14/go_m8010_arm_v15_14_kinematic.xml",
+    "sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9",
+    "mujoco_version": "3.11.0",
+    "runtime_gravity_m_s2": [
+      0.0,
+      0.0,
+      -9.81
+    ]
+  },
+  "frozen_ledgers_sha256": {
+    "V15_15_实测质量账本_v1.json": "658fa0b2aef1da4200d86fccf742e135215288e77f58fa5095a06f513eaba04a",
+    "V15_15_COM账本_v2.json": "1cb975890dd121eb41d41bfee414a2c4643f4d917089970fac60009736fc77ae",
+    "V15_16_刚体惯量_Engineering_V1.json": "c6c398532d7144ed6aa340a8d8b765b333d01f1fddc2e3280106c90565614401"
+  },
+  "q_anchor_model_rad": {
+    "J2": 2.9670597283903604,
+    "J3": -2.9670597283903604,
+    "J4": -0.2165953601724963,
+    "J5": 0.8150687606813519,
+    "J6": 0.009599310885968814
+  },
+  "q_anchor_model_deg": {
+    "J2": 170.0,
+    "J3": -170.0,
+    "J4": -12.41,
+    "J5": 46.7,
+    "J6": 0.55
+  },
+  "anchor_tau_g_j2_nm": -0.7348815343912594,
+  "tau_g_j2_min_nm": -1.2559621132264276,
+  "tau_g_j2_max_nm": -0.6557938494865535,
+  "gravity_sign_robust": true,
+  "uncertainty_coverage_complete": true,
+  "uncertainty_sample_count": 405,
+  "nominal_joint_range_extrapolation_sample_count": 351,
+  "nominal_joint_range_violation_record_count": 459,
+  "real_encoder_anchors": {
+    "level_a_run": {
+      "csv_path": "hardware/v15_24e_ft/j2_pose_gravity_025_run.csv",
+      "csv_sha256": "2c23c0e76a51eb861e7be3e44d95436970ed0fbd370588978b4076bff45ab24a",
+      "capture_mode": "BRAKE",
+      "valid_frames_each": 50,
+      "j2a_raw_anchor_rad": 2.823106527328491,
+      "j2b_raw_anchor_rad": 5.000789165496826
+    }
+  },
+  "real_to_model_mapping": {
+    "gear_ratio": 6.329999923706055,
+    "j2a_sign": -1,
+    "j2b_sign": 1,
+    "qA": "-1*(rawA-A0)/G",
+    "qB": "+1*(rawB-B0)/G",
+    "qJ2_relative": "0.5*(qA+qB)",
+    "qJ2_model": "q_anchor_model_J2+qJ2_relative"
+  },
+  "permanent_zero_modified": false,
+  "cad_zero": "PENDING",
+  "ros_zero": "PENDING"
+}

@@ -1,0 +1,422 @@
+{
+  "schema": "V15_24E_J2_POSE_GRAVITY_INVENTORY_V1",
+  "task": "V15.24E-FT J2 pose-aware automatic gravity compensation",
+  "source_head": "4fc673c77fee836a4931fabec731ea85346f25b3",
+  "branch": "agent/v15-24e-ft-j2-auto-gravity-compensation",
+  "status": "FAIL",
+  "frozen_authority": {
+    "model_sha256_verified": true,
+    "mass_com_inertia_modified": false,
+    "permanent_zero_modified": false,
+    "j2a_id": 0,
+    "j2b_id": 1,
+    "j2a_raw_to_ros_sign": -1,
+    "j2b_raw_to_ros_sign": 1,
+    "gear_ratio": 6.329999923706055,
+    "tff_authority": "MOTOR_ROTOR_TORQUE_Q8"
+  },
+  "session_anchor": {
+    "artifact": "hardware/v15_24e_ft/gravity_anchor_v1.json",
+    "artifact_sha256": "a8fc19658cd453c93acc36eb0ea049b7ae176e34d43cc7d992d3f15369cea89c",
+    "model_anchor_sha256": "fb3edbfbf4cd1a44a58c4322de4ec6b1b7e8938c234de4173a9b1d76777ae595",
+    "anchor_role": "STABLE_BOUNDARY_B",
+    "operator_gate_entry_method": "USER_CHAT_EXPLICIT_BOUNDARY_B_PLUS_5DEG_STAGE_ROUTE_AUTHORIZATION",
+    "test_center_c_boundary_relative_deg": 5.0,
+    "q_anchor_model_rad": {
+      "J2": 2.9670597283903604,
+      "J3": -2.9670597283903604,
+      "J4": -0.2165953601724963,
+      "J5": 0.8150687606813519,
+      "J6": 0.009599310885968814
+    },
+    "raw_anchor_level_a_run": {
+      "j2a_rad": 2.823106527328491,
+      "j2b_rad": 5.000789165496826
+    },
+    "gravity_sign_robust": true,
+    "anchor_tau_g_j2_nm": -0.7348815343912594,
+    "tau_g_j2_min_nm": -1.2559621132264276,
+    "tau_g_j2_max_nm": -0.6557938494865535
+  },
+  "boundary_route_contract": {
+    "startup": "STABILIZE_AT_BOUNDARY_B",
+    "stage": "ACTIVE_B_TO_C_PLUS_5_DEG",
+    "formal_route_center_relative_deg": [
+      0.0,
+      5.0,
+      0.0,
+      -5.0,
+      0.0
+    ],
+    "full_route_boundary_relative_deg": [
+      0.0,
+      5.0,
+      10.0,
+      5.0,
+      0.0,
+      5.0,
+      0.0
+    ],
+    "terminal": "RETURN_TO_BOUNDARY_B_THEN_BOTH_BRAKE",
+    "phase_order": [
+      "SESSION_BRAKE_CAPTURE",
+      "ZERO_TFF_BASELINE_HOLD",
+      "AUTO_GRAVITY_RAMP",
+      "AUTO_GRAVITY_HOLD",
+      "MOVE_TO_TEST_CENTER_PROFILE",
+      "MOVE_TO_TEST_CENTER_ENDPOINT",
+      "PLUS_5_PROFILE",
+      "PLUS_5_ENDPOINT",
+      "FIRST_CENTER_PROFILE",
+      "FIRST_CENTER_ENDPOINT",
+      "MINUS_5_PROFILE",
+      "MINUS_5_ENDPOINT",
+      "FINAL_CENTER_PROFILE",
+      "FINAL_CENTER_ENDPOINT",
+      "RETURN_TO_BOUNDARY_PROFILE",
+      "RETURN_TO_BOUNDARY_ENDPOINT",
+      "FINAL_DUAL_BRAKE"
+    ],
+    "level_a_phase_counts": {
+      "SESSION_BRAKE_CAPTURE": 50,
+      "ZERO_TFF_BASELINE_HOLD": 50,
+      "AUTO_GRAVITY_RAMP": 101,
+      "AUTO_GRAVITY_HOLD": 100,
+      "MOVE_TO_TEST_CENTER_PROFILE": 85,
+      "MOVE_TO_TEST_CENTER_ENDPOINT": 40,
+      "PLUS_5_PROFILE": 85,
+      "PLUS_5_ENDPOINT": 40,
+      "FIRST_CENTER_PROFILE": 85,
+      "FIRST_CENTER_ENDPOINT": 40,
+      "MINUS_5_PROFILE": 85,
+      "MINUS_5_ENDPOINT": 40,
+      "FINAL_CENTER_PROFILE": 85,
+      "FINAL_CENTER_ENDPOINT": 50,
+      "RETURN_TO_BOUNDARY_PROFILE": 85,
+      "RETURN_TO_BOUNDARY_ENDPOINT": 50,
+      "FINAL_DUAL_BRAKE": 5
+    },
+    "level_b_phase_counts": {
+      "SESSION_BRAKE_CAPTURE": 50,
+      "ZERO_TFF_BASELINE_HOLD": 50,
+      "AUTO_GRAVITY_RAMP": 151,
+      "AUTO_GRAVITY_HOLD": 100,
+      "MOVE_TO_TEST_CENTER_PROFILE": 85,
+      "MOVE_TO_TEST_CENTER_ENDPOINT": 40,
+      "PLUS_5_PROFILE": 85,
+      "PLUS_5_ENDPOINT": 40,
+      "FIRST_CENTER_PROFILE": 85,
+      "FIRST_CENTER_ENDPOINT": 40,
+      "MINUS_5_PROFILE": 85,
+      "MINUS_5_ENDPOINT": 40,
+      "FINAL_CENTER_PROFILE": 85,
+      "FINAL_CENTER_ENDPOINT": 50,
+      "RETURN_TO_BOUNDARY_PROFILE": 85,
+      "RETURN_TO_BOUNDARY_ENDPOINT": 50,
+      "FINAL_DUAL_BRAKE": 5
+    },
+    "command_range_boundary_relative_deg": [
+      0.0,
+      10.0
+    ],
+    "sampled_feedback_abort_range_boundary_relative_deg": [
+      -0.5,
+      12.0
+    ],
+    "no_additional_boundary_margin": true,
+    "additional_command_margin_deg": 0.0,
+    "actual_no_boundary_crossing_absolute_guarantee": false
+  },
+  "level_a": {
+    "run": {
+      "phase": "level-a-run",
+      "evidence_file": "hardware/v15_24e_ft/j2_pose_gravity_025_run.csv",
+      "sha256": "2c23c0e76a51eb861e7be3e44d95436970ed0fbd370588978b4076bff45ab24a",
+      "rows": 1076,
+      "operator_observation": "SAFE",
+      "operator_safe": true,
+      "alpha": 0.25,
+      "cap_per_motor_nm": 0.3,
+      "ramp_duration_contract_s": 1.0,
+      "ramp_elapsed_s": 1.000001165,
+      "a0_raw_rad": 2.823106527328491,
+      "b0_raw_rad": 5.000789165496826,
+      "capture_valid_frames_each": 50,
+      "zero_tff_startup_hold": "PASS",
+      "zero_hold_final_e_sync_deg": 0.001735062293484242,
+      "zero_hold_max_e_sync_deg": 0.005205186880452726,
+      "zero_hold_max_abs_qj2_deg": 0.002602593440226363,
+      "gravity_hold_displacement_deg": -0.009547158689520257,
+      "gravity_ramp_max_e_sync_deg": 0.020829379672524753,
+      "gravity_hold_max_e_sync_deg": 0.024299504259493235,
+      "gravity_hold_max_abs_displacement_deg": 0.011282220983004498,
+      "gravity_hold_numeric_result": "PASS",
+      "model_j2_torque_min_nm": -0.7607423468262985,
+      "model_j2_torque_max_nm": -0.7344772522362185,
+      "j2a_tff_decoded_min_nm": 0.0,
+      "j2a_tff_decoded_max_nm": 0.01171875,
+      "j2b_tff_decoded_min_nm": -0.01171875,
+      "j2b_tff_decoded_max_nm": 0.0,
+      "clamp_used": false,
+      "clamp_audit_pass": true,
+      "boundary_route": {
+        "startup_anchor": "STABLE_BOUNDARY_B",
+        "test_center": "C_EQUALS_B_PLUS_5_DEG",
+        "formal_center_relative_route_deg": [
+          0.0,
+          5.0,
+          0.0,
+          -5.0,
+          0.0
+        ],
+        "full_boundary_relative_route_deg": [
+          0.0,
+          5.0,
+          10.0,
+          5.0,
+          0.0,
+          5.0,
+          0.0
+        ],
+        "command_lower_boundary_deg": 0.0,
+        "command_upper_boundary_deg": 10.0,
+        "no_additional_boundary_margin": true,
+        "additional_command_margin_deg": 0.0,
+        "actual_no_boundary_crossing_absolute_guarantee": false,
+        "sampled_feedback_lower_abort_deg": -0.5,
+        "sampled_feedback_upper_abort_deg": 12.0,
+        "all_active_commands_nonnegative": true,
+        "active_command_min_boundary_relative_deg": 0.0,
+        "active_command_max_boundary_relative_deg": 10.0,
+        "active_negative_q_ref_row_count": 0,
+        "command_groups": {
+          "stage_boundary_b_to_center_c": {
+            "row_count": 125,
+            "min_q_ref_boundary_relative_deg": 0.0,
+            "max_q_ref_boundary_relative_deg": 5.0,
+            "negative_q_ref_row_count": 0,
+            "all_commands_nonnegative": true,
+            "result": "PASS"
+          },
+          "formal_center_relative_route": {
+            "row_count": 510,
+            "min_q_ref_boundary_relative_deg": 0.0,
+            "max_q_ref_boundary_relative_deg": 10.0,
+            "negative_q_ref_row_count": 0,
+            "all_commands_nonnegative": true,
+            "result": "PASS"
+          },
+          "return_center_c_to_boundary_b": {
+            "row_count": 135,
+            "min_q_ref_boundary_relative_deg": 0.0,
+            "max_q_ref_boundary_relative_deg": 5.0,
+            "negative_q_ref_row_count": 0,
+            "all_commands_nonnegative": true,
+            "result": "PASS"
+          }
+        },
+        "sampled_feedback_rows": 1026,
+        "qA_feedback_min_boundary_relative_deg": -0.001735062293484242,
+        "qA_feedback_max_boundary_relative_deg": 0.6421715880555882,
+        "qB_feedback_min_boundary_relative_deg": -0.022564441966008996,
+        "qB_feedback_max_boundary_relative_deg": 0.9181328142267212,
+        "qJ2_feedback_min_boundary_relative_deg": -0.012149752129746618,
+        "qJ2_feedback_max_boundary_relative_deg": 0.7792846699944125,
+        "sampled_feedback_protection": "PASS",
+        "result": "FAIL"
+      },
+      "move_to_test_center_actual_boundary_relative_deg": 0.23604184519492463,
+      "move_to_test_center_error_deg": 4.763958154805075,
+      "move_to_test_center_e_sync_deg": 0.14926067603089252,
+      "move_to_test_center_acceptance": "FAIL",
+      "plus_5_actual_deg": -4.222450392299072,
+      "plus_5_absolute_boundary_relative_deg": 0.7775496077009283,
+      "plus_5_error_deg": 9.222450392299072,
+      "plus_5_e_sync_deg": 0.27596122617113295,
+      "first_center_absolute_boundary_relative_deg": 0.48162977006053037,
+      "first_center_error_deg": 4.518370229939469,
+      "minus_5_actual_deg": -4.906277502643191,
+      "minus_5_absolute_boundary_relative_deg": 0.09372249735680832,
+      "minus_5_error_deg": 0.09372249735680871,
+      "minus_5_e_sync_deg": 0.05206805408711572,
+      "final_center_absolute_boundary_relative_deg": 0.27248894354648606,
+      "final_center_error_deg": 4.727511056453514,
+      "return_to_boundary_actual_boundary_relative_deg": 0.08591255899845077,
+      "return_to_boundary_error_deg": 0.08591255899845077,
+      "return_to_boundary_e_sync_deg": 0.03297697376459292,
+      "return_to_boundary_acceptance": "PASS",
+      "max_motion_e_sync_deg": 0.27769628846461736,
+      "max_common_mode_error_deg": 9.226790206070461,
+      "directional_asymmetry_deg": 0.6838271103441196,
+      "center_acceptance": "FAIL",
+      "sync_acceptance": "PASS",
+      "position_tracking": "FAIL",
+      "boundary_route_acceptance": "FAIL",
+      "max_abs_logical_paired_tau_feedback_nm": 8.060859277844429,
+      "max_abs_logical_velocity_deg_s": 10.441375051175411,
+      "max_temperature_c": 33,
+      "active_invalid_frames": 0,
+      "merror_nonzero_frames": 0,
+      "gravity_sign_runtime": "PASS",
+      "final_both_brake": "PASS",
+      "rate_100hz": {
+        "result": "PASS",
+        "median_period_ms": 9.999608000000215,
+        "p95_period_ms": 10.127064999999824,
+        "max_period_ms": 10.254050000000001
+      },
+      "invariants": {
+        "phase_counts": {
+          "SESSION_BRAKE_CAPTURE": 50,
+          "ZERO_TFF_BASELINE_HOLD": 50,
+          "AUTO_GRAVITY_RAMP": 101,
+          "AUTO_GRAVITY_HOLD": 100,
+          "MOVE_TO_TEST_CENTER_PROFILE": 85,
+          "MOVE_TO_TEST_CENTER_ENDPOINT": 40,
+          "PLUS_5_PROFILE": 85,
+          "PLUS_5_ENDPOINT": 40,
+          "FIRST_CENTER_PROFILE": 85,
+          "FIRST_CENTER_ENDPOINT": 40,
+          "MINUS_5_PROFILE": 85,
+          "MINUS_5_ENDPOINT": 40,
+          "FINAL_CENTER_PROFILE": 85,
+          "FINAL_CENTER_ENDPOINT": 50,
+          "RETURN_TO_BOUNDARY_PROFILE": 85,
+          "RETURN_TO_BOUNDARY_ENDPOINT": 50,
+          "FINAL_DUAL_BRAKE": 5
+        },
+        "max_a_command_mapping_residual_rad": 0.0,
+        "max_b_command_mapping_residual_rad": 0.0,
+        "max_feedback_mapping_residual": 0.0,
+        "max_pose_gravity_formula_residual_nm": 0.0,
+        "max_q8_decode_residual_nm": 0.0,
+        "max_model_prior_cycle_pose_residual_rad": 0.0,
+        "trajectory_samples_exact": true,
+        "boundary_stage_route_return_phase_counts_exact": true,
+        "all_active_logical_commands_nonnegative": true,
+        "sampled_real_feedback_boundary_guard": true,
+        "no_additional_boundary_margin": true,
+        "q8_truncation_and_opposite_symmetry": true,
+        "cap_flags_and_envelope": true,
+        "terminal_five_pair_brake": true
+      },
+      "numeric_result": "FAIL",
+      "result": "FAIL",
+      "operator_force_observation": "HIGHER_DRIVE_FORCE_REQUIRED",
+      "historical_comparison": {
+        "zero_tff": {
+          "plus_endpoint_error_improvement_deg": -4.451550909301219,
+          "minus_endpoint_error_improvement_deg": 4.610357665002794,
+          "both_directions_improve_at_least_0p05deg": false,
+          "directional_asymmetry_change_deg": 0.6170077897058701
+        },
+        "fixed_tff_005": {
+          "plus_endpoint_error_improvement_deg": -4.67110210957617,
+          "minus_endpoint_error_improvement_deg": 4.895863891825768,
+          "both_directions_improve_at_least_0p05deg": false,
+          "directional_asymmetry_change_deg": 0.24558900388444455
+        },
+        "improvement_vs_zero_and_fixed_both_directions": false,
+        "meaningful_improvement_threshold_deg": 0.05
+      }
+    },
+    "level_b_eligibility": {
+      "eligible": false,
+      "level_a_formal_position_fail": true,
+      "safety_and_sync_pass": false,
+      "gravity_sign_robust": true,
+      "center_pass": false,
+      "boundary_route_pass": false,
+      "clamp_audit_pass": true,
+      "improvement_vs_zero_and_fixed_both_directions": false,
+      "meaningful_improvement_threshold_deg": 0.05
+    },
+    "repeat": {
+      "executed": false,
+      "result": "NOT_EXECUTED"
+    }
+  },
+  "level_b": {
+    "executed": false,
+    "run": null,
+    "repeat": {
+      "executed": false,
+      "result": "NOT_EXECUTED"
+    }
+  },
+  "repeat": {
+    "used": "NO",
+    "level": "N/A",
+    "result": "NOT_EXECUTED"
+  },
+  "historical_comparison": {
+    "zero_tff": {
+      "name": "zero_tff",
+      "inventory_path": "hardware/v15_24b_ft/final_installed_load_inventory.json",
+      "inventory_sha256": "34fa0c8ac9aae24cef13ba6efd165a676c6ce87bf97b4d84d7ff6576f9a388a8",
+      "csv_path": "hardware/v15_24b_ft/j2_installed_load_run.csv",
+      "csv_sha256": "cbe675d7a497c1ec4ef00459faacabd0ea678cb43e35fabc76627a58f434d640",
+      "plus_5_actual_deg": 0.22910051700214848,
+      "plus_5_error_deg": 4.770899482997852,
+      "minus_5_actual_deg": -0.2959198376403979,
+      "minus_5_error_deg": 4.7040801623596025,
+      "first_center_error_deg": 0.13884814423230862,
+      "final_center_error_deg": 0.17269264914364366,
+      "max_motion_e_sync_deg": 0.15620524128018645,
+      "max_abs_logical_tau_feedback_nm": null,
+      "directional_asymmetry_deg": 0.06681932063824944
+    },
+    "fixed_tff_005": {
+      "name": "fixed_tff_005",
+      "inventory_path": "hardware/v15_24d_ft/j2_tff005_inventory.json",
+      "inventory_sha256": "3cbc492fc534f2b4692e4d5668ffb979bd11941c6acba3d7401f98d3dfa549c7",
+      "csv_path": "hardware/v15_24d_ft/j2_tff005_run1.csv",
+      "csv_sha256": "4f34dd171e21125dfe117d9877cf6754f5e6d5533ba4420a7ec35133695495c8",
+      "plus_5_actual_deg": 0.4486517172770982,
+      "plus_5_error_deg": 4.551348282722902,
+      "minus_5_actual_deg": -0.010413610817423147,
+      "minus_5_error_deg": 4.989586389182577,
+      "first_center_error_deg": 0.3605703304117921,
+      "final_center_error_deg": 0.05076567834816331,
+      "max_motion_e_sync_deg": 0.15273295865553949,
+      "max_abs_logical_tau_feedback_nm": 4.673320256173611,
+      "directional_asymmetry_deg": 0.43823810645967504
+    }
+  },
+  "combined": {
+    "selected_observed_level": "level-a-run",
+    "better_than_zero_tff": "NO",
+    "better_than_fixed_tff_005": "NO",
+    "directional_asymmetry_reduced": "NOT_SUPPORTED",
+    "gravity_contribution_confidence": "INCONCLUSIVE",
+    "best_alpha": "NOT_VALIDATED"
+  },
+  "classification": {
+    "POSITION_CONTROL_GRAVITY_FEEDFORWARD": "TESTED",
+    "ZERO_GRAVITY_TEACH_MODE": "NOT_IMPLEMENTED",
+    "NO_ADDITIONAL_BOUNDARY_MARGIN": "YES",
+    "ACTUAL_NO_BOUNDARY_CROSSING_ABSOLUTE_GUARANTEE": "NO",
+    "J2_INSTALLED_LOAD_BIDIRECTIONAL_5DEG": "FAIL",
+    "J2_LOCAL_MOTION_AUTHORITY": "NOT_GRANTED"
+  },
+  "safety": {
+    "final_both_brake": "PASS",
+    "operator_observations_all_safe": true,
+    "boundary_routes_all_pass": false,
+    "all_active_commands_nonnegative": true,
+    "sampled_feedback_boundary_protection_all_pass": true,
+    "power_24v_off": true,
+    "j3_work_used": false
+  },
+  "next_phase_gate": {
+    "eligible": false,
+    "allowed_phase": null
+  },
+  "unresolved_items": [
+    "J2 repeated local-motion authority is not established.",
+    "Internal torque/current limit, static friction/brake, model-load mismatch, and anchor accuracy remain possible contributors.",
+    "Alpha above 0.50, Kp increase, friction compensation, and velocity tuning were not authorized."
+  ],
+  "next_single_task": "J2_TORQUE_LIMIT_FRICTION_MODEL_ANCHOR_DIAGNOSTIC",
+  "final_task_result": "FAIL"
+}
