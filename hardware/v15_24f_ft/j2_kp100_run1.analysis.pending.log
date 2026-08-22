@@ -1,0 +1,101 @@
+{
+  "a0_raw_rad": 2.453991413116455,
+  "b0_raw_rad": 5.42014217376709,
+  "center_gate_fix": "YES",
+  "csv": "hardware/v15_24f_ft/j2_kp100_run1.csv",
+  "csv_sha256": "fb9a1d01fb14b1d1d9ddd3dae38d80ad634292fa892a1a4e65c2966cbdb6d74e",
+  "failed_endpoint": "PLUS_5_ENDPOINT",
+  "final_brake": "PASS",
+  "final_brake_static": {
+    "a_raw_span_deg": 0.06074660261105463,
+    "a_raw_tail_median_offset_deg": 0.0,
+    "b_raw_span_deg": 0.13190789505837164,
+    "b_raw_tail_median_offset_deg": 0.0
+  },
+  "hold": {
+    "final_e_sync_deg": 0.0034722826246469467,
+    "max_e_sync_deg": 0.008677469505099672,
+    "max_motion_deg": 0.002602593440226363,
+    "result": "PASS"
+  },
+  "invariant_errors": [],
+  "joint": "J2",
+  "kp": 1.0,
+  "max_abs_expected_logical_pd_tau_nm": 5.999227928426715,
+  "max_abs_logical_tau_feedback_nm": 6.305273361504078,
+  "max_logical_velocity_deg_s": 9.330590976335781,
+  "max_motion_e_sync_deg": 0.22042196847820952,
+  "numeric_result": "FAIL",
+  "operator_observation": "PENDING",
+  "phase": "j2-kp100-run1",
+  "phase_prefix_audit": {
+    "reason": "PASS",
+    "result": "PASS"
+  },
+  "phase_segments": [
+    [
+      "SESSION_BRAKE_CAPTURE",
+      50
+    ],
+    [
+      "KP_RAMP_HOLD",
+      51
+    ],
+    [
+      "CURRENT_HOLD",
+      100
+    ],
+    [
+      "PLUS_5_PROFILE",
+      85
+    ],
+    [
+      "PLUS_5_ENDPOINT",
+      40
+    ],
+    [
+      "FINAL_DUAL_BRAKE",
+      5
+    ]
+  ],
+  "result": "FAIL",
+  "route": {
+    "final_center": null,
+    "first_center": null,
+    "minus_5": null,
+    "plus_5": {
+      "actual_deg": 0.7801522011411546,
+      "cumulative_max_e_sync_deg": 0.22042196847820952,
+      "e_sync_deg": 0.2013298091368475,
+      "error_deg": 4.219847798858845
+    }
+  },
+  "rows": 331,
+  "safe_tracking_fail_eligible_for_kp140": false,
+  "schema": "V15_24F_J2_RUN_ANALYSIS_V1",
+  "session_capture_brake": "PASS",
+  "session_capture_static": {
+    "a_raw_span_deg": 0.0034722826246469467,
+    "a_raw_tail_median_offset_deg": 0.0,
+    "b_raw_span_deg": 0.003470124586968484,
+    "b_raw_tail_median_offset_deg": 0.0
+  },
+  "session_center_redefined": false,
+  "session_center_source": "50_VALID_BRAKE_FRAME_MEDIAN",
+  "source_head": "5129a975d5c456aa04fed2e7ff47456a56785489",
+  "termination": {
+    "consistent": true,
+    "field_present": true,
+    "final_rows_complete": true,
+    "reason": "PLUS_5_ACCEPTANCE_FAILED_STOP_ROUTE",
+    "safety_abort_latched": false
+  },
+  "timing_100hz": {
+    "errors": [],
+    "max_ms": 10.159209000000057,
+    "median_ms": 9.999829000000071,
+    "p95_ms": 10.067980999999948,
+    "result": "PASS",
+    "samples": 275
+  }
+}

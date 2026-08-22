@@ -1,0 +1,297 @@
+{
+  "schema": "V15_24F_FT_FINAL_LOAD_DRIVE_AUTHORITY_INVENTORY_V1",
+  "task": "V15.24F-FT",
+  "final_task_result": "FAIL",
+  "source": {
+    "head": "5129a975d5c456aa04fed2e7ff47456a56785489",
+    "branch": "agent/v15-24f-ft-j2-drive-authority",
+    "commit": "SELF_RESOLVED_BY_FINAL_HANDOFF_GIT_REV_PARSE_HEAD",
+    "git_status": "CLEAN_AFTER_COMMIT_AND_PUSH_VERIFIED_BY_FINAL_HANDOFF"
+  },
+  "center_gate_issue_fixed": true,
+  "frozen_configuration": {
+    "j2a_id": 0,
+    "j2a_sign": -1,
+    "j2b_id": 1,
+    "j2b_sign": 1,
+    "gear_ratio": 6.3299999237060547,
+    "base_kp": 0.6,
+    "kd": 0.05,
+    "tff_nm": 0.0,
+    "velocity_deg_s": 10.0,
+    "acceleration_deg_s2": 30.0,
+    "command_rate_hz": 100.0,
+    "route_deg": [
+      0.0,
+      5.0,
+      0.0,
+      -5.0,
+      0.0
+    ],
+    "session_center": "MEDIAN_OF_50_VALID_STATIC_DUAL_BRAKE_FRAMES",
+    "session_center_redefined": false,
+    "max_authorized_kp": 1.4
+  },
+  "implementation_traceability": {
+    "active_j2_runner": {
+      "source_snapshot": "hardware/v15_24f_ft/j2_runner_active_source.cpp",
+      "source_sha256": "78ed9d8371356e7d5c618600c9b9919d042a6281f817a7f3d291c047e965ece0",
+      "binary_sha256": "b288285282445da1f3dbd0dc3fba17d74730488152eed483c4225fc494008ed6",
+      "endpoint_sync_semantics": "ABS_SIGNED_MEDIAN_OF_TAIL"
+    },
+    "committed_j2_runner": {
+      "path": "tools/hardware/v15_24f_ft_j2_drive_authority.cpp",
+      "sha256": "3c2c01662057eb867f7a9ceab8652953ebf01abcdb239ff19bba2b62fc7c786e",
+      "endpoint_sync_semantics": "MAX_ABS_OVER_TAIL",
+      "verification": "STRICT_REAL_SDK_OPTIMIZED_BUILD_SELF_TEST_AND_UBSAN_SELF_TEST_PASS_NO_SERIAL_CONSTRUCTION",
+      "verification_log": "hardware/v15_24f_ft/postrun_j2_safety_hardening_verification.log"
+    },
+    "j3_runner": {
+      "path": "tools/hardware/v15_24f_ft_j3_installed_load.cpp",
+      "sha256": "d32f6e01a9904bd3b2b6d3f6ad20dee7c20e7ba12588c5c796c644df4465c108"
+    },
+    "analyzer": {
+      "path": "tools/analyze_v15_24f_ft_final_load_drive_authority.py",
+      "sha256": "560084f8a909343bfc6ab44f524f3cf0ee30f2ac2779c7dd3640ad7cb4e48f90",
+      "endpoint_sync_semantics": "MAX_ABS_OVER_TAIL"
+    },
+    "active_result_impact_of_postrun_hardening": "NONE_BOTH_RUNS_FAILED_PLUS_5_POSITION_AND_STRICT_SYNC_REMAINED_BELOW_0_3_DEG",
+    "active_evidence_rewritten": false
+  },
+  "operator_confirmations": {
+    "level_a_observation": "SAFE",
+    "level_b_observation": "SAFE",
+    "abnormality_observed": false,
+    "drive_force_observation": "SUBSTANTIAL_FORCE_REQUIRED",
+    "power_24v_off_confirmed": true,
+    "j3_executed": false,
+    "source": "hardware/v15_24f_ft/operator_observations.json_and_operator_chat"
+  },
+  "j2": {
+    "level_a": {
+      "phase": "j2-kp100-run1",
+      "executed": true,
+      "kp": 1.0,
+      "a0_raw_rad": 2.453991413116455,
+      "b0_raw_rad": 5.42014217376709,
+      "hold": {
+        "result": "PASS",
+        "final_e_sync_deg": 0.0034722826246469467,
+        "max_e_sync_deg": 0.008677469505099672,
+        "max_motion_deg": 0.002602593440226363
+      },
+      "plus_5": {
+        "actual_deg": 0.7801522011411546,
+        "error_deg": 4.219847798858845,
+        "endpoint_e_sync_deg": 0.2013298091368475,
+        "cumulative_max_e_sync_deg": 0.22042196847820952,
+        "result": "FAIL"
+      },
+      "first_center": "NOT_EXECUTED_FAIL_CLOSED",
+      "minus_5": "NOT_EXECUTED_FAIL_CLOSED",
+      "final_center": "NOT_EXECUTED_FAIL_CLOSED",
+      "maximum_logical_velocity_deg_s": 9.330590976335781,
+      "maximum_expected_logical_pd_tau_nm": 5.999227928426715,
+      "maximum_logical_tau_feedback_nm": 6.305273361504078,
+      "timing_100hz": {
+        "result": "PASS",
+        "median_ms": 9.999829000000071,
+        "p95_ms": 10.067980999999948,
+        "max_ms": 10.159209000000057
+      },
+      "termination_reason": "PLUS_5_ACCEPTANCE_FAILED_STOP_ROUTE",
+      "failed_endpoint": "PLUS_5_ENDPOINT",
+      "center_gate_fix": "YES",
+      "final_brake": {
+        "command_and_communication": "PASS",
+        "strict_static": "PASS",
+        "frames": 5,
+        "a_span_deg": 0.06074660261105463,
+        "b_span_deg": 0.13190789505837164
+      },
+      "operator_observation": "SAFE",
+      "result": "FAIL",
+      "safe_tracking_fail_eligible_for_kp140": true
+    },
+    "level_b": {
+      "phase": "j2-kp140-run1",
+      "executed": true,
+      "kp": 1.4,
+      "a0_raw_rad": 2.4164087772369385,
+      "b0_raw_rad": 5.465011119842529,
+      "hold": {
+        "result": "PASS",
+        "final_e_sync_deg": 0.043389505563176826,
+        "max_e_sync_deg": 0.045126725894339526,
+        "max_motion_deg": 0.0355806462236585
+      },
+      "plus_5": {
+        "actual_deg": 0.6404354467432646,
+        "error_deg": 4.359564553256735,
+        "endpoint_e_sync_deg": 0.1475256137374082,
+        "cumulative_max_e_sync_deg": 0.14752777177508675,
+        "result": "FAIL"
+      },
+      "first_center": "NOT_EXECUTED_FAIL_CLOSED",
+      "minus_5": "NOT_EXECUTED_FAIL_CLOSED",
+      "final_center": "NOT_EXECUTED_FAIL_CLOSED",
+      "maximum_logical_velocity_deg_s": 7.997649331215038,
+      "maximum_expected_logical_pd_tau_nm": 8.551583893656497,
+      "maximum_logical_tau_feedback_nm": 9.0499217659235,
+      "timing_100hz": {
+        "result": "PASS",
+        "median_ms": 10.00088950000011,
+        "p95_ms": 10.114065000000005,
+        "max_ms": 10.171896999999985
+      },
+      "termination_reason": "PLUS_5_ACCEPTANCE_FAILED_STOP_ROUTE",
+      "failed_endpoint": "PLUS_5_ENDPOINT",
+      "center_gate_fix": "YES",
+      "final_brake": {
+        "command_and_communication": "PASS",
+        "strict_static": "FAIL",
+        "frames": 5,
+        "a_span_deg": 0.1058711704677157,
+        "b_span_deg": 0.21000727864194718,
+        "span_limit_deg": 0.2,
+        "failure_reason": "J2B_FINAL_BRAKE_SPAN_GT_0_2_DEG"
+      },
+      "operator_observation": "SAFE",
+      "result": "FAIL",
+      "safe_tracking_fail_eligible_for_kp140": false
+    },
+    "repeat": {
+      "used": false,
+      "kp100_result": "NOT_EXECUTED_RUN1_FAIL",
+      "kp140_result": "NOT_EXECUTED_RUN1_FAIL"
+    },
+    "torque_feedback_scaled_with_kp": "YES",
+    "expected_pd_tau_ratio_kp140_over_kp100": 1.4254474068464227,
+    "logical_tau_feedback_ratio_kp140_over_kp100": 1.4352941176470588,
+    "plus_5_actual_change_kp140_minus_kp100_deg": -0.13971675439789,
+    "final_validated_kp": null,
+    "installed_load_bidirectional_5deg": "FAIL",
+    "local_motion_authority": "NOT_GRANTED",
+    "failure_classification": {
+      "candidate": "MECHANICAL_LOAD_OR_FRICTION_CANDIDATE",
+      "exclusive_root_cause": false,
+      "basis": "LOGICAL_TAU_FEEDBACK_INCREASED_WITH_KP_BUT_MECHANICAL_MOVEMENT_REMAINED_SMALL_AND_DID_NOT_IMPROVE",
+      "unresolved_alternatives": [
+        "INTERNAL_TORQUE_OR_CURRENT_LIMIT",
+        "BRAKE_OR_TRANSMISSION_FRICTION",
+        "POWER_SUPPLY_LIMITATION",
+        "FINAL_MECHANICAL_LOAD",
+        "TORQUE_FEEDBACK_CALIBRATION"
+      ]
+    }
+  },
+  "j3": {
+    "executed": false,
+    "reason": "J2_EXACT_REPEAT_GATE_NOT_MET",
+    "kp_used": null,
+    "hold": "NOT_EXECUTED",
+    "plus_5": "NOT_EXECUTED",
+    "first_center": "NOT_EXECUTED",
+    "minus_5": "NOT_EXECUTED",
+    "final_center": "NOT_EXECUTED",
+    "repeat": "NOT_EXECUTED",
+    "local_motion_authority": "NOT_EVALUATED"
+  },
+  "combined": {
+    "final_joint_level_commissioning_gate": "FAIL",
+    "final_brake": "FAIL_STRICT_STATIC",
+    "final_five_frame_both_brake_command_and_communication": "PASS",
+    "power_24v_off": "CONFIRMED",
+    "motor_zero_modified": false,
+    "mujoco_modified": false,
+    "next_single_task": "J2_INTERNAL_CURRENT_TORQUE_LIMIT_MECHANICAL_FRICTION_BRAKE_POWER_LOAD_DIAGNOSTIC",
+    "kp_above_1_4_authorized": false
+  },
+  "evidence": [
+    {
+      "path": "hardware/v15_24f_ft/j2_kp100_run1.csv",
+      "bytes": 163696,
+      "sha256": "fb9a1d01fb14b1d1d9ddd3dae38d80ad634292fa892a1a4e65c2966cbdb6d74e"
+    },
+    {
+      "path": "hardware/v15_24f_ft/j2_kp100_run1.log",
+      "bytes": 698,
+      "sha256": "a457e04a432ed0f6e06011c75bbc57f8bd5b0937104b3291603daf1c6fa4887d"
+    },
+    {
+      "path": "hardware/v15_24f_ft/j2_kp100_run1.analysis.pending.json",
+      "bytes": 2607,
+      "sha256": "ebf359c10f5eb91debc56f498b6dd1d99dd44774b6c458a2c503f025291d9da3"
+    },
+    {
+      "path": "hardware/v15_24f_ft/j2_kp100_run1.analysis.pending.log",
+      "bytes": 2607,
+      "sha256": "ebf359c10f5eb91debc56f498b6dd1d99dd44774b6c458a2c503f025291d9da3"
+    },
+    {
+      "path": "hardware/v15_24f_ft/j2_kp100_run1.analysis.json",
+      "bytes": 2603,
+      "sha256": "ef73b248a809e8cb0fe86b9fe3bea734406cb0d122e0b1237e524ef8516a2e0d"
+    },
+    {
+      "path": "hardware/v15_24f_ft/j2_kp100_run1.analysis.log",
+      "bytes": 2656,
+      "sha256": "743d3ca2ccb05868b02539a1cfe705f97248cfc3ac36734c8341f53025d3a3f2"
+    },
+    {
+      "path": "hardware/v15_24f_ft/j2_kp140_run1.csv",
+      "bytes": 194210,
+      "sha256": "2e1fb90371abd0aa6000c825f1239a983d966dc85cc322e95939aeb32e64f0af"
+    },
+    {
+      "path": "hardware/v15_24f_ft/j2_kp140_run1.log",
+      "bytes": 714,
+      "sha256": "2ce145ca610e48c8341f06dc8392aba0fe713c0c2e7dbe2e59779145eba9fc36"
+    },
+    {
+      "path": "hardware/v15_24f_ft/j2_kp140_run1.analysis.pending.json",
+      "bytes": 2646,
+      "sha256": "fefb2af0c3a94c575272bf24a26130c673c28520d0ae0ccdcc348bf3f0e70b32"
+    },
+    {
+      "path": "hardware/v15_24f_ft/j2_kp140_run1.analysis.pending.log",
+      "bytes": 2669,
+      "sha256": "3740320b97b388b976710245f3f6627b236cc770a2768cfd370037f6c517d56c"
+    },
+    {
+      "path": "hardware/v15_24f_ft/j2_kp140_run1.analysis.json",
+      "bytes": 2643,
+      "sha256": "7a1f2b4f3f3a2e957e08166f08e0199a3a5e8021c0e15e7a6d0879f162ebe9c0"
+    },
+    {
+      "path": "hardware/v15_24f_ft/j2_kp140_run1.analysis.log",
+      "bytes": 2694,
+      "sha256": "6394e7d599d1877b9f82b8a8aa0352e82f4f13db8145ddbdf1b246f51148345b"
+    },
+    {
+      "path": "hardware/v15_24f_ft/offline_verification.log",
+      "bytes": 2660,
+      "sha256": "1d25ab85367110390597e2f59b3e94dd57bec0240cfc8df48f784498468ade8b"
+    },
+    {
+      "path": "hardware/v15_24f_ft/operator_observations.json",
+      "bytes": 1695,
+      "sha256": "3e0c8e829a564fa0ac93e3c13e6df9ef832b6d7d6898beaae454cab795f5bf99"
+    },
+    {
+      "path": "hardware/v15_24f_ft/j2_runner_active_source.cpp",
+      "bytes": 47433,
+      "sha256": "78ed9d8371356e7d5c618600c9b9919d042a6281f817a7f3d291c047e965ece0"
+    },
+    {
+      "path": "hardware/v15_24f_ft/postrun_j2_safety_hardening_verification.log",
+      "bytes": 3328,
+      "sha256": "29027d9143e562d1069d6e5d7df6ba2392dd5e076602c47b6ac10a21020f95c4"
+    },
+    {
+      "path": "docs/V15_24F_FT_FINAL_LOAD_DRIVE_AUTHORITY.md",
+      "bytes": 9579,
+      "sha256": "a0d26d0ca6f9224a6fa386afe0dd23ab051beba1a1413f53b1df592408b4046a"
+    }
+  ]
+}

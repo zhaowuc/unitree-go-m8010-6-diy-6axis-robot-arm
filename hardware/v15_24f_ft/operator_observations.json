@@ -1,0 +1,44 @@
+{
+  "schema": "V15_24F_OPERATOR_OBSERVATIONS_V1",
+  "task": "V15.24F-FT",
+  "source_head": "5129a975d5c456aa04fed2e7ff47456a56785489",
+  "branch": "agent/v15-24f-ft-j2-drive-authority",
+  "events": [
+    {
+      "phase": "j2-kp100-run1",
+      "kind": "pre_run_authorization",
+      "j2_plus_minus_5_clear": true,
+      "continuous_supervision": true,
+      "emergency_power_off_available": true,
+      "power_24v": "ON",
+      "operator_statement": "J2_PLUS_MINUS_5_CLEAR=YES；现场持续监护且急停/断电可用；24V已开启；可以执行J2 Level A"
+    },
+    {
+      "phase": "j2-kp100-run1",
+      "kind": "post_run_observation",
+      "observation": "SAFE",
+      "abnormality_observed": false,
+      "power_24v": "ON",
+      "operator_statement": "Level A现场观察=SAFE；无抖动、冲击、异响、卡阻、线束拉扯或碰撞趋势；24V仍开启"
+    },
+    {
+      "phase": "j2-kp140-run1",
+      "kind": "pre_run_authorization",
+      "current_brake_pose_plus_minus_5_clear": true,
+      "continuous_supervision": true,
+      "emergency_power_off_available": true,
+      "power_24v": "ON",
+      "operator_statement": "J2_KP140_RUN1_AUTHORIZED=YES；当前BRAKE姿态双向±5°净空确认；现场持续监护且急停/断电可用；24V仍开启；可以执行J2 Level B"
+    },
+    {
+      "phase": "j2-kp140-run1",
+      "kind": "post_run_observation",
+      "observation": "SAFE",
+      "abnormality_observed": false,
+      "power_24v": "OFF",
+      "operator_statement": "Level B现场观察=SAFE；无抖动、冲击、异响、卡阻、线束拉扯或碰撞趋势；24V已关闭"
+    }
+  ],
+  "final_power_24v_off_confirmed": true,
+  "j3_executed": false
+}

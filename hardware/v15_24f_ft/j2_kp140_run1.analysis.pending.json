@@ -1,0 +1,103 @@
+{
+  "a0_raw_rad": 2.4164087772369385,
+  "b0_raw_rad": 5.465011119842529,
+  "center_gate_fix": "YES",
+  "csv": "hardware/v15_24f_ft/j2_kp140_run1.csv",
+  "csv_sha256": "2e1fb90371abd0aa6000c825f1239a983d966dc85cc322e95939aeb32e64f0af",
+  "failed_endpoint": "PLUS_5_ENDPOINT",
+  "final_brake": "FAIL",
+  "final_brake_static": {
+    "a_raw_span_deg": 0.1058711704677157,
+    "a_raw_tail_median_offset_deg": 0.0,
+    "b_raw_span_deg": 0.21000727864194718,
+    "b_raw_tail_median_offset_deg": 0.0
+  },
+  "hold": {
+    "final_e_sync_deg": 0.043389505563176826,
+    "max_e_sync_deg": 0.045126725894339526,
+    "max_motion_deg": 0.0355806462236585,
+    "result": "PASS"
+  },
+  "invariant_errors": [
+    "FINAL_NOT_STATIC"
+  ],
+  "joint": "J2",
+  "kp": 1.4,
+  "max_abs_expected_logical_pd_tau_nm": 8.551583893656497,
+  "max_abs_logical_tau_feedback_nm": 9.0499217659235,
+  "max_logical_velocity_deg_s": 7.997649331215038,
+  "max_motion_e_sync_deg": 0.14752777177508675,
+  "numeric_result": "FAIL",
+  "operator_observation": "PENDING",
+  "phase": "j2-kp140-run1",
+  "phase_prefix_audit": {
+    "reason": "PASS",
+    "result": "PASS"
+  },
+  "phase_segments": [
+    [
+      "SESSION_BRAKE_CAPTURE",
+      50
+    ],
+    [
+      "KP_RAMP_HOLD",
+      76
+    ],
+    [
+      "CURRENT_HOLD",
+      100
+    ],
+    [
+      "PLUS_5_PROFILE",
+      85
+    ],
+    [
+      "PLUS_5_ENDPOINT",
+      40
+    ],
+    [
+      "FINAL_DUAL_BRAKE",
+      5
+    ]
+  ],
+  "result": "FAIL",
+  "route": {
+    "final_center": null,
+    "first_center": null,
+    "minus_5": null,
+    "plus_5": {
+      "actual_deg": 0.6404354467432646,
+      "cumulative_max_e_sync_deg": 0.14752777177508675,
+      "e_sync_deg": 0.1475256137374082,
+      "error_deg": 4.359564553256735
+    }
+  },
+  "rows": 356,
+  "safe_tracking_fail_eligible_for_kp140": false,
+  "schema": "V15_24F_J2_RUN_ANALYSIS_V1",
+  "session_capture_brake": "PASS",
+  "session_capture_static": {
+    "a_raw_span_deg": 0.0034722826246469467,
+    "a_raw_tail_median_offset_deg": 0.0,
+    "b_raw_span_deg": 0.003470124586968484,
+    "b_raw_tail_median_offset_deg": 0.000867531146742121
+  },
+  "session_center_redefined": false,
+  "session_center_source": "50_VALID_BRAKE_FRAME_MEDIAN",
+  "source_head": "5129a975d5c456aa04fed2e7ff47456a56785489",
+  "termination": {
+    "consistent": true,
+    "field_present": true,
+    "final_rows_complete": true,
+    "reason": "PLUS_5_ACCEPTANCE_FAILED_STOP_ROUTE",
+    "safety_abort_latched": false
+  },
+  "timing_100hz": {
+    "errors": [],
+    "max_ms": 10.171896999999985,
+    "median_ms": 10.00088950000011,
+    "p95_ms": 10.114065000000005,
+    "result": "PASS",
+    "samples": 300
+  }
+}
