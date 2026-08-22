@@ -1,0 +1,21 @@
+{
+  "schema": "go-m8010-v15.30a-direct-qpos-mirror/1.0",
+  "status": "NOT_RUN_THIS_HOST",
+  "reason": "Windows workspace has no ROS2, rclpy, MuJoCo runtime, Linux hardware worktree, or connected motor buses",
+  "implementation_offline_tests": "PASS",
+  "method": "DIRECT_QPOS_MIRROR",
+  "session_reference": "MIRROR_SESSION_REFERENCE_V1",
+  "mujoco_session_pose_matched": "NOT_PERFORMED",
+  "joint_state_messages": 0,
+  "median_latency_ms": null,
+  "p95_latency_ms": null,
+  "maximum_mirror_error_rad": null,
+  "direct_qpos_numeric_result": "NOT_EVALUATED",
+  "cad_zero": "PENDING",
+  "ros_zero": "PENDING",
+  "j2_active_motion_used": false,
+  "zero_gravity": "NOT_IMPLEMENTED",
+  "pid_used": false,
+  "actuator_tracking_used": false,
+  "trajectory_simulation_used": false
+}

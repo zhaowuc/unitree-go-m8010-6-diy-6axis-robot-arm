@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>go_m8010_arm_hardware</name>
+  <version>15.30.0</version>
+  <description>State-only seven-motor to six-joint session mirror for GO-M8010.</description>
+  <maintainer email="maintainer@example.invalid">GO-M8010 project</maintainer>
+  <license>Proprietary project data</license>
+  <buildtool_depend>ament_python</buildtool_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <export><build_type>ament_python</build_type></export>
+</package>

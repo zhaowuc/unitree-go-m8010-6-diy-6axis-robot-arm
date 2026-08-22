@@ -1,0 +1,22 @@
+{
+  "schema": "go-m8010-v15.30a-j2-blocker-operator-inventory/1.0",
+  "status": "OPERATOR_INPUT_REQUIRED",
+  "psu_rated": {"voltage_v": null, "current_a": null, "power_w": null},
+  "j2_motors_share_same_supply": null,
+  "main_power_cable_gauge": "UNKNOWN",
+  "manual_supported_movement": {
+    "power_24v_off_required": true,
+    "reliable_external_support_required": true,
+    "approximately_deg": 5,
+    "classification": "NOT_PERFORMED",
+    "allowed_values": ["SMOOTH", "HIGH_RESISTANCE", "STICK_SLIP", "HARD_STOP", "ABNORMAL_SOUND"]
+  },
+  "bus_voltage": {"instrument": "NOT_AVAILABLE", "idle_v": null, "minimum_loaded_v": null},
+  "power_limitation_classification": "UNKNOWN",
+  "j2_active_motion_authority": "NOT_GRANTED",
+  "j2_active_motion_used_in_v15_30a": false,
+  "prior_final_brake_communication": "PASS",
+  "prior_final_brake_strict_static": "FAIL_STRICT_STATIC",
+  "prior_j2b_span_deg": 0.21000727864194718,
+  "strict_static_threshold_deg": 0.2
+}
