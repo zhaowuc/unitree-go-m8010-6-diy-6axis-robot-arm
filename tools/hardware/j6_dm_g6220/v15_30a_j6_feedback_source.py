@@ -48,9 +48,9 @@ def main() -> int:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     transport = create_transport("dmcan_sdk", channel=0)
     udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    valid = 0
-    invalid = 0
-    consecutive_invalid = 0
+    feedback_frames = 0
+    published_updates = 0
+    empty_cycles = 0
     period = 1.0 / args.hz
     rows = int(round(args.seconds * args.hz))
     try:
@@ -61,25 +61,31 @@ def main() -> int:
             raise RuntimeError(f"J6 must already be DISABLED, got {state_text(initial.state)}")
         with args.output.open("w", encoding="utf-8", newline="") as stream:
             fields = [
-                "cycle", "source_monotonic_ns", "valid", "state", "state_name",
+                "cycle", "source_monotonic_ns", "batch_size", "valid", "state", "state_name",
                 "position_rad", "velocity_rad_s", "torque_protocol",
                 "mos_temperature_c", "coil_temperature_c",
             ]
             writer = csv.DictWriter(stream, fieldnames=fields)
             writer.writeheader()
             start = time.monotonic()
+            last_valid_time = start
             transport.clear_pending_feedback()
             for cycle in range(rows):
                 deadline = start + cycle * period
                 remaining = deadline - time.monotonic()
                 if remaining > 0.0:
                     time.sleep(remaining)
-                feedback = transport.refresh_feedback(1, timeout=min(0.015, period * 0.75))
+                # The official USB backend delivers RX callbacks in batches.
+                # Never clear its queue per request; drain each completed batch
+                # and publish its newest physical sample.
+                batch = transport.drain_feedback(1)
+                feedback = batch[-1][1] if batch else None
                 source_ns = time.monotonic_ns()
                 good = feedback is not None and feedback.state == 0
                 if good:
-                    valid += 1
-                    consecutive_invalid = 0
+                    feedback_frames += len(batch)
+                    published_updates += 1
+                    last_valid_time = time.monotonic()
                     payload = {
                         "schema": "go-m8010-motor-feedback/1.0",
                         "source_monotonic_ns": source_ns,
@@ -94,11 +100,11 @@ def main() -> int:
                     }
                     udp.sendto(json.dumps(payload, separators=(",", ":")).encode(), (args.udp_host, args.udp_port))
                 else:
-                    invalid += 1
-                    consecutive_invalid += 1
+                    empty_cycles += 1
                 writer.writerow({
                     "cycle": cycle,
                     "source_monotonic_ns": source_ns,
+                    "batch_size": len(batch),
                     "valid": int(good),
                     "state": "" if feedback is None else feedback.state,
                     "state_name": "TIMEOUT" if feedback is None else state_text(feedback.state),
@@ -110,18 +116,30 @@ def main() -> int:
                 })
                 if cycle % 50 == 0:
                     stream.flush()
-                if consecutive_invalid >= 5:
-                    raise RuntimeError("five consecutive J6 invalid/unsafe feedback frames")
+                if feedback is not None and feedback.state != 0:
+                    raise RuntimeError(f"J6 left DISABLED state: {state_text(feedback.state)}")
+                if time.monotonic() - last_valid_time > 0.5:
+                    raise RuntimeError("J6 produced no valid feedback batch for 0.5 seconds")
+                transport.send_refresh_request(1)
+            # Preserve any final callback batch in the source count.
+            time.sleep(0.05)
+            final_batch = transport.drain_feedback(1)
+            if any(item[1].state != 0 for item in final_batch):
+                raise RuntimeError("J6 final feedback was not DISABLED")
+            feedback_frames += len(final_batch)
     finally:
         udp.close()
         transport.close()
-    rate = valid / max(1, rows)
-    print(f"J6_STATE_FEEDBACK_VALID={valid}/{rows}")
-    print(f"J6_STATE_FEEDBACK_INVALID={invalid}")
-    print(f"J6_STATE_FEEDBACK_VALID_RATE={rate:.9f}")
+    frame_rate = feedback_frames / max(args.seconds, 1.0)
+    print(f"J6_STATE_FEEDBACK_REQUESTS={rows}")
+    print(f"J6_STATE_FEEDBACK_FRAMES={feedback_frames}")
+    print(f"J6_STATE_FEEDBACK_FRAME_RATE_HZ={frame_rate:.9f}")
+    print(f"J6_STATE_FEEDBACK_PUBLISHED_UPDATES={published_updates}")
+    print(f"J6_STATE_FEEDBACK_EMPTY_DRAIN_CYCLES={empty_cycles}")
     print("J6_ACTIVE_MOTION_USED=NO")
-    print("J6_STATE_FEEDBACK_RESULT=" + ("PASS" if rate >= 0.99 else "FAIL"))
-    return 0 if rate >= 0.99 else 2
+    passed = feedback_frames >= int(rows * 0.99) and published_updates > 0
+    print("J6_STATE_FEEDBACK_RESULT=" + ("PASS" if passed else "FAIL"))
+    return 0 if passed else 2
 
 
 if __name__ == "__main__":
