@@ -867,26 +867,26 @@ class Commissioner {
       baseline_and_session_zero();
       foc_entry_hold();
 
-      run_profile("PROFILE_SESSION_ZERO_TO_P10", entry_anchor_deg_, 10.0,
+      run_profile("PROFILE_SESSION_ZERO_TO_P5", entry_anchor_deg_, 5.0,
                   outcome_.stats.positive);
-      hold_target("HOLD_P10_300MS", 10.0, 0.300,
+      hold_target("HOLD_P5_300MS", 5.0, 0.300,
                   &outcome_.stats.positive);
 
       LegMetrics ignored_return_one;
-      run_profile("PROFILE_P10_TO_ZERO", 10.0, 0.0,
+      run_profile("PROFILE_P5_TO_ZERO", 5.0, 0.0,
                   ignored_return_one);
       const State zero_one =
           hold_target("HOLD_ZERO1_200MS", 0.0, 0.200, nullptr);
       outcome_.stats.first_return_error_deg =
           std::abs(degrees(zero_one.q_joint));
 
-      run_profile("PROFILE_ZERO_TO_N10", 0.0, -10.0,
+      run_profile("PROFILE_ZERO_TO_N5", 0.0, -5.0,
                   outcome_.stats.negative);
-      hold_target("HOLD_N10_300MS", -10.0, 0.300,
+      hold_target("HOLD_N5_300MS", -5.0, 0.300,
                   &outcome_.stats.negative);
 
       LegMetrics ignored_return_two;
-      run_profile("PROFILE_N10_TO_ZERO", -10.0, 0.0,
+      run_profile("PROFILE_N5_TO_ZERO", -5.0, 0.0,
                   ignored_return_two);
       const State zero_two =
           hold_target("HOLD_ZERO2_200MS", 0.0, 0.200, nullptr);
@@ -1065,7 +1065,7 @@ class Commissioner {
 
   void foc_entry_hold() {
     const double anchor_deg = degrees(latest_.q_joint);
-    // The requested first leg is SESSION_LOCAL_ZERO -> +10 deg.  Refuse to
+    // The requested first leg is SESSION_LOCAL_ZERO -> +5 deg.  Refuse to
     // energize FOC if BRAKE drifted outside the zero target band after the
     // median reference and estimator warmup.
     require_foc_entry_near_session_zero(anchor_deg);
@@ -1087,8 +1087,8 @@ class Commissioner {
   }
 
   static bool in_target_band(double target_deg, double actual_deg) {
-    if (target_deg == 10.0) return actual_deg >= 9.0 && actual_deg <= 11.0;
-    if (target_deg == -10.0) return actual_deg >= -11.0 && actual_deg <= -9.0;
+    if (target_deg == 5.0) return actual_deg >= 4.0 && actual_deg <= 6.0;
+    if (target_deg == -5.0) return actual_deg >= -6.0 && actual_deg <= -4.0;
     if (target_deg == 0.0) return std::abs(actual_deg) < 1.0;
     throw std::runtime_error("UNKNOWN_TARGET_BAND");
   }
@@ -1468,12 +1468,12 @@ int main(int argc, char** argv) {
     }
     if (!options.execute) {
       const j1_final::Profile profile = j1_final::makeProfile(
-          0.0, 10.0, kMaxVelocityDegS, kMaxAccelerationDegS2, kDtS);
+          0.0, 5.0, kMaxVelocityDegS, kMaxAccelerationDegS2, kDtS);
       std::cout << std::fixed << std::setprecision(9)
                 << "MODE=DRY_RUN\nSERIAL_DEVICE_OPENED=NO\n"
                 << "CONFIRMATION_REQUIRED=" << kConfirmation << '\n'
-                << "SEQUENCE=0,+10,0,-10,0\n"
-                << "PROFILE_INTERVALS_PER_10_DEG="
+                << "SEQUENCE=0,+5,0,-5,0\n"
+                << "PROFILE_INTERVALS_PER_5_DEG="
                 << profile.total_intervals << '\n'
                 << "REALIZED_PEAK_VELOCITY_DEG_S="
                 << profile.peak_velocity_deg_s << '\n'
