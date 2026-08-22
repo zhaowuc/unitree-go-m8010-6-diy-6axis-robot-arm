@@ -1,0 +1,17 @@
+{
+  "schema": "V15_30A_J3_NEXT_PHASE_GATE_V1",
+  "eligible": true,
+  "allowed_phase": "j3-kp060-run1",
+  "reason": "J3_INDEPENDENT_OPERATOR_AUTHORIZATION",
+  "source_head": "528abf487160476ece450c0f6c635e19476ac8d7",
+  "prerequisite_csv_path": "",
+  "operator_observation": "SAFE",
+  "final_brake": "PASS",
+  "preflight_result": "PASS",
+  "j2_policy": "STATE_ONLY_NO_MOTION",
+  "j2_safe_static_state": "CONFIRMED",
+  "j3_clearance_deg": 5.0,
+  "observer_emergency_power_cutoff": "READY",
+  "final_installed_configuration": "CONFIRMED",
+  "authorization_text": "机械臂周围已清空并有人随时断电监护，J2 当前安全静止，J3 具备 ±5°机械净空，并授权依次执行 J3 installed-load ±5°及 J1/J4/J5/J6 单关节 ±5°可见镜像测试"
+}

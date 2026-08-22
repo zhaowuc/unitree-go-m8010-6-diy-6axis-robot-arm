@@ -310,6 +310,8 @@ struct Cli {
 bool phase_gate_safety_contract_accepted(const std::string& phase,
                                          const nlohmann::json& gate) {
   try {
+    if (phase == "j3-kp060-run1")
+      return gate.at("preflight_result").get<std::string>() == "PASS";
     if (gate.at("center_gate_fix").get<std::string>() != "YES" ||
         gate.at("timing_100hz_result").get<std::string>() != "PASS" ||
         gate.at("hold_result").get<std::string>() != "PASS")
@@ -1282,6 +1284,7 @@ void self_test() {
   if (!wrong_count_rejected)
     throw std::runtime_error("BRAKE_STATIONARITY_COUNT_SELF_TEST_FAILED");
   nlohmann::json pass_gate = {
+      {"preflight_result", "PASS"},
       {"center_gate_fix", "YES"},
       {"timing_100hz_result", "PASS"},
       {"hold_result", "PASS"},
@@ -1291,6 +1294,10 @@ void self_test() {
       !phase_gate_safety_contract_accepted("j3-kp060-repeat", pass_gate) ||
       !phase_gate_safety_contract_accepted("j3-kp070-repeat", pass_gate))
     throw std::runtime_error("PREREQUISITE_PASS_GATE_SELF_TEST_FAILED");
+  pass_gate["preflight_result"] = "FAIL";
+  if (phase_gate_safety_contract_accepted("j3-kp060-run1", pass_gate))
+    throw std::runtime_error("PREFLIGHT_FAIL_GATE_SELF_TEST_FAILED");
+  pass_gate["preflight_result"] = "PASS";
   pass_gate["prerequisite_result"] = "FAIL";
   if (phase_gate_safety_contract_accepted("j3-kp060-repeat", pass_gate))
     throw std::runtime_error("PREREQUISITE_FAIL_GATE_SELF_TEST_FAILED");
