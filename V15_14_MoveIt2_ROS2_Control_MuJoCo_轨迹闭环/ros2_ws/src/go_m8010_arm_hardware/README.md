@@ -63,6 +63,11 @@ ros2 launch go_m8010_arm_hardware whole_arm_mirror.launch.py \
   evidence_directory:=/home/car/go-m8010-robot-arm-v15-20a/hardware/v15_30a_ft
 ```
 
+For headless numerical QA only, `numeric_test_only:=true` permits a zero base
+pose while recording `MUJOCO_SESSION_POSE_MATCHED=NO_NUMERIC_TEST_ONLY`. That
+result may prove direct-qpos arithmetic and latency but must not be reported as
+visual geometry/sign acceptance.
+
 The state node waits for 25 valid fresh samples from all seven motors, captures
 `MIRROR_SESSION_REFERENCE_V1`, then publishes exactly `joint1..joint6` in rad
 and rad/s at 50 Hz. `robot_state_publisher` uses a runtime-only lower-case

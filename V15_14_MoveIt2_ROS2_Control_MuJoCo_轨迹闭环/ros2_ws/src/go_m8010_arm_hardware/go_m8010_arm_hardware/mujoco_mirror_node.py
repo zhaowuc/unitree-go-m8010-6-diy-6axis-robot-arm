@@ -48,10 +48,13 @@ class WholeArmMujocoMirror(Node):
         self.declare_parameter("model_path", "")
         self.declare_parameter("session_pose_deg", "0,0,0,0,0,0")
         self.declare_parameter("pose_matched", False)
+        self.declare_parameter("numeric_test_only", False)
         self.declare_parameter("use_viewer", True)
         self.declare_parameter("evidence_directory", "hardware/v15_30a_ft")
 
-        if not bool(self.get_parameter("pose_matched").value):
+        self.pose_matched = bool(self.get_parameter("pose_matched").value)
+        self.numeric_test_only = bool(self.get_parameter("numeric_test_only").value)
+        if not self.pose_matched and not self.numeric_test_only:
             raise RuntimeError(
                 "operator visual pose match is required: set pose_matched:=true and session_pose_deg"
             )
@@ -100,7 +103,8 @@ class WholeArmMujocoMirror(Node):
         self.errors_rad: list[float] = []
         self.last_target: Optional[np.ndarray] = None
         self.get_logger().info(
-            "MUJOCO_SESSION_POSE_MATCHED=YES; direct qpos mirror active; "
+            ("MUJOCO_SESSION_POSE_MATCHED=YES" if self.pose_matched else "MUJOCO_SESSION_POSE_MATCHED=NO_NUMERIC_TEST_ONLY")
+            + "; direct qpos mirror active; "
             f"model_sha256={self.model_hash}"
         )
 
@@ -158,7 +162,7 @@ class WholeArmMujocoMirror(Node):
             "model_path": str(self.model_path),
             "model_sha256": self.model_hash,
             "session_reference": "MIRROR_SESSION_REFERENCE_V1",
-            "mujoco_session_pose_matched": "YES",
+            "mujoco_session_pose_matched": "YES" if self.pose_matched else "NO_NUMERIC_TEST_ONLY",
             "session_pose_rad": self.session_pose.tolist(),
             "joint_state_messages": self.sequence,
             "rejected_messages": self.rejected_messages,
