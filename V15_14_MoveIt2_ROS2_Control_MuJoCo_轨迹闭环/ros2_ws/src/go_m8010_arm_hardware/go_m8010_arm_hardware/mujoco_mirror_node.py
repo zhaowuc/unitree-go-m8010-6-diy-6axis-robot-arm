@@ -14,6 +14,7 @@ from typing import Optional
 import numpy as np
 import rclpy
 from rclpy.node import Node
+from rclpy.executors import ExternalShutdownException
 from sensor_msgs.msg import JointState
 from std_msgs.msg import String
 
@@ -209,6 +210,8 @@ def main(args=None) -> None:
                 viewer.sync()
         else:
             rclpy.spin(node)
+    except ExternalShutdownException:
+        pass
     finally:
         if viewer is not None:
             viewer.close()
