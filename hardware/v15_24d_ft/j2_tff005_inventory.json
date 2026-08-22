@@ -1,0 +1,124 @@
+{
+  "task": "V15.24D-FT J2 bounded gravity feedforward hold and +/-5 degree hardware test",
+  "source_head": "3ecf0f5bca06f605b8e4f5be61c3cdf33bb3f53d",
+  "branch": "agent/v15-24d-ft-j2-bounded-feedforward",
+  "status": "FAIL",
+  "failure_classification": "J2_TFF005_DIRECTIONALLY_BIASED_POSITION_TRACKING_FAIL",
+  "mechanical_state": "BIG_ARM_AND_FOREARM_INSTALLED",
+  "operator_observation": "SAFE",
+  "operator_confirmed_24v_power_off": true,
+  "authority_inherited": {
+    "J2_TAU_COMMAND_AUTHORITY": "PASS",
+    "J2_GRAVITY_MODEL_AUDIT": "PASS",
+    "J2_FEEDFORWARD_EXPERIMENT_READY": "YES"
+  },
+  "command": {
+    "kp": 0.6,
+    "kd": 0.05,
+    "velocity_deg_s": 10.0,
+    "acceleration_deg_s2": 30.0,
+    "rate_hz": 100.0,
+    "tff_literal_a_rotor_nm": -0.05,
+    "tff_literal_b_rotor_nm": 0.05,
+    "tff_encoded_a_count": -12,
+    "tff_encoded_b_count": 12,
+    "tff_decoded_a_rotor_nm": -0.046875,
+    "tff_decoded_b_rotor_nm": 0.046875,
+    "tff_logical_j2_decoded_nm": 0.5934374928474426,
+    "maximum_abs_count_observed": 12,
+    "automatic_tff_increase": false
+  },
+  "run1": {
+    "evidence_file": "hardware/v15_24d_ft/j2_tff005_run1.csv",
+    "sha256": "4f34dd171e21125dfe117d9877cf6754f5e6d5533ba4420a7ec35133695495c8",
+    "rows": 791,
+    "a0_raw_rad": 5.450438022613525,
+    "b0_raw_rad": 2.415450096130371,
+    "zero_tff_startup_hold": "PASS",
+    "tff_ramp_duration_s": 0.500067767,
+    "tff_hold_displacement_deg": 0.004338734752549836,
+    "tff_hold_direction": "NEGLIGIBLE",
+    "tff_hold_max_e_sync_deg": 0.010416847873940841,
+    "plus_5_actual_deg": 0.4486517172770982,
+    "plus_5_error_deg": 4.551348282722902,
+    "plus_5_e_sync_deg": 0.07028728718753952,
+    "first_center_error_deg": 0.3605703304117921,
+    "minus_5_actual_deg": -0.010413610817423147,
+    "minus_5_error_deg": 4.989586389182577,
+    "minus_5_e_sync_deg": 0.03037438032436655,
+    "final_center_error_deg": 0.05076567834816331,
+    "max_motion_e_sync_deg": 0.15273295865553949,
+    "max_abs_logical_paired_tau_feedback_nm": 4.673320256173611,
+    "max_temperature_c": 32,
+    "max_abs_logical_velocity_deg_s": 11.99647318755843,
+    "active_invalid_frames": 0,
+    "merror_nonzero_frames": 0,
+    "final_both_brake": "PASS",
+    "operator_safe": true,
+    "numeric_result": "FAIL",
+    "result": "FAIL"
+  },
+  "run2": {
+    "executed": false,
+    "result": "NOT_EXECUTED_RUN1_FAIL"
+  },
+  "comparison_to_v15_24b": {
+    "authoritative": {
+      "plus_signed_shift_deg": 0.2195512002749497,
+      "minus_signed_shift_deg": 0.2855062268229748,
+      "plus_error_improvement_deg": 0.21955120027494957,
+      "minus_error_improvement_deg": -0.28550622682297444
+    },
+    "operator_repeat": {
+      "plus_signed_shift_deg": 0.08938160456658006,
+      "minus_signed_shift_deg": 0.11281249866049191,
+      "plus_error_improvement_deg": 0.08938160456658029,
+      "minus_error_improvement_deg": -0.11281249866049237
+    }
+  },
+  "classification": {
+    "J2_TFF_005_EFFECT": "DIRECTIONALLY_BIASED",
+    "TFF_DIRECTION_AUTHORITY": "INCONCLUSIVE",
+    "GRAVITY_CONTRIBUTION_CONFIDENCE": "INCONCLUSIVE",
+    "J2_TFF_005_REPEATABILITY": "NOT_TESTED_RUN1_FAIL",
+    "J2_INSTALLED_LOAD_BIDIRECTIONAL_5DEG": "FAIL",
+    "J2_LOCAL_MOTION_AUTHORITY": "NOT_GRANTED"
+  },
+  "safety": {
+    "final_both_brake": "PASS",
+    "operator_safe": true,
+    "power_24v_off": true,
+    "j3_work_used": false,
+    "motor_zero_modified": false,
+    "simulation_modified": false
+  },
+  "invariants": {
+    "phase_counts": {
+      "SESSION_BRAKE_CAPTURE": 50,
+      "ZERO_TFF_BASELINE_HOLD": 75,
+      "TFF_LINEAR_RAMP": 51,
+      "FEEDFORWARD_HOLD": 100,
+      "PLUS_5_PROFILE": 85,
+      "PLUS_5_ENDPOINT": 40,
+      "FIRST_CENTER_PROFILE": 85,
+      "FIRST_CENTER_ENDPOINT": 40,
+      "MINUS_5_PROFILE": 85,
+      "MINUS_5_ENDPOINT": 40,
+      "FINAL_CENTER_PROFILE": 85,
+      "FINAL_CENTER_ENDPOINT": 50,
+      "FINAL_DUAL_BRAKE": 5
+    },
+    "max_a_command_mapping_residual_rad": 0.0,
+    "max_b_command_mapping_residual_rad": 0.0,
+    "ramp_monotone_and_symmetric": true,
+    "post_ramp_counts_exact": true
+  },
+  "unresolved_items": [
+    "The bounded 0.05 N.m literal feedforward did not establish bidirectional position tracking.",
+    "The hold displacement was negligible, so direct hold-based Tff direction authority remains inconclusive.",
+    "Internal torque/current limiting, position-loop effort scaling, friction/brake, and load/model mismatch remain unresolved.",
+    "J3 installed-load validation remains not tested."
+  ],
+  "next_single_task": "J2_INTERNAL_TORQUE_CURRENT_LIMIT_AND_POSITION_LOOP_EFFORT_AUDIT",
+  "final_task_result": "FAIL"
+}
