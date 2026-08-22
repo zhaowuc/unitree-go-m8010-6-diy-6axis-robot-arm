@@ -31,7 +31,10 @@ def _setup(context):
             executable="whole_arm_state_node",
             name="whole_arm_state_node",
             output="screen",
-            parameters=[LaunchConfiguration("state_config")],
+            parameters=[
+                LaunchConfiguration("state_config"),
+                {"evidence_directory": LaunchConfiguration("evidence_directory")},
+            ],
         ),
         Node(
             package="robot_state_publisher",
@@ -61,6 +64,7 @@ def _setup(context):
             name="rviz2",
             output="screen",
             condition=IfCondition(LaunchConfiguration("use_rviz")),
+            arguments=["-d", LaunchConfiguration("rviz_config")],
         ),
     ]
 
@@ -78,6 +82,10 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("pose_matched", default_value="false"),
         DeclareLaunchArgument("numeric_test_only", default_value="false"),
         DeclareLaunchArgument("use_rviz", default_value="true"),
+        DeclareLaunchArgument(
+            "rviz_config",
+            default_value=description_share + "/rviz/virtual_camera_tf.rviz",
+        ),
         DeclareLaunchArgument("use_mujoco_mirror", default_value="true"),
         DeclareLaunchArgument("use_mujoco_viewer", default_value="true"),
         DeclareLaunchArgument("evidence_directory", default_value="hardware/v15_30a_ft"),
