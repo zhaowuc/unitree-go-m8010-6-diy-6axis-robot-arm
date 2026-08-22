@@ -15,6 +15,7 @@ setup(
         ("share/" + package_name + "/launch", glob("launch/*.launch.py")),
     ],
     install_requires=["setuptools"],
+    tests_require=["pytest"],
     zip_safe=True,
     maintainer="GO-M8010 project",
     maintainer_email="maintainer@example.invalid",
