@@ -66,8 +66,8 @@ constexpr double kBrakeStationarityTailMedianDeltaDeg = 0.1;
 constexpr int kTempLimit = 60;
 constexpr char kRepoRoot[] = "/home/car/go-m8010-robot-arm-v15-20a";
 constexpr char kSourceHead[] =
-    "5129a975d5c456aa04fed2e7ff47456a56785489";
-constexpr char kEligibilityPath[] = "/tmp/v15_24f_next_phase_gate.json";
+    "528abf487160476ece450c0f6c635e19476ac8d7";
+constexpr char kEligibilityPath[] = "/tmp/v15_30a_j3_next_phase_gate.json";
 constexpr char kCsvHeader[] =
     "tick,timestamp_s,phase,run_label,kp_cmd_literal,kp_cmd_count,"
     "kp_cmd_decoded,kd_cmd_literal,kd_cmd_count,kd_cmd_decoded,"
@@ -358,12 +358,12 @@ Cli parse_cli(int argc, char** argv) {
       cli.phase == "j3-kp060-repeat" ? kKpRunA : kKpRunB;
   const std::string expected_output =
       cli.phase == "j3-kp060-run1"
-          ? "hardware/v15_24f_ft/j3_installed_run.csv"
+          ? "hardware/v15_30a_ft/j3_installed_run.csv"
       : cli.phase == "j3-kp060-repeat"
-          ? "hardware/v15_24f_ft/j3_installed_repeat.csv"
+          ? "hardware/v15_30a_ft/j3_installed_repeat.csv"
       : cli.phase == "j3-kp070-run1"
-          ? "hardware/v15_24f_ft/j3_kp070_run.csv"
-          : "hardware/v15_24f_ft/j3_kp070_repeat.csv";
+          ? "hardware/v15_30a_ft/j3_kp070_run.csv"
+          : "hardware/v15_30a_ft/j3_kp070_repeat.csv";
   if (cli.output != expected_output) {
     throw std::runtime_error("OUTPUT_PATH_NOT_ALLOWED");
   }
@@ -402,34 +402,42 @@ Cli parse_cli(int argc, char** argv) {
   std::string prerequisite;
   std::string reason;
   if (cli.phase == "j3-kp060-run1") {
-    prerequisite = gate.at("prerequisite_csv_path").get<std::string>();
-    if (prerequisite != "hardware/v15_24f_ft/j2_kp100_repeat.csv" &&
-        prerequisite != "hardware/v15_24f_ft/j2_kp140_repeat.csv")
-      throw std::runtime_error("J2_REPEAT_PREREQUISITE_PATH_INVALID");
-    reason = "J2_EXACT_REPEAT_PASS";
+    prerequisite = "";
+    reason = "J3_INDEPENDENT_OPERATOR_AUTHORIZATION";
   } else if (cli.phase == "j3-kp060-repeat") {
-    prerequisite = "hardware/v15_24f_ft/j3_installed_run.csv";
+    prerequisite = "hardware/v15_30a_ft/j3_installed_run.csv";
     reason = "J3_KP060_RUN1_PASS";
   } else if (cli.phase == "j3-kp070-run1") {
-    prerequisite = "hardware/v15_24f_ft/j3_installed_run.csv";
+    prerequisite = "hardware/v15_30a_ft/j3_installed_run.csv";
     reason = "J3_KP060_RUN1_SAFE_TRACKING_FAIL";
   } else {
-    prerequisite = "hardware/v15_24f_ft/j3_kp070_run.csv";
+    prerequisite = "hardware/v15_30a_ft/j3_kp070_run.csv";
     reason = "J3_KP070_RUN1_PASS";
   }
   if (gate.at("schema").get<std::string>() !=
-          "V15_24F_NEXT_PHASE_GATE_V1" ||
+          "V15_30A_J3_NEXT_PHASE_GATE_V1" ||
       !gate.at("eligible").get<bool>() ||
       gate.at("allowed_phase").get<std::string>() != cli.phase ||
       gate.at("reason").get<std::string>() != reason ||
       gate.at("source_head").get<std::string>() != kSourceHead ||
       gate.at("prerequisite_csv_path").get<std::string>() != prerequisite ||
-      gate.at("prerequisite_csv_sha256").get<std::string>() !=
-          sha256_file(std::string(kRepoRoot) + "/" + prerequisite) ||
       gate.at("operator_observation").get<std::string>() != "SAFE" ||
       gate.at("final_brake").get<std::string>() != "PASS" ||
       !phase_gate_safety_contract_accepted(cli.phase, gate))
     throw std::runtime_error("NEXT_PHASE_GATE_AUTHORITY_MISMATCH");
+  if (cli.phase == "j3-kp060-run1") {
+    if (gate.at("j2_policy").get<std::string>() != "STATE_ONLY_NO_MOTION" ||
+        gate.at("j2_safe_static_state").get<std::string>() != "CONFIRMED" ||
+        gate.at("j3_clearance_deg").get<double>() < 5.0 ||
+        gate.at("observer_emergency_power_cutoff").get<std::string>() !=
+            "READY" ||
+        gate.at("final_installed_configuration").get<std::string>() !=
+            "CONFIRMED")
+      throw std::runtime_error("V15_30A_INDEPENDENT_J3_GATE_MISMATCH");
+  } else if (gate.at("prerequisite_csv_sha256").get<std::string>() !=
+             sha256_file(std::string(kRepoRoot) + "/" + prerequisite)) {
+    throw std::runtime_error("NEXT_PHASE_PREREQUISITE_HASH_MISMATCH");
+  }
   return cli;
 }
 
