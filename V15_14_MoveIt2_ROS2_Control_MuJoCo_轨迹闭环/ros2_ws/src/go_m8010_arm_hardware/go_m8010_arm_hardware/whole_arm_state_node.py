@@ -19,7 +19,6 @@ from typing import Iterable, Optional
 
 import rclpy
 from rclpy.executors import ExternalShutdownException
-from rclpy.exceptions import RCLError
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from std_msgs.msg import String
@@ -249,8 +248,13 @@ def main(args=None) -> None:
     try:
         node = WholeArmStateNode()
         rclpy.spin(node)
-    except (ExternalShutdownException, RCLError):
+    except ExternalShutdownException:
         pass
+    except Exception:
+        # Humble may raise its private _rclpy.RCLError after a signal has
+        # already invalidated the context. Preserve every real runtime error.
+        if rclpy.ok():
+            raise
     finally:
         if node is not None:
             node.destroy_node()
