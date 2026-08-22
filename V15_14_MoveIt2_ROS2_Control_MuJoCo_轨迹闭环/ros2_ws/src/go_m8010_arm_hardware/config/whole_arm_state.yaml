@@ -3,6 +3,8 @@ whole_arm_state_node:
     publish_rate_hz: 50.0
     monitor_rate_hz: 2.0
     feedback_topic: /whole_arm/motor_feedback_raw
+    udp_bind: 127.0.0.1
+    udp_port: 15300
     capture_samples: 25
     capture_max_span_deg: 0.25
     feedback_freshness_s: 0.10

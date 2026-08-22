@@ -11,12 +11,14 @@ from __future__ import annotations
 import csv
 import json
 import math
+import socket
 import statistics
 import time
 from pathlib import Path
 from typing import Iterable, Optional
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from std_msgs.msg import String
@@ -50,6 +52,8 @@ class WholeArmStateNode(Node):
         self.declare_parameter("publish_rate_hz", 50.0)
         self.declare_parameter("monitor_rate_hz", 2.0)
         self.declare_parameter("feedback_topic", "/whole_arm/motor_feedback_raw")
+        self.declare_parameter("udp_bind", "127.0.0.1")
+        self.declare_parameter("udp_port", 15300)
         self.declare_parameter("capture_samples", 25)
         self.declare_parameter("feedback_freshness_s", 0.10)
         self.declare_parameter("capture_max_span_deg", 0.25)
@@ -84,6 +88,13 @@ class WholeArmStateNode(Node):
         )
         feedback_topic = str(self.get_parameter("feedback_topic").value)
         self.subscription = self.create_subscription(String, feedback_topic, self.on_feedback, 50)
+        self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udp_socket.setblocking(False)
+        self.udp_socket.bind((
+            str(self.get_parameter("udp_bind").value),
+            int(self.get_parameter("udp_port").value),
+        ))
+        self.udp_timer = self.create_timer(0.002, self.poll_udp)
         self.publisher = self.create_publisher(JointState, "/joint_states", 10)
         self.status_publisher = self.create_publisher(String, "/whole_arm/hardware_state", 10)
         self.timer = self.create_timer(1.0 / rate_hz, self.publish_state)
@@ -100,9 +111,19 @@ class WholeArmStateNode(Node):
         )
 
     def on_feedback(self, message: String) -> None:
-        receipt_ns = time.monotonic_ns()
+        self.accept_payload(message.data, time.monotonic_ns())
+
+    def poll_udp(self) -> None:
+        for _ in range(100):
+            try:
+                data, _address = self.udp_socket.recvfrom(65535)
+            except BlockingIOError:
+                return
+            self.accept_payload(data.decode("utf-8"), time.monotonic_ns())
+
+    def accept_payload(self, text: str, receipt_ns: int) -> None:
         try:
-            payload = json.loads(message.data)
+            payload = json.loads(text)
             for sample in parse_feedback_payload(payload, receipt_ns):
                 self.model.update(sample)
         except Exception as exc:
@@ -207,6 +228,7 @@ class WholeArmStateNode(Node):
         )
 
     def destroy_node(self) -> bool:
+        self.udp_socket.close()
         self.whole_capture.close()
         self.joint_capture.close()
         return super().destroy_node()
@@ -226,6 +248,8 @@ def main(args=None) -> None:
     try:
         node = WholeArmStateNode()
         rclpy.spin(node)
+    except ExternalShutdownException:
+        pass
     finally:
         if node is not None:
             node.destroy_node()

@@ -28,6 +28,10 @@ motor transaction. A publisher may send one or several samples per message:
 }
 ```
 
+The identical JSON datagram contract is accepted on UDP `127.0.0.1:15300` so
+the frozen C++ Unitree runtime and Python 3.13 dmcan runtime do not have to load
+the ROS 2 Python 3.10 ABI. The socket is loopback-only by default.
+
 `position_rad` and `velocity_rad_s` are protocol/motor coordinates. The state
 node applies the frozen gear and sign mapping. Required source names are
 `J1,J2A,J2B,J3,J4,J5,J6`. J2A and J2B remain internal motor sources and never
