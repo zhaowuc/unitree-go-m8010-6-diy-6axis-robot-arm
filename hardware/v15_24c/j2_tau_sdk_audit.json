@@ -1,0 +1,146 @@
+{
+  "device_io": false,
+  "documentation_conflict": false,
+  "evidence": {
+    "go_m8010_use_manual_v1_2": {
+      "page_13": "All commands target shaft 1 before the reducer, not output shaft 2; reducer ratio is 6.33.",
+      "page_17": "tau_set is desired motor torque; Tff is N.m and multiplied by 256.",
+      "page_18": "Unless specially stated, protocol parameters are rotor-side, not output-side; rotor-to-output ratio is 6.33.",
+      "page_4": "Mixed-control tau is explicitly the motor rotor output torque; p and omega are rotor position and velocity.",
+      "sha256": "1312eb4f9af0d5ebfe1e46376e6373df43330edc9222540e04e4ee4dd55e92be"
+    },
+    "go_m8010_user_manual_v1_0": {
+      "page_3_gear_ratio": 6.33,
+      "page_3_max_torque_nm": 23.7,
+      "page_7": "T is motor rotor output torque.",
+      "sha256": "b6dcadd37db9fa05c9e0704647346c7a9091aefaf3296ecf525712b3044ff446"
+    },
+    "go_protocol_header": "RIS_Comd_t.tor_des: desired joint output torque, unit N.m, q8",
+    "official_debugging_assistant": "Official GO-M8010 debugging assistant labels torque/speed/position as rotor quantities.",
+    "sdk_readme": "The README states commands are for the rotor side and output-side commands require reducer conversion."
+  },
+  "frozen_serializer_effective_count_max": 32765,
+  "frozen_serializer_effective_count_min": -32765,
+  "frozen_serializer_effective_nm_max": 127.98828125,
+  "frozen_serializer_effective_nm_min": -127.98828125,
+  "j2_tau_command_authority": "PASS",
+  "protocol_field": "signed int16 q8",
+  "protocol_storage_count_max": 32767,
+  "protocol_storage_count_min": -32768,
+  "protocol_storage_nominal_nm_max": 127.99609375,
+  "protocol_storage_nominal_nm_min": -128.0,
+  "quantity_unit": "N.m",
+  "quantity_unit_authority": "PASS",
+  "resolved_documentation_ambiguity": "The terse protocol header uses joint-output wording, but the product-specific V1.2 manual repeatedly and explicitly defines command T/tau, position, and velocity as pre-reducer rotor-side quantities.",
+  "schema": "go-m8010-arm-v15.24c-j2-tau-sdk-audit/1.0",
+  "sdk_commit": "5b79a42d81cd69adac1367db79efdb972a898fd1",
+  "sdk_header_sha256": "1189524e148ec7499300f35a9e27dfa01d84285a72e6fba012497a19200e2c7a",
+  "sdk_readme_sha256": "540b327bea62994c4aee20194b35b06325bd99754d3c081cf7e6651538718a6c",
+  "sdk_repository": "https://github.com/unitreerobotics/unitree_actuator_sdk",
+  "serial_port_constructed": false,
+  "serializer_cases": [
+    {
+      "decoded_tau_nm": -127.98828125,
+      "literal_tau_nm": -129.0,
+      "raw_int16_count": -32765
+    },
+    {
+      "decoded_tau_nm": -127.98828125,
+      "literal_tau_nm": -128.0,
+      "raw_int16_count": -32765
+    },
+    {
+      "decoded_tau_nm": -127.98828125,
+      "literal_tau_nm": -127.99609375,
+      "raw_int16_count": -32765
+    },
+    {
+      "decoded_tau_nm": -1.0,
+      "literal_tau_nm": -1.0,
+      "raw_int16_count": -256
+    },
+    {
+      "decoded_tau_nm": -0.25,
+      "literal_tau_nm": -0.25,
+      "raw_int16_count": -64
+    },
+    {
+      "decoded_tau_nm": -0.046875,
+      "literal_tau_nm": -0.05,
+      "raw_int16_count": -12
+    },
+    {
+      "decoded_tau_nm": -0.00390625,
+      "literal_tau_nm": -0.00390625,
+      "raw_int16_count": -1
+    },
+    {
+      "decoded_tau_nm": 0.0,
+      "literal_tau_nm": 0.0,
+      "raw_int16_count": 0
+    },
+    {
+      "decoded_tau_nm": 0.00390625,
+      "literal_tau_nm": 0.00390625,
+      "raw_int16_count": 1
+    },
+    {
+      "decoded_tau_nm": 0.046875,
+      "literal_tau_nm": 0.05,
+      "raw_int16_count": 12
+    },
+    {
+      "decoded_tau_nm": 0.25,
+      "literal_tau_nm": 0.25,
+      "raw_int16_count": 64
+    },
+    {
+      "decoded_tau_nm": 1.0,
+      "literal_tau_nm": 1.0,
+      "raw_int16_count": 256
+    },
+    {
+      "decoded_tau_nm": 127.98828125,
+      "literal_tau_nm": 127.99609375,
+      "raw_int16_count": 32765
+    },
+    {
+      "decoded_tau_nm": 127.98828125,
+      "literal_tau_nm": 128.0,
+      "raw_int16_count": 32765
+    },
+    {
+      "decoded_tau_nm": 127.98828125,
+      "literal_tau_nm": 129.0,
+      "raw_int16_count": 32765
+    }
+  ],
+  "serializer_lsb_nm": 0.00390625,
+  "serializer_out_of_range_behavior": "clamp to +/-32765 counts in tested cases",
+  "serializer_scale_counts_per_nm": 256.0,
+  "serializer_self_test": "PASS",
+  "serializer_stdout": [
+    "literal_tau_nm,raw_int16_count,decoded_tau_nm",
+    "-129,-32765,-127.98828125",
+    "-128,-32765,-127.98828125",
+    "-127.99609375,-32765,-127.98828125",
+    "-1,-256,-1",
+    "-0.25,-64,-0.25",
+    "-0.050000000000000003,-12,-0.046875",
+    "-0.00390625,-1,-0.00390625",
+    "0,0,0",
+    "0.00390625,1,0.00390625",
+    "0.050000000000000003,12,0.046875",
+    "0.25,64,0.25",
+    "1,256,1",
+    "127.99609375,32765,127.98828125",
+    "128,32765,127.98828125",
+    "129,32765,127.98828125",
+    "SELF_TEST=PASS",
+    "SERIAL_PORT_CONSTRUCTED=NO",
+    "DEVICE_IO=NO"
+  ],
+  "tau_physical_unit_authority": "PASS",
+  "tau_side": "MOTOR_ROTOR_TORQUE",
+  "tau_side_authority": "PASS"
+}

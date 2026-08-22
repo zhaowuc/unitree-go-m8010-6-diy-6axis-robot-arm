@@ -1,0 +1,175 @@
+{
+  "existing_run_analysis": {
+    "existing_run_command_target_correct": true,
+    "interpretation": "Correct commands plus low differential error exclude an A/B sign or common command-generation failure. Kp-dependent effort with very small motion supports a common external load/friction/brake or internal torque-scaling/limit candidate; it does not prove gravity as the root cause.",
+    "motor_or_internal_controller_saturation_evidence": "INCONCLUSIVE",
+    "position_command_bug": "NOT_FOUND",
+    "protocol_range_saturation_evidence": false,
+    "runs": [
+      {
+        "a_q_cmd_max_rad": 6.00187628152384,
+        "a_q_cmd_min_rad": 4.897082878327234,
+        "b_q_cmd_max_rad": 2.9691890943290153,
+        "b_q_cmd_min_rad": 1.8643956911324104,
+        "command_target_correct": true,
+        "filename": "j2_installed_load_run.csv",
+        "kp": 0.6,
+        "max_a_command_mapping_error_rad": 0.0,
+        "max_b_command_mapping_error_rad": 0.0,
+        "q_ref_max_deg": 5.0,
+        "q_ref_min_deg": -5.0,
+        "run_id": "RUN_A"
+      },
+      {
+        "a_q_cmd_max_rad": 6.019900726103918,
+        "a_q_cmd_min_rad": 4.915107322907312,
+        "b_q_cmd_max_rad": 2.9494389760734,
+        "b_q_cmd_min_rad": 1.8446455728767952,
+        "command_target_correct": true,
+        "filename": "j2_installed_load_run_operator_repeat.csv",
+        "kp": 0.6,
+        "max_a_command_mapping_error_rad": 0.0,
+        "max_b_command_mapping_error_rad": 0.0,
+        "q_ref_max_deg": 5.0,
+        "q_ref_min_deg": -5.0,
+        "run_id": "RUN_A_OPERATOR_REPEAT"
+      },
+      {
+        "a_q_cmd_max_rad": 6.019900726103918,
+        "a_q_cmd_min_rad": 4.915107322907312,
+        "b_q_cmd_max_rad": 2.9494389760734,
+        "b_q_cmd_min_rad": 1.8446455728767952,
+        "command_target_correct": true,
+        "filename": "j2_installed_load_kp070.csv",
+        "kp": 0.7,
+        "max_a_command_mapping_error_rad": 0.0,
+        "max_b_command_mapping_error_rad": 0.0,
+        "q_ref_max_deg": 5.0,
+        "q_ref_min_deg": -5.0,
+        "run_id": "RUN_B"
+      }
+    ],
+    "torque_feedback_behavior": "At +/-5 deg endpoints A/B feedback has opposite raw signs and the same aligned logical effort; magnitudes form sustained narrow bands. The bands rise from about 0.31-0.35 at Kp 0.60 to about 0.35-0.40 rotor N.m at Kp 0.70. Paired median conversion gives about 4.05-4.25 N.m logical J2 effort at Kp 0.60 and 4.53-4.87 N.m at Kp 0.70."
+  },
+  "final_task_result": "DIAGNOSIS_COMPLETE",
+  "gravity_load_contribution": "SUPPORTED",
+  "gravity_root_cause": "NOT_PROVEN",
+  "hardware_motion_used": false,
+  "j2_feedforward_experiment_ready": "YES",
+  "j2_gravity_model_audit": "PASS",
+  "j2_local_motion_authority": "NOT_GRANTED",
+  "j2_tau_command_authority": "PASS",
+  "j3_local_motion_authority": "NOT_GRANTED",
+  "model_audit": {
+    "J2": {
+      "max_hold_nm": 13.571141587433097,
+      "median_hold_nm": 12.51866792969193,
+      "min_hold_nm": 8.442850988273776,
+      "sign_change": false
+    },
+    "J3": {
+      "max_hold_nm": 6.287493693831718,
+      "median_hold_nm": 5.708569864521639,
+      "min_hold_nm": 2.136251271481755,
+      "sign_change": false
+    },
+    "current_physical_pose_exact_available": false,
+    "fixed_joint_values_deg": {
+      "J1": 0,
+      "J4": 0,
+      "J5": 0,
+      "J6": 0
+    },
+    "method": "mj_forward with qvel=qacc=0; runtime-only gravity override",
+    "mujoco_version": "3.11.0",
+    "pose_class": "REPRESENTATIVE_MODEL_SWEEP",
+    "production_model": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/mujoco_v15_14/go_m8010_arm_v15_14_kinematic.xml",
+    "production_model_modified": false,
+    "production_model_sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9",
+    "runtime_gravity_m_s2": [
+      0.0,
+      0.0,
+      -9.81
+    ],
+    "xml_compiled_gravity_m_s2": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "next_experiment_constraints": {
+    "Kd": 0.05,
+    "Kp": 0.6,
+    "abort_on": [
+      "unexpected direction",
+      "e_sync > 0.3 deg",
+      "rapid motion",
+      "merror != 0",
+      "temperature/sound/operator abnormality"
+    ],
+    "acceleration_deg_s2": 30,
+    "five_degree_motion": true,
+    "motion_route_after_bounded_hold_pass": "0_TO_PLUS5_TO_0_TO_MINUS5_TO_0",
+    "start_with_tff_zero_hold": true,
+    "then_ramp_paired_tff": "J2A 0 to -0.05; J2B 0 to +0.05",
+    "velocity_deg_s": 10
+  },
+  "next_single_experiment": "J2_GRAVITY_FEEDFORWARD_BOUNDED_HOLD_AND_5DEG_TEST",
+  "paired_signs_for_positive_logical_j2": {
+    "J2A": -0.05,
+    "J2B": 0.05
+  },
+  "percentage_of_theoretical_gravity": {
+    "exact_pose_unique_value_available": false,
+    "representative_rotor_side_percent_range": [
+      4.372789783557832,
+      7.028875597492652
+    ]
+  },
+  "proposed_first_bounded_tff_encoded_sdk_units_per_motor": 0.046875,
+  "proposed_first_bounded_tff_literal_sdk_units_per_motor": 0.05,
+  "proposed_initial_strategy": "Use rotor-side conversion, equal split, and the frozen mirror signs. Start with a conservative fixed paired Tff of 0.05 literal per motor, not full compensation, because the exact six-axis pose is unavailable.",
+  "remaining_candidates": [
+    "motor/internal torque or current saturation despite protocol headroom",
+    "position-loop effort scaling or limiting",
+    "mechanical brake or static friction",
+    "unmodeled load and model-pose mismatch",
+    "controller encoding beyond serializer"
+  ],
+  "representative_per_motor_torque_range": {
+    "datasheet_max_output_torque_nm": 23.7,
+    "datasheet_max_rotor_equivalent_nm": 3.744075829383886,
+    "output_shaft_share_abs_nm": [
+      4.221425494136888,
+      6.785570793716548
+    ],
+    "percent_of_serializer_effective_max": [
+      0.5210569786057374,
+      0.8375533385108772
+    ],
+    "sdk_rotor_tff_abs_nm": [
+      0.6668918712506635,
+      1.0719701225120661
+    ]
+  },
+  "schema": "go-m8010-arm-v15.24c-j2-feedforward-design/1.0",
+  "simulation_modified": false,
+  "torque_mapping": {
+    "output_side_conditional_formula": {
+      "J2A_equal_share": "tau_A_output = sign_A*tau_J2/2",
+      "J2B_equal_share": "tau_B_output = sign_B*tau_J2/2",
+      "joint_total": "tau_J2 = sign_A*tau_A_output + sign_B*tau_B_output"
+    },
+    "positive_ros_j2_torque_requires": {
+      "J2A_tau_sign": -1,
+      "J2B_tau_sign": 1
+    },
+    "reason": "GO-M8010 use manual V1.2 pages 4, 13, 17, and 18",
+    "rotor_side_conditional_formula": {
+      "J2A_equal_share": "tau_A_rotor = sign_A*tau_J2/(2*G)",
+      "J2B_equal_share": "tau_B_rotor = sign_B*tau_J2/(2*G)",
+      "joint_total": "tau_J2 = G*(sign_A*tau_A_rotor + sign_B*tau_B_rotor)"
+    },
+    "selected_physical_formula": "ROTOR_SIDE"
+  }
+}
