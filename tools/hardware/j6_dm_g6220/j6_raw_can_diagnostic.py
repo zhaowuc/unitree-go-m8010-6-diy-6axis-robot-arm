@@ -270,6 +270,13 @@ class RawCanLogger:
         with self._lock:
             return list(self._events)
 
+    def drain_events(self) -> tuple[RawEvent, ...]:
+        """Atomically return and clear queued events for bounded long-running workers."""
+        with self._lock:
+            events = tuple(self._events)
+            self._events.clear()
+            return events
+
     def close(self) -> None:
         try:
             self.device.enable_channel(self.channel, False)

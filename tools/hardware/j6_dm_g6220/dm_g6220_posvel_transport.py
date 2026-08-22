@@ -37,8 +37,8 @@ class DrainResult:
 class DmG6220PosVelTransport:
     """Small allowlisted transport for POS_VEL enable/hold diagnosis."""
 
-    def __init__(self, master_id: int) -> None:
-        self._logger = RawCanLogger()
+    def __init__(self, master_id: int, logger: RawCanLogger | None = None) -> None:
+        self._logger = RawCanLogger() if logger is None else logger
         self._logger.master_id = int(master_id)
 
     def send_enable(self) -> float:

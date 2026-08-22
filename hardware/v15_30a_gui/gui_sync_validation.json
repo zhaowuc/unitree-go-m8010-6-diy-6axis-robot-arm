@@ -1,0 +1,132 @@
+{
+  "schema": "go-m8010-v15.30a-gui-sync-validation/1.0",
+  "source_head": "9648aecc17486b0ca22a6595ad33cd3b1cb357c2",
+  "validated_code_commit": "62520ae52a935d01ee1e0a9667801230bed59450",
+  "branch": "agent/v15-30a-ft-cn-gui-real-sim-sync",
+  "validation_host": "Ubuntu 22.04 / ROS2 Humble",
+  "primary_hardware_run": "20260823T084155Z",
+  "supporting_hardware_runs": [
+    "20260823T074304Z",
+    "20260823T074752Z"
+  ],
+  "launch_command": "./start_arm_gui.sh",
+  "session_reference": "SESSION_REFERENCE_V1",
+  "production_model_sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9",
+  "production_model_modified": false,
+  "software_validation": {
+    "ros2_packages_built": 2,
+    "pytest_passed": 69,
+    "cpp_flags": "-Wall -Wextra -Werror",
+    "cpp_dry_run": "PASS",
+    "final_safety_review": "PASS_NO_KNOWN_P1_P2"
+  },
+  "gui": {
+    "visible": "PASS",
+    "all_chinese": "PASS",
+    "window_title": "六自由度机械臂控制系统",
+    "real_joint_sliders_j1_to_j6": "PASS",
+    "virtual_joint_sliders_j1_to_j6": "PASS",
+    "default_no_motion": "PASS"
+  },
+  "joint_states": {
+    "rows": 20401,
+    "duration_s": 407.99898171424866,
+    "median_rate_hz": 50.00064373845145,
+    "mean_rate_hz": 50.00012479023196,
+    "minimum_observed_rate_hz": 48.9657008101987
+  },
+  "real_to_sim": {
+    "data_path": "PASS",
+    "mujoco_direct_qpos_numeric": "PASS",
+    "mujoco_messages": 2272,
+    "mujoco_rejected_messages": 0,
+    "maximum_mirror_error_rad": 0.0,
+    "median_mirror_latency_ms": 11.3484915,
+    "manual_supported_j4_drag_demo": "NOT_TESTED"
+  },
+  "controls": {
+    "position_mode": "FAIL",
+    "sim_to_real": "PARTIAL",
+    "torque_on": "PASS",
+    "torque_off": "NOT_TESTED",
+    "drag_mode": "NOT_TESTED",
+    "hold_current": "PASS",
+    "save_initial_pose": "NOT_TESTED",
+    "return_initial_pose": "NOT_TESTED"
+  },
+  "position_tests": {
+    "arrival_requirement": "absolute_error_deg<=0.5 continuously for >=0.5s",
+    "J1": {
+      "result": "FAIL",
+      "target_deg": 5.0,
+      "maximum_observed_deg": 4.7885,
+      "reason": "fault interrupted arrival and the return attempt did not restore the session reference"
+    },
+    "J2": {
+      "result": "BLOCKED",
+      "reason": "V15.30A command router forces J2 active requests to BRAKE"
+    },
+    "J3": {
+      "result": "FAIL",
+      "target_deg": 5.0,
+      "maximum_observed_deg": 0.3124,
+      "reason": "installed-load tracking stalled outside the arrival band"
+    },
+    "J4": {
+      "result": "FAIL",
+      "target_deg": 5.0,
+      "maximum_observed_deg": 1.1802092259746233,
+      "reason": "tracking stalled outside the arrival band; negative segment was not attempted"
+    },
+    "J5": {
+      "result": "FAIL",
+      "target_deg": 5.0,
+      "maximum_observed_deg": 3.8912181630916094,
+      "reason": "tracking stalled outside the arrival band; negative segment was not attempted"
+    },
+    "J6": {
+      "result": "FAIL",
+      "target_deg": 5.0,
+      "maximum_observed_deg": 4.26210307661975,
+      "minimum_error_deg": 0.73789692338025,
+      "return_zero_result": "PASS",
+      "return_zero_observed_deg": 0.306,
+      "reason": "positive tracking stalled outside the arrival band; negative segment was not attempted"
+    },
+    "single_joint_isolation": "PASS",
+    "j2_sync_monitoring": "PASS",
+    "maximum_abs_j2_sync_error_deg": 0.005209502955809652
+  },
+  "j6_runtime_mode_gate": {
+    "motor_id": 1,
+    "rid10_initial": 1,
+    "rid10_runtime_write_count": 1,
+    "rid10_readback": 2,
+    "current_session_rid10_readback": 2,
+    "current_session_disabled_baseline_frames": 100,
+    "flash_or_eeprom_save_used": false,
+    "motor_zero_set": false,
+    "other_rid_write_count": 0,
+    "motor_id_write_count": 0,
+    "power_cycle_persistence_expected": false
+  },
+  "terminal_safety": {
+    "J1_FINAL_BRAKE": "PASS",
+    "J2_FINAL_BRAKE": "PASS",
+    "J345_FINAL_BRAKE": "PASS",
+    "J6_FINAL_DISABLED": "PASS",
+    "udp_ports_released": [15300, 15310, 15311, 15312, 15313],
+    "motor_internal_zero_modified": false,
+    "cad_zero": "PENDING",
+    "ros_zero": "PENDING"
+  },
+  "zero_gravity": "NOT_IMPLEMENTED",
+  "moveit": "NOT_IMPLEMENTED",
+  "remaining_blockers": [
+    "J1/J3/J4/J5/J6 did not satisfy the required position-arrival criterion",
+    "J2 active position tracking remains blocked",
+    "the supported manual J4 drag demonstration was not performed",
+    "torque-off, drag, save-initial-pose and return-initial-pose acceptance were not completed"
+  ],
+  "final_result": "BLOCKED"
+}

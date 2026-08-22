@@ -1,0 +1,13 @@
+whole_arm_state_node:
+  ros__parameters:
+    publish_rate_hz: 50.0
+    monitor_rate_hz: 2.0
+    feedback_topic: /whole_arm/motor_feedback_raw
+    udp_bind: 127.0.0.1
+    udp_port: 15300
+    capture_samples: 50
+    capture_max_span_deg: 0.20
+    capture_max_tail_drift_deg: 0.10
+    # dmcan delivers 100 Hz J6 frames in roughly 100 ms USB callback batches.
+    feedback_freshness_s: 0.25
+    evidence_directory: logs/arm_gui

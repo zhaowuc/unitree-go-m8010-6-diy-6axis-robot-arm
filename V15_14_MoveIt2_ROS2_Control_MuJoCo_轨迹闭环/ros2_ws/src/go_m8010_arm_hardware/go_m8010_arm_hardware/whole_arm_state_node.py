@@ -1,0 +1,334 @@
+"""ROS 2 state source: seven physical feedback streams to six logical joints.
+
+The node deliberately exposes no command subscriber, trajectory action,
+controller API, serial port, CAN transport, HOLD, FOC, or BRAKE operation.
+The process which already owns each hardware bus publishes the raw feedback
+contract on ``/whole_arm/motor_feedback_raw``.
+"""
+
+from __future__ import annotations
+
+import csv
+import json
+import math
+import signal
+import socket
+import statistics
+import threading
+import time
+from pathlib import Path
+from typing import Iterable, Optional
+
+import rclpy
+from rclpy.executors import ExternalShutdownException
+from rclpy.node import Node
+from rclpy.signals import SignalHandlerOptions
+from sensor_msgs.msg import JointState
+from std_msgs.msg import String
+
+from .state_model import JOINT_NAMES, MOTOR_NAMES, MirrorSessionReferenceV1, parse_feedback_payload
+
+
+class CsvCapture:
+    def __init__(self, path: Path, fieldnames: Iterable[str]) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self.stream = path.open("w", encoding="utf-8", newline="")
+        self.writer = csv.DictWriter(self.stream, fieldnames=list(fieldnames))
+        self.writer.writeheader()
+        self.rows = 0
+
+    def write(self, row: dict) -> None:
+        self.writer.writerow(row)
+        self.rows += 1
+        if self.rows % 50 == 0:
+            self.stream.flush()
+
+    def close(self) -> None:
+        if not self.stream.closed:
+            self.stream.flush()
+            self.stream.close()
+
+
+class WholeArmStateNode(Node):
+    def __init__(self) -> None:
+        super().__init__("whole_arm_state_node")
+        self.declare_parameter("publish_rate_hz", 50.0)
+        self.declare_parameter("monitor_rate_hz", 2.0)
+        self.declare_parameter("feedback_topic", "/whole_arm/motor_feedback_raw")
+        self.declare_parameter("udp_bind", "127.0.0.1")
+        self.declare_parameter("udp_port", 15300)
+        self.declare_parameter("capture_samples", 50)
+        self.declare_parameter("feedback_freshness_s", 0.10)
+        self.declare_parameter("capture_max_span_deg", 0.20)
+        self.declare_parameter("capture_max_tail_drift_deg", 0.10)
+        self.declare_parameter("evidence_directory", "logs/arm_gui")
+
+        rate_hz = float(self.get_parameter("publish_rate_hz").value)
+        monitor_rate_hz = float(self.get_parameter("monitor_rate_hz").value)
+        if rate_hz < 50.0 or monitor_rate_hz <= 0.0:
+            raise ValueError("publish_rate_hz must be >=50 and monitor_rate_hz >0")
+        self.model = MirrorSessionReferenceV1(
+            capture_samples=int(self.get_parameter("capture_samples").value),
+            freshness_s=float(self.get_parameter("feedback_freshness_s").value),
+            capture_max_span_joint_rad=math.radians(
+                float(self.get_parameter("capture_max_span_deg").value)
+            ),
+            capture_max_tail_drift_joint_rad=math.radians(
+                float(self.get_parameter("capture_max_tail_drift_deg").value)
+            ),
+        )
+        evidence = Path(str(self.get_parameter("evidence_directory").value)).resolve()
+        common_fields = [
+            "sequence", "ros_time_ns", "monotonic_ns", "healthy", "j2_e_sync_rad",
+            *[f"{name}_position_rad" for name in JOINT_NAMES],
+            *[f"{name}_velocity_rad_s" for name in JOINT_NAMES],
+            *[f"{name}_temperature_c" for name in MOTOR_NAMES],
+            *[f"{name}_merror" for name in MOTOR_NAMES],
+            *[f"{name}_communication_ok" for name in MOTOR_NAMES],
+            *[f"{name}_age_ms" for name in MOTOR_NAMES],
+        ]
+        self.whole_capture = CsvCapture(evidence / "whole_arm_state_capture.csv", common_fields)
+        self.joint_capture = CsvCapture(
+            evidence / "joint_states_capture.csv",
+            ["sequence", "ros_time_ns", *[f"{name}_position_rad" for name in JOINT_NAMES],
+             *[f"{name}_velocity_rad_s" for name in JOINT_NAMES]],
+        )
+        feedback_topic = str(self.get_parameter("feedback_topic").value)
+        self.subscription = self.create_subscription(String, feedback_topic, self.on_feedback, 50)
+        self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udp_socket.setblocking(False)
+        self.udp_socket.bind((
+            str(self.get_parameter("udp_bind").value),
+            int(self.get_parameter("udp_port").value),
+        ))
+        self.udp_timer = self.create_timer(0.002, self.poll_udp)
+        self.publisher = self.create_publisher(JointState, "/joint_states", 10)
+        self.status_publisher = self.create_publisher(String, "/whole_arm/hardware_state", 10)
+        self.timer = self.create_timer(1.0 / rate_hz, self.publish_state)
+        self.monitor_timer = self.create_timer(1.0 / monitor_rate_hz, self.monitor)
+        self.sequence = 0
+        self.invalid_payload_count = 0
+        self.publish_intervals_ms: list[float] = []
+        self.source_latencies_ms: list[float] = []
+        self.last_publish_ns: Optional[int] = None
+        self.last_snapshot: Optional[dict] = None
+        self.controller_modes: dict[str, str] = {}
+        self.controller_faults: dict[str, bool] = {}
+        self.j2_sync_fault = False
+        self.reference_announced = False
+        self.session_id: Optional[str] = None
+        self.get_logger().info(
+            f"state-only aggregator listening on {feedback_topic}; no actuator command API exists"
+        )
+
+    def on_feedback(self, message: String) -> None:
+        self.accept_payload(message.data, time.monotonic_ns())
+
+    def poll_udp(self) -> None:
+        for _ in range(100):
+            try:
+                data, _address = self.udp_socket.recvfrom(65535)
+            except BlockingIOError:
+                return
+            self.accept_payload(data.decode("utf-8"), time.monotonic_ns())
+
+    def accept_payload(self, text: str, receipt_ns: int) -> None:
+        try:
+            payload = json.loads(text)
+            samples = list(parse_feedback_payload(payload, receipt_ns))
+            controller_mode = str(payload.get("controller_mode", "unknown"))
+            controller_mode_by_motor = payload.get("controller_mode_by_motor", {})
+            if not isinstance(controller_mode_by_motor, dict):
+                raise ValueError("controller_mode_by_motor must be an object")
+            controller_fault = bool(payload.get("domain_fault", False))
+            if bool(payload.get("j2_sync_fault", False)):
+                self.j2_sync_fault = True
+            for sample in samples:
+                motor_mode = str(controller_mode_by_motor.get(sample.motor, controller_mode))
+                if motor_mode not in {"brake", "drag", "hold", "position", "unknown"}:
+                    raise ValueError("controller mode is invalid")
+                self.controller_modes[sample.motor] = motor_mode
+                self.controller_faults[sample.motor] = controller_fault
+                self.model.update(sample)
+        except Exception as exc:
+            self.invalid_payload_count += 1
+            self.get_logger().warning(f"rejected raw feedback payload: {exc}")
+
+    def publish_state(self) -> None:
+        now_monotonic_ns = time.monotonic_ns()
+        if not self.model.try_capture_available(now_monotonic_ns):
+            return
+        if not self.reference_announced:
+            try:
+                boot_id = Path("/proc/sys/kernel/random/boot_id").read_text(encoding="utf-8").strip()
+            except OSError:
+                boot_id = "boot-id-unavailable"
+            self.session_id = f"{boot_id}:{self.model.captured_monotonic_ns}"
+            self.get_logger().info(
+                "SESSION_REFERENCE_V1 已从当前可用电机独立捕获；缺失关节不会阻止界面启动；"
+                "CAD_ZERO=PENDING ROS_ZERO=PENDING"
+            )
+            self.reference_announced = True
+        try:
+            snapshot = self.model.snapshot_available(now_monotonic_ns)
+        except RuntimeError as exc:
+            self.get_logger().warning(str(exc))
+            return
+
+        stamp = self.get_clock().now().to_msg()
+        ros_time_ns = int(stamp.sec) * 1_000_000_000 + int(stamp.nanosec)
+        joint_state = JointState()
+        joint_state.header.stamp = stamp
+        joint_state.name = list(JOINT_NAMES)
+        joint_state.position = list(snapshot["position_rad"])
+        joint_state.velocity = list(snapshot["velocity_rad_s"])
+        self.publisher.publish(joint_state)
+
+        if self.last_publish_ns is not None:
+            self.publish_intervals_ms.append((now_monotonic_ns - self.last_publish_ns) / 1.0e6)
+            self.publish_intervals_ms = self.publish_intervals_ms[-5000:]
+        self.last_publish_ns = now_monotonic_ns
+        self.sequence += 1
+        row = {
+            "sequence": self.sequence,
+            "ros_time_ns": ros_time_ns,
+            "monotonic_ns": now_monotonic_ns,
+            "healthy": int(snapshot["healthy"]),
+            "j2_e_sync_rad": snapshot["j2_e_sync_rad"],
+        }
+        joint_row = {"sequence": self.sequence, "ros_time_ns": ros_time_ns}
+        for index, name in enumerate(JOINT_NAMES):
+            row[f"{name}_position_rad"] = snapshot["position_rad"][index]
+            row[f"{name}_velocity_rad_s"] = snapshot["velocity_rad_s"][index]
+            joint_row[f"{name}_position_rad"] = snapshot["position_rad"][index]
+            joint_row[f"{name}_velocity_rad_s"] = snapshot["velocity_rad_s"][index]
+        for name in MOTOR_NAMES:
+            motor = snapshot["per_motor"][name]
+            row[f"{name}_temperature_c"] = motor["temperature_c"]
+            row[f"{name}_merror"] = motor["merror"]
+            row[f"{name}_communication_ok"] = int(motor["communication_ok"])
+            row[f"{name}_age_ms"] = motor["age_ms"]
+            if motor["source_latency_ms"] is not None:
+                self.source_latencies_ms.append(float(motor["source_latency_ms"]))
+        self.source_latencies_ms = self.source_latencies_ms[-35000:]
+        self.whole_capture.write(row)
+        self.joint_capture.write(joint_row)
+
+        snapshot["sequence"] = self.sequence
+        snapshot["session_id"] = self.session_id
+        snapshot["invalid_payload_count"] = self.invalid_payload_count
+        snapshot["cad_zero"] = "PENDING"
+        snapshot["ros_zero"] = "PENDING"
+        snapshot["j2_active_motion_used"] = False
+        snapshot["zero_gravity"] = "NOT_IMPLEMENTED"
+        snapshot["controller_mode_by_motor"] = dict(self.controller_modes)
+        snapshot["controller_fault_by_motor"] = dict(self.controller_faults)
+        snapshot["j2_sync_fault"] = self.j2_sync_fault
+        snapshot["timing"] = self.timing_summary()
+        self.status_publisher.publish(String(data=json.dumps(snapshot, ensure_ascii=False)))
+        self.last_snapshot = snapshot
+
+    def timing_summary(self) -> dict:
+        intervals = self.publish_intervals_ms
+        latencies = self.source_latencies_ms
+        median_rate = None
+        if intervals:
+            median_interval = statistics.median(intervals)
+            median_rate = 1000.0 / median_interval if median_interval > 0.0 else None
+        return {
+            "median_publish_rate_hz": median_rate,
+            "p95_source_latency_ms": percentile(latencies, 0.95),
+        }
+
+    def monitor(self) -> None:
+        if self.last_snapshot is None:
+            counts = {name: len(self.model.history[name]) for name in MOTOR_NAMES}
+            self.get_logger().info(f"等待七路新鲜反馈以捕获会话参考: {counts}")
+            return
+        snapshot = self.last_snapshot
+        degrees = [math.degrees(value) for value in snapshot["position_rad"]]
+        health = "OK" if snapshot["healthy"] else "DEGRADED"
+        temperatures = ",".join(
+            f"{name}:{snapshot['per_motor'][name]['temperature_c']:.0f}C"
+            for name in MOTOR_NAMES
+        )
+        errors = ",".join(
+            f"{name}:{snapshot['per_motor'][name]['merror']}" for name in MOTOR_NAMES
+        )
+        self.get_logger().info(
+            " ".join(f"J{i + 1}={value:+.2f}deg" for i, value in enumerate(degrees))
+            + f" J2_e_sync={math.degrees(snapshot['j2_e_sync_rad']):+.3f}deg"
+            + f" COMM={health} TEMP=[{temperatures}] MERROR=[{errors}]"
+        )
+
+    def destroy_node(self) -> bool:
+        self.udp_socket.close()
+        self.whole_capture.close()
+        self.joint_capture.close()
+        return super().destroy_node()
+
+
+def percentile(values: list[float], fraction: float) -> Optional[float]:
+    if not values:
+        return None
+    ordered = sorted(values)
+    index = max(0, math.ceil(fraction * len(ordered)) - 1)
+    return ordered[index]
+
+
+def install_shutdown_handlers(stop_requested: threading.Event) -> dict[int, object]:
+    """Keep ROS/resource teardown out of asynchronous signal handlers."""
+
+    previous_handlers = {}
+
+    def request_stop(_signum, _frame) -> None:
+        stop_requested.set()
+
+    for signum in (signal.SIGINT, signal.SIGTERM):
+        previous_handlers[signum] = signal.getsignal(signum)
+        signal.signal(signum, request_stop)
+    return previous_handlers
+
+
+def restore_shutdown_handlers(previous_handlers: dict[int, object]) -> None:
+    for signum, handler in previous_handlers.items():
+        signal.signal(signum, handler)
+
+
+def main(args=None) -> None:
+    stop_requested = threading.Event()
+    previous_handlers = install_shutdown_handlers(stop_requested)
+    initialized = False
+    node: Optional[WholeArmStateNode] = None
+    try:
+        # Do not let rclpy invalidate the context asynchronously while timers,
+        # UDP and CSV resources are still owned by this node.  The main thread
+        # performs the complete teardown below after observing the stop flag.
+        rclpy.init(args=args, signal_handler_options=SignalHandlerOptions.NO)
+        initialized = True
+        if stop_requested.is_set():
+            return
+        node = WholeArmStateNode()
+        while not stop_requested.is_set() and rclpy.ok():
+            rclpy.spin_once(node, timeout_sec=0.05)
+    except ExternalShutdownException:
+        pass
+    except Exception:
+        # Humble may raise its private _rclpy.RCLError after a signal has
+        # already invalidated the context. Preserve every real runtime error.
+        if rclpy.ok():
+            raise
+    finally:
+        try:
+            if node is not None:
+                node.destroy_node()
+        finally:
+            try:
+                if initialized and rclpy.ok():
+                    rclpy.shutdown()
+            finally:
+                restore_shutdown_handlers(previous_handlers)
+
+
+if __name__ == "__main__":
+    main()

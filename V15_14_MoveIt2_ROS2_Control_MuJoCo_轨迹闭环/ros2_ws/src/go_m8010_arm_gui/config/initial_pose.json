@@ -1,0 +1,4 @@
+{
+  "有效": false,
+  "说明": "仅在当前 SESSION_REFERENCE_V1 会话内有效；不是电机零位、CAD零位或ROS零位。"
+}

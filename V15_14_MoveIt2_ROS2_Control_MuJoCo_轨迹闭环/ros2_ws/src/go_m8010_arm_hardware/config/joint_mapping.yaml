@@ -1,0 +1,14 @@
+# Audit authority only; this is intentionally not passed to rclpy as a ROS
+# parameter file. state_model.py hard-checks the same frozen constants.
+mapping:
+  gear_ratio: 6.329999923706055
+  J1: {logical_joint: joint1, raw_to_ros_sign: 1}
+  J2A: {logical_joint: joint2, motor_id: 0, raw_to_ros_sign: -1}
+  J2B: {logical_joint: joint2, motor_id: 1, raw_to_ros_sign: 1}
+  J3: {logical_joint: joint3, motor_id: 3, raw_to_ros_sign: 1}
+  J4: {logical_joint: joint4, motor_id: 4, raw_to_ros_sign: 1}
+  J5: {logical_joint: joint5, motor_id: 5, raw_to_ros_sign: 1}
+  J6: {logical_joint: joint6, protocol_to_ros_sign: -1, gear_ratio: 1.0}
+  cad_zero: PENDING
+  ros_zero: PENDING
+  runtime_reference: SESSION_REFERENCE_V1

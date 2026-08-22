@@ -12,6 +12,8 @@ venv/
 build/
 install/
 log/
+logs/
+.runtime/
 
 # CMake
 CMakeFiles/
