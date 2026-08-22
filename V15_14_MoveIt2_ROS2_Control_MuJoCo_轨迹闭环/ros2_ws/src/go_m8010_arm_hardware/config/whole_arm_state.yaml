@@ -7,5 +7,6 @@ whole_arm_state_node:
     udp_port: 15300
     capture_samples: 25
     capture_max_span_deg: 0.25
-    feedback_freshness_s: 0.10
+    # dmcan delivers 100 Hz J6 frames in roughly 100 ms USB callback batches.
+    feedback_freshness_s: 0.25
     evidence_directory: hardware/v15_30a_ft

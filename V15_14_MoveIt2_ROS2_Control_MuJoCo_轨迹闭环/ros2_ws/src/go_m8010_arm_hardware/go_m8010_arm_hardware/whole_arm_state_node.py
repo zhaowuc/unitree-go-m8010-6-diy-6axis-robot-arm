@@ -19,6 +19,7 @@ from typing import Iterable, Optional
 
 import rclpy
 from rclpy.executors import ExternalShutdownException
+from rclpy.exceptions import RCLError
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from std_msgs.msg import String
@@ -248,7 +249,7 @@ def main(args=None) -> None:
     try:
         node = WholeArmStateNode()
         rclpy.spin(node)
-    except ExternalShutdownException:
+    except (ExternalShutdownException, RCLError):
         pass
     finally:
         if node is not None:
