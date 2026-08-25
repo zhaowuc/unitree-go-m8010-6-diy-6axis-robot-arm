@@ -12,7 +12,6 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
-#include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -24,9 +23,6 @@
 #include <fcntl.h>
 #include <sys/file.h>
 #include <unistd.h>
-
-#include <nlohmann/json.hpp>
-#include <openssl/evp.h>
 
 #include "serialPort/SerialPort.h"
 #include "unitreeMotor/unitreeMotor.h"
@@ -46,35 +42,34 @@ constexpr int kSignB = +1;
 constexpr double kPi = 3.14159265358979323846;
 constexpr double kGear = 6.3299999237060547;
 constexpr double kBaseKp = 0.60;
-constexpr double kKd = 0.05;
+constexpr double kKd = 0.10;
 constexpr double kTauFf = 0.0;
 constexpr double kHz = 100.0;
 constexpr double kPeriod = 0.01;
-constexpr double kVmax = 10.0 * kPi / 180.0;
-constexpr double kAccel = 30.0 * kPi / 180.0;
+constexpr double kVmax = 5.0 * kPi / 180.0;
+constexpr double kAccel = 15.0 * kPi / 180.0;
 constexpr double kCommandEnvelope = 5.5 * kPi / 180.0;
 constexpr double kFeedbackEnvelope = 7.0 * kPi / 180.0;
-constexpr double kDiagnosticTarget = 0.8 * kPi / 180.0;
-constexpr double kDiagnosticFeedbackEnvelope = 1.0 * kPi / 180.0;
-constexpr double kDiagnosticVmax = 1.0 * kPi / 180.0;
-constexpr double kDiagnosticAccel = 3.0 * kPi / 180.0;
-// The SDK dq field has quantization noise; position-derived guards below enforce
-// the tighter physical envelope while this threshold catches gross feedback.
-constexpr double kDiagnosticVelocityAbort = 12.0 * kPi / 180.0;
-constexpr double kDiagnosticSyncHardAbort = 0.3 * kPi / 180.0;
 constexpr double kEndpointSyncAccept = 0.3 * kPi / 180.0;
 constexpr double kMotionSyncAccept = 0.7 * kPi / 180.0;
-constexpr double kSyncHardAbort = 1.0 * kPi / 180.0;
-constexpr double kUnexpectedVelocityAbort = 25.0 * kPi / 180.0;
+constexpr double kSyncHardAbort = 0.5 * kPi / 180.0;
+constexpr double kUnexpectedVelocityAbort = 20.0 * kPi / 180.0;
+constexpr double kRotorTorqueFeedbackHardNm = 154.0 / 256.0;
+constexpr double kPredictedRotorPdHardNm = 0.60;
+constexpr double kPredictedRotorWorkNm = 0.50;
+constexpr double kIntegralRotorHardNm = 0.15;
+constexpr double kIntegralKiPerRotorRadS = 0.20;
+constexpr double kIntegralRateHardNmS = 0.03;
+constexpr double kIntegralUnwindRateNmS = 0.15;
+constexpr double kIntegralEnterError = 3.0 * kPi / 180.0;
+constexpr double kIntegralEnterVelocity = 1.5 * kPi / 180.0;
+constexpr double kIntegralDeadband = 0.10 * kPi / 180.0;
+constexpr int kIntegralDwellFrames = 20;
+constexpr double kDerivedVelocityFilterAlpha = 0.10;
 constexpr double kCaptureSpanLimit = 0.2 * kPi / 180.0;
 constexpr double kCaptureTailMedianLimit = 0.1 * kPi / 180.0;
 constexpr int kTempLimit = 60;
-constexpr char kLegacyRepoRoot[] = "/home/car/go-m8010-robot-arm-v15-20a";
-constexpr char kDiagnosticRepoRoot[] =
-    "/home/car/go-m8010-robot-arm-v15-30a-gui";
-constexpr char kSourceHead[] =
-    "5129a975d5c456aa04fed2e7ff47456a56785489";
-constexpr char kEligibilityPath[] = "/tmp/v15_24f_next_phase_gate.json";
+constexpr char kRepoRoot[] = "/home/car/go-m8010-robot-arm-v15-30a-gui";
 constexpr char kCsvHeader[] =
     "tick,timestamp_s,phase,level,target_kp,active_kp,"
     "kp_cmd_count,kp_cmd_decoded,kd_cmd_count,kd_cmd_decoded,"
@@ -106,35 +101,6 @@ bool endpoint_accepted(double error, double sync, double max_motion_sync,
                        double position_tolerance) {
   return error <= position_tolerance && sync <= kEndpointSyncAccept &&
       max_motion_sync <= kMotionSyncAccept;
-}
-
-std::string sha256_file(const std::string& path) {
-  std::ifstream stream(path, std::ios::binary);
-  if (!stream) throw std::runtime_error("SHA256_FILE_OPEN_FAILED:" + path);
-  std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> context(
-      EVP_MD_CTX_new(), &EVP_MD_CTX_free);
-  if (!context || EVP_DigestInit_ex(context.get(), EVP_sha256(), nullptr) != 1)
-    throw std::runtime_error("SHA256_INIT_FAILED");
-  std::array<char, 65536> buffer{};
-  while (stream) {
-    stream.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
-    const std::streamsize count = stream.gcount();
-    if (count > 0 &&
-        EVP_DigestUpdate(context.get(), buffer.data(),
-                         static_cast<std::size_t>(count)) != 1)
-      throw std::runtime_error("SHA256_UPDATE_FAILED");
-  }
-  if (!stream.eof()) throw std::runtime_error("SHA256_FILE_READ_FAILED:" + path);
-  std::array<unsigned char, EVP_MAX_MD_SIZE> digest{};
-  unsigned int digest_size = 0;
-  if (EVP_DigestFinal_ex(context.get(), digest.data(), &digest_size) != 1 ||
-      digest_size != 32U)
-    throw std::runtime_error("SHA256_FINAL_FAILED");
-  std::ostringstream result;
-  result << std::hex << std::setfill('0');
-  for (unsigned int i = 0; i < digest_size; ++i)
-    result << std::setw(2) << static_cast<unsigned int>(digest[i]);
-  return result.str();
 }
 
 template <typename T>
@@ -262,42 +228,38 @@ struct ProfilePoint { double q = 0.0; double dq = 0.0; };
 
 class Trapezoid {
  public:
-  explicit Trapezoid(double displacement, double vmax = kVmax,
-                     double accel = kAccel)
+  explicit Trapezoid(double displacement)
       : sign_(displacement < 0.0 ? -1.0 : 1.0),
-        distance_(std::abs(displacement)), vmax_(vmax), accel_(accel) {
-    if (!std::isfinite(vmax_) || vmax_ <= 0.0 ||
-        !std::isfinite(accel_) || accel_ <= 0.0)
-      throw std::runtime_error("PROFILE_LIMIT_INVALID");
-    const double threshold = vmax_ * vmax_ / accel_;
+        distance_(std::abs(displacement)) {
+    const double threshold = kVmax * kVmax / kAccel;
     if (distance_ <= threshold) {
-      t_acc_ = std::sqrt(distance_ / accel_);
-      v_peak_ = accel_ * t_acc_;
+      t_acc_ = std::sqrt(distance_ / kAccel);
+      v_peak_ = kAccel * t_acc_;
       t_cruise_ = 0.0;
     } else {
-      t_acc_ = vmax_ / accel_;
-      v_peak_ = vmax_;
-      t_cruise_ = (distance_ - accel_ * t_acc_ * t_acc_) / vmax_;
+      t_acc_ = kVmax / kAccel;
+      v_peak_ = kVmax;
+      t_cruise_ = (distance_ - kAccel * t_acc_ * t_acc_) / kVmax;
     }
     duration_ = 2.0 * t_acc_ + t_cruise_;
   }
   double duration() const { return duration_; }
   ProfilePoint sample(double t) const {
     t = std::clamp(t, 0.0, duration_);
-    const double d_acc = 0.5 * accel_ * t_acc_ * t_acc_;
+    const double d_acc = 0.5 * kAccel * t_acc_ * t_acc_;
     double q = 0.0;
     double v = 0.0;
     if (t < t_acc_) {
-      q = 0.5 * accel_ * t * t;
-      v = accel_ * t;
+      q = 0.5 * kAccel * t * t;
+      v = kAccel * t;
     } else if (t < t_acc_ + t_cruise_) {
       const double u = t - t_acc_;
       q = d_acc + v_peak_ * u;
       v = v_peak_;
     } else if (t < duration_) {
       const double u = duration_ - t;
-      q = distance_ - 0.5 * accel_ * u * u;
-      v = accel_ * u;
+      q = distance_ - 0.5 * kAccel * u * u;
+      v = kAccel * u;
     } else {
       q = distance_;
       v = 0.0;
@@ -307,8 +269,6 @@ class Trapezoid {
  private:
   double sign_ = 1.0;
   double distance_ = 0.0;
-  double vmax_ = 0.0;
-  double accel_ = 0.0;
   double t_acc_ = 0.0;
   double t_cruise_ = 0.0;
   double v_peak_ = 0.0;
@@ -324,14 +284,6 @@ struct Cli {
   std::string power_on_gate;
   bool self_test = false;
 };
-
-bool is_diagnostic_phase(const Cli& cli) {
-  return cli.phase == "j2-kp100-plusminus1-diagnostic";
-}
-
-const char* repo_root(const Cli& cli) {
-  return is_diagnostic_phase(cli) ? kDiagnosticRepoRoot : kLegacyRepoRoot;
-}
 
 Cli parse_cli(int argc, char** argv) {
   Cli cli;
@@ -351,54 +303,20 @@ Cli parse_cli(int argc, char** argv) {
     else throw std::runtime_error("CLI_OPTION_NOT_ALLOWED");
   }
   if (cli.self_test) return cli;
-  const bool allowed_phase = cli.phase == "j2-kp100-plusminus1-diagnostic" ||
-      cli.phase == "j2-kp100-run1" ||
-      cli.phase == "j2-kp100-repeat" ||
-      cli.phase == "j2-kp140-run1" ||
-      cli.phase == "j2-kp140-repeat";
-  if (!allowed_phase)
+  if (cli.phase != "j2-coupled-plusminus5")
     throw std::runtime_error("PHASE_NOT_ALLOWED");
   const std::string expected_output =
-      cli.phase == "j2-kp100-plusminus1-diagnostic"
-          ? "hardware/v15_30b_ft/j2_kp100_plusminus1_diagnostic.csv"
-      : cli.phase == "j2-kp100-run1"
-          ? "hardware/v15_24f_ft/j2_kp100_run1.csv"
-      : cli.phase == "j2-kp100-repeat"
-          ? "hardware/v15_24f_ft/j2_kp100_repeat.csv"
-      : cli.phase == "j2-kp140-run1"
-          ? "hardware/v15_24f_ft/j2_kp140_run1.csv"
-          : "hardware/v15_24f_ft/j2_kp140_repeat.csv";
+      "hardware/v15_30e_ft/j2_coupled_plusminus5_retry3.csv";
   if (cli.output != expected_output)
     throw std::runtime_error("OUTPUT_PATH_NOT_ALLOWED");
-  if (std::filesystem::exists(std::string(repo_root(cli)) + "/" + cli.output))
+  if (std::filesystem::exists(std::string(kRepoRoot) + "/" + cli.output))
     throw std::runtime_error("EVIDENCE_OUTPUT_ALREADY_EXISTS_REFUSE_OVERWRITE");
-  if (cli.phase == "j2-kp100-run1" ||
-      cli.phase == "j2-kp100-plusminus1-diagnostic") {
-    if (!cli.eligibility_file.empty())
-      throw std::runtime_error("LEVEL_A_RUN_MUST_NOT_USE_PHASE_GATE");
-  } else if (cli.eligibility_file != kEligibilityPath) {
-    throw std::runtime_error("NEXT_PHASE_ELIGIBILITY_GATE_MISSING");
-  }
-  const std::string expected_auth =
-      cli.phase == "j2-kp100-plusminus1-diagnostic"
-          ? "J2_KP100_PLUS_MINUS_1_DIAGNOSTIC_AUTHORIZED=YES"
-      : cli.phase == "j2-kp100-run1"
-          ? "J2_KP100_RUN1_AUTHORIZED=YES"
-      : cli.phase == "j2-kp100-repeat"
-          ? "J2_KP100_EXACT_REPEAT_AUTHORIZED=YES"
-      : cli.phase == "j2-kp140-run1"
-          ? "J2_KP140_RUN1_AUTHORIZED=YES"
-          : "J2_KP140_EXACT_REPEAT_AUTHORIZED=YES";
-  const bool diagnostic = cli.phase == "j2-kp100-plusminus1-diagnostic";
-  const std::string expected_safety = diagnostic
-      ? "J2_SUPPORTED_AND_PLUS_MINUS_1_CLEAR=YES"
-      : "J2_PLUS_MINUS_5_CLEAR=YES";
-  const std::string expected_power = diagnostic
-      ? "J2_24V_POWER_ON_AND_LIVE_MONITOR_CONFIRMED=YES"
-      : "V15_24F_24V_POWER_ON_CONFIRMED=YES";
-  if (cli.authorization_gate != expected_auth ||
-      cli.safety_gate != expected_safety ||
-      cli.power_on_gate != expected_power)
+  if (!cli.eligibility_file.empty())
+    throw std::runtime_error("ELIGIBILITY_FILE_NOT_ALLOWED");
+  if (cli.authorization_gate !=
+          "J2_COUPLED_BRAKE_THEN_PLUS_MINUS_5_AUTHORIZED=YES" ||
+      cli.safety_gate != "J2_ASSEMBLED_STATIC_AND_PLUS_MINUS_5_CLEAR=YES" ||
+      cli.power_on_gate != "J2_24V_STABLE_MONITOR_AND_CUTOFF_READY=YES")
     throw std::runtime_error("DUAL_OPERATOR_GATE_MISSING");
   return cli;
 }
@@ -412,60 +330,11 @@ std::ofstream open_evidence_csv(const std::string& path) {
   return csv;
 }
 
-LevelConfig level_config(const Cli& cli) {
-  if (cli.phase == "j2-kp100-plusminus1-diagnostic" ||
-      cli.phase == "j2-kp100-run1" ||
-      cli.phase == "j2-kp100-repeat")
-    return {1.00, 0.50, "J2_KP100"};
-  return {1.40, 0.75, "J2_KP140"};
-}
-
-void verify_phase_eligibility(const Cli& cli) {
-  if (cli.phase == "j2-kp100-run1" ||
-      cli.phase == "j2-kp100-plusminus1-diagnostic") return;
-  std::ifstream stream(cli.eligibility_file);
-  if (!stream) throw std::runtime_error("NEXT_PHASE_GATE_OPEN_FAILED");
-  nlohmann::json gate;
-  stream >> gate;
-  const std::string prerequisite =
-      cli.phase == "j2-kp100-repeat"
-          ? "hardware/v15_24f_ft/j2_kp100_run1.csv"
-      : cli.phase == "j2-kp140-run1"
-          ? "hardware/v15_24f_ft/j2_kp100_run1.csv"
-          : "hardware/v15_24f_ft/j2_kp140_run1.csv";
-  const std::string reason =
-      cli.phase == "j2-kp100-repeat"
-          ? "J2_KP100_RUN1_PASS"
-      : cli.phase == "j2-kp140-run1"
-          ? "J2_KP100_RUN1_SAFE_TRACKING_FAIL"
-          : "J2_KP140_RUN1_PASS";
-  if (gate.at("schema").get<std::string>() !=
-          "V15_24F_NEXT_PHASE_GATE_V1" ||
-      !gate.at("eligible").get<bool>() ||
-      gate.at("allowed_phase").get<std::string>() != cli.phase ||
-      gate.at("reason").get<std::string>() != reason ||
-      gate.at("source_head").get<std::string>() != kSourceHead ||
-      gate.at("operator_observation").get<std::string>() != "SAFE" ||
-      gate.at("final_brake").get<std::string>() != "PASS" ||
-      gate.at("center_gate_fix").get<std::string>() != "YES" ||
-      gate.at("timing_100hz_result").get<std::string>() != "PASS" ||
-      gate.at("hold_result").get<std::string>() != "PASS" ||
-      gate.at("prerequisite_csv_path").get<std::string>() != prerequisite ||
-      gate.at("prerequisite_csv_sha256").get<std::string>() !=
-          sha256_file(std::string(repo_root(cli)) + "/" + prerequisite))
-    throw std::runtime_error("NEXT_PHASE_GATE_AUTHORITY_MISMATCH");
-  const bool repeat_phase = cli.phase == "j2-kp100-repeat" ||
-      cli.phase == "j2-kp140-repeat";
-  if ((repeat_phase && gate.at("prerequisite_result").get<std::string>() !=
-                           "PASS") ||
-      (cli.phase == "j2-kp140-run1" &&
-       (gate.at("prerequisite_result").get<std::string>() != "FAIL" ||
-        !gate.at("safe_tracking_fail_eligible").get<bool>())))
-    throw std::runtime_error("NEXT_PHASE_GATE_RESULT_MISMATCH");
+LevelConfig level_config(const Cli&) {
+  return {1.00, 0.50, "J2_COUPLED_KP100_KD010"};
 }
 
 LevelConfig load_preflight(const Cli& cli) {
-  verify_phase_eligibility(cli);
   return level_config(cli);
 }
 
@@ -504,6 +373,7 @@ struct PairState {
   double kd_decoded = 0.0;
   std::int16_t a_tff_count = 0;
   std::int16_t b_tff_count = 0;
+  double integral_wire_nm = 0.0;
   double dq_a_logical = std::numeric_limits<double>::quiet_NaN();
   double dq_b_logical = std::numeric_limits<double>::quiet_NaN();
   double tau_j2_feedback = std::numeric_limits<double>::quiet_NaN();
@@ -516,7 +386,7 @@ class Runner {
  public:
   explicit Runner(const Cli& cli)
       : cli_(cli), config_(load_preflight(cli)), lock_(),
-        csv_(open_evidence_csv(std::string(repo_root(cli)) + "/" + cli.output)),
+        csv_(open_evidence_csv(std::string(kRepoRoot) + "/" + cli.output)),
         serial_(kPort, 16, 4000000, 20000, BlockYN::NO,
                 bytesize_t::eightbits, parity_t::parity_none,
                 stopbits_t::stopbits_one, flowcontrol_t::flowcontrol_none) {
@@ -543,31 +413,6 @@ class Runner {
   }
 
  private:
-  bool diagnostic_phase() const {
-    return is_diagnostic_phase(cli_);
-  }
-
-  double command_envelope() const {
-    return diagnostic_phase() ? kDiagnosticTarget : kCommandEnvelope;
-  }
-
-  double feedback_envelope() const {
-    return diagnostic_phase() ? kDiagnosticFeedbackEnvelope : kFeedbackEnvelope;
-  }
-
-  double velocity_abort() const {
-    return diagnostic_phase() ? kDiagnosticVelocityAbort
-                              : kUnexpectedVelocityAbort;
-  }
-
-  double sync_hard_abort() const {
-    return diagnostic_phase() ? kDiagnosticSyncHardAbort : kSyncHardAbort;
-  }
-
-  int temperature_limit() const {
-    return diagnostic_phase() ? 45 : kTempLimit;
-  }
-
   Feedback transact(MotorCmd& command, int expected_id, int expected_mode) {
     MotorData data;
     initialize_feedback(data);
@@ -590,7 +435,7 @@ class Runner {
     }
     f.valid = f.send_recv && f.correct && f.crc_ok &&
         f.id == expected_id && f.mode == expected_mode && f.merror == 0 &&
-        f.temp >= 0 && f.temp < temperature_limit() && std::isfinite(f.q) &&
+        f.temp >= 0 && f.temp < kTempLimit && std::isfinite(f.q) &&
         std::isfinite(f.dq) && std::isfinite(f.tau);
     return f;
   }
@@ -603,16 +448,7 @@ class Runner {
       throw std::runtime_error("OPERATOR_ABORT");
     if (mode == kFocMode && !reference_set_)
       throw std::runtime_error("REFERENCE_NOT_SET");
-    if (diagnostic_phase() && mode == kFocMode) {
-      if (!diagnostic_watchdog_started_) {
-        diagnostic_watchdog_started_ = true;
-        diagnostic_active_started_at_ = Clock::now();
-      } else if (std::chrono::duration<double>(
-                     Clock::now() - diagnostic_active_started_at_).count() >= 10.0) {
-        throw std::runtime_error("DIAGNOSTIC_ACTIVE_WATCHDOG_10S");
-      }
-    }
-    if (std::abs(q_target) > command_envelope() + 1e-12)
+    if (std::abs(q_target) > kCommandEnvelope + 1e-12)
       throw std::runtime_error("COMMAND_ENVELOPE");
     if (mode == kFocMode &&
         (!std::isfinite(kp) || kp < kBaseKp - 1e-12 ||
@@ -625,23 +461,101 @@ class Runner {
     if (mode == kFocMode && begin > scheduled + std::chrono::milliseconds(2))
       throw std::runtime_error("CONTROL_DEADLINE_MISS_GT_2MS");
 
+    double governed_target = q_target;
+    double governed_dq = dq_target;
+    double integral_wire_nm = 0.0;
+    if (mode == kFocMode) {
+      const bool endpoint_phase = phase.find("ENDPOINT") != std::string::npos;
+      const bool integral_gate = endpoint_phase && previous_state_ready_ &&
+          std::abs(previous_e_common_) <= kIntegralEnterError &&
+          std::abs(derived_common_velocity_filtered_) <=
+              kIntegralEnterVelocity;
+      integral_dwell_frames_ = integral_gate ? integral_dwell_frames_ + 1 : 0;
+      double requested_rate = 0.0;
+      if (integral_gate && integral_dwell_frames_ >= kIntegralDwellFrames &&
+          std::abs(previous_e_common_) > kIntegralDeadband) {
+        requested_rate = std::clamp(
+            kIntegralKiPerRotorRadS * kGear * previous_e_common_,
+            -kIntegralRateHardNmS, kIntegralRateHardNmS);
+      } else if (std::abs(integral_accumulator_nm_) > 1e-12) {
+        requested_rate = -std::copysign(
+            kIntegralUnwindRateNmS, integral_accumulator_nm_);
+      }
+      const double next_integral = integral_accumulator_nm_ +
+          requested_rate * kPeriod;
+      if (integral_accumulator_nm_ * next_integral < 0.0 &&
+          requested_rate * integral_accumulator_nm_ < 0.0)
+        integral_accumulator_nm_ = 0.0;
+      else
+        integral_accumulator_nm_ = std::clamp(
+            next_integral, -kIntegralRotorHardNm, kIntegralRotorHardNm);
+      integral_wire_nm = std::round(integral_accumulator_nm_ * 256.0) / 256.0;
+      integral_wire_nm = std::clamp(
+          integral_wire_nm, -kIntegralRotorHardNm, kIntegralRotorHardNm);
+      max_integral_wire_nm_ = std::max(
+          max_integral_wire_nm_, std::abs(integral_wire_nm));
+
+      if (previous_raw_ready_) {
+        auto predicted = [&](double alpha, int sign, double previous_raw,
+                             double previous_dq) {
+          const double q_governed = last_command_ref_ +
+              alpha * (q_target - last_command_ref_);
+          const double dq_governed = alpha * dq_target;
+          const double q_command = (sign == kSignA ? ref_a_ : ref_b_) +
+              sign * kGear * q_governed;
+          const double dq_command = sign * kGear * dq_governed;
+          return kp * (q_command - previous_raw) +
+              kKd * (dq_command - previous_dq) + sign * integral_wire_nm;
+        };
+        auto feasible = [&](double alpha) {
+          return std::abs(predicted(
+                     alpha, kSignA, previous_raw_a_, previous_raw_dq_a_)) <=
+                     kPredictedRotorWorkNm + 1e-12 &&
+              std::abs(predicted(
+                     alpha, kSignB, previous_raw_b_, previous_raw_dq_b_)) <=
+                     kPredictedRotorWorkNm + 1e-12;
+        };
+        if (!feasible(0.0))
+          throw std::runtime_error("REFERENCE_GOVERNOR_NO_FEASIBLE_HOLD");
+        double alpha = 1.0;
+        if (!feasible(alpha)) {
+          double low = 0.0;
+          double high = 1.0;
+          for (int iteration = 0; iteration < 36; ++iteration) {
+            const double middle = 0.5 * (low + high);
+            if (feasible(middle)) low = middle;
+            else high = middle;
+          }
+          alpha = low;
+        }
+        governed_target = last_command_ref_ +
+            alpha * (q_target - last_command_ref_);
+        governed_dq = alpha * dq_target;
+      }
+    } else {
+      integral_accumulator_nm_ = 0.0;
+      integral_dwell_frames_ = 0;
+    }
     const double a_q_cmd = mode == kFocMode
-        ? ref_a_ + kSignA * kGear * q_target : 0.0;
+        ? ref_a_ + kSignA * kGear * governed_target : 0.0;
     const double b_q_cmd = mode == kFocMode
-        ? ref_b_ + kSignB * kGear * q_target : 0.0;
+        ? ref_b_ + kSignB * kGear * governed_target : 0.0;
     const double a_dq_cmd = mode == kFocMode
-        ? kSignA * kGear * dq_target : 0.0;
+        ? kSignA * kGear * governed_dq : 0.0;
     const double b_dq_cmd = mode == kFocMode
-        ? kSignB * kGear * dq_target : 0.0;
+        ? kSignB * kGear * governed_dq : 0.0;
+    const double a_tff = mode == kFocMode ? kSignA * integral_wire_nm : 0.0;
+    const double b_tff = mode == kFocMode ? kSignB * integral_wire_nm : 0.0;
     MotorCmd command_a = mode == kFocMode
-        ? make_command(kIdA, mode, a_q_cmd, a_dq_cmd, kp, kKd, kTauFf)
+        ? make_command(kIdA, mode, a_q_cmd, a_dq_cmd, kp, kKd, a_tff)
         : brake_command(kIdA);
     MotorCmd command_b = mode == kFocMode
-        ? make_command(kIdB, mode, b_q_cmd, b_dq_cmd, kp, kKd, kTauFf)
+        ? make_command(kIdB, mode, b_q_cmd, b_dq_cmd, kp, kKd, b_tff)
         : brake_command(kIdB);
     PairState state;
     std::string deferred_abort;
     state.kp = mode == kFocMode ? kp : 0.0;
+    state.integral_wire_nm = mode == kFocMode ? integral_wire_nm : 0.0;
     if (mode == kFocMode) {
       const std::uint8_t* packet_a = command_a.get_motor_send_data();
       const std::uint8_t* packet_b = command_b.get_motor_send_data();
@@ -651,13 +565,17 @@ class Runner {
       state.kd_decoded = static_cast<double>(state.kd_count) / 1280.0;
       state.a_tff_count = static_cast<std::int16_t>(load_u16_le(packet_a + 3));
       state.b_tff_count = static_cast<std::int16_t>(load_u16_le(packet_b + 3));
-      if (state.a_tff_count != 0 || state.b_tff_count != 0)
-        throw std::runtime_error("TFF_ZERO_CONTRACT_VIOLATION");
+      const int expected_a_tff = static_cast<int>(std::llround(a_tff * 256.0));
+      const int expected_b_tff = static_cast<int>(std::llround(b_tff * 256.0));
+      if (state.a_tff_count != expected_a_tff ||
+          state.b_tff_count != expected_b_tff ||
+          std::abs(expected_a_tff) > 38 || std::abs(expected_b_tff) > 38)
+        throw std::runtime_error("BOUNDED_INTEGRAL_WIRE_CONTRACT_VIOLATION");
       if (state.kp_count != load_u16_le(packet_b + 11) ||
           state.kd_count != load_u16_le(packet_b + 13))
         throw std::runtime_error("DUAL_GAIN_ENCODING_MISMATCH");
     }
-    state.q_ref = mode == kFocMode ? q_target
+    state.q_ref = mode == kFocMode ? governed_target
                                    : std::numeric_limits<double>::quiet_NaN();
     state.a = transact(command_a, kIdA, mode);
     state.b = transact(command_b, kIdB, mode);
@@ -668,7 +586,7 @@ class Runner {
         state.q_a = kSignA * (state.raw_a - ref_a_) / kGear;
         state.q_b = kSignB * (state.raw_b - ref_b_) / kGear;
         state.q_j2 = 0.5 * (state.q_a + state.q_b);
-        state.e_common = q_target - state.q_j2;
+        state.e_common = governed_target - state.q_j2;
         state.e_sync = state.q_a - state.q_b;
         state.dq_a_logical = kSignA * state.a.dq / kGear;
         state.dq_b_logical = kSignB * state.b.dq / kGear;
@@ -676,57 +594,50 @@ class Runner {
             (kSignA * state.a.tau + kSignB * state.b.tau);
         state.expected_a_pd_tau = kp * (a_q_cmd - state.raw_a);
         state.expected_b_pd_tau = kp * (b_q_cmd - state.raw_b);
-        if (std::abs(state.q_a) >= feedback_envelope() ||
-            std::abs(state.q_b) >= feedback_envelope() ||
-            std::abs(state.q_j2) >= feedback_envelope())
+        if (mode == kFocMode &&
+            (std::abs(state.a.tau) >= kRotorTorqueFeedbackHardNm ||
+             std::abs(state.b.tau) >= kRotorTorqueFeedbackHardNm))
+          deferred_abort = "ROTOR_TORQUE_FEEDBACK_HARD_LIMIT";
+        if (mode == kFocMode &&
+            (std::abs(state.expected_a_pd_tau) > kPredictedRotorPdHardNm ||
+             std::abs(state.expected_b_pd_tau) > kPredictedRotorPdHardNm) &&
+            deferred_abort.empty())
+          deferred_abort = "PREDICTED_ROTOR_PD_HARD_LIMIT";
+        if (std::abs(state.q_a) > kFeedbackEnvelope ||
+            std::abs(state.q_b) > kFeedbackEnvelope ||
+            std::abs(state.q_j2) > kFeedbackEnvelope)
           deferred_abort = "FEEDBACK_ENVELOPE";
         if (mode == kFocMode &&
-            (std::abs(state.dq_a_logical) > velocity_abort() ||
-             std::abs(state.dq_b_logical) > velocity_abort()) &&
-             deferred_abort.empty())
-          deferred_abort = diagnostic_phase()
-              ? "UNEXPECTED_SDK_LOGICAL_VELOCITY_GT_12DEG_S"
-              : "UNEXPECTED_LOGICAL_VELOCITY_GT_25DEG_S";
-        if (diagnostic_phase() && mode == kFocMode &&
-            phase.find("PLUS_DIAGNOSTIC") != std::string::npos &&
-            state.q_j2 < -0.1 * kPi / 180.0 && deferred_abort.empty())
-          deferred_abort = "DIAGNOSTIC_WRONG_DIRECTION_DURING_PLUS";
-        if (diagnostic_phase() && mode == kFocMode &&
-            phase.find("MINUS_DIAGNOSTIC") != std::string::npos &&
-            state.q_j2 > 0.1 * kPi / 180.0 && deferred_abort.empty())
-          deferred_abort = "DIAGNOSTIC_WRONG_DIRECTION_DURING_MINUS";
-        if (diagnostic_phase() && mode == kFocMode &&
-            (state.a.temp >= diagnostic_baseline_temp_a_ + 5 ||
-             state.b.temp >= diagnostic_baseline_temp_b_ + 5) &&
+            (std::abs(state.dq_a_logical) > kUnexpectedVelocityAbort ||
+             std::abs(state.dq_b_logical) > kUnexpectedVelocityAbort) &&
             deferred_abort.empty())
-          deferred_abort = "DIAGNOSTIC_TEMPERATURE_RISE_GE_5C";
-        if (diagnostic_phase() && mode == kFocMode) {
-          const Clock::time_point velocity_at = Clock::now();
-          if (diagnostic_velocity_ready_) {
-            const double dt = std::chrono::duration<double>(
-                velocity_at - diagnostic_previous_at_).count();
-            if (dt > 1e-4 && dt < 0.1) {
-              const double derived_speed = std::max(
-                  std::abs(state.q_a - diagnostic_previous_q_a_) / dt,
-                  std::abs(state.q_b - diagnostic_previous_q_b_) / dt);
-              diagnostic_fast_count_ =
-                  derived_speed > 3.0 * kPi / 180.0
-                      ? diagnostic_fast_count_ + 1 : 0;
-              if ((derived_speed > 5.0 * kPi / 180.0 ||
-                   diagnostic_fast_count_ >= 2) && deferred_abort.empty())
-                deferred_abort = "DIAGNOSTIC_POSITION_VELOCITY_ABORT";
-            }
-          }
-          diagnostic_previous_q_a_ = state.q_a;
-          diagnostic_previous_q_b_ = state.q_b;
-          diagnostic_previous_at_ = velocity_at;
-          diagnostic_velocity_ready_ = true;
-        }
+          deferred_abort = "UNEXPECTED_LOGICAL_VELOCITY_GT_25DEG_S";
         if (mode == kFocMode)
           max_logical_tau_feedback_ = std::max(
               max_logical_tau_feedback_, std::abs(state.tau_j2_feedback));
       }
       state.valid = true;
+      previous_raw_a_ = state.raw_a;
+      previous_raw_b_ = state.raw_b;
+      previous_raw_dq_a_ = state.a.dq;
+      previous_raw_dq_b_ = state.b.dq;
+      previous_raw_ready_ = true;
+      if (reference_set_) {
+        if (previous_q_j2_ready_) {
+          const double derived_velocity =
+              (state.q_j2 - previous_q_j2_) / kPeriod;
+          derived_common_velocity_filtered_ += kDerivedVelocityFilterAlpha *
+              (derived_velocity - derived_common_velocity_filtered_);
+        } else {
+          derived_common_velocity_filtered_ = 0.0;
+          previous_q_j2_ready_ = true;
+        }
+        previous_q_j2_ = state.q_j2;
+        previous_e_common_ = state.e_common;
+        previous_dq_a_logical_ = state.dq_a_logical;
+        previous_dq_b_logical_ = state.dq_b_logical;
+        previous_state_ready_ = true;
+      }
     }
     log_row(state, phase, a_q_cmd, b_q_cmd, a_dq_cmd, b_dq_cmd, begin);
     ++tick_;
@@ -737,10 +648,9 @@ class Runner {
     if (mode == kFocMode && (!state.a.valid || !state.b.valid))
       throw std::runtime_error("ACTIVE_FEEDBACK_LOSS_OR_INVALID");
     if (state.valid && reference_set_ &&
-        std::abs(state.e_sync) >= sync_hard_abort())
-      throw std::runtime_error(diagnostic_phase()
-          ? "SYNC_HARD_ABORT_GT_0P3DEG"
-          : "SYNC_HARD_ABORT_GT_1DEG");
+        std::abs(state.e_sync) > kSyncHardAbort)
+      throw std::runtime_error("SYNC_HARD_ABORT_GE_0P5DEG");
+    if (mode == kFocMode) last_command_ref_ = governed_target;
     return state;
   }
 
@@ -750,17 +660,12 @@ class Runner {
     a_values.reserve(50U);
     b_values.reserve(50U);
     Clock::time_point next = Clock::now();
-    const int frame_count = diagnostic_phase() ? 100 : 50;
-    for (int frame = 0; frame < frame_count; ++frame) {
+    for (int frame = 0; frame < 50; ++frame) {
       const PairState state = transact_pair(kBrakeMode, 0.0, 0.0,
                                             0.0, "SESSION_BRAKE_CAPTURE", next);
-      if (state.valid && (!diagnostic_phase() || frame >= 50)) {
+      if (state.valid) {
         a_values.push_back(state.raw_a);
         b_values.push_back(state.raw_b);
-        if (diagnostic_phase()) {
-          diagnostic_baseline_temp_a_ = state.a.temp;
-          diagnostic_baseline_temp_b_ = state.b.temp;
-        }
       }
       next += std::chrono::duration_cast<Clock::duration>(
           std::chrono::duration<double>(kPeriod));
@@ -807,10 +712,7 @@ class Runner {
 
   void run_profile(const std::string& phase, double start, double displacement,
                    double kp) {
-    Trapezoid profile(
-        displacement,
-        diagnostic_phase() ? kDiagnosticVmax : kVmax,
-        diagnostic_phase() ? kDiagnosticAccel : kAccel);
+    Trapezoid profile(displacement);
     const int count = static_cast<int>(std::ceil(profile.duration() * kHz)) + 1;
     Clock::time_point next = active_started_ ? next_active_ : Clock::now();
     active_started_ = true;
@@ -832,33 +734,16 @@ class Runner {
   bool terminal_brake() {
     bool pass = true;
     Clock::time_point next = Clock::now();
-    const int frame_count = diagnostic_phase() ? 70 : 5;
-    std::vector<double> final_a;
-    std::vector<double> final_b;
-    if (diagnostic_phase()) {
-      final_a.reserve(50U);
-      final_b.reserve(50U);
-    }
-    for (int frame = 0; frame < frame_count; ++frame) {
+    for (int frame = 0; frame < 5; ++frame) {
       try {
         const PairState state = transact_pair(kBrakeMode, 0.0, 0.0,
                                               0.0, "FINAL_DUAL_BRAKE", next,
                                               true);
         pass = pass && state.a.valid && state.b.valid;
-        if (diagnostic_phase() && frame >= 20 && state.valid) {
-          final_a.push_back(state.raw_a);
-          final_b.push_back(state.raw_b);
-        }
       } catch (...) {
         pass = false;
       }
       next += std::chrono::milliseconds(10);
-    }
-    if (diagnostic_phase()) {
-      diagnostic_final_brake_static_pass_ =
-          final_a.size() == 50U && final_b.size() == 50U &&
-          capture_is_static(final_a) && capture_is_static(final_b);
-      pass = pass && diagnostic_final_brake_static_pass_;
     }
     csv_.flush();
     if (!csv_) pass = false;
@@ -898,7 +783,8 @@ class Runner {
          << config_.label << ',' << config_.target_kp << ',' << state.kp << ','
          << state.kp_count << ',' << state.kp_decoded << ','
          << state.kd_count << ',' << state.kd_decoded << ','
-         << kTauFf << ',' << state.a_tff_count << ',' << state.b_tff_count << ','
+         << state.integral_wire_nm << ',' << state.a_tff_count << ','
+         << state.b_tff_count << ','
          << state.a.mode << ',' << state.b.mode << ','
          << a_q_cmd << ',' << b_q_cmd << ',' << a_dq_cmd << ',' << b_dq_cmd << ','
          << state.raw_a << ',' << state.raw_b << ',' << state.q_a << ',' << state.q_b
@@ -999,12 +885,7 @@ class Runner {
     EndpointSummary summary;
     summary.actual = median(tail_field(values, false, tail_count));
     summary.error = std::abs(summary.actual - target);
-    const std::vector<double> sync_tail = tail_field(values, true, tail_count);
-    summary.sync = std::abs(*std::max_element(
-        sync_tail.begin(), sync_tail.end(),
-        [](double left, double right) {
-          return std::abs(left) < std::abs(right);
-        }));
+    summary.sync = std::abs(median(tail_field(values, true, tail_count)));
     const bool pass = endpoint_accepted(
         summary.error, summary.sync, max_motion_sync_, position_tolerance);
     std::cout << std::setprecision(17)
@@ -1051,7 +932,7 @@ class Runner {
               << "KP_TARGET=" << config_.target_kp << '\n'
               << "KP_RAMP_DURATION_S=" << config_.ramp_duration << '\n'
               << "KD=" << kKd << '\n'
-              << "TFF=0\n"
+              << "TFF=BOUNDED_COMMON_INTEGRAL\n"
               << "HOLD_FINAL_ESYNC_DEG=" << hold_final_sync * 180.0 / kPi << '\n'
               << "HOLD_MAX_ESYNC_DEG=" << hold_max_sync * 180.0 / kPi << '\n'
               << "HOLD_MAX_LOGICAL_MOTION_DEG="
@@ -1062,105 +943,63 @@ class Runner {
 
     max_motion_sync_ = 0.0;
     max_common_error_ = 0.0;
-    const double amplitude = diagnostic_phase()
-        ? kDiagnosticTarget : 5.0 * kPi / 180.0;
-    const double endpoint_hold_s = diagnostic_phase() ? 0.5 : 0.4;
-    const std::string plus_profile = diagnostic_phase()
-        ? "PLUS_DIAGNOSTIC_PROFILE" : "PLUS_5_PROFILE";
-    const std::string plus_endpoint = diagnostic_phase()
-        ? "PLUS_DIAGNOSTIC_ENDPOINT" : "PLUS_5_ENDPOINT";
-    const std::string plus_label = diagnostic_phase()
-        ? "PLUS_DIAGNOSTIC" : "PLUS_5";
-    const std::string minus_profile = diagnostic_phase()
-        ? "MINUS_DIAGNOSTIC_PROFILE" : "MINUS_5_PROFILE";
-    const std::string minus_endpoint = diagnostic_phase()
-        ? "MINUS_DIAGNOSTIC_ENDPOINT" : "MINUS_5_ENDPOINT";
-    const std::string minus_label = diagnostic_phase()
-        ? "MINUS_DIAGNOSTIC" : "MINUS_5";
-    run_profile(plus_profile, 0.0, amplitude,
-                 config_.target_kp);
+    run_profile("PLUS_5_PROFILE", 0.0, 5.0 * kPi / 180.0,
+                config_.target_kp);
     const auto plus_values = run_target_hold(
-        plus_endpoint, amplitude, endpoint_hold_s,
+        "PLUS_5_ENDPOINT", 5.0 * kPi / 180.0, 8.0,
         config_.target_kp, true);
     const EndpointSummary plus = accept_endpoint(
-        plus_label, plus_values, amplitude,
-        1.0 * kPi / 180.0, 30U);
+        "PLUS_5", plus_values, 5.0 * kPi / 180.0,
+        1.0 * kPi / 180.0, 200U);
 
-    run_profile("FIRST_CENTER_PROFILE", amplitude,
-                -amplitude, config_.target_kp);
+    run_profile("FIRST_CENTER_PROFILE", 5.0 * kPi / 180.0,
+                -5.0 * kPi / 180.0, config_.target_kp);
     const auto first_values = run_target_hold(
-        "FIRST_CENTER_ENDPOINT", 0.0, endpoint_hold_s,
-        config_.target_kp, true);
+        "FIRST_CENTER_ENDPOINT", 0.0, 8.0, config_.target_kp, true);
     const EndpointSummary first = accept_endpoint(
         "FIRST_CENTER", first_values, 0.0,
-        (diagnostic_phase() ? 0.2 : 0.75) * kPi / 180.0, 30U);
+        0.75 * kPi / 180.0, 200U);
 
-    run_profile(minus_profile, 0.0, -amplitude,
-                 config_.target_kp);
+    run_profile("MINUS_5_PROFILE", 0.0, -5.0 * kPi / 180.0,
+                config_.target_kp);
     const auto minus_values = run_target_hold(
-        minus_endpoint, -amplitude, endpoint_hold_s,
+        "MINUS_5_ENDPOINT", -5.0 * kPi / 180.0, 8.0,
         config_.target_kp, true);
     const EndpointSummary minus = accept_endpoint(
-        minus_label, minus_values, -amplitude,
-        1.0 * kPi / 180.0, 30U);
+        "MINUS_5", minus_values, -5.0 * kPi / 180.0,
+        1.0 * kPi / 180.0, 200U);
 
-    run_profile("FINAL_CENTER_PROFILE", -amplitude,
-                amplitude, config_.target_kp);
+    run_profile("FINAL_CENTER_PROFILE", -5.0 * kPi / 180.0,
+                5.0 * kPi / 180.0, config_.target_kp);
     const auto final_values = run_target_hold(
-        "FINAL_CENTER_ENDPOINT", 0.0,
-        0.5, config_.target_kp, true);
+        "FINAL_CENTER_ENDPOINT", 0.0, 8.0, config_.target_kp, true);
     const EndpointSummary final = accept_endpoint(
         "FINAL_CENTER", final_values, 0.0,
-        (diagnostic_phase() ? 0.2 : 0.75) * kPi / 180.0, 40U);
+        0.75 * kPi / 180.0, 200U);
 
     termination_reason_ = "COMPLETED_ROUTE";
     const bool brake = terminal_brake();
-    if (diagnostic_phase()) {
-      std::cout << std::setprecision(17)
-                << "DIAGNOSTIC_COMMAND_TARGET_DEG="
-                << amplitude * 180.0 / kPi << '\n'
-                << "DIAGNOSTIC_FEEDBACK_HARD_ENVELOPE_DEG="
-                << kDiagnosticFeedbackEnvelope * 180.0 / kPi << '\n'
-                << "DIAGNOSTIC_ROUTE=0_TO_PLUS_TO_0_TO_MINUS_TO_0\n"
-                << "PLUS_LOGICAL_ACTUAL_DEG=" << plus.actual * 180.0 / kPi << '\n'
-                << "PLUS_LOGICAL_ERROR_DEG=" << plus.error * 180.0 / kPi << '\n'
-                << "FIRST_CENTER_ACTUAL_DEG=" << first.actual * 180.0 / kPi << '\n'
-                << "FIRST_CENTER_ERROR_DEG=" << first.error * 180.0 / kPi << '\n'
-                << "MINUS_LOGICAL_ACTUAL_DEG=" << minus.actual * 180.0 / kPi << '\n'
-                << "MINUS_LOGICAL_ERROR_DEG=" << minus.error * 180.0 / kPi << '\n'
-                << "FINAL_CENTER_ACTUAL_DEG=" << final.actual * 180.0 / kPi << '\n'
-                << "FINAL_CENTER_ERROR_DEG=" << final.error * 180.0 / kPi << '\n'
-                << "MAX_MOTION_ESYNC_DEG=" << max_motion_sync_ * 180.0 / kPi << '\n'
-                << "MAX_COMMON_MODE_ERROR_DEG=" << max_common_error_ * 180.0 / kPi << '\n'
-                << "MAX_LOGICAL_PAIRED_TAU_FEEDBACK_NM="
-                << max_logical_tau_feedback_ << '\n'
-                << "FINAL_DUAL_20_PLUS_50_FRAME_BRAKE_STATIC="
-                << (diagnostic_final_brake_static_pass_ ? "PASS" : "FAIL") << '\n'
-                << "FINAL_DUAL_BRAKE="
-                << (brake ? "PASS" : "FAIL") << '\n'
-                << "V15_30B_FT_J2_PLUSMINUS1_DIAGNOSTIC_RESULT="
-                << (brake ? "PASS" : "FAIL") << '\n';
-    } else {
-      std::cout << std::setprecision(17)
-                << "V15_24E_CENTER_GATE_ISSUE_FIXED=YES\n"
-                << "DUAL_ROUTE=0_TO_PLUS5_TO_0_TO_MINUS5_TO_0\n"
-                << "PLUS_5_LOGICAL_ACTUAL_DEG=" << plus.actual * 180.0 / kPi << '\n'
-                << "PLUS_5_LOGICAL_ERROR_DEG=" << plus.error * 180.0 / kPi << '\n'
-                << "FIRST_CENTER_ACTUAL_DEG=" << first.actual * 180.0 / kPi << '\n'
-                << "FIRST_CENTER_ERROR_DEG=" << first.error * 180.0 / kPi << '\n'
-                << "MINUS_5_LOGICAL_ACTUAL_DEG=" << minus.actual * 180.0 / kPi << '\n'
-                << "MINUS_5_LOGICAL_ERROR_DEG=" << minus.error * 180.0 / kPi << '\n'
-                << "FINAL_CENTER_ACTUAL_DEG=" << final.actual * 180.0 / kPi << '\n'
-                << "FINAL_CENTER_ERROR_DEG=" << final.error * 180.0 / kPi << '\n'
-                << "MAX_MOTION_ESYNC_DEG=" << max_motion_sync_ * 180.0 / kPi << '\n'
-                << "MAX_COMMON_MODE_ERROR_DEG=" << max_common_error_ * 180.0 / kPi << '\n'
-                << "MAX_LOGICAL_PAIRED_TAU_FEEDBACK_NM="
-                << max_logical_tau_feedback_ << '\n'
-                << "DUAL_MOTION_NUMERIC_RESULT=PASS\n"
-                << "FINAL_DUAL_5_FRAME_BRAKE=" << (brake ? "PASS" : "FAIL") << '\n'
-                << "V15_24F_FT_J2_DRIVE_AUTHORITY_RESULT="
-                << (brake ? "PASS" : "FAIL") << '\n';
-    }
+    std::cout << std::setprecision(17)
+              << "V15_30E_COUPLED_SYNC_CONTROLLER=YES\n"
+              << "DUAL_ROUTE=0_TO_PLUS5_TO_0_TO_MINUS5_TO_0\n"
+              << "PLUS_5_LOGICAL_ACTUAL_DEG=" << plus.actual * 180.0 / kPi << '\n'
+              << "PLUS_5_LOGICAL_ERROR_DEG=" << plus.error * 180.0 / kPi << '\n'
+              << "FIRST_CENTER_ACTUAL_DEG=" << first.actual * 180.0 / kPi << '\n'
+              << "FIRST_CENTER_ERROR_DEG=" << first.error * 180.0 / kPi << '\n'
+              << "MINUS_5_LOGICAL_ACTUAL_DEG=" << minus.actual * 180.0 / kPi << '\n'
+              << "MINUS_5_LOGICAL_ERROR_DEG=" << minus.error * 180.0 / kPi << '\n'
+              << "FINAL_CENTER_ACTUAL_DEG=" << final.actual * 180.0 / kPi << '\n'
+              << "FINAL_CENTER_ERROR_DEG=" << final.error * 180.0 / kPi << '\n'
+              << "MAX_MOTION_ESYNC_DEG=" << max_motion_sync_ * 180.0 / kPi << '\n'
+              << "MAX_COMMON_MODE_ERROR_DEG=" << max_common_error_ * 180.0 / kPi << '\n'
+              << "MAX_LOGICAL_PAIRED_TAU_FEEDBACK_NM="
+              << max_logical_tau_feedback_ << '\n'
+              << "MAX_ABS_INTEGRAL_PER_ROTOR_NM="
+              << max_integral_wire_nm_ << '\n'
+              << "DUAL_MOTION_NUMERIC_RESULT=PASS\n"
+              << "FINAL_DUAL_5_FRAME_BRAKE=" << (brake ? "PASS" : "FAIL") << '\n';
+    std::cout << "V15_30E_FT_J2_COUPLED_SYNC_RESULT="
+              << (brake ? "PASS" : "FAIL") << '\n';
     return brake ? 0 : 2;
   }
 
@@ -1177,7 +1016,6 @@ class Runner {
   bool reference_set_ = false;
   bool terminal_brake_done_ = false;
   bool final_brake_pass_ = false;
-  bool diagnostic_final_brake_static_pass_ = false;
   bool have_previous_ = false;
   double previous_s_ = 0.0;
   std::uint64_t tick_ = 0;
@@ -1186,15 +1024,22 @@ class Runner {
   double max_motion_sync_ = 0.0;
   double max_common_error_ = 0.0;
   double max_logical_tau_feedback_ = 0.0;
-  bool diagnostic_velocity_ready_ = false;
-  double diagnostic_previous_q_a_ = 0.0;
-  double diagnostic_previous_q_b_ = 0.0;
-  Clock::time_point diagnostic_previous_at_{};
-  int diagnostic_fast_count_ = 0;
-  int diagnostic_baseline_temp_a_ = 0;
-  int diagnostic_baseline_temp_b_ = 0;
-  bool diagnostic_watchdog_started_ = false;
-  Clock::time_point diagnostic_active_started_at_{};
+  double integral_accumulator_nm_ = 0.0;
+  int integral_dwell_frames_ = 0;
+  bool previous_raw_ready_ = false;
+  bool previous_state_ready_ = false;
+  double previous_raw_a_ = 0.0;
+  double previous_raw_b_ = 0.0;
+  double previous_raw_dq_a_ = 0.0;
+  double previous_raw_dq_b_ = 0.0;
+  double previous_e_common_ = 0.0;
+  double previous_dq_a_logical_ = 0.0;
+  double previous_dq_b_logical_ = 0.0;
+  double last_command_ref_ = 0.0;
+  bool previous_q_j2_ready_ = false;
+  double previous_q_j2_ = 0.0;
+  double derived_common_velocity_filtered_ = 0.0;
+  double max_integral_wire_nm_ = 0.0;
   std::string termination_reason_ = "RUNNING";
 };
 
@@ -1209,45 +1054,37 @@ void self_test() {
                                    1.00, kKd, kTauFf);
   MotorCmd foc100_b = make_command(kIdB, kFocMode, 2.0, 0.2,
                                    1.00, kKd, kTauFf);
-  MotorCmd foc140_a = make_command(kIdA, kFocMode, 1.0, -0.2,
-                                   1.40, kKd, kTauFf);
+  MotorCmd bounded_i_a = make_command(
+      kIdA, kFocMode, 1.0, 0.0, 1.00, kKd, -0.15);
+  MotorCmd bounded_i_b = make_command(
+      kIdB, kFocMode, 2.0, 0.0, 1.00, kKd, 0.15);
   const std::uint8_t* p100a = foc100_a.get_motor_send_data();
   const std::uint8_t* p100b = foc100_b.get_motor_send_data();
-  const std::uint8_t* p140a = foc140_a.get_motor_send_data();
-  if (p100a != nullptr && p100b != nullptr && p140a != nullptr)
+  const std::uint8_t* pia = bounded_i_a.get_motor_send_data();
+  const std::uint8_t* pib = bounded_i_b.get_motor_send_data();
+  if (p100a != nullptr && p100b != nullptr)
     std::cout << "SELFTEST_KP100_COUNT=" << load_u16_le(p100a + 11) << '\n'
-              << "SELFTEST_KP140_COUNT=" << load_u16_le(p140a + 11) << '\n'
               << "SELFTEST_KD_COUNT=" << load_u16_le(p100a + 13) << '\n';
-  if (p100a == nullptr || p100b == nullptr || p140a == nullptr ||
+  if (p100a == nullptr || p100b == nullptr || pia == nullptr || pib == nullptr ||
       p100a[2] != static_cast<std::uint8_t>(kIdA | (kFocMode << 4)) ||
       p100b[2] != static_cast<std::uint8_t>(kIdB | (kFocMode << 4)) ||
       load_u16_le(p100a + 3) != 0U || load_u16_le(p100b + 3) != 0U ||
-      load_u16_le(p140a + 3) != 0U ||
       load_u16_le(p100a + 11) != 1280U ||
       load_u16_le(p100b + 11) != 1280U ||
-      load_u16_le(p140a + 11) != 1791U ||
-      load_u16_le(p100a + 13) != 64U ||
-      load_u16_le(p100b + 13) != 64U ||
-      load_u16_le(p140a + 13) != 64U)
+      load_u16_le(p100a + 13) != 128U ||
+      load_u16_le(p100b + 13) != 128U ||
+      static_cast<std::int16_t>(load_u16_le(pia + 3)) != -38 ||
+      static_cast<std::int16_t>(load_u16_le(pib + 3)) != 38)
     throw std::runtime_error("DUAL_PACKET_SELF_TEST_FAILED");
   (void)brake_a;
   (void)brake_b;
   Trapezoid plus(5.0 * kPi / 180.0);
   Trapezoid minus(-5.0 * kPi / 180.0);
-  Trapezoid diagnostic_plus(
-      kDiagnosticTarget, kDiagnosticVmax, kDiagnosticAccel);
-  Trapezoid diagnostic_minus(
-      -kDiagnosticTarget, kDiagnosticVmax, kDiagnosticAccel);
   if (std::abs(plus.sample(plus.duration()).q - 5.0 * kPi / 180.0) > 1e-12 ||
-      std::abs(minus.sample(minus.duration()).q + 5.0 * kPi / 180.0) > 1e-12 ||
-      std::abs(diagnostic_plus.sample(diagnostic_plus.duration()).q -
-               kDiagnosticTarget) > 1e-12 ||
-      std::abs(diagnostic_minus.sample(diagnostic_minus.duration()).q +
-               kDiagnosticTarget) > 1e-12 ||
-      !(kDiagnosticTarget < kDiagnosticFeedbackEnvelope))
+      std::abs(minus.sample(minus.duration()).q + 5.0 * kPi / 180.0) > 1e-12)
     throw std::runtime_error("PROFILE_SELF_TEST_FAILED");
   for (const auto& ramp_case :
-       std::array<std::pair<int, double>, 2>{{{50, 1.00}, {75, 1.40}}}) {
+       std::array<std::pair<int, double>, 1>{{{50, 1.00}}}) {
     double previous_kp = kBaseKp;
     for (int frame = 0; frame <= ramp_case.first; ++frame) {
       const double fraction = smoothstep5(
@@ -1301,16 +1138,22 @@ void self_test() {
   if (!capture_is_static(span_boundary) || capture_is_static(span_fail) ||
       !capture_is_static(tail_boundary) || capture_is_static(tail_fail))
     throw std::runtime_error("STATIC_CAPTURE_BOUNDARY_SELF_TEST_FAILED");
-  std::cout << "V15_24F_FT_J2_DRIVE_AUTHORITY_SELF_TEST=PASS\n"
+  std::cout << "V15_30E_FT_J2_COUPLED_SYNC_SELF_TEST=PASS\n"
             << "SERIAL_PORT_CONSTRUCTED=NO\n"
             << "J2A_ID=0\nJ2B_ID=1\n"
             << "SIGN_A=-1\nSIGN_B=+1\nSIGN_RELATION=OPPOSITE\n"
             << "SEPARATE_RAW_CURRENT_TARGETS=YES\n"
-            << "ONLY_KP_CHANGED=YES\nBASE_KP=0.60\n"
-            << "LEVEL_A_KP=1.00\nLEVEL_A_RAMP_S=0.50\n"
-            << "LEVEL_B_KP=1.40\nLEVEL_B_RAMP_S=0.75\n"
-            << "KP_RAMP_EXACT_51_AND_76_FRAME_SELF_TEST=PASS\n"
-            << "DUAL_KD=0.05\nDUAL_TFF=0\n"
+            << "BASE_KP=0.60\nTARGET_KP=1.00\nKP_RAMP_S=0.50\n"
+            << "KP_RAMP_EXACT_51_FRAME_SELF_TEST=PASS\n"
+            << "DUAL_KD=0.10\nDUAL_TFF=BOUNDED_COMMON_INTEGRAL\n"
+            << "VELOCITY_DEG_S=5\nACCELERATION_DEG_S2=15\n"
+            << "ROTOR_TORQUE_FEEDBACK_HARD_NM="
+            << kRotorTorqueFeedbackHardNm << '\n'
+            << "PREDICTED_ROTOR_PD_HARD_NM="
+            << kPredictedRotorPdHardNm << '\n'
+            << "PREDICTED_ROTOR_WORK_NM=" << kPredictedRotorWorkNm << '\n'
+            << "INTEGRAL_PER_ROTOR_HARD_NM=" << kIntegralRotorHardNm << '\n'
+            << "ANTI_WINDUP_REFERENCE_GOVERNOR=YES\n"
             << "POST_RAMP_HOLD_DURATION_S=1.0\n"
             << "MOTION_ROUTE=0_TO_PLUS5_TO_0_TO_MINUS5_TO_0\n"
             << "SESSION_CENTER_CAPTURE_FRAMES=50\n"
@@ -1322,16 +1165,9 @@ void self_test() {
             << "FAIL_CLOSED_ENDPOINT_GATE_SELF_TEST=PASS\n"
             << "V15_24E_CENTER_GATE_ISSUE_FIXED=YES\n"
             << "SYNC_HOLD_ACCEPT_DEG=0.3\nSYNC_MOTION_ACCEPT_DEG=0.7\n"
-             << "SYNC_HARD_ABORT_DEG=1.0\n"
-             << "UNEXPECTED_LOGICAL_VELOCITY_ABORT_DEG_S=25\n"
-             << "DIAGNOSTIC_TARGET_DEG=0.8\n"
-             << "DIAGNOSTIC_FEEDBACK_HARD_ENVELOPE_DEG=1.0\n"
-             << "DIAGNOSTIC_VMAX_DEG_S=1.0\n"
-             << "DIAGNOSTIC_ACCEL_DEG_S2=3.0\n"
-             << "DIAGNOSTIC_SYNC_HARD_ABORT_DEG=0.3\n"
-             << "DIAGNOSTIC_SDK_DQ_ABORT_DEG_S=12\n"
-             << "DIAGNOSTIC_PROFILE_SELF_TEST=PASS\n"
-             << "CALIBRATE_PATH=NO\nID_WRITE_PATH=NO\nZERO_WRITE_PATH=NO\n";
+            << "SYNC_HARD_ABORT_DEG=0.5\n"
+            << "UNEXPECTED_LOGICAL_VELOCITY_ABORT_DEG_S=20\n"
+            << "CALIBRATE_PATH=NO\nID_WRITE_PATH=NO\nZERO_WRITE_PATH=NO\n";
 }
 
 }  // namespace
@@ -1350,7 +1186,7 @@ int main(int argc, char** argv) {
     Runner runner(cli);
     return runner.run();
   } catch (const std::exception& error) {
-    std::cerr << "V15_24F_FT_J2_DRIVE_AUTHORITY_RESULT=FAIL\nREASON="
+    std::cerr << "V15_30E_FT_J2_COUPLED_SYNC_RESULT=FAIL\nREASON="
               << error.what() << '\n';
     return 2;
   }

@@ -16,7 +16,8 @@ from std_msgs.msg import String
 
 ALLOWED_MODES = {"brake", "drag", "hold", "position"}
 TARGET_LIMIT_RAD = math.radians(10.0)
-J2_ACTIVE_CONTROL_BLOCKED = True
+J2_TARGET_LIMIT_RAD = math.radians(5.0)
+J2_ACTIVE_CONTROL_BLOCKED = False
 DOMAIN_JOINT_INDICES = {
     "J1": frozenset({0}),
     "J2": frozenset({1}),
@@ -41,6 +42,8 @@ def validate_command(text: str) -> tuple[dict, bytes]:
     targets = [float(item) for item in targets]
     if not all(math.isfinite(item) and abs(item) <= TARGET_LIMIT_RAD + 1e-12 for item in targets):
         raise ValueError("关节目标超出会话参考正负十度")
+    if abs(targets[1]) > J2_TARGET_LIMIT_RAD + 1e-12:
+        raise ValueError("J2目标超出已验证的会话参考正负五度")
     active_joint_mask = value.get("active_joint_mask")
     if schema == "go-m8010-gui-command/1.0":
         active_joint_mask = [False] * 6
@@ -66,11 +69,11 @@ def validate_command(text: str) -> tuple[dict, bytes]:
     if mode in {"drag", "hold", "position"} and any(active_joint_mask) and activation_epoch == 0:
         raise ValueError("主动命令的激活纪元必须大于零")
     kp = [float(item) for item in value.get("kp", [0.5, 1.0, 0.6, 0.5, 0.5, 0.0])]
-    kd = [float(item) for item in value.get("kd", [0.05] * 5 + [0.0])]
+    kd = [float(item) for item in value.get("kd", [0.05, 0.10, 0.05, 0.05, 0.05, 0.0])]
     if len(kp) != 6 or len(kd) != 6 or not all(math.isfinite(item) and item >= 0.0 for item in kp + kd):
         raise ValueError("关节增益格式不正确")
     kp_limits = [0.5, 1.0, 0.6, 0.5, 0.5, 0.0]
-    kd_limits = [0.05, 0.05, 0.05, 0.05, 0.05, 0.0]
+    kd_limits = [0.05, 0.10, 0.05, 0.05, 0.05, 0.0]
     if any(item > limit + 1e-12 for item, limit in zip(kp, kp_limits)) or any(
         item > limit + 1e-12 for item, limit in zip(kd, kd_limits)
     ):
@@ -97,13 +100,7 @@ def validate_command(text: str) -> tuple[dict, bytes]:
 
 
 def payload_for_domain(normalized: dict, domain: str) -> bytes:
-    """Keep the unresolved J2 active-control domain fail-closed.
-
-    J2 feedback and synchronization monitoring remain live, but drag, hold and
-    position requests are never forwarded to the J2 worker in V15.30A.  This
-    lets the independently validated joints move without implicitly granting
-    J2 active-motion authority.
-    """
+    """Forward only commands that select a joint owned by this fault domain."""
 
     if domain not in DOMAIN_JOINT_INDICES:
         raise ValueError("未知硬件故障域")
@@ -113,13 +110,7 @@ def payload_for_domain(normalized: dict, domain: str) -> bytes:
         normalized["active_joint_mask"][index]
         for index in DOMAIN_JOINT_INDICES[domain]
     )
-    if (
-        active_mode
-        and (
-            not domain_selected
-            or (J2_ACTIVE_CONTROL_BLOCKED and domain == "J2")
-        )
-    ):
+    if active_mode and not domain_selected:
         domain_command = dict(normalized)
         domain_command["mode"] = "brake"
         domain_command["active_joint_mask"] = [False] * 6
@@ -168,7 +159,8 @@ class CommandRouter(Node):
             "received": self.last_command is not None,
             "last_mode": None if self.last_command is None else self.last_command["mode"],
             "j2_active_control_blocked": J2_ACTIVE_CONTROL_BLOCKED,
-            "j2_forwarded_mode": None if self.last_command is None else "brake",
+            "j2_forwarded_mode": None if self.last_command is None else
+                json.loads(payload_for_domain(self.last_command, "J2"))["mode"],
             "last_active_joint_mask": None if self.last_command is None else
                 self.last_command["active_joint_mask"],
             "last_activation_epoch": None if self.last_command is None else

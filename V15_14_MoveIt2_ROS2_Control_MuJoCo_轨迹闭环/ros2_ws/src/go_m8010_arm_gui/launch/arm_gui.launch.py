@@ -46,11 +46,11 @@ def generate_launch_description() -> LaunchDescription:
         output="screen",
         parameters=[{
             "model_path": LaunchConfiguration("model_path"),
-            "session_pose_deg": "0,0,0,0,0,0",
+            "session_pose_deg": LaunchConfiguration("session_pose_deg"),
             "pose_matched": False,
             "session_relative_baseline": True,
             "numeric_test_only": False,
-            "use_viewer": True,
+            "use_viewer": False,
             "evidence_directory": LaunchConfiguration("runtime_log_directory"),
         }],
     )
@@ -64,11 +64,14 @@ def generate_launch_description() -> LaunchDescription:
             "joint_limits_path": LaunchConfiguration("joint_limits_path"),
             "initial_pose_path": LaunchConfiguration("initial_pose_path"),
             "log_directory": LaunchConfiguration("runtime_log_directory"),
+            "embedded_model_path": LaunchConfiguration("model_path"),
+            "embedded_session_pose_deg": LaunchConfiguration("session_pose_deg"),
         }],
     )
 
     return LaunchDescription([
         DeclareLaunchArgument("model_path"),
+        DeclareLaunchArgument("session_pose_deg", default_value="0,0,0,0,0,0"),
         DeclareLaunchArgument("config_path", default_value=gui_share + "/config/arm_gui.yaml"),
         DeclareLaunchArgument("joint_limits_path", default_value=gui_share + "/config/gui_joint_limits.yaml"),
         DeclareLaunchArgument("initial_pose_path", default_value=str(initial_pose_default)),

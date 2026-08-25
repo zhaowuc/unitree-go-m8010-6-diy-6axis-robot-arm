@@ -1,0 +1,90 @@
+{
+  "schema": "V15_30D_FT_J2A_INDEPENDENT_PRECISION_RESULT_V1",
+  "run_time_local": "2026-08-24T19:44:19+08:00",
+  "authorization_scope": "J2A_ONLY_J2B_CONTINUOUS_BRAKE",
+  "result": "BLOCKED_SAFE",
+  "reason": "INTEGRAL_UNWIND_POSITION_LOSS",
+  "failure_context": {
+    "phase": "FINAL_CENTER_I_UNWIND",
+    "tick": 6844,
+    "timestamp_s": 69.646335886,
+    "target_deg": 0.0,
+    "actual_deg": -1.1073150292715004,
+    "precision_gate_abs_deg": 1.0,
+    "gate_excess_deg": 0.1073150292715004,
+    "note": "THE_FINAL_50_FRAME_HOLD_MEDIAN_WAS_ALREADY_OUTSIDE_THE_1_DEG_GATE_BEFORE_UNWIND"
+  },
+  "precision_points": {
+    "plus_10_tail50_deg": 9.818294543442345,
+    "plus_10_error_deg": -0.181705456557655,
+    "plus_10_pass": true,
+    "first_center_tail50_deg": 0.0,
+    "first_center_error_deg": 0.0,
+    "first_center_pass": true,
+    "minus_10_tail50_deg": -9.903338492275216,
+    "minus_10_error_deg": 0.096661507724784,
+    "minus_10_pass": true,
+    "final_center_tail50_deg": -1.1125202161519532,
+    "final_center_error_deg": -1.1125202161519532,
+    "final_center_pass": false
+  },
+  "observed_envelopes": {
+    "q_active_min_deg": -9.908547995231027,
+    "q_active_max_deg": 9.825234792616284,
+    "max_abs_active_rotor_tau_feedback_nm": 0.4296875,
+    "active_rotor_tau_feedback_hard_nm": 0.6015625,
+    "max_abs_predicted_total_rotor_nm": 0.4259028853614407,
+    "predicted_total_rotor_work_nm": 0.5,
+    "max_abs_integral_wire_nm": 0.11328125,
+    "integral_wire_hard_nm": 0.1484375,
+    "max_abs_other_drift_deg": 0.24645653503118703,
+    "other_drift_hard_deg": 10.0,
+    "max_abs_fast_velocity_deg_s": 18.376271953052786,
+    "fast_velocity_hard_deg_s": 40.0,
+    "max_abs_slow_velocity_deg_s": 11.024840402702639,
+    "slow_velocity_hard_deg_s": 30.0,
+    "max_cycle_ms": 2.7429,
+    "cycle_hard_ms": 20.0,
+    "max_active_temp_c": 35,
+    "max_other_temp_c": 35,
+    "invalid_feedback_rows": 0,
+    "merror_rows": 0,
+    "mode_mismatch_rows": 0,
+    "reference_governor_limited_rows": 0
+  },
+  "wire_integral_audit": {
+    "change_count": 97,
+    "minimum_frames_between_changes": 14,
+    "maximum_abs_q8_delta": 1,
+    "pass": true
+  },
+  "post_abort_dual_brake": {
+    "j2a_valid": "100/100",
+    "j2b_valid": "100/100",
+    "merror_zero": true,
+    "final_dual_brake_frames": "5/5",
+    "foc_used": false,
+    "j2a_post_brake_relative_to_run_center_deg": -1.16109530187374,
+    "pass": true
+  },
+  "implementation": {
+    "source_sha256": "3797afd139db05fd530a6bbd83fdb2a438293b3432df639a7150d93698bac33a",
+    "remote_binary_sha256": "4ca66edd84550f10592a31f67d6c6f62711847924df8df03c2651895dded49d1"
+  },
+  "evidence": [
+    {
+      "path": "hardware/v15_30d_ft/j2a_independent_precision_i015_failed.csv",
+      "sha256": "6dd51d2354fbd6005f63519349676208c884bd501cddfea9dd4b37afe20917f5"
+    },
+    {
+      "path": "hardware/v15_30d_ft/post_j2a_independent_precision_dual_brake.csv",
+      "sha256": "0ff00f35dd08cbc7a8f38ed3f19d02357982764330ed4c46cc099bc424c87ae9"
+    }
+  ],
+  "diagnosis": {
+    "control_limit_saturation_observed": false,
+    "communication_or_temperature_fault_observed": false,
+    "likely_issue": "FINAL_REVERSE_RETURN_NEEDED_MORE_LOW_SPEED_COMPENSATION_TIME",
+    "recommended_change": "ENABLE_THE_EXISTING_BOUNDED_INTEGRATOR_ONLY_WHEN_ITS_LOW_SPEED_NEAR_TARGET_GATES_PASS_DURING_PROFILE_APPROACH_AND_EXTEND_ENDPOINT_HOLD_WITHOUT_INCREASING_TORQUE_LIMITS"
+  }
+}

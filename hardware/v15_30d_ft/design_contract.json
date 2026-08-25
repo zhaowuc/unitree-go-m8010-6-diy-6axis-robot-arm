@@ -1,0 +1,114 @@
+{
+  "schema": "V15_30D_R2_FT_J2_PRECISION_AND_SYNC_BOUNDARY_V3",
+  "current_physical_state": "J2A_AND_J2B_OUTPUTS_MECHANICALLY_INDEPENDENT",
+  "current_motion_authority": "NONE_FOR_V15_30D_R2_UNTIL_FRESH_OPERATOR_GATES",
+  "independent_precision_stage": {
+    "execution_rule": "ONE_MOTOR_FOC_OTHER_MOTOR_CONTINUOUS_BRAKE",
+    "cross_axis_sync_control": "DISABLED",
+    "same_control_law_required_for_j2a_and_j2b": true,
+    "kp_ramp": [0.2, 1.0],
+    "kp_ramp_duration_s": 2.0,
+    "kd": 0.1,
+    "move_duration_each_10deg_leg_s": 10.0,
+    "endpoint_hold_s": 8.0,
+    "profile_peak_velocity_deg_s": 1.875,
+    "profile_integral_endpoint_proximity_deg": 3.0,
+    "profile_integral_requires_desired_and_last_governed_reference_near_endpoint": true,
+    "integral_entry_error_deg": 3.0,
+    "integral_entry_velocity_deg_s": 1.0,
+    "integral_entry_desired_velocity_deg_s": 1.0,
+    "integral_entry_previous_feedback_torque_abs_lt_nm": 0.4,
+    "integral_entry_dwell_frames": 30,
+    "integral_requested_bound_nm": 0.25,
+    "integral_wire_q8_hard": 64,
+    "integral_wire_quantum_nm": 0.00390625,
+    "integral_wire_total_rotor_nm_hard": 0.25,
+    "integral_host_residual_rate_nm_s_hard": 0.03,
+    "integral_wire_adjacent_step_hard_lsb": 1,
+    "integral_wire_min_frames_between_steps": 14,
+    "integral_wire_average_slew_ceiling_nm_s": 0.027901785714285716,
+    "predicted_total_rotor_work_nm_per_motor": 0.5,
+    "predicted_total_rotor_hard_nm_per_motor": 0.59765625,
+    "feedback_rotor_hard_nm_per_motor": 0.6015625,
+    "host_prediction_is_not_internal_motor_torque_guarantee": true
+  },
+  "coupled_sync_stage": {
+    "enabled_now": false,
+    "required_before_enable": [
+      "OUTPUTS_RIGIDLY_RECOUPLED_WITHOUT_PRELOAD",
+      "J2_DOWNSTREAM_STRUCTURE_MECHANICALLY_SUPPORTED",
+      "OLD_INDEPENDENT_CENTERS_INVALIDATED",
+      "NEW_50_FRAME_DUAL_BRAKE_CENTERS_CAPTURED",
+      "POSE_MODEL_CONFIRMS_ABS_J2_GRAVITY_TORQUE_LE_4_5_NM",
+      "FRESH_OPERATOR_CLEARANCE_POWER_AND_DUAL_MOTION_AUTHORIZATION"
+    ],
+    "mapping": {
+      "j2a_id": 0,
+      "j2a_sign": -1,
+      "j2b_id": 1,
+      "j2b_sign": 1,
+      "gear_ratio": 6.329999923706055,
+      "common_position": "0.5*(qA_logical+qB_logical)",
+      "sync_error": "qA_logical-qB_logical"
+    },
+    "integrator_rule": "SHARED_COMMON_MODE_ONLY_NO_INDEPENDENT_A_B_INTEGRATORS",
+    "differential_compensation_initial_nm": 0.0,
+    "sync_integral_gate_abs_deg": 0.1,
+    "sync_soft_stop_abs_deg": 0.2,
+    "sync_hard_brake_abs_deg": 0.5,
+    "sync_velocity_soft_stop_abs_deg_s": 1.0,
+    "sync_velocity_hard_brake_abs_deg_s": 3.0,
+    "logical_feedback_torque_difference_soft_nm": 0.2,
+    "logical_feedback_torque_difference_hard_nm": 0.35,
+    "opposed_motor_torque_hard_condition": "OPPOSITE_LOGICAL_SIGNS_AND_EACH_ABS_GT_0_25_NM"
+  },
+  "installed_load_authority": {
+    "frozen_max_abs_j2_gravity_torque_nm": 13.75842143182542,
+    "ideal_output_capacity_at_0_60_nm_per_motor_nm": 7.595999908447266,
+    "full_arm_all_pose_authority_validated": false,
+    "reason": "PER_MOTOR_0_60_NM_ROTOR_LIMIT_IS_BELOW_FROZEN_WORST_POSE_GRAVITY_REQUIREMENT"
+  },
+  "prohibited_writes": [
+    "MOTOR_ID",
+    "MOTOR_ZERO",
+    "RID",
+    "FLASH",
+    "EEPROM"
+  ],
+  "implementation": {
+    "source": "tools/hardware/v15_30d_ft_j2_independent_precision.cpp",
+    "source_sha256": "82aec796ca3d7732933045f02bb1deed80897729687c22d288b6ed3df4e7b9b5",
+    "remote_binary": "/tmp/v15_30d_r2_ft_j2_independent_precision",
+    "remote_binary_sha256": "7ca3becb1d976b8a25e0f4afdbf757f4f260ade642862547c22d1df9cde5cd32",
+    "remote_sanitized_binary_sha256": "1174fed1f411a8f891cbf608ddd31b08c25a6ce87762fea04a4060c80c472611",
+    "required_execute_gate_j2a": "J2A_INDEPENDENT_PRECISION_I025_R2_AUTHORIZED=YES",
+    "required_execute_gate_j2b": "J2B_INDEPENDENT_PRECISION_I025_R2_AUTHORIZED=YES",
+    "strict_compile": "PASS_WALL_WEXTRA_WPEDANTIC_WERROR",
+    "offline_self_test": "PASS",
+    "asan_ubsan_offline_self_test": "PASS",
+    "serial_port_constructed_during_self_test": false,
+    "active_motion_used_during_self_test": false,
+    "old_v15_30d_r1_execute_gate": "PASS_REJECTED_BEFORE_SERIAL_CONSTRUCTION",
+    "j2a_motion_output_file_present": false,
+    "j2b_motion_output_file_present": false,
+    "static_review": "LOCAL_LOCKED_DIFF_AUDIT_PASS",
+    "r1_to_r2_diff_scope": "ONLY_INTEGRAL_BOUND_Q8_HARD_AUTH_OUTPUT_LABELS_AND_SELFTEST_FRAME_COUNT"
+  },
+  "completed_independent_precision_runs": {
+    "j2a": {
+      "result_file": "hardware/v15_30d_ft/j2a_r2_run_result.json",
+      "result": "PASS"
+    },
+    "j2b": {
+      "result_file": "hardware/v15_30d_ft/j2b_r2_run_result.json",
+      "result": "PASS"
+    }
+  },
+  "last_executed_run": {
+    "result_file": "hardware/v15_30d_ft/j2b_r2_run_result.json",
+    "result": "PASS",
+    "executed_source_sha256": "82aec796ca3d7732933045f02bb1deed80897729687c22d288b6ed3df4e7b9b5",
+    "precision_result": "PASS_ALL_FOUR_POINTS_WITHIN_PLUS_MINUS_1_DEG",
+    "post_run_dual_brake": "PASS"
+  }
+}

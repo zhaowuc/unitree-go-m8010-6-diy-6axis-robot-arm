@@ -1,0 +1,64 @@
+{
+  "schema": "V15_30D_R2_FT_J2A_INDEPENDENT_PRECISION_RESULT_V1",
+  "result": "PASS",
+  "authorization_scope": "J2A_ONLY_J2B_CONTINUOUS_BRAKE",
+  "precision_tolerance_deg": 1.0,
+  "precision_points": {
+    "plus_10_actual_deg": 9.691596151339784,
+    "plus_10_pass": true,
+    "first_center_actual_deg": -0.17529740062154844,
+    "first_center_pass": true,
+    "minus_10_actual_deg": -10.042186636507523,
+    "minus_10_pass": true,
+    "final_center_actual_deg": -0.17182295995922306,
+    "final_center_pass": true
+  },
+  "observed_envelopes": {
+    "max_abs_active_rotor_tau_feedback_nm": 0.43359375,
+    "active_rotor_tau_feedback_hard_nm": 0.6015625,
+    "max_abs_predicted_total_rotor_nm": 0.430329383049526,
+    "predicted_total_rotor_work_nm": 0.5,
+    "max_abs_integral_wire_nm": 0.09765625,
+    "integral_wire_hard_nm": 0.25,
+    "max_abs_other_drift_deg": 0.34885542287425575,
+    "max_abs_fast_velocity_deg_s": 17.313507424721902,
+    "max_abs_slow_velocity_deg_s": 10.841409359646953,
+    "max_cycle_ms": 4.651702,
+    "max_active_temp_c": 36,
+    "max_other_temp_c": 35,
+    "invalid_feedback_rows": 0,
+    "merror_rows": 0,
+    "mode_mismatch_rows": 0,
+    "reference_governor_limited_rows": 0
+  },
+  "post_run_dual_brake": {
+    "j2a_valid": "100/100",
+    "j2b_valid": "100/100",
+    "final_dual_brake_frames": "5/5",
+    "merror_zero": true,
+    "foc_used": false,
+    "j2a_relative_to_run_center_deg": -0.183930761217644,
+    "j2b_relative_to_run_center_deg": -0.00175344532164534,
+    "pass": true
+  },
+  "implementation": {
+    "source_sha256": "82aec796ca3d7732933045f02bb1deed80897729687c22d288b6ed3df4e7b9b5",
+    "remote_binary_sha256": "7ca3becb1d976b8a25e0f4afdbf757f4f260ade642862547c22d1df9cde5cd32"
+  },
+  "evidence": [
+    {
+      "path": "hardware/v15_30d_ft/j2a_independent_precision_i025_r2.csv",
+      "sha256": "0e76a572f60126b20a7fc228c0839180a207daa2792c72383acb921e7651dc43"
+    },
+    {
+      "path": "hardware/v15_30d_ft/post_j2a_independent_precision_r2_dual_brake.csv",
+      "sha256": "f65b99032d74ca857e16bc3d8bbcfe5a37572e445107bf39ca7ecf8e78f65e94"
+    }
+  ],
+  "writes": {
+    "motor_zero_modified": false,
+    "motor_id_modified": false,
+    "rid_written": false,
+    "flash_or_eeprom_written": false
+  }
+}

@@ -39,8 +39,26 @@ constexpr double kPi = 3.14159265358979323846;
 constexpr double kGear = 6.329999923706055;
 constexpr double kPeriod = 0.01;
 constexpr double kTargetLimit = 10.0 * kPi / 180.0;
+constexpr double kJ2TargetLimit = 5.0 * kPi / 180.0;
 constexpr double kFeedbackLimit = 12.0 * kPi / 180.0;
-constexpr double kJ2SyncLimit = 1.0 * kPi / 180.0;
+constexpr double kJ2SyncLimit = 0.5 * kPi / 180.0;
+constexpr double kJ2RotorTorqueFeedbackHardNm = 154.0 / 256.0;
+constexpr double kJ2PredictedRotorPdHardNm = 0.60;
+constexpr double kJ2PredictedRotorWorkNm = 0.50;
+constexpr double kJ2IntegralRotorHardNm = 0.15;
+constexpr double kJ2IntegralKiPerRotorRadS = 0.20;
+constexpr double kJ2IntegralRateHardNmS = 0.03;
+constexpr double kJ2IntegralUnwindRateNmS = 0.15;
+constexpr double kJ2IntegralEnterError = 3.0 * kPi / 180.0;
+constexpr double kJ2IntegralEnterVelocity = 1.5 * kPi / 180.0;
+constexpr double kJ2IntegralDeadband = 0.10 * kPi / 180.0;
+constexpr double kJ2EndpointProfileTolerance = 0.10 * kPi / 180.0;
+constexpr int kJ2IntegralDwellFrames = 20;
+constexpr double kJ2DerivedVelocityFilterAlpha = 0.10;
+constexpr double kJ2MaximumAcceleration = 15.0 * kPi / 180.0;
+constexpr double kJ2FeedbackLimit = 7.0 * kPi / 180.0;
+constexpr double kJ2BaseKp = 0.60;
+constexpr double kJ2KpRampSeconds = 0.50;
 constexpr double kArrivalTolerance = 0.5 * kPi / 180.0;
 constexpr double kBrakeStationaritySpan = 0.20 * kPi / 180.0;
 constexpr double kTargetTimeoutSeconds = 15.0;
@@ -75,7 +93,7 @@ std::uint16_t crc16_kermit(const std::uint8_t* p, std::size_t n) {
 }
 
 MotorCmd make_command(int id, int mode, double q, double dq, double kp,
-                      double kd) {
+                      double kd, double tau = 0.0) {
   MotorCmd command;
   zero_object(command);
   command.motorType = MotorType::GO_M8010_6;
@@ -85,7 +103,7 @@ MotorCmd make_command(int id, int mode, double q, double dq, double kp,
   command.dq = static_cast<float>(dq);
   command.kp = static_cast<float>(kp);
   command.kd = static_cast<float>(kd);
-  command.tau = 0.0F;
+  command.tau = static_cast<float>(tau);
   command.Res.u32 = 0;
   command.modify_data(&command);
   if (command.hex_len != 17) throw std::runtime_error("COMMAND_LENGTH_INVALID");
@@ -213,7 +231,7 @@ struct MotorRuntime {
 std::vector<MotorRuntime> make_motors(const std::string& bus) {
   if (bus == "j1") return {{"J1", 0, 0, +1, 0.50, 0.05}};
   if (bus == "j2") return {
-      {"J2A", 0, 1, -1, 1.00, 0.05}, {"J2B", 1, 1, +1, 1.00, 0.05}};
+      {"J2A", 0, 1, -1, 1.00, 0.10}, {"J2B", 1, 1, +1, 1.00, 0.10}};
   return {
       {"J3", 3, 2, +1, 0.60, 0.05},
       {"J4", 4, 3, +1, 0.50, 0.05},
@@ -270,7 +288,9 @@ bool apply_velocity_guards(const std::string& bus, MotorRuntime& motor,
     if (speed_degrees >= 40.0 || motor.fast_speed_count >= 2 ||
         motor.slow_speed_count >= 10 || std::abs(motor.last_tau) >= 5.0)
       tripped = true;
-  } else if (bus == "j2" || motor.name == "J3") {
+  } else if (bus == "j2") {
+    if (speed_degrees > 20.0) tripped = true;
+  } else if (motor.name == "J3") {
     if (speed_degrees > 25.0) tripped = true;
   } else {
     motor.slow_speed_count = speed_degrees > 30.0 ? motor.slow_speed_count + 1 : 0;
@@ -287,7 +307,7 @@ struct GuiCommand {
   std::array<bool, 6> active_joint_mask{};
   std::uint64_t activation_epoch = 0;
   std::array<double, 6> kp{{0.5, 1.0, 0.6, 0.5, 0.5, 0.0}};
-  std::array<double, 6> kd{{0.05, 0.05, 0.05, 0.05, 0.05, 0.0}};
+  std::array<double, 6> kd{{0.05, 0.10, 0.05, 0.05, 0.05, 0.0}};
   double vmax = 5.0 * kPi / 180.0;
   double amax = 20.0 * kPi / 180.0;
   Clock::time_point received_at{};
@@ -318,12 +338,14 @@ void parse_command(const std::string& text, GuiCommand& command) {
   if (!active_joint_mask.is_array() || active_joint_mask.size() != 6U)
     throw std::runtime_error("COMMAND_ACTIVE_MASK_SIZE_INVALID");
   const std::array<double, 6> kp_limits{{0.5, 1.0, 0.6, 0.5, 0.5, 0.0}};
-  const std::array<double, 6> kd_limits{{0.05, 0.05, 0.05, 0.05, 0.05, 0.0}};
+  const std::array<double, 6> kd_limits{{0.05, 0.10, 0.05, 0.05, 0.05, 0.0}};
   for (std::size_t i = 0; i < 6U; ++i) {
     if (!active_joint_mask.at(i).is_boolean())
       throw std::runtime_error("COMMAND_ACTIVE_MASK_TYPE_INVALID");
     if (!std::isfinite(targets[i]) || std::abs(targets[i]) > kTargetLimit + 1e-12)
       throw std::runtime_error("COMMAND_TARGET_ENVELOPE");
+    if (i == 1U && std::abs(targets[i]) > kJ2TargetLimit + 1e-12)
+      throw std::runtime_error("J2_VERIFIED_TARGET_ENVELOPE");
     if (!std::isfinite(kp[i]) || kp[i] < 0.0 || kp[i] > kp_limits[i] + 1e-12 ||
         !std::isfinite(kd[i]) || kd[i] < 0.0 || kd[i] > kd_limits[i] + 1e-12)
       throw std::runtime_error("COMMAND_GAIN_ENVELOPE");
@@ -418,7 +440,7 @@ void command_mask_self_test() {
       "activation_epoch":7,"maximum_velocity_rad_s":0.08,
       "maximum_acceleration_rad_s2":0.3,
       "kp":[0.5,1.0,0.6,0.5,0.5,0.0],
-      "kd":[0.05,0.05,0.05,0.05,0.05,0.0]})", command);
+       "kd":[0.05,0.10,0.05,0.05,0.05,0.0]})", command);
   const std::uint64_t minimum = minimum_epoch_after_lease(
       0, false, command.active_joint_mask[3], command.activation_epoch);
   if (!command.active_joint_mask[3] || command.active_joint_mask[2] ||
@@ -471,20 +493,22 @@ void receive_latest(
 void update_profile(int joint, const GuiCommand& command,
                     std::array<double, 6>& q_command,
                     std::array<double, 6>& dq_command) {
+  const double amax = joint == 1
+      ? std::min(command.amax, kJ2MaximumAcceleration) : command.amax;
   const double error = command.targets[static_cast<std::size_t>(joint)] -
                        q_command[static_cast<std::size_t>(joint)];
-  const double stopping_speed = std::sqrt(2.0 * command.amax * std::abs(error));
+  const double stopping_speed = std::sqrt(2.0 * amax * std::abs(error));
   const double wanted = std::copysign(std::min(command.vmax, stopping_speed), error);
   const double previous_speed = std::abs(dq_command[static_cast<std::size_t>(joint)]);
   const double delta_v = std::clamp(
       wanted - dq_command[static_cast<std::size_t>(joint)],
-      -command.amax * kPeriod, command.amax * kPeriod);
+      -amax * kPeriod, amax * kPeriod);
   dq_command[static_cast<std::size_t>(joint)] += delta_v;
   const double current_speed = std::abs(dq_command[static_cast<std::size_t>(joint)]);
   const double snap_distance = current_speed * kPeriod +
-                               0.5 * command.amax * kPeriod * kPeriod;
-  if (previous_speed <= command.amax * kPeriod &&
-      current_speed <= command.amax * kPeriod && std::abs(error) <= snap_distance) {
+                               0.5 * amax * kPeriod * kPeriod;
+  if (previous_speed <= amax * kPeriod &&
+      current_speed <= amax * kPeriod && std::abs(error) <= snap_distance) {
     q_command[static_cast<std::size_t>(joint)] = command.targets[static_cast<std::size_t>(joint)];
     dq_command[static_cast<std::size_t>(joint)] = 0.0;
   } else {
@@ -624,7 +648,11 @@ int run(const Options& options) {
   if (!options.execute) {
     command_mask_self_test();
     std::cout << "DRY_RUN=YES\nSERIAL_OPENED=NO\nDEFAULT_MODE=BRAKE\n"
-                 "CONTROL_LOOP_HZ=100\nTARGET_LIMIT_DEG=10\nTFF=0\n"
+                 "CONTROL_LOOP_HZ=100\nTARGET_LIMIT_DEG=10\nJ2_TARGET_LIMIT_DEG=5\n"
+                 "J2_KP_MAX=1.0\nJ2_KP_RAMP=0.60_TO_TARGET_IN_0.50S\n"
+                 "J2_KD_MAX=0.10\nJ2_ACCELERATION_MAX_DEG_S2=15\n"
+                 "J2_TFF=BOUNDED_COMMON_INTEGRAL\nJ2_TFF_HARD_NM=0.15\n"
+                 "J2_PREDICTED_WORK_NM=0.50\nJ2_SYNC_HARD_DEG=0.5\n"
                  "MOTOR_INTERNAL_ZERO_WRITE=NO\n";
     return 0;
   }
@@ -680,6 +708,15 @@ int run(const Options& options) {
   auto next = Clock::now();
   std::uint64_t cycles = 0;
   bool previous_j2_pair_ready = false;
+  double j2_integral_accumulator_nm = 0.0;
+  int j2_integral_dwell_frames = 0;
+  double j2_integral_wire_nm = 0.0;
+  double j2_previous_common_position = 0.0;
+  bool j2_previous_common_ready = false;
+  double j2_derived_velocity_filtered = 0.0;
+  double j2_last_governed_reference = 0.0;
+  bool j2_last_governed_ready = false;
+  Clock::time_point j2_active_started_at = Clock::now();
   while (!g_stop.load()) {
     const auto loop_started = Clock::now();
     if (cycles > 0U && loop_started > next + std::chrono::milliseconds(2))
@@ -702,6 +739,10 @@ int run(const Options& options) {
     if (!command_lease_fresh)
       effective_mode = "brake";
     if (domain_fault) effective_mode = "brake";
+    // There is no gravity-compensated teach mode for the installed J2 load.
+    // A GUI drag request therefore keeps J2 in BRAKE while other domains may drag.
+    if (options.bus == "j2" && effective_mode == "drag")
+      effective_mode = "brake";
     if (effective_mode != "brake" &&
         command.activation_epoch < command_safety.minimum_activation_epoch)
       effective_mode = "brake";
@@ -744,7 +785,9 @@ int run(const Options& options) {
          std::any_of(motors.begin(), motors.end(), [&](const MotorRuntime& motor) {
            const std::size_t index = static_cast<std::size_t>(motor.joint_index);
            return command.active_joint_mask[index] && !previous_active_joint_mask[index];
-         }));
+          }));
+    if (options.bus == "j2" && active_transition)
+      j2_active_started_at = Clock::now();
     if (options.bus == "j2" && j2_pair_ready &&
         (active_transition || !previous_j2_pair_ready)) {
       const double q_a = -1.0 * (motors[0].unwrapped - motors[0].reference) / kGear;
@@ -773,12 +816,111 @@ int run(const Options& options) {
       dq_command.fill(0.0);
     }
 
+    j2_integral_wire_nm = 0.0;
+    double j2_effective_kp = 0.0;
+    if (options.bus == "j2") {
+      const bool j2_active = position_control_requested && j2_pair_ready &&
+          command_lease_fresh && command.active_joint_mask[1] && !domain_fault &&
+          !j2_sync_fault;
+      if (j2_active) {
+        const double target_kp = std::min(command.kp[1], motors[0].kp_limit);
+        const double base_kp = std::min(target_kp, kJ2BaseKp);
+        const double kp_alpha = std::clamp(
+            std::chrono::duration<double>(Clock::now() - j2_active_started_at).count() /
+                kJ2KpRampSeconds,
+            0.0, 1.0);
+        j2_effective_kp = base_kp + kp_alpha * (target_kp - base_kp);
+        const double q_a = -1.0 * (motors[0].unwrapped - motors[0].reference) / kGear;
+        const double q_b = +1.0 * (motors[1].unwrapped - motors[1].reference) / kGear;
+        const double q_measured = 0.5 * (q_a + q_b);
+        const double error = q_command[1] - q_measured;
+        const bool endpoint_phase = effective_mode == "hold" ||
+            (std::abs(command.targets[1] - q_command[1]) <=
+                 kJ2EndpointProfileTolerance &&
+             std::abs(dq_command[1]) <= kJ2IntegralEnterVelocity);
+        const bool integral_gate = endpoint_phase &&
+            std::abs(error) <= kJ2IntegralEnterError &&
+            std::abs(j2_derived_velocity_filtered) <= kJ2IntegralEnterVelocity;
+        j2_integral_dwell_frames = integral_gate
+            ? j2_integral_dwell_frames + 1 : 0;
+        double requested_rate = 0.0;
+        if (integral_gate &&
+            j2_integral_dwell_frames >= kJ2IntegralDwellFrames &&
+            std::abs(error) > kJ2IntegralDeadband) {
+          requested_rate = std::clamp(
+              kJ2IntegralKiPerRotorRadS * kGear * error,
+              -kJ2IntegralRateHardNmS, kJ2IntegralRateHardNmS);
+        } else if (std::abs(j2_integral_accumulator_nm) > 1e-12) {
+          requested_rate = -std::copysign(
+              kJ2IntegralUnwindRateNmS, j2_integral_accumulator_nm);
+        }
+        const double next_integral = j2_integral_accumulator_nm +
+            requested_rate * kPeriod;
+        if (j2_integral_accumulator_nm * next_integral < 0.0 &&
+            requested_rate * j2_integral_accumulator_nm < 0.0) {
+          j2_integral_accumulator_nm = 0.0;
+        } else {
+          j2_integral_accumulator_nm = std::clamp(
+              next_integral, -kJ2IntegralRotorHardNm,
+              kJ2IntegralRotorHardNm);
+        }
+        j2_integral_wire_nm = std::clamp(
+            std::round(j2_integral_accumulator_nm * 256.0) / 256.0,
+            -kJ2IntegralRotorHardNm, kJ2IntegralRotorHardNm);
+
+        if (!j2_last_governed_ready) {
+          j2_last_governed_reference = q_measured;
+          j2_last_governed_ready = true;
+        }
+        auto predicted = [&](double alpha, const MotorRuntime& motor) {
+          const double governed_q = j2_last_governed_reference +
+              alpha * (q_command[1] - j2_last_governed_reference);
+          const double governed_dq = alpha * dq_command[1];
+          const double q = motor.reference + motor.sign * kGear * governed_q;
+          const double dq = motor.sign * kGear * governed_dq;
+          return j2_effective_kp * (q - motor.unwrapped) +
+                 std::min(command.kd[1], motor.kd_limit) *
+                     (dq - motor.last_dq) +
+                 motor.sign * j2_integral_wire_nm;
+        };
+        auto feasible = [&](double alpha) {
+          return std::abs(predicted(alpha, motors[0])) <=
+                     kJ2PredictedRotorWorkNm + 1e-12 &&
+                 std::abs(predicted(alpha, motors[1])) <=
+                     kJ2PredictedRotorWorkNm + 1e-12;
+        };
+        if (!feasible(0.0)) {
+          domain_fault = true;
+        } else {
+          double alpha = 1.0;
+          if (!feasible(alpha)) {
+            double low = 0.0;
+            double high = 1.0;
+            for (int iteration = 0; iteration < 36; ++iteration) {
+              const double middle = 0.5 * (low + high);
+              if (feasible(middle)) low = middle;
+              else high = middle;
+            }
+            alpha = low;
+          }
+          q_command[1] = j2_last_governed_reference +
+              alpha * (q_command[1] - j2_last_governed_reference);
+          dq_command[1] *= alpha;
+          j2_last_governed_reference = q_command[1];
+        }
+      } else {
+        j2_integral_accumulator_nm = 0.0;
+        j2_integral_dwell_frames = 0;
+        j2_last_governed_ready = false;
+      }
+    }
+
     bool any_foc_sent = false;
     for (auto& motor : motors) {
       int send_mode = kBrakeMode;
       double q = 0.0, dq = 0.0, kp = 0.0, kd = 0.0;
       const bool active_allowed = motor.reference_ready && !motor.fault_latched &&
-          !(options.bus == "j2" && j2_sync_fault) && j2_pair_ready &&
+          !(options.bus == "j2" && j2_sync_fault) && !domain_fault && j2_pair_ready &&
           command_lease_fresh &&
           command.active_joint_mask[static_cast<std::size_t>(motor.joint_index)];
       if (effective_mode == "drag" && active_allowed) {
@@ -788,10 +930,13 @@ int run(const Options& options) {
         const std::size_t joint = static_cast<std::size_t>(motor.joint_index);
         q = motor.reference + motor.sign * kGear * q_command[joint];
         dq = motor.sign * kGear * dq_command[joint];
-        kp = std::min(command.kp[joint], motor.kp_limit);
+        kp = options.bus == "j2" ? j2_effective_kp
+                                  : std::min(command.kp[joint], motor.kp_limit);
         kd = std::min(command.kd[joint], motor.kd_limit);
       }
-      MotorCmd packet = make_command(motor.id, send_mode, q, dq, kp, kd);
+      const double tau = options.bus == "j2" && send_mode == kFocMode
+          ? motor.sign * j2_integral_wire_nm : 0.0;
+      MotorCmd packet = make_command(motor.id, send_mode, q, dq, kp, kd, tau);
       any_foc_sent = any_foc_sent || send_mode == kFocMode;
       const Feedback feedback = transact(serial, packet, motor.id, send_mode);
       motor.valid = feedback.valid;
@@ -840,7 +985,9 @@ int run(const Options& options) {
         }
         if (motor.reference_ready) {
           const double logical = motor.sign * (motor.unwrapped - motor.reference) / kGear;
-          if (std::abs(logical) > kFeedbackLimit) motor.fault_latched = true;
+          const double feedback_limit = options.bus == "j2"
+              ? kJ2FeedbackLimit : kFeedbackLimit;
+          if (std::abs(logical) > feedback_limit) motor.fault_latched = true;
         }
       } else if (++motor.consecutive_invalid >= (options.bus == "j345" ? 1 : 5)) {
         motor.fault_latched = true;
@@ -869,6 +1016,32 @@ int run(const Options& options) {
           MotorCmd brake = make_command(motor.id, kBrakeMode, 0.0, 0.0, 0.0, 0.0);
           (void)transact(serial, brake, motor.id, kBrakeMode);
         }
+      }
+      const double q_common = 0.5 * (q_a + q_b);
+      if (j2_previous_common_ready) {
+        const double derived_velocity =
+            (q_common - j2_previous_common_position) / kPeriod;
+        j2_derived_velocity_filtered += kJ2DerivedVelocityFilterAlpha *
+            (derived_velocity - j2_derived_velocity_filtered);
+      } else {
+        j2_derived_velocity_filtered = 0.0;
+        j2_previous_common_ready = true;
+      }
+      j2_previous_common_position = q_common;
+      if (any_foc_sent &&
+          (std::abs(motors[0].last_tau) >= kJ2RotorTorqueFeedbackHardNm ||
+           std::abs(motors[1].last_tau) >= kJ2RotorTorqueFeedbackHardNm))
+        domain_fault = true;
+      if (any_foc_sent) {
+        const double expected_a_pd = j2_effective_kp *
+            (motors[0].reference - kGear * q_command[1] -
+             motors[0].unwrapped);
+        const double expected_b_pd = j2_effective_kp *
+            (motors[1].reference + kGear * q_command[1] -
+             motors[1].unwrapped);
+        if (std::abs(expected_a_pd) > kJ2PredictedRotorPdHardNm ||
+            std::abs(expected_b_pd) > kJ2PredictedRotorPdHardNm)
+          domain_fault = true;
       }
     }
     if (options.bus == "j2" && position_tracking[1] &&

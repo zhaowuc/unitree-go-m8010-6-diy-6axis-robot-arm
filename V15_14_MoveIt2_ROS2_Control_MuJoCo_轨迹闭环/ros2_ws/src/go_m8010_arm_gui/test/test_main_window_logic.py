@@ -42,13 +42,13 @@ def test_complete_pose_actions_require_all_six_healthy():
     assert ready(True, True, [True] * 6, require_all=True)
 
 
-def test_active_mask_excludes_j2_and_disconnected_joints():
+def test_active_mask_includes_connected_j2_and_excludes_disconnected_joints():
     mask = load_function("effective_active_joint_mask")
     assert mask(
         [True] * 6,
         [True, True, False, True, False, True],
         "hold",
-    ) == [True, False, False, True, False, True]
+    ) == [True, True, False, True, False, True]
 
 
 def test_brake_always_clears_active_mask():

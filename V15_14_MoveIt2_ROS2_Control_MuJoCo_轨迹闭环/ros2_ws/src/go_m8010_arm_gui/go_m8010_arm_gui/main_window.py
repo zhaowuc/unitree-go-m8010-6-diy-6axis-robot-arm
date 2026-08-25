@@ -17,13 +17,15 @@ from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray, String
 import yaml
+import mujoco
+import numpy as np
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QCloseEvent, QFont
+from PySide6.QtGui import QCloseEvent, QFont, QImage, QPixmap
 from PySide6.QtWidgets import (
     QApplication, QDoubleSpinBox, QGridLayout, QGroupBox, QHBoxLayout,
-    QLabel, QMainWindow, QMessageBox, QPushButton, QSlider, QVBoxLayout,
-    QWidget,
+    QLabel, QMainWindow, QMessageBox, QPushButton, QSizePolicy, QSlider,
+    QVBoxLayout, QWidget,
 )
 
 from .state_machine import ArmMode, ArrivalTracker, MODE_TEXT, ModeMachine
@@ -36,6 +38,96 @@ RAD = math.pi / 180.0
 CONTROL_STREAM_TIMEOUT_S = 0.5
 MUJOCO_STREAM_TIMEOUT_S = 0.5
 TARGET_SELECTION_DEADBAND_RAD = math.radians(0.01)
+
+
+def parse_pose_degrees(value: str) -> np.ndarray:
+    fields = [field.strip() for field in value.split(",")]
+    if len(fields) != 6:
+        raise ValueError("MuJoCo绝对姿态必须包含六个逗号分隔角度")
+    pose = np.radians(np.asarray([float(field) for field in fields], dtype=float))
+    if not np.all(np.isfinite(pose)):
+        raise ValueError("MuJoCo绝对姿态包含无效数值")
+    return pose
+
+
+class EmbeddedMujocoPreview(QGroupBox):
+    """Render the frozen MuJoCo model directly inside the control window."""
+
+    def __init__(self, model_path: Path, session_pose_deg: str) -> None:
+        super().__init__("MuJoCo实时三维预览")
+        layout = QVBoxLayout(self)
+        self.image = QLabel("正在初始化MuJoCo内嵌渲染…")
+        self.image.setAlignment(Qt.AlignCenter)
+        self.image.setMinimumSize(420, 360)
+        self.image.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.image.setStyleSheet("background: #111820; color: #cfd8dc;")
+        self.pose_text = QLabel()
+        self.pose_text.setAlignment(Qt.AlignCenter)
+        self.pose_text.setWordWrap(True)
+        layout.addWidget(self.image, 1)
+        layout.addWidget(self.pose_text)
+
+        if not model_path.is_file():
+            raise FileNotFoundError(f"MuJoCo模型不存在：{model_path}")
+        self.session_pose = parse_pose_degrees(session_pose_deg)
+        self.model = mujoco.MjModel.from_xml_path(str(model_path))
+        self.data = mujoco.MjData(self.model)
+        addresses = []
+        for name in ("J1", "J2", "J3", "J4", "J5", "J6"):
+            joint_id = mujoco.mj_name2id(
+                self.model, mujoco.mjtObj.mjOBJ_JOINT, name
+            )
+            if joint_id < 0:
+                raise ValueError(f"MuJoCo模型缺少关节：{name}")
+            addresses.append(int(self.model.jnt_qposadr[joint_id]))
+        self.qpos_addresses = np.asarray(addresses, dtype=int)
+        self.renderer = mujoco.Renderer(self.model, height=420, width=520)
+        self.camera = mujoco.MjvCamera()
+        mujoco.mjv_defaultCamera(self.camera)
+        self.camera.lookat[:] = self.model.stat.center
+        self.camera.distance = max(0.5, 1.65 * float(self.model.stat.extent))
+        self.camera.azimuth = 135.0
+        self.camera.elevation = -22.0
+        self.last_relative: Optional[np.ndarray] = None
+        self.set_relative_pose([0.0] * 6, force=True)
+
+    def set_relative_pose(self, relative_rad, force: bool = False) -> None:
+        relative = np.asarray(relative_rad, dtype=float)
+        if relative.shape != (6,) or not np.all(np.isfinite(relative)):
+            return
+        if not force and self.last_relative is not None and np.allclose(
+            relative, self.last_relative, atol=1.0e-7, rtol=0.0
+        ):
+            return
+        absolute = self.session_pose + relative
+        self.data.qpos[self.qpos_addresses] = absolute
+        self.data.qvel[:] = 0.0
+        mujoco.mj_forward(self.model, self.data)
+        self.renderer.update_scene(self.data, camera=self.camera)
+        pixels = np.ascontiguousarray(self.renderer.render())
+        height, width, channels = pixels.shape
+        if channels != 3:
+            raise RuntimeError("MuJoCo渲染图像通道数异常")
+        image = QImage(
+            pixels.data, width, height, width * channels, QImage.Format_RGB888
+        ).copy()
+        available = self.image.size()
+        pixmap = QPixmap.fromImage(image).scaled(
+            max(1, available.width()), max(1, available.height()),
+            Qt.KeepAspectRatio, Qt.SmoothTransformation,
+        )
+        self.image.setPixmap(pixmap)
+        absolute_deg = np.degrees(absolute)
+        self.pose_text.setText(
+            "绝对姿态：" + "　".join(
+                f"J{index + 1}={value:+.2f}°"
+                for index, value in enumerate(absolute_deg)
+            )
+        )
+        self.last_relative = relative.copy()
+
+    def close_renderer(self) -> None:
+        self.renderer.close()
 
 
 def receipt_is_fresh(receipt: float, now: float, timeout_s: float) -> bool:
@@ -78,18 +170,14 @@ def effective_active_joint_mask(
 ) -> list[bool]:
     """Return the per-joint activation mask sent to the hardware workers.
 
-    V15.30A keeps J2 active control fail-closed.  A disconnected joint is also
-    removed from every active command before publication.  Brake never carries
-    an active bit.
+    A disconnected joint is removed from every active command before
+    publication. Brake never carries an active bit.
     """
     if len(requested) != 6 or len(connected) != 6:
         raise ValueError("关节激活掩码必须包含六项")
     if mode == "brake":
         return [False] * 6
-    return [
-        bool(requested[index] and connected[index] and index != 1)
-        for index in range(6)
-    ]
+    return [bool(requested[index] and connected[index]) for index in range(6)]
 
 
 def clear_mask_on_connection_loss(
@@ -151,12 +239,20 @@ class ArmGuiNode(Node):
         self.declare_parameter("joint_limits_path", "")
         self.declare_parameter("initial_pose_path", "")
         self.declare_parameter("log_directory", "logs/arm_gui")
+        self.declare_parameter("embedded_model_path", "")
+        self.declare_parameter("embedded_session_pose_deg", "0,0,0,0,0,0")
         self.config_path = Path(str(self.get_parameter("config_path").value)).resolve()
         self.joint_limits_path = Path(
             str(self.get_parameter("joint_limits_path").value)
         ).resolve()
         self.initial_pose_path = Path(str(self.get_parameter("initial_pose_path").value)).resolve()
         self.log_directory = Path(str(self.get_parameter("log_directory").value)).resolve()
+        self.embedded_model_path = Path(
+            str(self.get_parameter("embedded_model_path").value)
+        ).resolve()
+        self.embedded_session_pose_deg = str(
+            self.get_parameter("embedded_session_pose_deg").value
+        )
         self.command_publisher = self.create_publisher(String, "/whole_arm/gui_command", 10)
         self.target_publisher = self.create_publisher(Float64MultiArray, "/whole_arm/gui_targets", 10)
         self.mode_publisher = self.create_publisher(String, "/whole_arm/gui_mode", 10)
@@ -268,8 +364,9 @@ class MainWindow(QMainWindow):
         )
         self.virtual_widgets: list[VirtualWidgets] = []
         self.real_widgets: list[RealWidgets] = []
+        self.mujoco_preview: Optional[EmbeddedMujocoPreview] = None
         self.setWindowTitle("六自由度机械臂控制系统")
-        self.resize(1220, 860)
+        self.resize(1740, 900)
         self._build_ui()
         self._open_log()
 
@@ -291,8 +388,22 @@ class MainWindow(QMainWindow):
         outer.addWidget(subtitle)
 
         columns = QHBoxLayout()
-        columns.addWidget(self._virtual_panel())
-        columns.addWidget(self._real_panel())
+        columns.addWidget(self._virtual_panel(), 2)
+        columns.addWidget(self._real_panel(), 3)
+        try:
+            self.mujoco_preview = EmbeddedMujocoPreview(
+                self.node.embedded_model_path,
+                self.node.embedded_session_pose_deg,
+            )
+            columns.addWidget(self.mujoco_preview, 4)
+        except Exception as exc:
+            unavailable = QGroupBox("MuJoCo实时三维预览")
+            unavailable_layout = QVBoxLayout(unavailable)
+            unavailable_label = QLabel(f"内嵌模型不可用：{exc}")
+            unavailable_label.setWordWrap(True)
+            unavailable_label.setAlignment(Qt.AlignCenter)
+            unavailable_layout.addWidget(unavailable_label)
+            columns.addWidget(unavailable, 4)
         outer.addLayout(columns, 1)
         outer.addWidget(self._control_panel())
 
@@ -672,6 +783,16 @@ class MainWindow(QMainWindow):
         if not self.node.control_streams_fresh(now):
             self._fail_closed_for_stale_feedback()
         self._refresh_joint_widgets()
+        if self.mujoco_preview is not None:
+            preview_pose = (
+                self.targets
+                if self.direction is ArmMode.SIM_TO_REAL
+                else self.actual
+            )
+            try:
+                self.mujoco_preview.set_relative_pose(preview_pose)
+            except Exception as exc:
+                self.mujoco_preview.image.setText(f"MuJoCo渲染失败：{exc}")
         if not run_ros_context_operation(self._ros_context_ok, self._publish_command):
             self._close_for_ros_shutdown()
             return
@@ -842,7 +963,7 @@ class MainWindow(QMainWindow):
             f"硬件：{hardware_text}　｜　ROS2：{'正常' if ros_ok else '等待数据'}　｜　MuJoCo：{mujoco_text}　｜　"
             f"实测更新频率：{rate_text}　｜　控制器确认：{confirmed}　｜　"
             f"J2双电机同步误差：{sync_text}　｜　整体：{overall}　｜　"
-            "J2最终负载跟踪待解决"
+            "J2已启用±5°验证包络（超限拒绝）"
         )
 
     def _open_log(self) -> None:
@@ -888,6 +1009,8 @@ class MainWindow(QMainWindow):
                 break
         self.log_stream.flush()
         self.log_stream.close()
+        if self.mujoco_preview is not None:
+            self.mujoco_preview.close_renderer()
         event.accept()
 
 

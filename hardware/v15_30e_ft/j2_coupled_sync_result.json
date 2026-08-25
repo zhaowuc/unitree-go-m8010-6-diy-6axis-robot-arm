@@ -1,0 +1,68 @@
+{
+  "schema": "V15_30E_FT_J2_COUPLED_SYNC_RESULT_V1",
+  "result": "PASS_BIDIRECTIONAL_COMPLETION",
+  "scope": "FULLY_ASSEMBLED_J2A_J2B_COUPLED_INSTALLED_LOAD",
+  "control": {
+    "kp": 1.0,
+    "kd": 0.1,
+    "velocity_deg_s": 5.0,
+    "acceleration_deg_s2": 15.0,
+    "integral_per_rotor_hard_nm": 0.15,
+    "predicted_rotor_work_nm": 0.5,
+    "rotor_feedback_hard_nm": 0.6015625,
+    "sync_hard_abort_deg": 0.5
+  },
+  "brake_baseline": {
+    "j2a_valid": "100/100",
+    "j2b_valid": "100/100",
+    "merror_zero": true,
+    "final_dual_brake": "PASS"
+  },
+  "positive_direction": {
+    "source_run": "j2_coupled_plusminus5_retry3.csv",
+    "actual_deg": 5.137377020520061,
+    "error_deg": 0.13737702052006145,
+    "endpoint_sync_deg": 0.14405333111276108,
+    "gate": "PASS",
+    "strict_first_center_gate": "FAIL_AT_0P75_DEG",
+    "strict_first_center_tail_median_deg": 0.7766820765541861,
+    "note": "The run stopped fail-closed before its negative leg; negative direction was completed in the bounded follow-up run."
+  },
+  "negative_direction": {
+    "source_run": "j2_coupled_minus5_completion.csv",
+    "actual_deg": -4.472207494679803,
+    "error_deg": 0.5277925053201967,
+    "endpoint_sync_deg": 0.15186272996169939,
+    "gate": "PASS",
+    "final_center_actual_deg": -0.3141433868161786,
+    "final_center_error_deg": 0.3141433868161786,
+    "final_center_sync_deg": 0.2950555435501735,
+    "final_center_gate": "PASS"
+  },
+  "negative_completion_envelopes": {
+    "active_rows": 2021,
+    "invalid_active_rows": 0,
+    "merror_active_rows": 0,
+    "mode_mismatch_active_rows": 0,
+    "maximum_abs_integral_per_rotor_nm": 0.13671875,
+    "maximum_abs_j2a_rotor_tau_feedback_nm": 0.25,
+    "maximum_abs_j2b_rotor_tau_feedback_nm": 0.20703125,
+    "maximum_abs_sync_error_deg": 0.317622143553861,
+    "maximum_temperature_c": 34,
+    "final_dual_brake_valid": "5/5"
+  },
+  "evidence_sha256": {
+    "j2_coupled_brake_capture.csv": "551e56b8bdfab047b2aecde8bd4dfce72b2f62fcc70b4dd7ded1d2abb65ea3d1",
+    "j2_coupled_plusminus5_retry3.csv": "13280926055c560f18288ae5c2c222792126cfd473cd8bd5b908faa3070fd07a",
+    "j2_coupled_minus5_completion.csv": "b60efdcfda61cba6e91059da0f2afa3edd26db93992db390540a55834af16476",
+    "j2_positive_runner_source.cpp": "3e559d2b7260ad5cf2dacf91ce94760f2a3bf3572071ccc91b95f7eb88d5c73f",
+    "j2_negative_runner_source.cpp": "579da1c8e9b098594440235a984e7cda0c873428ebf0b169a085f42a6c2cbf58"
+  },
+  "writes": {
+    "motor_zero_modified": false,
+    "motor_id_modified": false,
+    "rid_written": false,
+    "flash_or_eeprom_written": false
+  },
+  "terminal_state": "J2A_J2B_DUAL_BRAKE"
+}

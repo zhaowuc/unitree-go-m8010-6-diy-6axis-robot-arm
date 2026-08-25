@@ -1,0 +1,172 @@
+{
+  "schema": "V15_30C_FT_J2_INDEPENDENT_NO_LOAD_10DEG_V1",
+  "task": "J2A/J2B big-arm-removed individual no-load visible-motion diagnostic",
+  "operator_state": {
+    "big_arm_removed_and_secured": true,
+    "outputs_declared_mechanically_independent": true,
+    "clearance_each_direction_deg": 20.0,
+    "power_voltage_v": 24.0,
+    "power_current_measurement": "UNAVAILABLE",
+    "observer_and_power_cut_ready": true
+  },
+  "controller": {
+    "kp": 0.5,
+    "kd": 0.05,
+    "tff_rotor_nm": 0.0,
+    "route_deg": [0.0, 10.0, 0.0, -10.0, 0.0],
+    "move_duration_each_leg_s": 4.0,
+    "active_feedback_envelope_deg": 12.0,
+    "rotor_predicted_pd_hard_nm": 0.35,
+    "rotor_feedback_hard_nm": 0.35,
+    "other_motor_command": "CONTINUOUS_BRAKE",
+    "first_invalid_or_merror_abort": true,
+    "zero_id_or_rid_write": false
+  },
+  "preflight_dual_brake": {
+    "j2a_valid": "100/100",
+    "j2b_valid": "100/100",
+    "merror_zero": true,
+    "result": "PASS"
+  },
+  "j2a": {
+    "route_completed": true,
+    "plus_10_actual_deg": 8.80296802825301,
+    "first_center_actual_deg": 0.949372567660151,
+    "minus_10_actual_deg": -4.96902418514781,
+    "final_center_actual_deg": -4.24875321350864,
+    "maximum_abs_active_deg": 8.81164765579579,
+    "maximum_abs_other_braked_motor_deg": 0.211742340935431,
+    "maximum_abs_rotor_tau_feedback_nm": 0.3203125,
+    "maximum_abs_logical_output_tau_feedback_nm": 2.0275781005621,
+    "maximum_fast_velocity_deg_s": 23.0933416130679,
+    "maximum_temperature_c": 34,
+    "invalid_frames": 0,
+    "merror_nonzero_frames": 0,
+    "final_dual_brake": "PASS",
+    "motion_existence": "PASS",
+    "position_tracking_and_return": "FAIL"
+  },
+  "j2b": {
+    "attempt_1": {
+      "maximum_actual_deg": 7.23572121875908,
+      "maximum_other_braked_motor_drift_deg": 0.921607254889046,
+      "maximum_abs_rotor_tau_feedback_nm": 0.34765625,
+      "abort_reason": "OTHER_BRAKED_MOTOR_MOVED_GT_1DEG"
+    },
+    "attempt_2": {
+      "maximum_actual_deg": 8.23542569919403,
+      "maximum_other_braked_motor_drift_deg": 4.97249862581013,
+      "maximum_abs_rotor_tau_feedback_nm": 0.109375,
+      "maximum_temperature_c": 34,
+      "invalid_frames": 0,
+      "merror_nonzero_frames": 0,
+      "abort_reason": "OTHER_BRAKED_MOTOR_MOVED_GT_5DEG"
+    },
+    "motion_existence": "PASS",
+    "full_route": "NOT_COMPLETED_SAFETY_ABORT",
+    "interpretation": "J2B moved visibly, while J2A returned mode=BRAKE and tau=0 but followed in the same logical direction; physical independence or passive drift must be rechecked before another run."
+  },
+  "j2a_followup_tuning": {
+    "operator_recheck": {
+      "outputs_verified_independent_by_tape_marks": true,
+      "clearance_each_direction_deg": 12.0,
+      "power_off_forward_reverse_resistance_difference": false
+    },
+    "kp08_kd05_4s": {
+      "plus_10_actual_deg": 9.762753127711745,
+      "first_center_actual_deg": 0.020825063597168,
+      "minus_10_actual_deg": -8.419402727358355,
+      "final_center_actual_deg": -1.579398719661350,
+      "maximum_abs_active_rotor_tau_feedback_nm": 0.3828125,
+      "maximum_abs_other_drift_deg": 0.435636592038288,
+      "maximum_raw_velocity_deg_s": 33.10,
+      "moving_frames_over_10_deg_s_fraction": 0.066,
+      "moving_frames_under_0_5_deg_s_fraction": 0.162,
+      "maximum_tracking_error_deg": 4.108,
+      "final_dual_brake": "PASS",
+      "precision_within_1deg": "FAIL"
+    },
+    "kp10_kd10_6s": {
+      "plus_10_actual_deg": 9.646471583483123,
+      "first_center_actual_deg": 0.425224060239704,
+      "minus_10_actual_deg": -9.778375162466139,
+      "final_center_actual_deg": -2.238925246727137,
+      "final_center_mean_rotor_tau_feedback_nm": -0.2477,
+      "maximum_abs_active_rotor_tau_feedback_nm": 0.3125,
+      "maximum_abs_other_drift_deg": 0.328028201239410,
+      "maximum_raw_velocity_deg_s": 21.10,
+      "maximum_filtered_velocity_deg_s": 15.061285020201968,
+      "moving_frames_over_10_deg_s_fraction": 0.033,
+      "moving_frames_under_0_5_deg_s_fraction": 0.163,
+      "maximum_tracking_error_deg": 2.634,
+      "final_dual_brake": "PASS",
+      "precision_within_1deg": "FAIL"
+    },
+    "interpretation": "Higher stiffness plus damping reduced velocity bursts and tracking error, but a steady final-center error remained while approximately 0.248 Nm rotor torque was applied. This is consistent with MIT-PD static-friction steady-state error; simply raising Kp is not the preferred precision fix."
+  },
+  "final_safety": {
+    "dual_brake_rows": 210,
+    "j2a_valid_brake_rows": 105,
+    "j2b_valid_brake_rows": 105,
+    "returned_modes": [0],
+    "merror_nonzero_frames": 0,
+    "temperature_c": 34,
+    "result": "PASS"
+  },
+  "classification": {
+    "j2a_motor_can_move_without_big_arm": true,
+    "j2b_motor_can_move_without_big_arm": true,
+    "complete_no_load_position_tracking_validated": false,
+    "installed_load_failure_most_likely_class": "DOWNSTREAM_LOAD_OR_FINAL_ASSEMBLY_CONDITION",
+    "power_current_limiting_excluded": false,
+    "outputs_mechanically_independent_verified": true,
+    "power_off_directional_resistance_difference_found": false,
+    "j2a_stick_slip_detected_from_trace": true,
+    "next_required_check": "BOUNDED_ANTI_WINDUP_POSITION_INTEGRAL_OR_FRICTION_COMPENSATION_UNDER_EXISTING_0_60NM_TOTAL_GUARD"
+  },
+  "evidence": [
+    {
+      "path": "hardware/v15_30c_ft/j2a_independent_10deg.csv",
+      "sha256": "185c80778ec2c36a116dcc1f0f0747abe58351cf6ba436f73e8e673804a1392b"
+    },
+    {
+      "path": "hardware/v15_30c_ft/j2b_independent_10deg_abort1.csv",
+      "sha256": "70a3ebfdb051c1ad71243841c6cf9890f944b7f91a97cc531f8a46a23964d593"
+    },
+    {
+      "path": "hardware/v15_30c_ft/j2b_independent_10deg_retry1.csv",
+      "sha256": "9b2d74810f599656e51fbcf770846efa0cc9efc01f531db505e1478c6bac0132"
+    },
+    {
+      "path": "hardware/v15_30c_ft/final_dual_brake.csv",
+      "sha256": "9926618d9c1aabcea510c1bf3c34ed68103a8c61fd88847b101f3dbfdf574431"
+    },
+    {
+      "path": "hardware/v15_30c_ft/j2a_independent_10deg_kp08.csv",
+      "sha256": "800e3d5ffb37ceb371d858ad0468bb903431386365486fbe9f2905030580890e"
+    },
+    {
+      "path": "hardware/v15_30c_ft/post_j2a_kp08_dual_brake.csv",
+      "sha256": "3e8f0399cebda9dad5fd08a0153d7c6e0c91c48803923792cb667da9c7817bf4"
+    },
+    {
+      "path": "hardware/v15_30c_ft/j2a_independent_10deg_kp10_kd10_6s.csv",
+      "sha256": "f300392c0787bb8f8bd81935d23e6d9237d20c0998c69b40de75463153b404e4"
+    },
+    {
+      "path": "hardware/v15_30c_ft/post_j2a_kp10_kd10_6s_dual_brake.csv",
+      "sha256": "b4a591e47d12b6843e1206936812a1b39fbd8f1781784f02d7a4bce357039f38"
+    }
+  ],
+  "implementation": {
+    "source": "tools/hardware/v15_30c_ft_j2_independent_10deg.cpp",
+    "source_sha256": "47645605ba7ac0a081a39361f9db96cc60eaf7906ba2d0d718b495e080ff1fd6",
+    "remote_binary_sha256": "af7d2814bc450f69cd239e86152010b5186548d964b15bfc46e559ab1afc098d",
+    "latest_kp10_kd10_6s_source_sha256": "bae9577b7350130c75634305fa3b0f8a7cff535e612516061de45d7116e206e9",
+    "latest_kp10_kd10_6s_remote_binary_sha256": "7ddda0cf98c6a05cce8f52c29086ce2183af69a338e95c308d8b3c476750569e",
+    "optimized_compile_and_self_test": "PASS",
+    "asan_ubsan_self_test": "PASS",
+    "independent_static_safety_review": "PASS_AFTER_FIXES"
+  },
+  "final_task_result": "J2A_TUNING_COMPLETE_WITH_FINAL_CENTER_PRECISION_FAIL_J2B_PAUSED"
+}

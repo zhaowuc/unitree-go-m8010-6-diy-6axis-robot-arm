@@ -43,6 +43,22 @@ class StaticContractTest(unittest.TestCase):
         self.assertIn('payload.get("controller_mode_by_motor", {})', source)
         self.assertIn("controller_mode_by_motor.get(sample.motor, controller_mode)", source)
 
+    def test_j2_gui_worker_freezes_v15_30e_control_guards(self):
+        source = (
+            REPOSITORY / "tools" / "hardware" / "v15_30a_gui_go_controller.cpp"
+        ).read_text(encoding="utf-8")
+        for token in (
+            "kJ2TargetLimit = 5.0",
+            "kJ2SyncLimit = 0.5",
+            "kJ2IntegralRotorHardNm = 0.15",
+            "kJ2PredictedRotorWorkNm = 0.50",
+            "kJ2RotorTorqueFeedbackHardNm = 154.0 / 256.0",
+            "kJ2MaximumAcceleration = 15.0",
+            "kJ2KpRampSeconds = 0.50",
+            "motor.sign * j2_integral_wire_nm",
+        ):
+            self.assertIn(token, source)
+
 
 if __name__ == "__main__":
     unittest.main()

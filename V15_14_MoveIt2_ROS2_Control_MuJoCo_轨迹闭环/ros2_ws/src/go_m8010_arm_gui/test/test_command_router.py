@@ -28,9 +28,9 @@ def test_valid_six_joint_command():
 
 
 @pytest.mark.parametrize("mode", ["drag", "hold", "position"])
-def test_j2_active_control_is_always_forwarded_as_brake(mode):
+def test_selected_j2_active_control_is_forwarded(mode):
     value, _payload = validate_command(command(mode=mode))
-    assert json.loads(payload_for_domain(value, "J2"))["mode"] == "brake"
+    assert json.loads(payload_for_domain(value, "J2"))["mode"] == mode
     for domain in ("J1", "J345", "J6"):
         assert json.loads(payload_for_domain(value, domain))["mode"] == mode
 
@@ -114,6 +114,13 @@ def test_non_hardware_modes_rejected(mode):
 def test_out_of_envelope_rejected():
     with pytest.raises(ValueError):
         validate_command(command(target=math.radians(10.01)))
+
+
+def test_j2_target_outside_verified_five_degree_envelope_is_rejected():
+    document = json.loads(command())
+    document["targets_rad"] = [0.0, math.radians(5.01), 0.0, 0.0, 0.0, 0.0]
+    with pytest.raises(ValueError, match="J2目标"):
+        validate_command(json.dumps(document))
 
 
 @pytest.mark.parametrize("field,value", [

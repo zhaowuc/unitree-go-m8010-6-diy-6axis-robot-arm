@@ -1,0 +1,64 @@
+{
+  "schema": "V15_30D_R1_FT_J2A_INDEPENDENT_PRECISION_RESULT_V1",
+  "result": "BLOCKED_SAFE",
+  "reason": "FINAL_CENTER_PRECISION_FAILED",
+  "authorization_scope": "J2A_ONLY_J2B_CONTINUOUS_BRAKE",
+  "precision_points": {
+    "plus_10_tail50_deg": 9.780110224759621,
+    "plus_10_pass": true,
+    "first_center_tail50_deg": 0.4790239395637862,
+    "first_center_pass": true,
+    "minus_10_tail50_deg": -9.870363676548301,
+    "minus_10_pass": true,
+    "final_center_tail50_deg": -1.4579055144392405,
+    "final_center_pass": false
+  },
+  "observed_envelopes": {
+    "max_abs_active_rotor_tau_feedback_nm": 0.421875,
+    "active_rotor_tau_feedback_hard_nm": 0.6015625,
+    "max_abs_predicted_total_rotor_nm": 0.4583432168031974,
+    "predicted_total_rotor_work_nm": 0.5,
+    "max_abs_integral_wire_nm": 0.1484375,
+    "integral_wire_hard_nm": 0.1484375,
+    "max_abs_other_drift_deg": 0.2794313507581015,
+    "max_abs_fast_velocity_deg_s": 18.20751083616949,
+    "max_abs_slow_velocity_deg_s": 11.004483572817243,
+    "max_cycle_ms": 2.737345,
+    "max_active_temp_c": 36,
+    "max_other_temp_c": 35,
+    "invalid_feedback_rows": 0,
+    "merror_rows": 0,
+    "mode_mismatch_rows": 0,
+    "reference_governor_limited_rows": 0
+  },
+  "post_abort_dual_brake": {
+    "j2a_valid": "100/100",
+    "j2b_valid": "100/100",
+    "final_dual_brake_frames": "5/5",
+    "merror_zero": true,
+    "foc_used": false,
+    "j2a_post_brake_relative_to_run_center_deg": -1.53946902568204,
+    "pass": true
+  },
+  "implementation": {
+    "source_sha256": "1b174261a1456b734853f5d61a9362b66a535bd38ff14062ae876363c9c88b8b",
+    "remote_binary_sha256": "ba67d56ac7b6f7db6283f4652d0d2d14d11ad72b13cbc63ead27f92928bccdc3"
+  },
+  "evidence": [
+    {
+      "path": "hardware/v15_30d_ft/j2a_independent_precision_i015_r1_failed.csv",
+      "sha256": "307f02b2144c2c61fc5262ba2a955b1aafe60e5cd7b7b5b70180b0b2b71a8dff"
+    },
+    {
+      "path": "hardware/v15_30d_ft/post_j2a_independent_precision_r1_dual_brake.csv",
+      "sha256": "4b409cc39720a85b04b33971caa02241a20a4fae05b65eb6da49d4ecde9ab32e"
+    }
+  ],
+  "diagnosis": {
+    "integral_reached_hard_limit": true,
+    "control_total_work_limit_reached": false,
+    "communication_temperature_or_mode_fault_observed": false,
+    "estimated_static_friction_rotor_nm": 0.30,
+    "recommended_next_candidate": "R2_I025_WITH_UNCHANGED_0_50_NM_TOTAL_WORK_LIMIT"
+  }
+}
