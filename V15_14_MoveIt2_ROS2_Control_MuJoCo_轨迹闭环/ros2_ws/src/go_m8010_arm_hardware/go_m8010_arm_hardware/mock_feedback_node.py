@@ -39,7 +39,18 @@ class MockFeedbackNode(Node):
         ]
         for sample in samples:
             sample.update({"temperature_c": 30.0, "merror": 0, "communication_ok": True})
-        payload = {"schema": "go-m8010-motor-feedback/1.0", "source_monotonic_ns": stamp, "samples": samples}
+        payload = {
+            "schema": "go-m8010-motor-feedback/1.0",
+            "source_monotonic_ns": stamp,
+            "samples": samples,
+            "controller_mode": "brake",
+            "controller_mode_by_motor": {
+                sample["motor"]: "brake" for sample in samples
+            },
+            "domain_fault": False,
+            "j2_sync_fault": False,
+            "lease_safe_hold": False,
+        }
         self.publisher.publish(String(data=json.dumps(payload)))
 
 

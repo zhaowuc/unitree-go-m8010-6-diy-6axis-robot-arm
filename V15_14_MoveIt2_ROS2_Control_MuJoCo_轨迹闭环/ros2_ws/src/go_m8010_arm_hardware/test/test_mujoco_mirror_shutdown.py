@@ -25,6 +25,7 @@ def load_with_ros_stubs(events, ros_state):
     package.__path__ = []
     state_model = ModuleType(f"{package_name}.state_model")
     state_model.JOINT_NAMES = tuple(f"joint{index}" for index in range(1, 7))
+    state_model.MOTOR_NAMES = ("J1", "J2A", "J2B", "J3", "J4", "J5", "J6")
 
     rclpy = ModuleType("rclpy")
 

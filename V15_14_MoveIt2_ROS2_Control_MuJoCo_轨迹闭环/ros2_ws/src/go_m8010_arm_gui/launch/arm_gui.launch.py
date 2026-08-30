@@ -5,11 +5,11 @@ from pathlib import Path
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, EmitEvent, RegisterEventHandler
+from launch.actions import DeclareLaunchArgument, LogInfo, RegisterEventHandler
 from launch.event_handlers import OnProcessExit
-from launch.events import Shutdown
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description() -> LaunchDescription:
@@ -31,6 +31,15 @@ def generate_launch_description() -> LaunchDescription:
         output="screen",
         parameters=[hardware_share + "/config/whole_arm_state.yaml", {
             "evidence_directory": LaunchConfiguration("runtime_log_directory"),
+            "persistent_zero_path": LaunchConfiguration("persistent_zero_path"),
+            "recovery_hint_path": LaunchConfiguration("recovery_hint_path"),
+            "initial_pose_path": LaunchConfiguration("initial_pose_path"),
+            "j2_session_reference_path": LaunchConfiguration(
+                "j2_session_reference_path"
+            ),
+            "go_aux_session_reference_path": LaunchConfiguration(
+                "go_aux_session_reference_path"
+            ),
         }],
     )
     router = Node(
@@ -47,7 +56,9 @@ def generate_launch_description() -> LaunchDescription:
         parameters=[{
             "model_path": LaunchConfiguration("model_path"),
             "session_pose_deg": LaunchConfiguration("session_pose_deg"),
-            "pose_matched": False,
+            "pose_matched": ParameterValue(
+                LaunchConfiguration("pose_matched"), value_type=bool
+            ),
             "session_relative_baseline": True,
             "numeric_test_only": False,
             "use_viewer": False,
@@ -63,6 +74,9 @@ def generate_launch_description() -> LaunchDescription:
             "config_path": LaunchConfiguration("config_path"),
             "joint_limits_path": LaunchConfiguration("joint_limits_path"),
             "initial_pose_path": LaunchConfiguration("initial_pose_path"),
+            "initial_pose_read_only": ParameterValue(
+                LaunchConfiguration("initial_pose_read_only"), value_type=bool
+            ),
             "log_directory": LaunchConfiguration("runtime_log_directory"),
             "embedded_model_path": LaunchConfiguration("model_path"),
             "embedded_session_pose_deg": LaunchConfiguration("session_pose_deg"),
@@ -72,9 +86,15 @@ def generate_launch_description() -> LaunchDescription:
     return LaunchDescription([
         DeclareLaunchArgument("model_path"),
         DeclareLaunchArgument("session_pose_deg", default_value="0,0,0,0,0,0"),
+        DeclareLaunchArgument("pose_matched", default_value="false"),
         DeclareLaunchArgument("config_path", default_value=gui_share + "/config/arm_gui.yaml"),
         DeclareLaunchArgument("joint_limits_path", default_value=gui_share + "/config/gui_joint_limits.yaml"),
         DeclareLaunchArgument("initial_pose_path", default_value=str(initial_pose_default)),
+        DeclareLaunchArgument("initial_pose_read_only", default_value="false"),
+        DeclareLaunchArgument("persistent_zero_path", default_value=""),
+        DeclareLaunchArgument("recovery_hint_path", default_value=""),
+        DeclareLaunchArgument("j2_session_reference_path", default_value=""),
+        DeclareLaunchArgument("go_aux_session_reference_path", default_value=""),
         DeclareLaunchArgument("runtime_log_directory", default_value="logs/arm_gui"),
         state,
         router,
@@ -82,18 +102,27 @@ def generate_launch_description() -> LaunchDescription:
         gui,
         RegisterEventHandler(OnProcessExit(
             target_action=gui,
-            on_exit=[EmitEvent(event=Shutdown(reason="控制界面已关闭，停止全部ROS2进程"))],
+            on_exit=[LogInfo(msg=(
+                "控制界面已退出；保留状态/路由进程，硬件 worker 将按独立租约策略进入安全保持。"
+                "不要在机械臂未支撑时终止顶层 supervisor。"
+            ))],
         )),
         RegisterEventHandler(OnProcessExit(
             target_action=state,
-            on_exit=[EmitEvent(event=Shutdown(reason="硬件状态节点已退出，触发安全停止"))],
+            on_exit=[LogInfo(msg=(
+                "硬件状态节点已退出；GUI 将把状态判为过期，但不联动终止其它故障域。"
+            ))],
         )),
         RegisterEventHandler(OnProcessExit(
             target_action=router,
-            on_exit=[EmitEvent(event=Shutdown(reason="命令路由节点已退出，触发安全停止"))],
+            on_exit=[LogInfo(msg=(
+                "命令路由节点已退出；不再转发新目标，硬件 worker 将按独立租约策略处理。"
+            ))],
         )),
         RegisterEventHandler(OnProcessExit(
             target_action=mirror,
-            on_exit=[EmitEvent(event=Shutdown(reason="MuJoCo镜像节点已退出，触发安全停止"))],
+            on_exit=[LogInfo(msg=(
+                "MuJoCo镜像节点已退出；仿真显示故障不联动撤销真机保持。"
+            ))],
         )),
     ])

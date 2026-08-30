@@ -48,17 +48,6 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM HUP
 
-ros2 run go_m8010_arm_hardware whole_arm_mujoco_mirror --ros-args \
-  -p model_path:="$MODEL" \
-  -p session_pose_deg:="0,170,-170,-12.41,46.7,0.55" \
-  -p pose_matched:=false \
-  -p session_relative_baseline:=true \
-  -p numeric_test_only:=false \
-  -p use_viewer:=false \
-  -p evidence_directory:="$RUNTIME" \
-  >"$RUNTIME/mujoco.log" 2>&1 &
-PIDS+=("$!")
-
 ros2 topic pub -r 20 /joint_states sensor_msgs/msg/JointState \
   "{name: [joint1, joint2, joint3, joint4, joint5, joint6], position: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], velocity: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]}" \
   >"$RUNTIME/dummy_joint_states.log" 2>&1 &
@@ -70,13 +59,13 @@ ros2 run go_m8010_arm_gui arm_gui --ros-args \
   -p initial_pose_path:="$RUNTIME/initial_pose.json" \
   -p log_directory:="$RUNTIME" \
   -p embedded_model_path:="$MODEL" \
-  -p embedded_session_pose_deg:="0,170,-170,-12.41,46.7,0.55" \
+  -p embedded_session_pose_deg:="0,90,-14.40,13.49,47.94,0" \
   >"$RUNTIME/gui.log" 2>&1 &
 GUI_PID=$!
 PIDS+=("$GUI_PID")
 
 echo "POSE_ADJUST_GUI_PID=$GUI_PID"
 echo "HARDWARE_SERIAL_OPENED=NO"
-echo "SESSION_ANCHOR_DEG=0,170,-170,-12.41,46.7,0.55"
+echo "SESSION_ANCHOR_DEG=0,90,-14.40,13.49,47.94,0"
 echo "ABSOLUTE_LIMITS_DEG=J1:-180..180,J2:-170..170,J3:-170..170,J4:-116..159,J5:-70.6..151.2,J6:-180..180"
 wait "$GUI_PID"

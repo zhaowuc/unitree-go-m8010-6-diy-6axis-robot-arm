@@ -23,10 +23,17 @@ def load_with_ros_stubs(events, ros_state):
     package = ModuleType(package_name)
     package.__path__ = []
     state_model = ModuleType(f"{package_name}.state_model")
+    state_model.GEAR_RATIO = 6.329999923706055
     state_model.JOINT_NAMES = tuple(f"joint{index}" for index in range(1, 7))
     state_model.MOTOR_NAMES = ("J1", "J2A", "J2B", "J3", "J4", "J5", "J6")
     state_model.MirrorSessionReferenceV1 = object
+    state_model.PositionSpanVelocityObserver = object
+    state_model.WorkerSupervisorStatusError = type(
+        "WorkerSupervisorStatusError", (ValueError,), {}
+    )
     state_model.parse_feedback_payload = lambda _payload, _receipt: ()
+    state_model.unavailable_worker_control_status = lambda _reason: {}
+    state_model.validate_worker_supervisor_status = lambda value, _now, _age: value
 
     rclpy = ModuleType("rclpy")
 

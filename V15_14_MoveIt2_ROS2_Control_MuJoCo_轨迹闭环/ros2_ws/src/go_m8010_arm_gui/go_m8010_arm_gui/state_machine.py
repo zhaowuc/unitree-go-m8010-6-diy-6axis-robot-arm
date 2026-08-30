@@ -31,9 +31,17 @@ class ArrivalTracker:
     tolerance_rad: float
     dwell_s: float
     timeout_s: float
+    per_joint_tolerance_rad: Optional[tuple[float, ...]] = None
     started_at: Optional[float] = None
     inside_since: list[Optional[float]] = field(default_factory=lambda: [None] * 6)
     reached_once: list[bool] = field(default_factory=lambda: [False] * 6)
+
+    def __post_init__(self) -> None:
+        if (
+            self.per_joint_tolerance_rad is not None
+            and len(self.per_joint_tolerance_rad) != 6
+        ):
+            raise ValueError("每关节到位容差必须包含六项")
 
     def start(self, now: float) -> None:
         self.started_at = now
@@ -47,7 +55,12 @@ class ArrivalTracker:
                 result.append("未连接")
                 self.inside_since[index] = None
                 continue
-            if abs(error) <= self.tolerance_rad:
+            tolerance = (
+                self.tolerance_rad
+                if self.per_joint_tolerance_rad is None
+                else self.per_joint_tolerance_rad[index]
+            )
+            if abs(error) <= tolerance:
                 if self.inside_since[index] is None:
                     self.inside_since[index] = now
                 if now - self.inside_since[index] >= self.dwell_s:
@@ -65,15 +78,16 @@ class ArrivalTracker:
 class ModeMachine:
     def __init__(self) -> None:
         self.mode = ArmMode.REAL_TO_SIM
-        self.torque_enabled = False
+        # This is an operator-selected post-arrival policy, not a motor-power
+        # switch.  POSITION/HOLD always require the drive torque needed by the
+        # position servo; only DRAG/BRAKE withdraw drive authority.
+        self.fixed_hold_after_arrival = True
 
     def stop(self) -> None:
         self.mode = ArmMode.BRAKE
-        self.torque_enabled = False
 
     def drag(self) -> None:
         self.mode = ArmMode.DRAG
-        self.torque_enabled = False
 
     def real_to_sim(self) -> None:
         self.mode = ArmMode.REAL_TO_SIM
@@ -81,14 +95,13 @@ class ModeMachine:
     def sim_to_real(self) -> None:
         self.mode = ArmMode.SIM_TO_REAL
 
-    def torque_on(self) -> None:
-        self.mode = ArmMode.HOLD
-        self.torque_enabled = True
+    def set_fixed_hold_after_arrival(self, enabled: bool) -> None:
+        if type(enabled) is not bool:
+            raise TypeError("到位后固定保持策略必须是严格布尔值")
+        self.fixed_hold_after_arrival = enabled
 
     def hold(self) -> None:
         self.mode = ArmMode.HOLD
-        self.torque_enabled = True
 
     def position(self) -> None:
         self.mode = ArmMode.POSITION
-        self.torque_enabled = True
