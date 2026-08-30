@@ -386,8 +386,10 @@ def parse_collision_guard_request(
     ):
         raise ValueError("request nonce or monotonic timestamp was replayed")
     kind = value.get("kind")
-    if kind not in {"preview", "pose_preview", "execute"}:
-        raise ValueError("kind must be preview, pose_preview or execute")
+    if kind not in {"preview", "pose_preview", "plan_preview", "execute"}:
+        raise ValueError(
+            "kind must be preview, pose_preview, plan_preview or execute"
+        )
     session_id = value.get("session_id")
     if not isinstance(session_id, str) or not session_id or len(session_id) > 512:
         raise ValueError("session_id is invalid")
@@ -439,7 +441,7 @@ def parse_collision_guard_request(
         raise ValueError("session_mismatch")
     if state["state_instance_id"] != state_instance_id:
         raise ValueError("state_instance_mismatch")
-    if any(
+    if kind != "plan_preview" and any(
         abs(requested - measured) > COLLISION_START_MATCH_TOLERANCE_RAD
         for requested, measured in zip(start, state["position_rad"])
     ):
@@ -1008,12 +1010,15 @@ class CollisionGuardEngine:
                     > COLLISION_HARDWARE_MAX_ABS_VELOCITY_RAD_S + 1.0e-12
                     for value in proof_state["velocity_rad_s"]
                 )
-                or any(
+                or (
+                    request.kind != "plan_preview"
+                    and any(
                     abs(requested - measured)
                     > COLLISION_START_MATCH_TOLERANCE_RAD + 1.0e-12
                     for requested, measured in zip(
                         request.start_relative_rad,
                         proof_state["position_rad"],
+                    )
                     )
                 )
                 or request.hardware_state_sha256

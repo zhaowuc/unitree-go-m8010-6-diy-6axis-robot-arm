@@ -407,6 +407,38 @@ def test_multi_joint_pose_preview_is_non_authorizing_and_checks_target_tube(mirr
     assert blocked["contact_pairs"]
 
 
+def test_plan_preview_checks_a_hypothetical_later_segment_without_authority(mirror):
+    now_ns = 9_200_000_000
+    start = [math.radians(5.0), 0.0, 0.0, 0.0, 0.0, 0.0]
+    target = [math.radians(10.0), 0.0, 0.0, 0.0, 0.0, 0.0]
+    value = request_payload(mirror, now_ns, target=target)
+    value["kind"] = "plan_preview"
+    value["start_relative_rad"] = start
+    request = mirror.parse_collision_guard_request(
+        value,
+        now_ns=now_ns,
+        hardware_state=hardware_payload(now_ns),
+        expected_session_pose_sha256=value["session_pose_sha256"],
+    )
+    assert request.kind == "plan_preview"
+    assert request.start_relative_rad == tuple(start)
+    assert request.hardware_position_rad == (0.0,) * 6
+
+    result = engine(mirror, ThresholdGuard()).evaluate(request)
+    assert result["safe"] is True
+    assert result["moving_joint_count"] == 1
+    assert result["recommended_relative_rad"] == target
+
+    value["kind"] = "preview"
+    with pytest.raises(ValueError, match="start_state_mismatch"):
+        mirror.parse_collision_guard_request(
+            value,
+            now_ns=now_ns,
+            hardware_state=hardware_payload(now_ns),
+            expected_session_pose_sha256=value["session_pose_sha256"],
+        )
+
+
 @pytest.mark.parametrize(
     ("mutation", "message"),
     [

@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import csv
+import bisect
+import concurrent.futures
 import hashlib
 import json
 import math
 import secrets
 import struct
 import sys
+import threading
 import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -24,16 +27,28 @@ import yaml
 import mujoco
 import numpy as np
 
-from PySide6.QtCore import QEvent, Qt, QTimer
-from PySide6.QtGui import QCloseEvent, QFont, QImage, QPixmap
+from PySide6.QtCore import QEvent, Qt, QTimer, Signal
+from PySide6.QtGui import QCloseEvent, QColor, QFont, QImage, QPixmap
 from PySide6.QtWidgets import (
-    QAbstractScrollArea, QApplication, QDoubleSpinBox, QGridLayout, QGroupBox,
+    QAbstractItemView, QAbstractScrollArea, QApplication, QDoubleSpinBox, QGridLayout, QGroupBox,
     QHBoxLayout, QLabel, QMainWindow, QMessageBox, QProgressBar, QPushButton,
-    QScrollArea,
+    QScrollArea, QTableWidget, QTableWidgetItem,
     QSizePolicy, QSlider, QVBoxLayout, QWidget,
 )
 
 from .state_machine import ArmMode, ArrivalTracker, MODE_TEXT, ModeMachine
+from .workflow_contract import (
+    ContractViolation,
+    PreviewChecks,
+    RealSubmitRejected,
+    TrajectoryPlan,
+    TrajectoryRecipe,
+    WorkflowState,
+    generate_segmented_quintic_recipe,
+    trajectory_command_descriptor,
+    trajectory_plan_manifest,
+    trajectory_sample_index_at,
+)
 
 
 JOINT_NAMES = tuple(f"joint{index}" for index in range(1, 7))
@@ -43,12 +58,34 @@ MOTOR_GROUPS = (
     ("J1",), ("J2A", "J2B"), ("J3",),
     ("J4",), ("J5",), ("J6",),
 )
+MOTOR_LOGICAL_JOINT = {
+    "J1": "J1", "J2A": "J2", "J2B": "J2", "J3": "J3",
+    "J4": "J4", "J5": "J5", "J6": "J6",
+}
+MOTOR_BUS_LOCAL_ID = {
+    "J1": "0", "J2A": "0", "J2B": "1", "J3": "3",
+    "J4": "4", "J5": "5", "J6": "1",
+}
+THERMAL_STATE_CN = {
+    "OFFLINE": "离线",
+    "NORMAL": "正常",
+    "WARNING": "温度预警",
+    "DERATING": "热降额",
+    "THERMAL_STOP": "热停机",
+    "COOLDOWN": "冷却中",
+    "WAIT_OPERATOR_CONFIRM": "等待确认",
+}
 CONTROLLER_MODES = frozenset({"brake", "drag", "hold", "position", "unknown"})
 DEG = 180.0 / math.pi
 RAD = math.pi / 180.0
 CONTROL_STREAM_TIMEOUT_S = 0.5
 MUJOCO_STREAM_TIMEOUT_S = 0.5
 ROUTER_STATUS_TIMEOUT_S = 1.5
+GRAVITY_STATUS_TIMEOUT_S = 0.5
+GRAVITY_STATUS_SCHEMA = "go-m8010-gravity-status/1.1"
+GRAVITY_SCALE_LEVELS = (0.0, 0.25, 0.50, 0.75, 1.0)
+GRAVITY_ROTOR_FEEDFORWARD_LIMIT_NM = (0.20, 1.75, 1.10, 0.40, 0.20, 0.0)
+TRAJECTORY_EXECUTE_LEAD_NS = 250_000_000
 SUMMARY_REFRESH_PERIOD_S = 0.2
 ROS_CALLBACK_BUDGET_PER_TICK = 8
 ROUTER_REJECTION_WARNING_WINDOW_MS = 5000.0
@@ -79,6 +116,10 @@ PRODUCTION_ABSOLUTE_JOINT_LIMITS_DEG = (
 PRODUCTION_MODEL_SHA256 = (
     "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9"
 )
+GRAVITY_CONFIG_SHA256 = (
+    "307469b8384fd35547327ba1d5f80aa440e6b9663406ab7c9d9469bea263335d"
+)
+PLAN_ACTUAL_DRIFT_TOLERANCE_RAD = math.radians(0.25)
 PRODUCTION_COLLISION_CONTRACT_SHA256 = (
     "6d802909e44f238816f007ef33b57e1b57099c5522a473cd2dcc2705397af9c9"
 )
@@ -341,11 +382,14 @@ def collision_guard_result_matches(result: object, request: dict) -> bool:
                 COLLISION_HOLD_VELOCITY_TOLERANCE_RAD_S + 1.0e-12
                 for value in hardware_velocity
             )
-            or any(
-                abs(float(measured) - float(start)) >
-                COLLISION_START_MATCH_TOLERANCE_RAD + 1.0e-12
-                for measured, start in zip(
-                    hardware_position, request["start_relative_rad"]
+            or (
+                request["kind"] != "plan_preview"
+                and any(
+                    abs(float(measured) - float(start)) >
+                    COLLISION_START_MATCH_TOLERANCE_RAD + 1.0e-12
+                    for measured, start in zip(
+                        hardware_position, request["start_relative_rad"]
+                    )
                 )
             )
             or not isinstance(hardware_modes, dict)
@@ -733,6 +777,134 @@ def moving_targets_within_model_limits(
     )
 
 
+def moving_trajectory_feedback_complete(
+    hardware: object,
+    moving_joint_index: object,
+    trajectory_descriptor: object,
+) -> bool:
+    """Require the moving worker(s) to echo this exact completed segment."""
+
+    if (
+        not isinstance(hardware, dict)
+        or type(moving_joint_index) is not int
+        or not 0 <= moving_joint_index < len(MOTOR_GROUPS)
+        or not isinstance(trajectory_descriptor, dict)
+        or set(trajectory_descriptor) != {"plan_token_id", "trajectory"}
+    ):
+        return False
+    token_id = trajectory_descriptor.get("plan_token_id")
+    trajectory = trajectory_descriptor.get("trajectory")
+    per_motor = hardware.get("per_motor")
+    if (
+        not isinstance(token_id, str)
+        or not isinstance(trajectory, dict)
+        or not isinstance(per_motor, dict)
+    ):
+        return False
+    trajectory_sha256 = trajectory.get("trajectory_sha256")
+    interval_count = trajectory.get("interval_count")
+    if (
+        not isinstance(trajectory_sha256, str)
+        or type(interval_count) is not int
+        or interval_count <= 0
+    ):
+        return False
+    for motor_name in MOTOR_GROUPS[moving_joint_index]:
+        sample = per_motor.get(motor_name)
+        if (
+            not isinstance(sample, dict)
+            or sample.get("fresh") is not True
+            or sample.get("trajectory_plan_token_id") != token_id
+            or sample.get("trajectory_sha256") != trajectory_sha256
+            or sample.get("trajectory_state") != "COMPLETE"
+            or sample.get("trajectory_interval_count") != interval_count
+            or sample.get("trajectory_sample_index") != interval_count
+        ):
+            return False
+    return True
+
+
+def gravity_status_authorizes_hardware(
+    status: object,
+    *,
+    session_id: str,
+    state_instance_id: str,
+    now_monotonic_ns: Optional[int] = None,
+) -> bool:
+    """Validate the fail-closed status consumed by GUI and Router."""
+
+    if not isinstance(status, dict):
+        return False
+    checked_ns = (
+        time.monotonic_ns()
+        if now_monotonic_ns is None else now_monotonic_ns
+    )
+    feedforward = status.get("feedforward_nm")
+    gravity = status.get("gravity_joint_nm")
+    scale = status.get("gravity_scale")
+    target = status.get("gravity_scale_target")
+    source_ns = status.get("source_monotonic_ns")
+    hardware_source_ns = status.get("hardware_state_source_monotonic_ns")
+    return bool(
+        status.get("schema") == GRAVITY_STATUS_SCHEMA
+        and status.get("source") == "whole_arm_gravity_node"
+        and isinstance(status.get("source_instance_id"), str)
+        and len(status["source_instance_id"]) == 32
+        and all(character in "0123456789abcdef"
+                for character in status["source_instance_id"])
+        and type(status.get("sequence")) is int
+        and status["sequence"] > 0
+        and type(source_ns) is int
+        and 0 < source_ns <= checked_ns
+        and checked_ns - source_ns <= int(GRAVITY_STATUS_TIMEOUT_S * 1.0e9)
+        and type(status.get("hardware_state_sequence")) is int
+        and status["hardware_state_sequence"] > 0
+        and type(hardware_source_ns) is int
+        and 0 < hardware_source_ns <= source_ns
+        and source_ns - hardware_source_ns <= HARDWARE_STATE_SOURCE_MAX_AGE_NS
+        and isinstance(status.get("q_actual_sha256"), str)
+        and len(status["q_actual_sha256"]) == 64
+        and all(character in "0123456789abcdef"
+                for character in status["q_actual_sha256"])
+        and status.get("session_id") == session_id
+        and status.get("state_instance_id") == state_instance_id
+        and status.get("anchor_valid") is True
+        and status.get("production_model_hash_match") is True
+        and status.get("model_sha256") == PRODUCTION_MODEL_SHA256
+        and status.get("gravity_config_sha256") == GRAVITY_CONFIG_SHA256
+        and status.get("finite_bounded") is True
+        and status.get("pose_feasibility") == "PASS"
+        and status.get("blocker") is None
+        and status.get("hardware_enable_requested") is True
+        and status.get("continuous_rotor_limits_authoritative") is True
+        and status.get("actuation_interface_present") is True
+        and isinstance(status.get("last_update_age_s"), (int, float))
+        and math.isfinite(float(status["last_update_age_s"]))
+        and 0.0 <= float(status["last_update_age_s"]) <= 0.25
+        and isinstance(gravity, (list, tuple))
+        and len(gravity) == 6
+        and all(type(value) in {int, float} and math.isfinite(float(value))
+                for value in gravity)
+        and isinstance(feedforward, (list, tuple))
+        and len(feedforward) == 6
+        and all(type(value) in {int, float} and math.isfinite(float(value))
+                for value in feedforward)
+        and all(abs(float(value)) <= limit + 1.0e-12
+                for value, limit in zip(
+                    feedforward, GRAVITY_ROTOR_FEEDFORWARD_LIMIT_NM
+                ))
+        and abs(float(feedforward[5])) <= 1.0e-12
+        and type(scale) in {int, float}
+        and math.isfinite(float(scale))
+        and 0.0 <= float(scale) <= 1.0
+        and type(target) in {int, float}
+        and math.isfinite(float(target))
+        and any(abs(float(target) - level) <= 1.0e-12
+                for level in GRAVITY_SCALE_LEVELS)
+        and status.get("hardware_tff_enabled") is bool(float(target) > 0.0)
+    )
+
+
 def fixed_hold_targets_after_position_stop(
     command_targets: list[float],
     actual: list[float],
@@ -881,10 +1053,16 @@ def load_gui_visual_model(model_path: Path) -> mujoco.MjModel:
 
 
 class EmbeddedMujocoPreview(QGroupBox):
-    """Render the frozen MuJoCo model directly inside the control window."""
+    """Render one twin without running MuJoCo work on the Qt event thread."""
 
-    def __init__(self, model_path: Path, session_pose_deg: str) -> None:
-        super().__init__("MuJoCo实时三维预览")
+    render_completed = Signal(object)
+    render_failed = Signal(str)
+
+    def __init__(
+        self, model_path: Path, session_pose_deg: str,
+        title: str = "MuJoCo实时三维预览",
+    ) -> None:
+        super().__init__(title)
         layout = QVBoxLayout(self)
         self.image = QLabel("正在初始化MuJoCo内嵌渲染…")
         self.image.setAlignment(Qt.AlignCenter)
@@ -930,19 +1108,43 @@ class EmbeddedMujocoPreview(QGroupBox):
                 raise ValueError(f"MuJoCo模型缺少关节：{name}")
             addresses.append(int(self.model.jnt_qposadr[joint_id]))
         self.qpos_addresses = np.asarray(addresses, dtype=int)
-        self.renderer = mujoco.Renderer(self.model, height=420, width=520)
+        # The renderer owns an OpenGL context, so it is created, used and
+        # destroyed on this preview's one dedicated worker thread.  Requests
+        # are coalesced: a slow frame can never build an unbounded queue or
+        # stall the GUI refresh timer.
+        self.renderer = None
         self.camera = mujoco.MjvCamera()
         mujoco.mjv_defaultCamera(self.camera)
         self.camera.lookat[:] = self.model.stat.center
         self.camera.distance = max(0.5, 1.65 * float(self.model.stat.extent))
         self.camera.azimuth = 135.0
         self.camera.elevation = -22.0
+        self.camera_state = {
+            "lookat": tuple(float(item) for item in self.camera.lookat),
+            "distance": float(self.camera.distance),
+            "azimuth": float(self.camera.azimuth),
+            "elevation": float(self.camera.elevation),
+        }
         self.last_relative: Optional[np.ndarray] = None
         self.last_image: Optional[QImage] = None
         self.mouse_position = None
-        self.set_relative_pose([0.0] * 6, force=True)
+        self._render_lock = threading.Lock()
+        self._render_executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=1,
+            thread_name_prefix="m8010-mujoco-preview",
+        )
+        self._render_in_flight = False
+        self._pending_render = None
+        self._render_sequence = 0
+        self._latest_requested_sequence = 0
+        self._renderer_closed = False
+        self.render_completed.connect(self._apply_render_result)
+        self.render_failed.connect(self._show_render_error)
+        self.set_relative_pose([0.0] * 6, force=True, fit=True)
 
-    def set_relative_pose(self, relative_rad, force: bool = False) -> None:
+    def set_relative_pose(
+        self, relative_rad, force: bool = False, fit: bool = False,
+    ) -> None:
         relative = np.asarray(relative_rad, dtype=float)
         if relative.shape != (6,) or not np.all(np.isfinite(relative)):
             return
@@ -951,12 +1153,6 @@ class EmbeddedMujocoPreview(QGroupBox):
         ):
             return
         absolute = self.session_pose + relative
-        self.data.qpos[self.qpos_addresses] = absolute
-        self.data.qvel[:] = 0.0
-        mujoco.mj_forward(self.model, self.data)
-        if self.last_relative is None:
-            self.fit_camera(render=False)
-        self._render_scene()
         absolute_deg = np.degrees(absolute)
         self.pose_text.setText(
             "绝对姿态：" + "　".join(
@@ -965,8 +1161,54 @@ class EmbeddedMujocoPreview(QGroupBox):
             )
         )
         self.last_relative = relative.copy()
+        self._schedule_render(relative, fit=fit or self.last_image is None)
 
     def _render_scene(self) -> None:
+        relative = (
+            np.zeros(6, dtype=float)
+            if self.last_relative is None else self.last_relative.copy()
+        )
+        self._schedule_render(relative, fit=False)
+
+    def _schedule_render(self, relative: np.ndarray, *, fit: bool) -> None:
+        with self._render_lock:
+            if self._renderer_closed:
+                return
+            self._render_sequence += 1
+            request = {
+                "sequence": self._render_sequence,
+                "relative": np.asarray(relative, dtype=float).copy(),
+                "fit": bool(fit),
+                "camera": {
+                    "lookat": tuple(self.camera_state["lookat"]),
+                    "distance": float(self.camera_state["distance"]),
+                    "azimuth": float(self.camera_state["azimuth"]),
+                    "elevation": float(self.camera_state["elevation"]),
+                },
+            }
+            self._latest_requested_sequence = request["sequence"]
+            if self._render_in_flight:
+                self._pending_render = request
+                return
+            self._render_in_flight = True
+            future = self._render_executor.submit(self._render_request, request)
+            future.add_done_callback(self._render_future_done)
+
+    def _render_request(self, request: dict) -> dict:
+        if self.renderer is None:
+            self.renderer = mujoco.Renderer(self.model, height=420, width=520)
+        relative = request["relative"]
+        absolute = self.session_pose + relative
+        self.data.qpos[self.qpos_addresses] = absolute
+        self.data.qvel[:] = 0.0
+        mujoco.mj_forward(self.model, self.data)
+        camera = request["camera"]
+        self.camera.lookat[:] = camera["lookat"]
+        self.camera.distance = camera["distance"]
+        self.camera.azimuth = camera["azimuth"]
+        self.camera.elevation = camera["elevation"]
+        if request["fit"]:
+            self._fit_camera_worker()
         self.renderer.update_scene(self.data, camera=self.camera)
         pixels = np.ascontiguousarray(self.renderer.render())
         height, width, channels = pixels.shape
@@ -975,8 +1217,55 @@ class EmbeddedMujocoPreview(QGroupBox):
         image = QImage(
             pixels.data, width, height, width * channels, QImage.Format_RGB888
         ).copy()
+        return {
+            "sequence": request["sequence"],
+            "image": image,
+            "camera": {
+                "lookat": tuple(float(item) for item in self.camera.lookat),
+                "distance": float(self.camera.distance),
+                "azimuth": float(self.camera.azimuth),
+                "elevation": float(self.camera.elevation),
+            },
+        }
+
+    def _render_future_done(self, future) -> None:
+        try:
+            result = future.result()
+        except Exception as exc:  # delivered to the Qt thread via a signal
+            self.render_failed.emit(str(exc))
+        else:
+            self.render_completed.emit(result)
+        with self._render_lock:
+            next_request = None if self._renderer_closed else self._pending_render
+            self._pending_render = None
+            if next_request is None:
+                self._render_in_flight = False
+                return
+            next_future = self._render_executor.submit(
+                self._render_request, next_request
+            )
+            next_future.add_done_callback(self._render_future_done)
+
+    def _apply_render_result(self, result: object) -> None:
+        if not isinstance(result, dict):
+            return
+        sequence = result.get("sequence")
+        image = result.get("image")
+        camera = result.get("camera")
+        if (
+            type(sequence) is not int
+            or sequence != self._latest_requested_sequence
+            or not isinstance(image, QImage)
+            or not isinstance(camera, dict)
+        ):
+            return
+        self.camera_state = camera
         self.last_image = image
         self._update_pixmap()
+
+    def _show_render_error(self, detail: str) -> None:
+        if not self._renderer_closed:
+            self.image.setText(f"MuJoCo渲染失败：{detail}")
 
     def _update_pixmap(self) -> None:
         image = getattr(self, "last_image", None)
@@ -989,7 +1278,7 @@ class EmbeddedMujocoPreview(QGroupBox):
         )
         self.image.setPixmap(pixmap)
 
-    def fit_camera(self, _checked: bool = False, render: bool = True) -> None:
+    def _fit_camera_worker(self) -> None:
         plane = int(mujoco.mjtGeom.mjGEOM_PLANE)
         indices = np.flatnonzero(self.model.geom_type != plane)
         if indices.size:
@@ -1004,17 +1293,23 @@ class EmbeddedMujocoPreview(QGroupBox):
         else:
             self.camera.lookat[:] = self.model.stat.center
             self.camera.distance = max(0.5, 2.4 * float(self.model.stat.extent))
-        if render and hasattr(self, "renderer"):
-            self._render_scene()
+
+    def fit_camera(self, _checked: bool = False, render: bool = True) -> None:
+        if render:
+            relative = (
+                np.zeros(6, dtype=float)
+                if self.last_relative is None else self.last_relative.copy()
+            )
+            self._schedule_render(relative, fit=True)
 
     def reset_camera(self, _checked: bool = False) -> None:
-        self.camera.azimuth = 135.0
-        self.camera.elevation = -22.0
+        self.camera_state["azimuth"] = 135.0
+        self.camera_state["elevation"] = -22.0
         self.fit_camera(render=True)
 
     def set_camera_view(self, azimuth: float, elevation: float) -> None:
-        self.camera.azimuth = azimuth
-        self.camera.elevation = elevation
+        self.camera_state["azimuth"] = float(azimuth)
+        self.camera_state["elevation"] = float(elevation)
         self.fit_camera(render=True)
 
     def eventFilter(self, watched, event) -> bool:
@@ -1031,18 +1326,25 @@ class EmbeddedMujocoPreview(QGroupBox):
                 self.mouse_position = position
                 buttons = event.buttons()
                 if buttons & Qt.LeftButton:
-                    self.camera.azimuth += 0.45 * delta.x()
-                    self.camera.elevation = float(np.clip(
-                        self.camera.elevation - 0.45 * delta.y(), -89.0, 89.0
+                    self.camera_state["azimuth"] += 0.45 * delta.x()
+                    self.camera_state["elevation"] = float(np.clip(
+                        self.camera_state["elevation"] - 0.45 * delta.y(),
+                        -89.0, 89.0,
                     ))
                     self._render_scene()
                     return True
                 if buttons & (Qt.RightButton | Qt.MiddleButton):
-                    scale = max(1.0e-4, self.camera.distance * 0.0015)
-                    angle = math.radians(self.camera.azimuth)
+                    scale = max(
+                        1.0e-4, self.camera_state["distance"] * 0.0015
+                    )
+                    angle = math.radians(self.camera_state["azimuth"])
                     right = np.array([math.cos(angle), math.sin(angle), 0.0])
-                    self.camera.lookat[:] -= delta.x() * scale * right
-                    self.camera.lookat[2] += delta.y() * scale
+                    lookat = np.asarray(self.camera_state["lookat"], dtype=float)
+                    lookat -= delta.x() * scale * right
+                    lookat[2] += delta.y() * scale
+                    self.camera_state["lookat"] = tuple(
+                        float(item) for item in lookat
+                    )
                     self._render_scene()
                     return True
             if event.type() == QEvent.MouseButtonRelease:
@@ -1050,8 +1352,9 @@ class EmbeddedMujocoPreview(QGroupBox):
                 return True
             if event.type() == QEvent.Wheel:
                 steps = event.angleDelta().y() / 120.0
-                self.camera.distance = float(np.clip(
-                    self.camera.distance * math.exp(-0.12 * steps), 0.08, 20.0
+                self.camera_state["distance"] = float(np.clip(
+                    self.camera_state["distance"] * math.exp(-0.12 * steps),
+                    0.08, 20.0,
                 ))
                 self._render_scene()
                 return True
@@ -1062,7 +1365,19 @@ class EmbeddedMujocoPreview(QGroupBox):
         self._update_pixmap()
 
     def close_renderer(self) -> None:
-        self.renderer.close()
+        with self._render_lock:
+            if self._renderer_closed:
+                return
+            self._renderer_closed = True
+            self._pending_render = None
+
+        def close_on_worker() -> None:
+            if self.renderer is not None:
+                self.renderer.close()
+
+        # Context destruction happens on the same thread as render creation.
+        self._render_executor.submit(close_on_worker)
+        self._render_executor.shutdown(wait=True, cancel_futures=False)
 
 
 def receipt_is_fresh(receipt: float, now: float, timeout_s: float) -> bool:
@@ -1246,11 +1561,15 @@ def run_ros_context_operation(context_ok, operation) -> bool:
 class VirtualWidgets:
     value: QLabel
     target: QDoubleSpinBox
+    # Optional keeps older logic-only fakes source-compatible; every real GUI
+    # row owns this single operator-editable planned-target slider.
+    slider: Optional[QSlider] = None
 
 
 @dataclass
 class RealWidgets:
-    slider: QSlider
+    # The real side is an encoder table, never a second target slider set.
+    slider: Optional[QSlider]
     actual: QLabel
     target: QLabel
     error: QLabel
@@ -1293,11 +1612,13 @@ class ArmGuiNode(Node):
         self.latest_hardware: Optional[dict] = None
         self.latest_mujoco: Optional[dict] = None
         self.latest_control_status: Optional[dict] = None
+        self.latest_gravity_status: Optional[dict] = None
         self.latest_collision_result: Optional[dict] = None
         self.last_joint_receipt = 0.0
         self.last_hardware_receipt = 0.0
         self.last_mujoco_receipt = 0.0
         self.last_control_status_receipt = 0.0
+        self.last_gravity_status_receipt = 0.0
         self.last_collision_result_receipt = 0.0
         self.command_source_instance_id = secrets.token_hex(16)
         self.hardware_sequences_by_instance: dict[str, int] = {}
@@ -1311,6 +1632,9 @@ class ArmGuiNode(Node):
         self.create_subscription(String, "/whole_arm/mujoco_mirror_status", self._mujoco_callback, 10)
         self.create_subscription(
             String, "/whole_arm/control_status", self._control_status_callback, 10
+        )
+        self.create_subscription(
+            String, "/whole_arm/gravity_status", self._gravity_status_callback, 10
         )
         self.create_subscription(
             String,
@@ -1388,6 +1712,19 @@ class ArmGuiNode(Node):
         except json.JSONDecodeError:
             pass
 
+    def _gravity_status_callback(self, message: String) -> None:
+        try:
+            value = json.loads(message.data)
+            if (
+                not isinstance(value, dict)
+                or value.get("schema") != GRAVITY_STATUS_SCHEMA
+            ):
+                return
+            self.latest_gravity_status = value
+            self.last_gravity_status_receipt = time.monotonic()
+        except json.JSONDecodeError:
+            pass
+
     def _collision_result_callback(self, message: String) -> None:
         try:
             value = json.loads(message.data)
@@ -1422,12 +1759,22 @@ class ArmGuiNode(Node):
             self.last_control_status_receipt, checked_at, ROUTER_STATUS_TIMEOUT_S
         )
 
+    def gravity_status_fresh(self, now: Optional[float] = None) -> bool:
+        checked_at = time.monotonic() if now is None else now
+        return receipt_is_fresh(
+            self.last_gravity_status_receipt,
+            checked_at,
+            GRAVITY_STATUS_TIMEOUT_S,
+        )
+
     def publish_command(
         self, sequence: int, mode: str, command_targets: list[float],
         virtual_targets: list[float], active_joint_mask: list[bool],
         moving_joint_mask: list[bool],
         activation_epoch: int, config: dict,
         collision_guard_proof: Optional[dict] = None,
+        trajectory_descriptor: Optional[dict] = None,
+        plan_manifest: Optional[dict] = None,
     ) -> None:
         control = config["控制"]
         is_brake = mode == "brake"
@@ -1455,6 +1802,22 @@ class ArmGuiNode(Node):
         if mode == "position":
             if not isinstance(collision_guard_proof, dict):
                 raise ValueError("POSITION命令缺少已批准的碰撞守卫证明")
+            if (
+                not isinstance(trajectory_descriptor, dict)
+                or set(trajectory_descriptor) != {"plan_token_id", "trajectory"}
+            ):
+                raise ValueError("POSITION命令缺少已预演的quintic描述符")
+            if (
+                not isinstance(plan_manifest, dict)
+                or set(plan_manifest)
+                != {"schema", "recipe_sha256", "segment_sha256"}
+                or plan_manifest.get("schema")
+                != "go-m8010-plan-manifest/1.0"
+            ):
+                raise ValueError("POSITION命令缺少不可变分段manifest")
+            payload["schema"] = "go-m8010-gui-command/1.3"
+            payload.update(json.loads(json.dumps(trajectory_descriptor)))
+            payload["plan_manifest"] = json.loads(json.dumps(plan_manifest))
             payload["collision_guard_proof"] = json.loads(
                 json.dumps(collision_guard_proof)
             )
@@ -1506,7 +1869,9 @@ class MainWindow(QMainWindow):
         ]
         control = self.config["控制"]
         self.machine = ModeMachine()
-        self.direction = ArmMode.REAL_TO_SIM
+        # V15.31A exposes only the virtual-first position workflow.  Editing is
+        # non-authorizing and the command stream remains suspended at startup.
+        self.direction = ArmMode.SIM_TO_REAL
         self.hardware_mode = "brake"
         # The candidate is the final, operator-visible virtual pose.  ``targets``
         # remains the exact target of the current physical segment.  Keeping the
@@ -1521,6 +1886,33 @@ class MainWindow(QMainWindow):
         self.moving_joint_mask = [False] * 6
         self.activation_epoch = max(1, time.monotonic_ns() & ((1 << 63) - 1))
         self.actual = [0.0] * 6
+        workflow_limits_rad = tuple(
+            (lower * RAD, upper * RAD) for lower, upper in self.edit_limits
+        )
+        self.workflow_contract = WorkflowState.initialize(
+            self.actual,
+            workflow_limits_rad,
+            PRODUCTION_MODEL_SHA256,
+            session_id="UNBOUND_SESSION",
+            state_instance_id="UNBOUND_STATE_INSTANCE",
+            gravity_config_sha256=GRAVITY_CONFIG_SHA256,
+        )
+        self.preview_requested_by_operator = False
+        self.preview_animation_started_at: Optional[float] = None
+        self.preview_animation_complete = False
+        self.preview_collision_safe = False
+        self.preview_collision_segment_index = 0
+        self.preview_collision_segment_sha256: list[str] = []
+        self.preview_collision_request_segment_by_sequence: dict[int, int] = {}
+        self.preview_frame_index = 0
+        self.preview_pose = tuple(self.actual)
+        self.task_id: Optional[str] = None
+        self.task_started_at: Optional[float] = None
+        self.task_started_wall_utc: Optional[str] = None
+        self.last_task_heartbeat = time.monotonic()
+        self.task_status_labels: dict[str, QLabel] = {}
+        self.motor_status_table: Optional[QTableWidget] = None
+        self.j2_motor_summary: Optional[QLabel] = None
         self.connected = [False] * 6
         self.faulted = [False] * 6
         self.observation_uncertain = [False] * 6
@@ -1541,6 +1933,13 @@ class MainWindow(QMainWindow):
         self.active_collision_proof: Optional[dict] = None
         self.queued_pose_target: Optional[list[float]] = None
         self.queued_joint_indices: list[int] = []
+        self.queued_trajectory_segments: list[TrajectoryPlan] = []
+        self.trajectory_segment_count = 0
+        self.active_trajectory_segment: Optional[TrajectoryPlan] = None
+        self.active_trajectory_segment_index: Optional[int] = None
+        self.active_trajectory_descriptor: Optional[dict] = None
+        self.active_plan_manifest: Optional[dict] = None
+        self.active_trajectory_first_publish_pending = False
         self.active_sequence_joint: Optional[int] = None
         self.last_consumed_collision_sequence = 0
         self.last_collision_popup_signature: Optional[str] = None
@@ -1567,6 +1966,10 @@ class MainWindow(QMainWindow):
         self.virtual_widgets: list[VirtualWidgets] = []
         self.virtual_edit_requested = False
         self.real_widgets: list[RealWidgets] = []
+        self.planned_mujoco_preview: Optional[EmbeddedMujocoPreview] = None
+        self.actual_mujoco_preview: Optional[EmbeddedMujocoPreview] = None
+        # Compatibility alias for old diagnostics; it always names the plan
+        # renderer and is never fed encoder state.
         self.mujoco_preview: Optional[EmbeddedMujocoPreview] = None
         self.setWindowTitle(
             "纯仿真零位调姿（不连接真机）"
@@ -1602,22 +2005,37 @@ class MainWindow(QMainWindow):
         columns = QHBoxLayout()
         columns.addWidget(self._virtual_panel(), 2)
         columns.addWidget(self._real_panel(), 3)
-        try:
-            self.mujoco_preview = EmbeddedMujocoPreview(
-                self.node.embedded_model_path,
-                self.node.embedded_session_pose_deg,
-            )
-            columns.addWidget(self.mujoco_preview, 4)
-        except Exception as exc:
-            unavailable = QGroupBox("MuJoCo实时三维预览")
-            unavailable_layout = QVBoxLayout(unavailable)
-            unavailable_label = QLabel(f"内嵌模型不可用：{exc}")
-            unavailable_label.setWordWrap(True)
-            unavailable_label.setAlignment(Qt.AlignCenter)
-            unavailable_layout.addWidget(unavailable_label)
-            columns.addWidget(unavailable, 4)
-        outer.addLayout(columns, 1)
+        outer.addLayout(columns)
+
+        # Two independent renderers deliberately own different MjData objects.
+        # The planned side consumes only q_plan_target/q_plan_trajectory; the
+        # actual side consumes only fresh encoder q_actual.
+        twins = QHBoxLayout()
+        for attribute, title in (
+            ("planned_mujoco_preview", "计划／虚拟机械臂（不代表真机）"),
+            ("actual_mujoco_preview", "现实机械臂数字孪生（仅编码器）"),
+        ):
+            try:
+                preview = EmbeddedMujocoPreview(
+                    self.node.embedded_model_path,
+                    self.node.embedded_session_pose_deg,
+                    title,
+                )
+                setattr(self, attribute, preview)
+                twins.addWidget(preview, 1)
+            except Exception as exc:
+                unavailable = QGroupBox(title)
+                unavailable_layout = QVBoxLayout(unavailable)
+                unavailable_label = QLabel(f"内嵌模型不可用：{exc}")
+                unavailable_label.setWordWrap(True)
+                unavailable_label.setAlignment(Qt.AlignCenter)
+                unavailable_layout.addWidget(unavailable_label)
+                twins.addWidget(unavailable, 1)
+        self.mujoco_preview = self.planned_mujoco_preview
+        outer.addLayout(twins, 1)
         outer.addWidget(self._control_panel())
+        outer.addWidget(self._task_status_panel())
+        outer.addWidget(self._motor_status_panel())
 
         self.safety_notice = QLabel(
             "安全状态：等待控制状态流与命令路由确认；控制请求不代表硬件已执行"
@@ -1650,7 +2068,7 @@ class MainWindow(QMainWindow):
             "QPushButton { min-height: 32px; padding: 3px 10px; }"
             "QLabel { min-height: 20px; }"
         )
-        self._set_virtual_editable(False)
+        self._set_virtual_editable(True)
 
     def _fit_window_to_available_screen(self) -> None:
         """Keep the GUI inside the usable desktop without shortening sliders."""
@@ -1675,16 +2093,18 @@ class MainWindow(QMainWindow):
         return slider
 
     def _virtual_panel(self) -> QGroupBox:
-        box = QGroupBox("虚拟机械臂（目标／仿真）")
+        box = QGroupBox("计划目标（唯一可编辑滑条组）")
         layout = QGridLayout(box)
-        layout.setColumnStretch(2, 1)
+        layout.setColumnStretch(1, 1)
         layout.addWidget(QLabel("关节"), 0, 0)
-        layout.addWidget(QLabel("角度"), 0, 1)
-        layout.addWidget(QLabel("精确输入"), 0, 2)
+        layout.addWidget(QLabel("计划目标滑条"), 0, 1)
+        layout.addWidget(QLabel("目标角度"), 0, 2)
+        layout.addWidget(QLabel("精确输入"), 0, 3)
         for index, label_text in enumerate(JOINT_LABELS):
             edit_bounds = self.edit_limits[index]
             absolute_bounds = self.absolute_limits[index]
             value = QLabel("+0.00°")
+            slider = self._slider(index, edit_bounds)
             spin = QDoubleSpinBox()
             spin.setRange(*edit_bounds)
             spin.setDecimals(2)
@@ -1698,29 +2118,88 @@ class MainWindow(QMainWindow):
                 f"沿本次运动路径预留{COLLISION_MARGIN_DEG:.0f}°碰撞余量"
             )
             spin.setToolTip(limit_text)
+            slider.setToolTip(limit_text)
+            slider.valueChanged.connect(
+                lambda hundredths, i=index: self._virtual_slider_changed(
+                    i, hundredths
+                )
+            )
             spin.valueChanged.connect(lambda degrees, i=index: self._virtual_spin_changed(i, degrees))
             row = index + 1
             layout.addWidget(QLabel(label_text), row, 0)
-            layout.addWidget(value, row, 1)
-            layout.addWidget(spin, row, 2)
-            self.virtual_widgets.append(VirtualWidgets(value, spin))
+            layout.addWidget(slider, row, 1)
+            layout.addWidget(value, row, 2)
+            layout.addWidget(spin, row, 3)
+            self.virtual_widgets.append(VirtualWidgets(value, spin, slider))
         return box
 
     def _real_panel(self) -> QGroupBox:
         box = QGroupBox("现实机械臂（编码器反馈）")
         layout = QGridLayout(box)
-        layout.setColumnStretch(1, 1)
-        for column, text in enumerate(("关节", "实际滑条", "实际角度", "目标角度", "位置误差", "状态")):
+        for column, text in enumerate(("关节", "实际角度", "硬件命令", "位置误差", "状态")):
             layout.addWidget(QLabel(text), 0, column)
         for index, label_text in enumerate(JOINT_LABELS):
-            slider = self._slider(index)
-            slider.setEnabled(False)
-            widgets = RealWidgets(slider, QLabel("+0.00°"), QLabel("+0.00°"), QLabel("+0.00°"), QLabel("未连接"))
+            widgets = RealWidgets(None, QLabel("+0.00°"), QLabel("+0.00°"), QLabel("+0.00°"), QLabel("未连接"))
             row = index + 1
             layout.addWidget(QLabel(label_text), row, 0)
-            for column, widget in enumerate((widgets.slider, widgets.actual, widgets.target, widgets.error, widgets.state), 1):
+            for column, widget in enumerate((widgets.actual, widgets.target, widgets.error, widgets.state), 1):
                 layout.addWidget(widget, row, column)
             self.real_widgets.append(widgets)
+        return box
+
+    def _task_status_panel(self) -> QGroupBox:
+        box = QGroupBox("当前任务状态")
+        layout = QGridLayout(box)
+        fields = (
+            ("任务ID", "task_id"), ("当前状态", "state"),
+            ("当前阶段", "phase"), ("进度", "progress"),
+            ("开始时间", "started"), ("已用时间", "elapsed"),
+            ("预计剩余", "remaining"), ("最后控制心跳", "heartbeat"),
+            ("最后编码器反馈", "encoder"), ("当前目标", "target"),
+            ("当前实际", "actual"), ("最大位置误差", "max_error"),
+            ("当前最大温度", "max_temperature"),
+            ("当前热状态", "thermal"), ("失败原因", "failure"),
+        )
+        for index, (title, key) in enumerate(fields):
+            row = index // 3
+            column = (index % 3) * 2
+            layout.addWidget(QLabel(title + "："), row, column)
+            value = QLabel("—")
+            value.setWordWrap(True)
+            layout.addWidget(value, row, column + 1)
+            self.task_status_labels[key] = value
+        return box
+
+    def _motor_status_panel(self) -> QGroupBox:
+        box = QGroupBox("物理电机状态（七颗电机；力矩侧别与单位明确）")
+        layout = QVBoxLayout(box)
+        headers = (
+            "逻辑关节", "物理电机", "ID", "在线", "新鲜度ms", "当前模式",
+            "原始位置rad", "逻辑位置°", "速度°/s",
+            "tau反馈\nrotor N·m", "估算关节力矩\nN·m", "温度°C",
+            "merror", "热状态", "控制状态",
+        )
+        table = QTableWidget(len(MOTOR_NAMES), len(headers))
+        table.setHorizontalHeaderLabels(list(headers))
+        table.setVerticalHeaderLabels(list(MOTOR_NAMES))
+        table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        table.setSelectionMode(QAbstractItemView.NoSelection)
+        table.setAlternatingRowColors(True)
+        table.setMinimumHeight(250)
+        for row, name in enumerate(MOTOR_NAMES):
+            for column in range(len(headers)):
+                table.setItem(row, column, QTableWidgetItem("—"))
+            table.item(row, 0).setText(MOTOR_LOGICAL_JOINT[name])
+            table.item(row, 1).setText(name)
+            table.item(row, 2).setText(MOTOR_BUS_LOCAL_ID[name])
+        table.resizeColumnsToContents()
+        self.motor_status_table = table
+        layout.addWidget(table)
+        self.j2_motor_summary = QLabel(
+            "J2：等待双电机反馈（逻辑实际／目标／误差／同步误差／力矩分担／温差）"
+        )
+        self.j2_motor_summary.setWordWrap(True)
+        layout.addWidget(self.j2_motor_summary)
         return box
 
     def _button(self, text: str, callback, object_name: str = "") -> QPushButton:
@@ -1731,62 +2210,47 @@ class MainWindow(QMainWindow):
         return button
 
     def _control_panel(self) -> QGroupBox:
-        box = QGroupBox("控制模式与安全操作")
+        box = QGroupBox("固定位置模式：虚拟先行，明确确认后才可下发现实")
         layout = QGridLayout(box)
         buttons = [
-            ("现实驱动虚拟", self._real_to_sim), ("虚拟驱动现实", self._sim_to_real),
-            ("位置模式／重新接管（先保持当前角度）", self._position_mode),
-            ("到位后固定保持开（位置伺服始终有效）", self._fixed_hold_after_arrival_on),
-            ("到位后固定保持关（位置伺服始终有效）", self._fixed_hold_after_arrival_off),
-            ("可拖动模式（普通脱力）", self._drag_mode),
-            ("重新接管并保持当前位置", self._hold_current), ("设置初始化姿态", self._save_initial_pose),
-            ("回到初始化姿态（仅虚拟预演）", self._return_initial_pose),
-            ("确认执行现实轨迹", self._execute_target),
+            ("预演轨迹", self._start_virtual_preview),
+            ("下发到现实", self._execute_target),
+            ("恢复初始化姿态", self._return_initial_pose),
+            ("停止并制动", self._emergency_brake),
         ]
         for index, (text, callback) in enumerate(buttons):
             button = self._button(text, callback)
-            if text == "设置初始化姿态":
-                button.setEnabled(not self.node.initial_pose_read_only)
-                if self.node.initial_pose_read_only:
-                    button.setToolTip("生产初始化姿态受只读保护，禁止由GUI覆盖")
-            if text == "确认执行现实轨迹":
+            if text == "下发到现实":
                 self.execute_target_button = button
                 button.setEnabled(False)
-                button.setToolTip("必须先获得与当前虚拟候选姿态完全匹配的SAFE预演结果")
-            layout.addWidget(button, index // 5, index % 5)
-        emergency = self._button(
-            "紧急制动／撤销驱动（需可靠支撑）",
-            self._emergency_brake,
-        )
-        emergency.setStyleSheet(
-            "background: #4a0000; color: #ffeb3b; font-weight: bold; min-height: 46px;"
-        )
-        layout.addWidget(emergency, 2, 0, 1, 5)
-        stop = self._button("停止轨迹并保持（承重HOLD）", self._stop)
-        stop.setStyleSheet("background: #b71c1c; color: white; font-weight: bold; min-height: 46px;")
-        layout.addWidget(stop, 3, 0, 1, 5)
+                button.setToolTip("必须先完成与当前候选完全匹配的轨迹预演")
+            if text == "停止并制动":
+                button.setStyleSheet(
+                    "background: #4a0000; color: #ffeb3b; font-weight: bold; min-height: 46px;"
+                )
+            layout.addWidget(button, 0, index)
         self.mode_label = QLabel(
-            "当前方向：现实驱动虚拟　｜　控制请求：制动　｜　硬件确认：等待状态反馈"
+            "当前固定模式：位置控制　｜　控制请求：制动　｜　硬件确认：等待状态反馈"
         )
         self.mode_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.mode_label, 4, 0, 1, 5)
+        layout.addWidget(self.mode_label, 1, 0, 1, 4)
         servo_notice = QLabel(
-            "说明：位置伺服无论“到位后固定保持”开或关，都会产生到达和维持目标所需的驱动力；"
-            "“关”不是物理脱力。普通脱力只能使用“可拖动模式”；紧急撤销驱动请使用独立紧急制动按钮。"
+            "说明：调整计划滑条只改变虚拟目标，不会发布真实运动。"
+            "停止并制动会撤销位置伺服和承重保持，重载关节必须有可靠机械支撑。"
         )
         servo_notice.setWordWrap(True)
-        layout.addWidget(servo_notice, 5, 0, 1, 5)
+        layout.addWidget(servo_notice, 2, 0, 1, 4)
         self.workflow_status = QLabel(
             "工作流：等待设置虚拟候选姿态；未授权现实运动"
         )
         self.workflow_status.setWordWrap(True)
         self.workflow_status.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.workflow_status, 6, 0, 1, 5)
+        layout.addWidget(self.workflow_status, 3, 0, 1, 4)
         self.workflow_progress = QProgressBar()
         self.workflow_progress.setRange(0, 100)
         self.workflow_progress.setValue(0)
         self.workflow_progress.setFormat("虚拟预演未开始")
-        layout.addWidget(self.workflow_progress, 7, 0, 1, 5)
+        layout.addWidget(self.workflow_progress, 4, 0, 1, 4)
         return box
 
     def _set_workflow_state(
@@ -1815,6 +2279,17 @@ class MainWindow(QMainWindow):
         self.approved_candidate_sha256 = None
         self.approved_candidate_session_id = None
         self.approved_candidate_state_instance_id = None
+        self.preview_requested_by_operator = False
+        self.preview_animation_started_at = None
+        self.preview_animation_complete = False
+        self.preview_collision_safe = False
+        self.preview_collision_segment_index = 0
+        self.preview_collision_segment_sha256 = []
+        self.preview_collision_request_segment_by_sequence = {}
+        if hasattr(self, "workflow_contract"):
+            self.workflow_contract = self.workflow_contract.invalidate_preview(
+                clear_trajectory=True
+            )
         # A late result from a superseded/edited candidate must never re-enable
         # the real execution button.
         self.latest_collision_preview_sequence = None
@@ -1826,10 +2301,13 @@ class MainWindow(QMainWindow):
         except (AttributeError, TypeError, ValueError):
             return False
         return bool(
-            self.collision_preview_state == "safe"
+            self.preview_requested_by_operator
+            and self.preview_animation_complete
+            and self.collision_preview_state == "safe"
             and self.approved_candidate_sha256 == digest
             and self.approved_candidate_session_id == self.session_id
             and self.approved_candidate_state_instance_id == self.state_instance_id
+            and self.workflow_contract.current_plan_token is not None
         )
 
     def _refresh_execute_target_enabled(self) -> None:
@@ -1877,6 +2355,8 @@ class MainWindow(QMainWindow):
                 and not edit_blocked
             )
             set_widget_enabled_if_changed(widgets.target, joint_enabled)
+            if widgets.slider is not None:
+                set_widget_enabled_if_changed(widgets.slider, joint_enabled)
             if self.virtual_edit_requested and edit_blocked:
                 text = (
                     "已有POSITION运动、逐轴安全序列或碰撞执行检查正在进行；"
@@ -1895,6 +2375,8 @@ class MainWindow(QMainWindow):
                 )
                 text = limit_text
             set_widget_tooltip_if_changed(widgets.target, text)
+            if widgets.slider is not None:
+                set_widget_tooltip_if_changed(widgets.slider, text)
         self._refresh_execute_target_enabled()
 
     def _record_virtual_target(self, index: int, target_rad: float) -> None:
@@ -1902,6 +2384,21 @@ class MainWindow(QMainWindow):
 
         self.candidate_targets[index] = target_rad
         self.targets[index] = target_rad
+        try:
+            updated_workflow = self.workflow_contract.change_plan_target(
+                self.candidate_targets
+            )
+        except ContractViolation as exc:
+            self._notify(f"计划目标无效：{exc}", "warning")
+            return
+        if (
+            updated_workflow is self.workflow_contract
+            and getattr(self.workflow_contract, "q_plan_target", None)
+            == tuple(self.candidate_targets)
+        ):
+            self._show_targets_on_virtual()
+            return
+        self.workflow_contract = updated_workflow
         # Candidate selection remains visible even if a hardware connection is
         # absent.  ``pending_target_joint_mask`` is reserved for the one-axis
         # physical segment created only after explicit confirmation.
@@ -1919,7 +2416,7 @@ class MainWindow(QMainWindow):
             10,
         )
         self._show_targets_on_virtual()
-        self.collision_preview_timer.start(COLLISION_PREVIEW_DEBOUNCE_MS)
+        self.collision_preview_timer.stop()
 
     def _virtual_spin_changed(self, index: int, degrees: float) -> None:
         if (
@@ -1933,33 +2430,279 @@ class MainWindow(QMainWindow):
         widgets.value.setText(f"{degrees:+.2f}°")
         self._record_virtual_target(index, degrees * RAD)
 
+    def _virtual_slider_changed(self, index: int, hundredths_degree: int) -> None:
+        """Update only the planned candidate; never publish a motor command."""
+
+        if (
+            self.direction is not ArmMode.SIM_TO_REAL
+            or self.hardware_mode == "position"
+            or self.pending_collision_execute_sequence is not None
+            or self.queued_pose_target is not None
+        ):
+            return
+        self._record_virtual_target(index, float(hundredths_degree) * 0.01 * RAD)
+
+    def _start_virtual_preview(self) -> None:
+        """Build and animate the exact segmented quintic execution recipe."""
+
+        if not self._require_control_feedback(
+            "轨迹预演需要六轴新鲜编码器和硬件状态。", require_all=True
+        ):
+            return
+        if not self.session_id or not source_instance_id_valid(self.state_instance_id):
+            self._notify("当前session/状态实例无效，不能建立PLAN_TOKEN。", "warning")
+            return
+        self._clear_candidate_approval()
+        self.preview_requested_by_operator = True
+        try:
+            limits_rad = tuple(
+                (lower * RAD, upper * RAD) for lower, upper in self.edit_limits
+            )
+            workflow = self.workflow_contract.replace_authority(
+                joint_limits_rad=limits_rad,
+                model_sha256=PRODUCTION_MODEL_SHA256,
+                session_id=self.session_id,
+                state_instance_id=self.state_instance_id,
+                gravity_config_sha256=GRAVITY_CONFIG_SHA256,
+            )
+            workflow = workflow.update_actual(self.actual)
+            workflow = workflow.change_plan_target(self.candidate_targets)
+            control = self.config["控制"]
+            trajectory = generate_segmented_quintic_recipe(
+                workflow.q_actual,
+                workflow.q_plan_target,
+                workflow.joint_limits_rad,
+                maximum_velocity_rad_s=(
+                    float(control["最大速度_度每秒"]) * RAD
+                ),
+                maximum_acceleration_rad_s2=(
+                    float(control["最大加速度_度每二次方秒"]) * RAD
+                ),
+                maximum_segment_delta_rad=(
+                    float(COLLISION_EXECUTE_SEGMENT_MAX_DEG) * RAD
+                ),
+                maximum_sample_period_s=0.01,
+            )
+            self.workflow_contract = workflow.set_plan_trajectory(trajectory)
+        except (ContractViolation, KeyError, TypeError, ValueError) as exc:
+            self.preview_requested_by_operator = False
+            self._set_workflow_state(
+                "unsafe", f"轨迹解算失败：{exc}", 0
+            )
+            return
+        self.task_id = secrets.token_hex(8)
+        self.task_started_at = time.monotonic()
+        self.task_started_wall_utc = datetime.now(timezone.utc).isoformat()
+        self.last_task_heartbeat = self.task_started_at
+        self.preview_animation_started_at = self.task_started_at
+        self.preview_animation_complete = False
+        self.preview_collision_safe = False
+        self.preview_frame_index = 0
+        self.preview_pose = trajectory.start_rad
+        self._set_workflow_state(
+            "previewing",
+            f"正在进行虚拟预演；预计{trajectory.profile.duration_s:.2f}秒",
+            0,
+        )
+        self._request_collision_preview()
+
+    def _update_preview_animation(self, now: float) -> None:
+        if (
+            not self.preview_requested_by_operator
+            or self.preview_animation_started_at is None
+            or self.preview_animation_complete
+            or self.workflow_contract.q_plan_trajectory is None
+        ):
+            return
+        trajectory = self.workflow_contract.q_plan_trajectory
+        elapsed = max(0.0, now - self.preview_animation_started_at)
+        sample_times = [sample.time_s for sample in trajectory.samples]
+        index = min(
+            len(trajectory.samples) - 1,
+            max(0, bisect.bisect_right(sample_times, elapsed) - 1),
+        )
+        self.preview_frame_index = max(self.preview_frame_index, index)
+        sample = trajectory.samples[self.preview_frame_index]
+        self.preview_pose = sample.q_rad
+        self.last_task_heartbeat = now
+        progress = round(100.0 * sample.time_s / trajectory.profile.duration_s)
+        if self.preview_frame_index >= len(trajectory.samples) - 1:
+            self.preview_animation_complete = True
+            self.preview_pose = trajectory.target_rad
+            self._try_finalize_preview(now)
+        else:
+            self._set_workflow_state(
+                "previewing",
+                f"正在进行虚拟预演；{sample.time_s:.2f}/"
+                f"{trajectory.profile.duration_s:.2f}秒",
+                progress,
+            )
+
+    def _update_planned_execution_pose(self, now_ns: int) -> None:
+        """Render the exact dispatched sample, never an endpoint shortcut."""
+
+        segment = self.active_trajectory_segment
+        descriptor = self.active_trajectory_descriptor
+        if not isinstance(segment, TrajectoryPlan) or not isinstance(
+            descriptor, dict
+        ):
+            return
+        trajectory = descriptor.get("trajectory")
+        if not isinstance(trajectory, dict):
+            return
+        try:
+            index = trajectory_sample_index_at(
+                now_ns,
+                execute_at_monotonic_ns=trajectory["execute_at_monotonic_ns"],
+                duration_ns=trajectory["duration_ns"],
+                interval_count=trajectory["interval_count"],
+            )
+        except (ContractViolation, KeyError):
+            return
+        if index >= len(segment.samples):
+            return
+        self.preview_pose = segment.samples[index].q_rad
+
+    def _current_preview_checks(self, now: float) -> PreviewChecks:
+        hardware = self.node.latest_hardware or {}
+        per_motor = hardware.get("per_motor", {})
+        communication_pass = bool(
+            isinstance(per_motor, dict)
+            and all(
+                isinstance(per_motor.get(name), dict)
+                and per_motor[name].get("fresh") is True
+                and per_motor[name].get("communication_ok") is True
+                and per_motor[name].get("merror") == 0
+                for name in MOTOR_NAMES
+            )
+        )
+        thermal_allowed_states = {"NORMAL", "WARNING"}
+        thermal_pass = bool(
+            communication_pass
+            and all(
+                isinstance(per_motor[name].get("temperature_c"), (int, float))
+                and float(per_motor[name]["temperature_c"]) < 60.0
+                and per_motor[name].get("thermal_state") in thermal_allowed_states
+                for name in MOTOR_NAMES
+            )
+        )
+        gravity = self.node.latest_gravity_status or {}
+        gravity_pass = bool(
+            self.node.gravity_status_fresh(now)
+            and gravity_status_authorizes_hardware(
+                gravity,
+                session_id=self.session_id,
+                state_instance_id=self.state_instance_id,
+                now_monotonic_ns=time.monotonic_ns(),
+            )
+        )
+        trajectory = self.workflow_contract.q_plan_trajectory
+        exact_recipe_proof = bool(
+            isinstance(trajectory, TrajectoryRecipe)
+            and getattr(self, "preview_collision_segment_sha256", [])
+            == [segment.sha256 for segment in trajectory.segments]
+        )
+        return PreviewChecks(
+            trajectory_pass=bool(
+                self.preview_animation_complete
+                and isinstance(trajectory, TrajectoryRecipe)
+            ),
+            limits_pass=isinstance(trajectory, TrajectoryRecipe),
+            collision_pass=bool(self.preview_collision_safe and exact_recipe_proof),
+            gravity_pass=gravity_pass,
+            thermal_pass=thermal_pass,
+            feedback_fresh=self.node.control_streams_fresh(now),
+            communication_pass=communication_pass,
+        )
+
+    def _try_finalize_preview(self, now: Optional[float] = None) -> None:
+        checked_at = time.monotonic() if now is None else now
+        if (
+            not self.preview_requested_by_operator
+            or not self.preview_animation_complete
+            or not self.preview_collision_safe
+            or self.workflow_contract.q_plan_trajectory is None
+        ):
+            return
+        checks = self._current_preview_checks(checked_at)
+        if not checks.complete_success:
+            failed = [name for name, passed in checks.as_dict().items() if not passed]
+            self.workflow_contract = self.workflow_contract.invalidate_preview()
+            self._set_workflow_state(
+                "blocked",
+                "预演完成但现实下发被阻止：" + "、".join(failed),
+                100,
+            )
+            return
+        try:
+            self.workflow_contract = self.workflow_contract.accept_successful_preview(
+                self.workflow_contract.q_plan_trajectory,
+                checks,
+                created_monotonic_ns=time.monotonic_ns(),
+                nonce=secrets.token_hex(16),
+                actual_tolerance_rad=PLAN_ACTUAL_DRIFT_TOLERANCE_RAD,
+            )
+        except ContractViolation as exc:
+            self._set_workflow_state("stale", f"PLAN_TOKEN签发失败：{exc}", 0)
+            return
+        self._set_workflow_state(
+            "safe", "预演通过，等待用户下发；PLAN_TOKEN已锁定", 100
+        )
+
     def _new_collision_request(self, kind: str) -> Optional[dict]:
-        if kind not in {"preview", "pose_preview", "execute"}:
+        if kind not in {"preview", "pose_preview", "plan_preview", "execute"}:
             raise ValueError("碰撞检查类型无效")
         hardware = self.node.latest_hardware
         now_ns = time.monotonic_ns()
-        target_values = (
-            self.targets if kind == "execute" else self.candidate_targets
-        )
-        selected_mask = (
-            self.pending_target_joint_mask
-            if kind == "execute" else self.candidate_joint_mask
-        )
-        moving_indices = [
-            index
-            for index, pending in enumerate(selected_mask)
-            if pending
-        ]
+        plan_segment = None
+        if kind == "plan_preview":
+            recipe = self.workflow_contract.q_plan_trajectory
+            segment_index = getattr(self, "preview_collision_segment_index", -1)
+            if (
+                not isinstance(recipe, TrajectoryRecipe)
+                or type(segment_index) is not int
+                or not 0 <= segment_index < len(recipe.segments)
+            ):
+                return None
+            plan_segment = recipe.segments[segment_index]
+            target_values = plan_segment.target_rad
+            start_values = plan_segment.start_rad
+            moving_indices = [
+                index
+                for index, (source, target) in enumerate(
+                    zip(plan_segment.start_rad, plan_segment.target_rad)
+                )
+                if source != target
+            ]
+        else:
+            target_values = (
+                self.targets if kind == "execute" else self.candidate_targets
+            )
+            selected_mask = (
+                self.pending_target_joint_mask
+                if kind == "execute" else self.candidate_joint_mask
+            )
+            moving_indices = [
+                index
+                for index, pending in enumerate(selected_mask)
+                if pending
+            ]
+            start_values = None
         if (
             self.direction is not ArmMode.SIM_TO_REAL
             or not self.session_id
             or not source_instance_id_valid(self.state_instance_id)
             or not self.node.control_streams_fresh()
-            or self.command_stream_suspended
-            # Each proof authorizes exactly one physical swept segment.  A
-            # complete virtual pose is decomposed by _begin_next_queued_segment.
             or not moving_indices
-            or (kind != "pose_preview" and len(moving_indices) != 1)
+            or not hardware_state_contract_valid(hardware)
+            or hardware["session_id"] != self.session_id
+            or hardware["state_instance_id"] != self.state_instance_id
+        ):
+            return None
+        if kind == "execute" and (
+            self.command_stream_suspended
+            # Each execute proof authorizes exactly one physical swept segment.
+            or len(moving_indices) != 1
             or not collision_motion_state_ready(
                 hardware,
                 self.command_targets,
@@ -1967,14 +2710,31 @@ class MainWindow(QMainWindow):
                 self.hardware_mode,
                 now_ns=now_ns,
             )
-            or hardware["session_id"] != self.session_id
-            or hardware["state_instance_id"] != self.state_instance_id
+        ):
+            return None
+        if kind in {"preview", "plan_preview"} and len(moving_indices) != 1:
+            return None
+        if kind == "plan_preview" and not collision_motion_state_ready(
+            hardware,
+            hardware["position_rad"],
+            [True] * 6,
+            "hold",
+            now_ns=now_ns,
         ):
             return None
         if not moving_targets_within_model_limits(
             target_values, [True] * 6, self.edit_limits
         ):
             return None
+        active_segment = getattr(self, "active_trajectory_segment", None)
+        if start_values is None:
+            start_values = (
+                active_segment.start_rad
+                if kind == "execute" and isinstance(active_segment, TrajectoryPlan)
+                else self.command_targets
+                if kind == "execute"
+                else hardware["position_rad"]
+            )
         self.collision_request_sequence += 1
         payload = {
             "schema": "go-m8010-collision-guard-request/1.0",
@@ -1988,14 +2748,16 @@ class MainWindow(QMainWindow):
             "moving_joint_mask": [
                 index in moving_indices for index in range(6)
             ],
-            "start_relative_rad": [
-                float(value) for value in hardware["position_rad"]
-            ],
+            "start_relative_rad": [float(value) for value in start_values],
             "target_relative_rad": [float(value) for value in target_values],
             "target_sha256": collision_target_sha256(target_values),
             "collision_margin_deg": COLLISION_MARGIN_DEG,
         }
         self.collision_requests[self.collision_request_sequence] = payload
+        if kind == "plan_preview":
+            self.preview_collision_request_segment_by_sequence[
+                self.collision_request_sequence
+            ] = self.preview_collision_segment_index
         # Results are processed monotonically; bound stale request memory too.
         for sequence in sorted(self.collision_requests)[:-16]:
             self.collision_requests.pop(sequence, None)
@@ -2016,14 +2778,29 @@ class MainWindow(QMainWindow):
                 "idle", "候选姿态与当前锁定目标相同，无需执行", 0
             )
             return
-        # Multi-joint editing checks the final pose immediately but never
-        # grants motion authority.  Execute still uses fresh one-joint path
-        # proofs for every physical segment.
-        request = self._new_collision_request(
-            "preview" if moving_count == 1 else "pose_preview"
-        )
+        workflow = getattr(self, "workflow_contract", None)
+        trajectory = getattr(workflow, "q_plan_trajectory", None)
+        if isinstance(trajectory, TrajectoryRecipe):
+            segment_index = getattr(self, "preview_collision_segment_index", 0)
+            if segment_index >= len(trajectory.segments):
+                self.preview_collision_safe = True
+                self.approved_candidate_sha256 = collision_target_sha256(
+                    self.candidate_targets
+                )
+                self.approved_candidate_session_id = self.session_id
+                self.approved_candidate_state_instance_id = self.state_instance_id
+                if self.preview_animation_complete:
+                    self._try_finalize_preview()
+                return
+            request_kind = "plan_preview"
+        else:
+            # Compatibility fallback for isolated legacy logic tests.  The
+            # production V15.31A path always has an immutable recipe here.
+            request_kind = "preview" if moving_count == 1 else "pose_preview"
+            segment_index = 0
+        request = self._new_collision_request(request_kind)
         if request is None:
-            self._clear_candidate_approval()
+            self.preview_collision_safe = False
             self._set_workflow_state(
                 "waiting_hardware",
                 "候选姿态已在虚拟机械臂中加载；"
@@ -2033,9 +2810,14 @@ class MainWindow(QMainWindow):
             return
         self.latest_collision_preview_sequence = request["request_sequence"]
         self.collision_preview_started_at = time.monotonic()
+        total_segments = (
+            len(trajectory.segments)
+            if isinstance(trajectory, TrajectoryRecipe) else 1
+        )
         self._set_workflow_state(
             "solving",
-            f"正在解算候选姿态（请求{request['request_sequence']}）；"
+            f"正在解算预演分段{segment_index + 1}/{total_segments}"
+            f"（请求{request['request_sequence']}）；"
             "结果出来前现实执行保持禁用",
             None,
         )
@@ -2070,6 +2852,13 @@ class MainWindow(QMainWindow):
         self.collision_preview_timer.stop()
         self.queued_pose_target = None
         self.queued_joint_indices = []
+        self.queued_trajectory_segments = []
+        self.trajectory_segment_count = 0
+        self.active_trajectory_segment = None
+        self.active_trajectory_segment_index = None
+        self.active_trajectory_descriptor = None
+        self.active_plan_manifest = None
+        self.active_trajectory_first_publish_pending = False
         self.active_sequence_joint = None
         clear_approval = getattr(self, "_clear_candidate_approval", None)
         if clear_approval is not None:
@@ -2098,28 +2887,55 @@ class MainWindow(QMainWindow):
             or self.pending_collision_execute_sequence is not None
         ):
             return
-        while self.queued_joint_indices:
-            index = self.queued_joint_indices[0]
-            final_target = self.queued_pose_target[index]
-            delta = final_target - self.command_targets[index]
-            if abs(delta) <= TARGET_SELECTION_DEADBAND_RAD:
-                self.queued_joint_indices.pop(0)
-                continue
-            maximum_segment = math.radians(COLLISION_EXECUTE_SEGMENT_MAX_DEG)
-            target = self.command_targets[index] + math.copysign(
-                min(abs(delta), maximum_segment), delta
+        while self.queued_trajectory_segments:
+            segment = self.queued_trajectory_segments.pop(0)
+            changed = [
+                index
+                for index, (source, target) in enumerate(
+                    zip(segment.start_rad, segment.target_rad)
+                )
+                if source != target
+            ]
+            if len(changed) != 1 or any(
+                abs(source - command) > 1.0e-12
+                for source, command in zip(
+                    segment.start_rad, self.command_targets
+                )
+            ):
+                self._notify(
+                    "已预演分段与当前锁定目标不再一致；剩余计划已作废。",
+                    "warning",
+                )
+                self._cancel_queued_pose(restore_command_target=True)
+                return
+            index = changed[0]
+            self.active_trajectory_segment = segment
+            self.active_trajectory_segment_index = (
+                self.trajectory_segment_count
+                - len(self.queued_trajectory_segments)
+                - 1
             )
-            if abs(delta) <= maximum_segment + 1.0e-12:
-                self.queued_joint_indices.pop(0)
-            self.targets = list(self.command_targets)
-            self.targets[index] = target
+            self.preview_pose = segment.start_rad
+            self.targets = list(segment.target_rad)
             self.pending_target_joint_mask = [False] * 6
             self.pending_target_joint_mask[index] = True
             self.active_sequence_joint = index
+            self.queued_joint_indices = [
+                next(
+                    joint
+                    for joint, (source, target) in enumerate(
+                        zip(queued.start_rad, queued.target_rad)
+                    )
+                    if source != target
+                )
+                for queued in self.queued_trajectory_segments
+            ]
             self._show_targets_on_virtual()
             if self._request_collision_execute():
                 self._notify(
-                    f"虚拟目标已拆分：正在检查并执行 J{index + 1}，"
+                    f"正在检查已预演分段"
+                    f"{self.active_trajectory_segment_index + 1}/"
+                    f"{self.trajectory_segment_count}：J{index + 1}，"
                     "其余关节保持原锁定角度。",
                     "info",
                 )
@@ -2302,6 +3118,87 @@ class MainWindow(QMainWindow):
             return
         self.last_consumed_collision_sequence = sequence
         kind = request["kind"]
+        if kind == "plan_preview":
+            if sequence != getattr(self, "latest_collision_preview_sequence", None):
+                return
+            workflow = getattr(self, "workflow_contract", None)
+            recipe = getattr(workflow, "q_plan_trajectory", None)
+            segment_by_sequence = getattr(
+                self, "preview_collision_request_segment_by_sequence", {}
+            )
+            segment_index = segment_by_sequence.get(sequence)
+            candidate_still_matches = bool(
+                isinstance(recipe, TrajectoryRecipe)
+                and type(segment_index) is int
+                and segment_index
+                == getattr(self, "preview_collision_segment_index", -1)
+                and 0 <= segment_index < len(recipe.segments)
+                and request["session_id"] == self.session_id
+                and request["state_instance_id"] == self.state_instance_id
+                and collision_target_sha256(self.candidate_targets)
+                == collision_target_sha256(recipe.target_rad)
+                and tuple(request["start_relative_rad"])
+                == recipe.segments[segment_index].start_rad
+                and tuple(request["target_relative_rad"])
+                == recipe.segments[segment_index].target_rad
+            )
+            if not candidate_still_matches:
+                self._clear_candidate_approval()
+                self._set_workflow_state(
+                    "stale",
+                    "分段预演返回时recipe、候选姿态或会话已变化；结果已作废",
+                    0,
+                )
+                return
+            assert isinstance(recipe, TrajectoryRecipe)
+            assert type(segment_index) is int
+            if not result["safe"]:
+                self._clear_candidate_approval()
+                self._notify(
+                    f"第{segment_index + 1}个预演分段未通过3D碰撞／余量检查；"
+                    "现实执行已禁用。",
+                    "warning",
+                )
+                self._set_workflow_state(
+                    "unsafe",
+                    f"预演分段{segment_index + 1}/{len(recipe.segments)}"
+                    f"未通过：{result.get('reason', '未知原因')}",
+                    0,
+                )
+                return
+            self.preview_collision_segment_sha256.append(
+                recipe.segments[segment_index].sha256
+            )
+            self.preview_collision_segment_index = segment_index + 1
+            if self.preview_collision_segment_index < len(recipe.segments):
+                self._set_workflow_state(
+                    "solving",
+                    f"已通过{self.preview_collision_segment_index}/"
+                    f"{len(recipe.segments)}个轨迹分段；正在检查下一段",
+                    round(
+                        100.0
+                        * self.preview_collision_segment_index
+                        / len(recipe.segments)
+                    ),
+                )
+                self._request_collision_preview()
+                return
+            self.preview_collision_safe = True
+            self.approved_candidate_sha256 = collision_target_sha256(
+                self.candidate_targets
+            )
+            self.approved_candidate_session_id = self.session_id
+            self.approved_candidate_state_instance_id = self.state_instance_id
+            if self.preview_animation_complete:
+                self._try_finalize_preview()
+            else:
+                self._set_workflow_state(
+                    "previewing",
+                    f"全部{len(recipe.segments)}个预演轨迹分段已通过碰撞检查；"
+                    "正在继续播放虚拟动画",
+                    None,
+                )
+            return
         if kind in {"preview", "pose_preview"}:
             if sequence != getattr(self, "latest_collision_preview_sequence", None):
                 return
@@ -2322,6 +3219,7 @@ class MainWindow(QMainWindow):
                 return
             if result["safe"]:
                 self.last_collision_popup_signature = None
+                self.preview_collision_safe = True
                 self.approved_candidate_sha256 = request["target_sha256"]
                 self.approved_candidate_session_id = request["session_id"]
                 self.approved_candidate_state_instance_id = request[
@@ -2337,13 +3235,23 @@ class MainWindow(QMainWindow):
                     time.monotonic()
                     - getattr(self, "collision_preview_started_at", 0.0),
                 )
-                self._set_workflow_state(
-                    "safe",
-                    f"SAFE：当前候选姿态通过完整3D预演"
-                    f"{pose_text}，用时{elapsed:.2f}秒；"
-                    "请目视虚拟机械臂，确认合理后才可执行现实轨迹",
-                    100,
-                )
+                if self.preview_animation_complete:
+                    self._try_finalize_preview()
+                else:
+                    trajectory = self.workflow_contract.q_plan_trajectory
+                    progress = (
+                        round(
+                            100.0 * self.preview_frame_index
+                            / max(1, len(trajectory.samples) - 1)
+                        )
+                        if trajectory is not None else 0
+                    )
+                    self._set_workflow_state(
+                        "previewing",
+                        f"碰撞检查已通过{pose_text}，用时{elapsed:.2f}秒；"
+                        "正在继续播放完整计划轨迹",
+                        progress,
+                    )
             elif result.get("reason") in {
                 "self_collision", "self_collision_margin",
                 "ground_collision", "ground_collision_margin",
@@ -2424,7 +3332,10 @@ class MainWindow(QMainWindow):
 
     def _expire_collision_request(self, now: float) -> None:
         preview_sequence = getattr(self, "latest_collision_preview_sequence", None)
-        if self.collision_preview_state == "solving" and preview_sequence is not None:
+        if (
+            getattr(self, "collision_preview_state", "idle") == "solving"
+            and preview_sequence is not None
+        ):
             preview_request = self.collision_requests.get(preview_sequence)
             if (
                 preview_request is None
@@ -2483,6 +3394,7 @@ class MainWindow(QMainWindow):
         elif self.hardware_mode in {"brake", "drag"}:
             self.targets = list(self.actual)
             self.command_targets = list(self.actual)
+            self.candidate_targets = list(self.actual)
             self._show_targets_on_virtual()
         self._update_mode_label("方向切换不会撤销当前承重保持")
 
@@ -2510,6 +3422,7 @@ class MainWindow(QMainWindow):
         elif self.hardware_mode in {"brake", "drag"}:
             self.targets = list(self.actual)
             self.command_targets = list(self.actual)
+            self.candidate_targets = list(self.actual)
             self._show_targets_on_virtual()
         self._set_virtual_editable(True)
         self._update_mode_label("方向切换不会撤销当前承重保持")
@@ -2688,6 +3601,7 @@ class MainWindow(QMainWindow):
         self._cancel_queued_pose(restore_command_target=False)
         self.targets = list(self.actual)
         self.command_targets = list(self.actual)
+        self.candidate_targets = list(self.actual)
         # HOLD is captured exactly once. Feedback refresh must never move this
         # setpoint: an external displacement must create a restoring error
         # instead of becoming the next target.
@@ -2716,6 +3630,7 @@ class MainWindow(QMainWindow):
         ]
         self.targets = list(merged_targets)
         self.command_targets = list(merged_targets)
+        self.candidate_targets = list(merged_targets)
         self._set_virtual_editable(False)
         self._show_targets_on_virtual()
         self.pending_target_joint_mask = [False] * 6
@@ -2738,6 +3653,7 @@ class MainWindow(QMainWindow):
             self.moving_joint_mask,
         )
         self.targets = list(self.command_targets)
+        self.candidate_targets = list(self.command_targets)
         self._set_virtual_editable(False)
         self._show_targets_on_virtual()
         self.pending_target_joint_mask = [False] * 6
@@ -2752,20 +3668,32 @@ class MainWindow(QMainWindow):
         self.arrival.start(time.monotonic())
 
     def _execute_target(self) -> None:
+        if not self._preview_approval_matches_candidate():
+            self._notify(
+                "现实下发已拒绝：必须先由“预演轨迹”完成当前候选的完整预演并取得PLAN_TOKEN。",
+                "warning",
+            )
+            return
         if not self._require_control_feedback(
             "执行现实目标要求六个关节均有新鲜、健康反馈。",
             require_all=True,
         ):
             return
+        checks = self._current_preview_checks(time.monotonic())
+        if not checks.complete_success:
+            self._clear_candidate_approval()
+            self._notify(
+                "现实下发前复核失败：编码器、通信、温度、重力authority或碰撞状态已变化。",
+                "critical",
+            )
+            return
+        token = self.workflow_contract.current_plan_token
+        trajectory = self.workflow_contract.q_plan_trajectory
+        if token is None or not isinstance(trajectory, TrajectoryRecipe):
+            self._notify("PLAN_TOKEN已失效，必须重新预演。", "warning")
+            return
         if self.direction is not ArmMode.SIM_TO_REAL:
             self._notify("请先选择“虚拟驱动现实”。")
-            return
-        if self.command_stream_suspended:
-            self._notify(
-                "GUI命令流已暂停；请先在新鲜六轴反馈下重新接管HOLD，"
-                "未授权新运动。",
-                "warning",
-            )
             return
         if (
             self.hardware_mode == "position"
@@ -2778,37 +3706,58 @@ class MainWindow(QMainWindow):
                 "warning",
             )
             return
+
+        prospective_active_mask = list(self.connected)
+        if self.command_stream_suspended:
+            hardware = self.node.latest_hardware
+            controller_modes = (
+                hardware.get("controller_mode_by_motor", {})
+                if isinstance(hardware, dict) else {}
+            )
+            if not all(controller_modes.get(name) == "hold" for name in MOTOR_NAMES):
+                self._clear_candidate_approval()
+                self._notify(
+                    "GUI命令流仍暂停且七电机未全部确认HOLD；未授权现实运动。",
+                    "warning",
+                )
+                return
+            # ``require_all=True`` above guarantees all six logical joints are
+            # freshly observed.  Preserve that checked connectivity explicitly
+            # instead of pre-arming a literal all-true mask that could outlive
+            # a future topology or health-policy change.
+            prospective_active_mask = list(self.connected)
+        elif self.hardware_mode != "hold":
+            self._notify(
+                "现实下发前必须处于全轴HOLD；PLAN_TOKEN尚未消费。",
+                "warning",
+            )
+            return
+
+        # The recipe is bound to the encoder pose used for preview.  Explicit
+        # submit deliberately rebases the next HOLD/trajectory epoch to that
+        # checked pose (within the plan drift tolerance), rather than requiring
+        # mathematically exact equality with an older fixed-HOLD target.
+        execution_start = list(trajectory.start_rad)
+        final_target = list(trajectory.target_rad)
         pending_indices = [
             index
-            for index, (target, command_target, connected) in enumerate(zip(
-                self.targets, self.command_targets, self.connected
+            for index, (target, start, connected) in enumerate(zip(
+                final_target, execution_start, self.connected
             ))
             if connected
-            and abs(target - command_target) > TARGET_SELECTION_DEADBAND_RAD
-        ]
-        self.pending_target_joint_mask = [
-            index in pending_indices for index in range(6)
+            and abs(target - start) > TARGET_SELECTION_DEADBAND_RAD
         ]
         if not pending_indices:
-            if self.hardware_mode in {"brake", "drag"}:
-                self._prepare_hold_at_actual()
-                self._notify(
-                    "没有选中新目标；已锁定当前实际姿态并请求承重HOLD。",
-                    "info",
-                )
-            else:
-                # Repeated Execute in an authoritative HOLD/POSITION epoch is
-                # not permission to adopt an externally displaced sample.
-                self._notify(
-                    "没有选中新目标；保留现有权威目标与命令流，未重采样实际角度。",
-                    "info",
-                )
+            self._notify(
+                "候选目标与预演起点在选择死区内；PLAN_TOKEN尚未消费。",
+                "info",
+            )
             return
         if not collision_motion_state_ready(
             self.node.latest_hardware,
-            self.command_targets,
-            self.requested_active_joint_mask,
-            self.hardware_mode,
+            execution_start,
+            prospective_active_mask,
+            "hold",
         ):
             self._notify(
                 "现实下发前必须确认六轴均健康、静止并处于承重HOLD；"
@@ -2817,7 +3766,7 @@ class MainWindow(QMainWindow):
             )
             return
         if not moving_targets_within_model_limits(
-            self.targets, [True] * 6, self.edit_limits
+            final_target, [True] * 6, self.edit_limits
         ):
             self._notify(
                 "目标超出历史3D模型关节范围；新目标未发布，原位置保持继续。",
@@ -2825,14 +3774,52 @@ class MainWindow(QMainWindow):
             )
             self._update_mode_label("模型机械范围外目标已拒绝；原位置保持继续")
             return
-        # Preserve the complete virtual pose, then expose only one changed
-        # joint to each physical proof/command epoch.  This is the strongest
-        # executable contract available across the independent GO/J2/J6
-        # transports: the operator edits once, while every real segment is
-        # freshly swept against the actual pose reached by the previous one.
+
+        # Consume the one-shot token only after every ordinary runtime gate
+        # above has succeeded.  A retryable HOLD/mode/proof readiness failure
+        # must not silently exhaust operator approval.
+        try:
+            self.workflow_contract = self.workflow_contract.explicit_real_submit(
+                token.token_id,
+                actual_tolerance_rad=PLAN_ACTUAL_DRIFT_TOLERANCE_RAD,
+            )
+        except (ContractViolation, RealSubmitRejected) as exc:
+            self._clear_candidate_approval()
+            self._notify(f"现实下发已拒绝：{exc}", "warning")
+            return
+        assert self.workflow_contract.q_hardware_command is not None
+        self.preview_requested_by_operator = False
+        self.preview_animation_started_at = None
+        self.targets = list(self.workflow_contract.q_hardware_command)
+        self.command_targets = execution_start
+        self._authorize_active_joints(prospective_active_mask)
+        self.hardware_mode = "hold"
+        if self.command_stream_suspended:
+            self._resume_command_stream()
+        self.pending_target_joint_mask = [
+            index in pending_indices for index in range(6)
+        ]
+        # Consume the exact immutable recipe already animated in MuJoCo.  No
+        # endpoint is re-segmented or re-timed after explicit submission.
         self.queued_pose_target = list(self.targets)
-        self.queued_joint_indices = list(pending_indices)
+        self.queued_trajectory_segments = list(trajectory.segments)
+        self.trajectory_segment_count = len(trajectory.segments)
+        self.active_plan_manifest = trajectory_plan_manifest(trajectory)
+        self.queued_joint_indices = [
+            next(
+                index
+                for index, (source, target) in enumerate(
+                    zip(segment.start_rad, segment.target_rad)
+                )
+                if source != target
+            )
+            for segment in trajectory.segments
+        ]
         self.active_sequence_joint = None
+        self.active_trajectory_segment = None
+        self.active_trajectory_segment_index = None
+        self.active_trajectory_descriptor = None
+        self.active_trajectory_first_publish_pending = False
         self._begin_next_queued_segment()
 
     def _commit_checked_target(
@@ -2894,11 +3881,52 @@ class MainWindow(QMainWindow):
             )
             self._update_mode_label(f"无效移动目标已拒绝；{unchanged}")
             return False
+        segment = self.active_trajectory_segment
+        segment_index = self.active_trajectory_segment_index
+        token_id = self.workflow_contract.submitted_token_id
+        manifest = self.active_plan_manifest
+        manifest_segments = (
+            manifest.get("segment_sha256")
+            if isinstance(manifest, dict) else None
+        )
+        if (
+            not isinstance(segment, TrajectoryPlan)
+            or type(segment_index) is not int
+            or not isinstance(token_id, str)
+            or not isinstance(manifest, dict)
+            or manifest.get("schema") != "go-m8010-plan-manifest/1.0"
+            or not isinstance(manifest.get("recipe_sha256"), str)
+            or not isinstance(manifest_segments, list)
+            or len(manifest_segments) != self.trajectory_segment_count
+            or not 0 <= segment_index < len(manifest_segments)
+            or manifest_segments[segment_index] != segment.sha256
+            or segment.start_rad != tuple(self.command_targets)
+            or segment.target_rad != tuple(self.targets)
+        ):
+            self._notify(
+                "碰撞证明未绑定到已预演的不可变quintic分段；现实下发已拒绝。",
+                "critical",
+            )
+            return False
+        try:
+            self.active_trajectory_descriptor = trajectory_command_descriptor(
+                segment,
+                plan_token_id=token_id,
+                execute_at_monotonic_ns=(
+                    time.monotonic_ns() + TRAJECTORY_EXECUTE_LEAD_NS
+                ),
+                segment_index=segment_index,
+                segment_count=self.trajectory_segment_count,
+            )
+        except ContractViolation as exc:
+            self._notify(f"quintic命令描述符无效：{exc}", "critical")
+            return False
         self.machine.position()
         self.hardware_mode = "position"
         self.command_targets = list(self.targets)
         self.moving_joint_mask = candidate_moving_joint_mask
         self.active_collision_proof = json.loads(json.dumps(approved_result))
+        self.active_trajectory_first_publish_pending = True
         # Unedited load-bearing joints remain active at their captured targets;
         # otherwise the domain router would normalize them to BRAKE.
         self._authorize_active_joints([True] * 6)
@@ -2972,6 +4000,7 @@ class MainWindow(QMainWindow):
         self.direction = ArmMode.REAL_TO_SIM
         self.targets = list(self.actual)
         self.command_targets = list(self.actual)
+        self.candidate_targets = list(self.actual)
         self.requested_active_joint_mask = [False] * 6
         self.pending_target_joint_mask = [False] * 6
         self.moving_joint_mask = [False] * 6
@@ -3037,16 +4066,26 @@ class MainWindow(QMainWindow):
             ):
                 raise ValueError
             positions = document["关节位置_弧度"]
-            self.targets = [float(positions[f"J{i + 1}"]) for i in range(6)]
+            restored_target = [float(positions[f"J{i + 1}"]) for i in range(6)]
             if not all(
                 math.isfinite(value) and self.limits[index][0] * RAD <= value <= self.limits[index][1] * RAD
-                for index, value in enumerate(self.targets)
+                for index, value in enumerate(restored_target)
             ):
                 raise ValueError
         except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
             self._notify("初始化姿态需要重新设置。")
             return
         self.direction = ArmMode.SIM_TO_REAL
+        self.candidate_targets = list(restored_target)
+        self.targets = list(restored_target)
+        self._clear_candidate_approval()
+        try:
+            self.workflow_contract = self.workflow_contract.change_plan_target(
+                self.candidate_targets
+            )
+        except ContractViolation:
+            self._notify("初始化姿态不满足当前计划限位。", "warning")
+            return
         self.pending_target_joint_mask = [
             connected and abs(target - command) > TARGET_SELECTION_DEADBAND_RAD
             for target, command, connected in zip(
@@ -3055,7 +4094,7 @@ class MainWindow(QMainWindow):
         ]
         self._set_virtual_editable(True)
         self._show_targets_on_virtual()
-        self._execute_target()
+        self._start_virtual_preview()
 
     def _notify(self, text: str, level: str = "warning") -> None:
         """Record one non-modal operator notice; repeated states replace text."""
@@ -3107,14 +4146,17 @@ class MainWindow(QMainWindow):
             )
 
     def _show_targets_on_virtual(self) -> None:
-        for index, target in enumerate(self.targets):
+        planned_targets = getattr(self, "candidate_targets", self.targets)
+        for index, target in enumerate(planned_targets):
             degrees = target * DEG
             widgets = self.virtual_widgets[index]
-            widgets.slider.blockSignals(True)
             widgets.target.blockSignals(True)
-            widgets.slider.setValue(round(degrees * 100.0))
+            if widgets.slider is not None:
+                widgets.slider.blockSignals(True)
+                widgets.slider.setValue(round(degrees * 100.0))
             widgets.target.setValue(degrees)
-            widgets.slider.blockSignals(False)
+            if widgets.slider is not None:
+                widgets.slider.blockSignals(False)
             widgets.target.blockSignals(False)
             widgets.value.setText(f"{degrees:+.2f}°")
 
@@ -3136,6 +4178,252 @@ class MainWindow(QMainWindow):
             text += f"　｜　{extra}"
         set_widget_text_if_changed(self.mode_label, text)
 
+    def _sync_workflow_contract(self, now: float) -> None:
+        if not self.have_first_state or not self.session_id or not self.state_instance_id:
+            return
+        token_before = self.workflow_contract.current_plan_token
+        try:
+            if (
+                self.workflow_contract.session_id != self.session_id
+                or self.workflow_contract.state_instance_id != self.state_instance_id
+            ):
+                self.workflow_contract = self.workflow_contract.replace_authority(
+                    joint_limits_rad=self.workflow_contract.joint_limits_rad,
+                    model_sha256=PRODUCTION_MODEL_SHA256,
+                    session_id=self.session_id,
+                    state_instance_id=self.state_instance_id,
+                    gravity_config_sha256=GRAVITY_CONFIG_SHA256,
+                )
+            self.workflow_contract = self.workflow_contract.update_actual(
+                self.actual,
+                invalidation_tolerance_rad=PLAN_ACTUAL_DRIFT_TOLERANCE_RAD,
+            )
+            if tuple(self.candidate_targets) != self.workflow_contract.q_plan_target:
+                self.workflow_contract = self.workflow_contract.change_plan_target(
+                    self.candidate_targets
+                )
+        except ContractViolation as exc:
+            self._clear_candidate_approval()
+            self._set_workflow_state("unsafe", f"工作流状态无效：{exc}", 0)
+            return
+        token_after = self.workflow_contract.current_plan_token
+        if token_before is not None and token_after is None:
+            self._clear_candidate_approval()
+            self._set_workflow_state(
+                "stale", "实际姿态/session已变化，旧PLAN_TOKEN自动失效", 0
+            )
+            return
+        if token_after is not None and not self._current_preview_checks(now).complete_success:
+            self._clear_candidate_approval()
+            self._set_workflow_state(
+                "blocked", "温度、通信、重力或碰撞状态已变化，PLAN_TOKEN失效", 0
+            )
+
+    def _refresh_task_status_panel(self, now: float) -> None:
+        labels = getattr(self, "task_status_labels", {})
+        if not labels:
+            return
+        state_map = {
+            "idle": "空闲", "pending": "正在解算轨迹",
+            "previewing": "正在进行虚拟预演", "solving": "正在检查碰撞",
+            "waiting_hardware": "读取现实状态", "safe": "等待用户下发",
+            "execute_proof": "正在下发", "blocked": "负载超限",
+            "unsafe": "已取消", "stale": "通信故障",
+        }
+        state_text = state_map.get(self.collision_preview_state, "空闲")
+        if self.hardware_mode == "position":
+            state_text = "现实机械臂执行中"
+        elif self.hardware_mode == "hold" and self.task_id:
+            state_text = "正在到位稳定"
+        progress = (
+            self.workflow_progress.value()
+            if self.workflow_progress.maximum() > 0 else 0
+        )
+        elapsed = (
+            0.0 if self.task_started_at is None
+            else max(0.0, now - self.task_started_at)
+        )
+        trajectory = self.workflow_contract.q_plan_trajectory
+        remaining = (
+            max(0.0, trajectory.profile.duration_s - elapsed)
+            if trajectory is not None and not self.preview_animation_complete else 0.0
+        )
+        per_motor = (self.node.latest_hardware or {}).get("per_motor", {})
+        temperatures = [
+            float(item["temperature_c"])
+            for item in per_motor.values()
+            if isinstance(item, dict)
+            and type(item.get("temperature_c")) in {int, float}
+            and math.isfinite(float(item["temperature_c"]))
+        ] if isinstance(per_motor, dict) else []
+        thermal_priority = (
+            "THERMAL_STOP", "WAIT_OPERATOR_CONFIRM", "COOLDOWN",
+            "DERATING", "WARNING", "NORMAL", "OFFLINE",
+        )
+        observed_states = {
+            item.get("thermal_state", "OFFLINE")
+            for item in per_motor.values()
+            if isinstance(item, dict)
+        } if isinstance(per_motor, dict) else {"OFFLINE"}
+        worst_thermal = next(
+            (item for item in thermal_priority if item in observed_states),
+            "OFFLINE",
+        )
+        target_text = " ".join(
+            f"J{i + 1}{value * DEG:+.1f}°"
+            for i, value in enumerate(self.candidate_targets)
+        )
+        actual_text = " ".join(
+            f"J{i + 1}{value * DEG:+.1f}°"
+            for i, value in enumerate(self.actual)
+        )
+        max_error = max(
+            abs(target - actual)
+            for target, actual in zip(self.candidate_targets, self.actual)
+        ) * DEG
+        phase = self.workflow_status.text().removeprefix("工作流：")
+        failure = (
+            self.operator_notice_text
+            if self.collision_preview_state in {"blocked", "unsafe", "stale"}
+            else "—"
+        )
+        values = {
+            "task_id": self.task_id or "—",
+            "state": state_text,
+            "phase": phase,
+            "progress": f"{progress}%",
+            "started": self.task_started_wall_utc or "—",
+            "elapsed": f"{elapsed:.1f}s" if self.task_started_at is not None else "—",
+            "remaining": f"{remaining:.1f}s" if trajectory is not None else "—",
+            "heartbeat": f"{max(0.0, now - self.last_task_heartbeat) * 1000.0:.0f}ms前",
+            "encoder": (
+                f"{max(0.0, now - self.node.last_joint_receipt) * 1000.0:.0f}ms前"
+                if self.node.last_joint_receipt > 0.0 else "未收到"
+            ),
+            "target": target_text,
+            "actual": actual_text,
+            "max_error": f"{max_error:.2f}°",
+            "max_temperature": (
+                f"{max(temperatures):.0f}°C" if temperatures else "离线"
+            ),
+            "thermal": THERMAL_STATE_CN.get(worst_thermal, worst_thermal),
+            "failure": failure,
+        }
+        for key, text in values.items():
+            set_widget_text_if_changed(labels[key], text)
+
+    def _refresh_motor_status_panel(self, now: float) -> None:
+        table = getattr(self, "motor_status_table", None)
+        if table is None:
+            return
+        hardware = self.node.latest_hardware or {}
+        per_motor = hardware.get("per_motor", {})
+        modes = hardware.get("controller_mode_by_motor", {})
+        faults = hardware.get("controller_fault_by_motor", {})
+        lease_holds = hardware.get("lease_safe_hold_by_motor", {})
+        for row, name in enumerate(MOTOR_NAMES):
+            sample = per_motor.get(name, {}) if isinstance(per_motor, dict) else {}
+            fresh = sample.get("fresh") is True
+            communication_ok = sample.get("communication_ok") is True
+            online = fresh and communication_ok
+            thermal_state = sample.get("thermal_state", "OFFLINE") if fresh else "OFFLINE"
+            temperature = sample.get("temperature_c")
+
+            def number(field: str, scale: float = 1.0, suffix: str = "") -> str:
+                value = sample.get(field)
+                if type(value) not in {int, float} or not math.isfinite(float(value)):
+                    return "N/A"
+                return f"{float(value) * scale:+.3f}{suffix}"
+
+            control_state = (
+                "控制故障" if faults.get(name) is True
+                else "租约安全保持" if lease_holds.get(name) is True
+                else "热锁存" if sample.get("thermal_fault_latched") is True
+                else "正常" if online else "状态未知"
+            )
+            trajectory_state = sample.get("trajectory_state", "INACTIVE")
+            if trajectory_state != "INACTIVE":
+                sample_index = sample.get("trajectory_sample_index", 0)
+                interval_count = sample.get("trajectory_interval_count", 0)
+                control_state += (
+                    f" / quintic {trajectory_state} "
+                    f"{sample_index}/{interval_count}"
+                )
+            values = (
+                MOTOR_LOGICAL_JOINT[name], name, MOTOR_BUS_LOCAL_ID[name],
+                "在线" if online else "离线",
+                (
+                    f"{float(sample['age_ms']):.1f}"
+                    if type(sample.get("age_ms")) in {int, float} else "N/A"
+                ),
+                str(modes.get(name, "unknown")),
+                number("raw_position_rad"),
+                number("q_joint_rad", DEG),
+                number("dq_joint_rad_s", DEG),
+                number("tau_feedback_rotor_nm"),
+                number("estimated_joint_torque_nm"),
+                (
+                    f"{float(temperature):.0f}"
+                    if type(temperature) in {int, float} else "N/A"
+                ),
+                str(sample.get("merror", "N/A")),
+                THERMAL_STATE_CN.get(str(thermal_state), str(thermal_state)),
+                control_state,
+            )
+            for column, text in enumerate(values):
+                item = table.item(row, column)
+                if item.text() != text:
+                    item.setText(text)
+
+            temperature_item = table.item(row, 11)
+            state_item = table.item(row, 13)
+            if thermal_state == "OFFLINE":
+                background, foreground = "#616161", "#ffffff"
+            elif thermal_state == "NORMAL":
+                background, foreground = "#2e7d32", "#ffffff"
+            elif thermal_state == "WARNING" and type(temperature) in {int, float} and float(temperature) >= 50.0:
+                background, foreground = "#ef6c00", "#ffffff"
+            elif thermal_state == "WARNING":
+                background, foreground = "#fdd835", "#000000"
+            elif thermal_state == "DERATING":
+                background, foreground = "#c62828", "#ffffff"
+            elif thermal_state == "THERMAL_STOP":
+                background, foreground = "#4a0000", "#ffeb3b"
+                if int(now * 2.0) % 2:
+                    state_item.setText("⚠ 热停机 ⚠")
+            else:
+                background, foreground = "#8d3b00", "#ffffff"
+            for item in (temperature_item, state_item):
+                item.setBackground(QColor(background))
+                item.setForeground(QColor(foreground))
+
+        j2a = per_motor.get("J2A", {}) if isinstance(per_motor, dict) else {}
+        j2b = per_motor.get("J2B", {}) if isinstance(per_motor, dict) else {}
+        if self.j2_motor_summary is not None:
+            def optional_value(mapping: dict, field: str, scale: float = 1.0) -> str:
+                value = mapping.get(field)
+                return (
+                    f"{float(value) * scale:+.2f}"
+                    if type(value) in {int, float} and math.isfinite(float(value))
+                    else "N/A"
+                )
+            temperature_difference = (
+                abs(float(j2a["temperature_c"]) - float(j2b["temperature_c"]))
+                if type(j2a.get("temperature_c")) in {int, float}
+                and type(j2b.get("temperature_c")) in {int, float}
+                else None
+            )
+            text = (
+                f"J2逻辑实际={self.actual[1] * DEG:+.2f}°　"
+                f"目标={self.candidate_targets[1] * DEG:+.2f}°　"
+                f"误差={(self.candidate_targets[1] - self.actual[1]) * DEG:+.2f}°　"
+                f"e_sync={float(hardware.get('j2_e_sync_rad', 0.0)) * DEG:+.2f}°　"
+                f"rotor力矩分担 A={optional_value(j2a, 'tau_feedback_rotor_nm')} / "
+                f"B={optional_value(j2b, 'tau_feedback_rotor_nm')} N·m　"
+                f"温差={'N/A' if temperature_difference is None else f'{temperature_difference:.0f}°C'}"
+            )
+            set_widget_text_if_changed(self.j2_motor_summary, text)
+
     def _tick(self) -> None:
         if not run_ros_context_operation(
             self._ros_context_ok,
@@ -3150,30 +4438,64 @@ class MainWindow(QMainWindow):
             if not self.have_first_state:
                 self.targets = list(self.actual)
                 self.command_targets = list(self.actual)
+                self.candidate_targets = list(self.actual)
                 self.have_first_state = True
+        self._update_connected(now)
+        self._sync_workflow_contract(now)
+        self._update_preview_animation(now)
+        self._update_planned_execution_pose(time.monotonic_ns())
         self._consume_collision_guard_result()
         self._expire_collision_request(now)
-        self._update_connected(now)
         if not self.node.control_streams_fresh(now):
             self._suspend_for_stale_feedback()
+        if (
+            self.hardware_mode in {"hold", "position"}
+            and any(self.requested_active_joint_mask)
+            and (
+                not self.node.gravity_status_fresh(now)
+                or not gravity_status_authorizes_hardware(
+                    self.node.latest_gravity_status,
+                    session_id=self.session_id,
+                    state_instance_id=self.state_instance_id,
+                    now_monotonic_ns=time.monotonic_ns(),
+                )
+            )
+        ):
+            self._suspend_command_stream(
+                "重力authority失效或过期；停止刷新命令并保留底层租约安全保持"
+            )
         self._refresh_joint_widgets()
         # Arrival first requests the exact-target HOLD barrier.  A later tick
         # observes all seven motors actually reporting HOLD and stationary;
         # only then may this advance to a freshly checked next segment.
         self._continue_queued_sequence_if_ready()
-        if self.mujoco_preview is not None:
-            preview_pose = (
-                self.targets
-                if self.direction is ArmMode.SIM_TO_REAL
-                else self.actual
-            )
+        if self.planned_mujoco_preview is not None:
             try:
-                self.mujoco_preview.set_relative_pose(preview_pose)
+                self.planned_mujoco_preview.set_relative_pose(
+                    self.preview_pose
+                    if (
+                        self.preview_requested_by_operator
+                        or self.active_trajectory_segment is not None
+                        or self.queued_pose_target is not None
+                    )
+                    else self.candidate_targets
+                )
             except Exception as exc:
-                self.mujoco_preview.image.setText(f"MuJoCo渲染失败：{exc}")
+                self.planned_mujoco_preview.image.setText(
+                    f"计划MuJoCo渲染失败：{exc}"
+                )
+        if self.actual_mujoco_preview is not None:
+            try:
+                self.actual_mujoco_preview.set_relative_pose(self.actual)
+            except Exception as exc:
+                self.actual_mujoco_preview.image.setText(
+                    f"现实数字孪生渲染失败：{exc}"
+                )
         if not run_ros_context_operation(self._ros_context_ok, self._publish_command):
             self._close_for_ros_shutdown()
             return
+        self._refresh_task_status_panel(now)
+        self._refresh_motor_status_panel(now)
         self._refresh_summary()
         self._write_log()
 
@@ -3239,6 +4561,7 @@ class MainWindow(QMainWindow):
             )
             self.targets = list(self.actual)
             self.command_targets = list(self.actual)
+            self.candidate_targets = list(self.actual)
             self.requested_active_joint_mask = [False] * 6
             self.pending_target_joint_mask = [False] * 6
             self.moving_joint_mask = [False] * 6
@@ -3353,6 +4676,7 @@ class MainWindow(QMainWindow):
 
     def _refresh_joint_widgets(self) -> None:
         now = time.monotonic()
+        hardware = self.node.latest_hardware or {}
         errors = [target - actual for target, actual in zip(self.command_targets, self.actual)]
         active_joint_mask = effective_active_joint_mask(
             self.requested_active_joint_mask, self.connected, self.hardware_mode
@@ -3392,6 +4716,12 @@ class MainWindow(QMainWindow):
             if (
                 self.hardware_mode == "position"
                 and moving_indices
+                and isinstance(self.active_trajectory_descriptor, dict)
+                and moving_trajectory_feedback_complete(
+                    hardware,
+                    moving_indices[0],
+                    self.active_trajectory_descriptor,
+                )
                 and all(
                     states[index] in {"已到位", "保持中"}
                     and confirmed_modes[index] == "position"
@@ -3410,7 +4740,10 @@ class MainWindow(QMainWindow):
                     self.hardware_mode = "hold"
                     self.moving_joint_mask = [False] * 6
                     self.active_collision_proof = None
+                    self.active_trajectory_descriptor = None
+                    self.active_trajectory_first_publish_pending = False
                     self.targets = list(self.command_targets)
+                    self.preview_pose = tuple(self.command_targets)
                     self.pending_target_joint_mask = [False] * 6
                     self._show_targets_on_virtual()
                     self.arrival.start(now)
@@ -3420,6 +4753,9 @@ class MainWindow(QMainWindow):
                         # "continue POSITION".  Only confirmed all-axis HOLD
                         # may authorize the next separately proven segment.
                         self.active_sequence_joint = None
+                        self.active_trajectory_segment = None
+                        self.active_trajectory_segment_index = None
+                        self.active_trajectory_descriptor = None
                         self._update_mode_label(
                             f"J{sequence_joint + 1}分段已到位；"
                             "已转为原目标HOLD且未重采样反馈，"
@@ -3458,7 +4794,6 @@ class MainWindow(QMainWindow):
                     )
         else:
             states = ["待机"] * 6
-        hardware = self.node.latest_hardware or {}
         for index, faulted in enumerate(self.faulted):
             if faulted:
                 states[index] = "故障"
@@ -3475,7 +4810,8 @@ class MainWindow(QMainWindow):
             target_deg = self.command_targets[index] * DEG
             error_deg = errors[index] * DEG
             real = self.real_widgets[index]
-            set_widget_value_if_changed(real.slider, round(actual_deg * 100.0))
+            if real.slider is not None:
+                set_widget_value_if_changed(real.slider, round(actual_deg * 100.0))
             set_widget_text_if_changed(real.actual, f"{actual_deg:+.2f}°")
             set_widget_text_if_changed(real.target, f"{target_deg:+.2f}°")
             set_widget_text_if_changed(real.error, f"{error_deg:+.2f}°")
@@ -3486,6 +4822,7 @@ class MainWindow(QMainWindow):
         ):
             self.targets = list(self.actual)
             self.command_targets = list(self.actual)
+            self.candidate_targets = list(self.actual)
             self._show_targets_on_virtual()
 
     def _publish_command(self) -> bool:
@@ -3513,6 +4850,39 @@ class MainWindow(QMainWindow):
                 Float64MultiArray(data=self.targets)
             )
             return False
+        if (
+            self.hardware_mode == "position"
+            and self.active_trajectory_first_publish_pending
+        ):
+            segment = self.active_trajectory_segment
+            segment_index = self.active_trajectory_segment_index
+            token_id = self.workflow_contract.submitted_token_id
+            if (
+                not isinstance(segment, TrajectoryPlan)
+                or type(segment_index) is not int
+                or not isinstance(token_id, str)
+                or not isinstance(self.active_plan_manifest, dict)
+            ):
+                self._suspend_command_stream(
+                    "首次轨迹发送缺少不可变PLAN_TOKEN或分段manifest"
+                )
+                return False
+            try:
+                # Allocate the cross-domain lead immediately before the first
+                # ROS publish; Qt rendering/collision callbacks cannot consume
+                # the worker preparation window before it is placed on wire.
+                self.active_trajectory_descriptor = trajectory_command_descriptor(
+                    segment,
+                    plan_token_id=token_id,
+                    execute_at_monotonic_ns=(
+                        time.monotonic_ns() + TRAJECTORY_EXECUTE_LEAD_NS
+                    ),
+                    segment_index=segment_index,
+                    segment_count=self.trajectory_segment_count,
+                )
+            except ContractViolation as exc:
+                self._suspend_command_stream(f"轨迹首次发送已拒绝：{exc}")
+                return False
         self.command_sequence += 1
         self.node.publish_command(
             self.command_sequence, self.hardware_mode,
@@ -3520,7 +4890,13 @@ class MainWindow(QMainWindow):
             self.moving_joint_mask,
             self.activation_epoch, self.config,
             self.active_collision_proof,
+            self.active_trajectory_descriptor,
+            self.active_plan_manifest,
         )
+        if self.hardware_mode == "position":
+            self.active_trajectory_first_publish_pending = False
+        if self.task_id is not None:
+            self.last_task_heartbeat = time.monotonic()
         return True
 
     def _refresh_safety_notice(self, now: Optional[float] = None) -> None:
@@ -3786,8 +5162,11 @@ class MainWindow(QMainWindow):
                     break
         self.log_stream.flush()
         self.log_stream.close()
-        if self.mujoco_preview is not None:
-            self.mujoco_preview.close_renderer()
+        for preview in (
+            self.planned_mujoco_preview, self.actual_mujoco_preview,
+        ):
+            if preview is not None:
+                preview.close_renderer()
         event.accept()
 
 

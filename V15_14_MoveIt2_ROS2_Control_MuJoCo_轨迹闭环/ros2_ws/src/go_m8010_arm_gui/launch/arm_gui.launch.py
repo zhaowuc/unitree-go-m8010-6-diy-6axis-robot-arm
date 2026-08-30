@@ -47,6 +47,14 @@ def generate_launch_description() -> LaunchDescription:
         executable="arm_gui_command_router",
         name="arm_gui_command_router",
         output="screen",
+        parameters=[{
+            # Production is fail-closed.  The explicit launch override exists
+            # only for isolated protocol regression tests with no workers.
+            "allow_legacy_v12_position": ParameterValue(
+                LaunchConfiguration("allow_legacy_v12_position"),
+                value_type=bool,
+            ),
+        }],
     )
     mirror = Node(
         package="go_m8010_arm_hardware",
@@ -63,6 +71,32 @@ def generate_launch_description() -> LaunchDescription:
             "numeric_test_only": False,
             "use_viewer": False,
             "evidence_directory": LaunchConfiguration("runtime_log_directory"),
+        }],
+    )
+    gravity = Node(
+        package="go_m8010_arm_hardware",
+        executable="whole_arm_gravity_node",
+        name="whole_arm_gravity_node",
+        output="screen",
+        parameters=[{
+            "model_path": LaunchConfiguration("model_path"),
+            "gravity_config_path": hardware_share + "/config/gravity_control.yaml",
+            "anchor_path": LaunchConfiguration("gravity_anchor_path"),
+            "calculation_rate_hz": 100.0,
+            "joint_state_maximum_age_ms": 250.0,
+            # Both values default fail-closed.  A powered validation stage
+            # must explicitly provide a session-bound anchor, enable the
+            # hardware authority and select one approved scale rung.
+            "enabled_for_hardware": ParameterValue(
+                LaunchConfiguration("gravity_enabled_for_hardware"),
+                value_type=bool,
+            ),
+            "gravity_scale_target": ParameterValue(
+                LaunchConfiguration("gravity_scale_target"),
+                value_type=float,
+            ),
+            "gravity_scale_ramp_seconds": 2.0,
+            "maximum_rotor_torque_slew_nm_per_s": 1.0,
         }],
     )
     gui = Node(
@@ -87,18 +121,34 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("model_path"),
         DeclareLaunchArgument("session_pose_deg", default_value="0,0,0,0,0,0"),
         DeclareLaunchArgument("pose_matched", default_value="false"),
-        DeclareLaunchArgument("config_path", default_value=gui_share + "/config/arm_gui.yaml"),
-        DeclareLaunchArgument("joint_limits_path", default_value=gui_share + "/config/gui_joint_limits.yaml"),
-        DeclareLaunchArgument("initial_pose_path", default_value=str(initial_pose_default)),
+        DeclareLaunchArgument(
+            "allow_legacy_v12_position", default_value="false"
+        ),
+        DeclareLaunchArgument(
+            "config_path", default_value=gui_share + "/config/arm_gui.yaml"
+        ),
+        DeclareLaunchArgument(
+            "joint_limits_path",
+            default_value=gui_share + "/config/gui_joint_limits.yaml",
+        ),
+        DeclareLaunchArgument(
+            "initial_pose_path", default_value=str(initial_pose_default)
+        ),
         DeclareLaunchArgument("initial_pose_read_only", default_value="false"),
         DeclareLaunchArgument("persistent_zero_path", default_value=""),
         DeclareLaunchArgument("recovery_hint_path", default_value=""),
         DeclareLaunchArgument("j2_session_reference_path", default_value=""),
         DeclareLaunchArgument("go_aux_session_reference_path", default_value=""),
+        DeclareLaunchArgument("gravity_anchor_path", default_value=""),
+        DeclareLaunchArgument(
+            "gravity_enabled_for_hardware", default_value="false"
+        ),
+        DeclareLaunchArgument("gravity_scale_target", default_value="0.0"),
         DeclareLaunchArgument("runtime_log_directory", default_value="logs/arm_gui"),
         state,
         router,
         mirror,
+        gravity,
         gui,
         RegisterEventHandler(OnProcessExit(
             target_action=gui,
@@ -123,6 +173,12 @@ def generate_launch_description() -> LaunchDescription:
             target_action=mirror,
             on_exit=[LogInfo(msg=(
                 "MuJoCo镜像节点已退出；仿真显示故障不联动撤销真机保持。"
+            ))],
+        )),
+        RegisterEventHandler(OnProcessExit(
+            target_action=gravity,
+            on_exit=[LogInfo(msg=(
+                "重力诊断节点已退出；硬件Tff保持禁用，GUI必须拒绝新的现实轨迹。"
             ))],
         )),
     ])

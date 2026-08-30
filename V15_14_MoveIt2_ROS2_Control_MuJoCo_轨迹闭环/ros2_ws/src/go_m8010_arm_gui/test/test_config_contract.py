@@ -38,7 +38,10 @@ def test_control_defaults_and_fixed_hold_gain_envelope_are_frozen():
     config = yaml.safe_load((CONFIG_DIRECTORY / "arm_gui.yaml").read_text(encoding="utf-8"))
     assert config["控制"]["控制频率_赫兹"] == 100
     assert config["控制"]["最大速度_度每秒"] == 5.0
-    assert config["控制"]["最大加速度_度每二次方秒"] == 20.0
+    # The shared default is the most restrictive active joint limit: J2's
+    # established 15 deg/s^2 guard.  This keeps preview/router/GO execution
+    # compatible without weakening any worker-side protection.
+    assert config["控制"]["最大加速度_度每二次方秒"] == 15.0
     assert config["控制"]["到位容差_度"] == 0.5
     assert config["控制"]["J6到位容差_度"] == 0.08
     assert [config["关节"][f"J{index}"]["Kp"] for index in range(1, 6)] == [

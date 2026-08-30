@@ -19,6 +19,57 @@ from std_msgs.msg import String
 
 
 ALLOWED_MODES = {"brake", "drag", "hold", "position"}
+GUI_COMMAND_SCHEMA_V12 = "go-m8010-gui-command/1.2"
+GUI_COMMAND_SCHEMA_V13 = "go-m8010-gui-command/1.3"
+QUINTIC_COMMAND_SCHEMA = "go-m8010-quintic-command/1.0"
+QUINTIC_PROFILE = "quintic-rest-to-rest-v1"
+PLAN_MANIFEST_SCHEMA = "go-m8010-plan-manifest/1.0"
+GRAVITY_STATUS_SCHEMA = "go-m8010-gravity-status/1.1"
+GRAVITY_COMMAND_AUTHORITY_SCHEMA = (
+    "go-m8010-gravity-command-authority/1.0"
+)
+GRAVITY_STATUS_TOPIC = "/whole_arm/gravity_status"
+GRAVITY_CONFIG_SHA256 = (
+    "307469b8384fd35547327ba1d5f80aa440e6b9663406ab7c9d9469bea263335d"
+)
+GRAVITY_STATUS_MAXIMUM_AGE_NS = 250_000_000
+GRAVITY_SCALE_LEVELS = (0.0, 0.25, 0.50, 0.75, 1.0)
+# Software command envelopes derived from the frozen model and existing
+# controller guards.  They are not continuous motor ratings.
+GRAVITY_ROTOR_FEEDFORWARD_LIMIT_NM = (0.20, 1.75, 1.10, 0.40, 0.20, 0.0)
+MAXIMUM_TRAJECTORY_INTERVALS = 1_000_000
+MAXIMUM_TRAJECTORY_GRID_NS = 10_000_000
+MAXIMUM_PLAN_SEGMENTS = 4096
+MAXIMUM_TRACKED_PLAN_TOKENS = 1024
+UINT64_MAXIMUM = (1 << 64) - 1
+INT64_MAXIMUM = (1 << 63) - 1
+# The GUI currently schedules 250 ms ahead.  The Router accepts a deliberately
+# narrower-but-tolerant first-packet window, then permits exact refresh packets
+# after execution has begun because they cannot alter the frozen descriptor.
+TRAJECTORY_MINIMUM_EXECUTE_LEAD_NS = 100_000_000
+TRAJECTORY_MAXIMUM_EXECUTE_LEAD_NS = 2_000_000_000
+QUINTIC_PEAK_VELOCITY_FACTOR = 15.0 / 8.0
+QUINTIC_PEAK_ACCELERATION_FACTOR = 10.0 / math.sqrt(3.0)
+JOINT_MAXIMUM_TRAJECTORY_ACCELERATION_RAD_S2 = tuple(
+    math.radians(value) for value in (20.0, 15.0, 20.0, 20.0, 20.0, 20.0)
+)
+TRAJECTORY_REQUIRED_FIELDS = frozenset({
+    "schema",
+    "trajectory_sha256",
+    "profile",
+    "start_rad",
+    "target_rad",
+    "duration_ns",
+    "interval_count",
+    "execute_at_monotonic_ns",
+    "segment_index",
+    "segment_count",
+})
+PLAN_MANIFEST_REQUIRED_FIELDS = frozenset({
+    "schema",
+    "recipe_sha256",
+    "segment_sha256",
+})
 MODEL_COMMAND_LOWER_RAD = tuple(math.radians(value) for value in (
     -180.0, -260.0, -155.6, -129.49, -118.54, -180.0,
 ))
@@ -56,7 +107,7 @@ PRODUCTION_ABSOLUTE_JOINT_LIMITS_DEG = (
     (-116.0, 159.0), (-70.6, 151.2), (-180.0, 180.0),
 )
 MAX_CACHED_COLLISION_PROOFS = 64
-MAX_BOUND_COLLISION_PROOFS = 64
+MAX_BOUND_COLLISION_PROOFS = 4096
 PRODUCTION_MODEL_SHA256 = (
     "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9"
 )
@@ -144,6 +195,25 @@ KNOWN_REJECTION_REASONS = frozenset({
     "位置运动必须激活全部六个关节",
     "位置运动必须且只能选择一个移动关节",
     "位置运动缺少碰撞守卫证明",
+    "位置运动缺少计划轨迹权限",
+    "生产路由禁止旧版POSITION",
+    "计划令牌格式无效",
+    "计划清单格式无效",
+    "计划清单与轨迹分段不匹配",
+    "计划令牌已被其他来源绑定",
+    "计划分段必须从索引0开始",
+    "计划分段顺序或激活纪元无效",
+    "计划分段权限在同一索引发生变化",
+    "计划令牌已完成且不得复用",
+    "计划令牌冻结表已满",
+    "位置权限冻结表已满",
+    "轨迹描述符格式无效",
+    "轨迹描述符与运动目标不匹配",
+    "轨迹描述符与碰撞守卫不匹配",
+    "轨迹采样网格超过10ms",
+    "轨迹峰值速度或加速度超过命令上限",
+    "轨迹首包执行时间过早或已过期",
+    "轨迹首包执行时间超过上界",
     "碰撞守卫证明格式无效",
     "碰撞守卫证明与运动目标不匹配",
     "碰撞守卫证明与运动合同不匹配",
@@ -204,6 +274,207 @@ def _strict_finite_number(value: object, label: str) -> float:
     if type(value) not in {int, float} or not math.isfinite(float(value)):
         raise ValueError(f"{label}无效")
     return float(value)
+
+
+def _validated_quintic_descriptor(value: object) -> dict:
+    """Return the canonical, bounded command/1.3 trajectory descriptor."""
+
+    try:
+        if not isinstance(value, dict) or set(value) != set(
+            TRAJECTORY_REQUIRED_FIELDS
+        ):
+            raise ValueError
+        if (
+            value.get("schema") != QUINTIC_COMMAND_SCHEMA
+            or value.get("profile") != QUINTIC_PROFILE
+            or not _valid_sha256(value.get("trajectory_sha256"))
+        ):
+            raise ValueError
+        start = _finite_six(value.get("start_rad"), "轨迹起点")
+        target = _finite_six(value.get("target_rad"), "轨迹目标")
+        duration_ns = value.get("duration_ns")
+        interval_count = value.get("interval_count")
+        execute_at_ns = value.get("execute_at_monotonic_ns")
+        segment_index = value.get("segment_index")
+        segment_count = value.get("segment_count")
+        # GO workers parse these fields as uint64_t and segment indices as
+        # non-negative int64_t.  Reject Python's wider integers here so a
+        # Router acceptance can never become a worker-side representation
+        # mismatch after the first UDP domain has already received a packet.
+        if (
+            type(duration_ns) is not int
+            or not 1 <= duration_ns <= UINT64_MAXIMUM
+        ):
+            raise ValueError
+        if (
+            type(interval_count) is not int
+            or not 1 <= interval_count <= MAXIMUM_TRAJECTORY_INTERVALS
+        ):
+            raise ValueError
+        if (
+            type(execute_at_ns) is not int
+            or not 1 <= execute_at_ns <= UINT64_MAXIMUM
+        ):
+            raise ValueError
+        if (
+            type(segment_index) is not int
+            or not 0 <= segment_index <= INT64_MAXIMUM
+            or type(segment_count) is not int
+            or not 1 <= segment_count <= min(
+                INT64_MAXIMUM, MAXIMUM_PLAN_SEGMENTS
+            )
+            or segment_index >= segment_count
+        ):
+            raise ValueError
+        try:
+            duration_s = duration_ns / 1_000_000_000.0
+        except OverflowError:
+            raise ValueError from None
+        if not math.isfinite(duration_s) or duration_s <= 0.0:
+            raise ValueError
+    except (TypeError, ValueError, OverflowError):
+        raise ValueError("轨迹描述符格式无效") from None
+
+    if duration_ns > interval_count * MAXIMUM_TRAJECTORY_GRID_NS:
+        raise ValueError("轨迹采样网格超过10ms")
+    return {
+        "schema": QUINTIC_COMMAND_SCHEMA,
+        "trajectory_sha256": value["trajectory_sha256"],
+        "profile": QUINTIC_PROFILE,
+        "start_rad": list(start),
+        "target_rad": list(target),
+        "duration_ns": duration_ns,
+        "interval_count": interval_count,
+        "execute_at_monotonic_ns": execute_at_ns,
+        "segment_index": segment_index,
+        "segment_count": segment_count,
+    }
+
+
+def _validated_plan_manifest(value: object, trajectory: dict) -> dict:
+    """Validate the immutable ordered hash list for one PLAN_TOKEN.
+
+    ``recipe_sha256`` remains the GUI workflow's already-issued recipe hash.
+    The Router treats the plan token as an opaque one-shot identity and binds
+    it to this exact manifest on first use; it does not mint plan tokens.
+    """
+
+    try:
+        if (
+            not isinstance(value, dict)
+            or set(value) != set(PLAN_MANIFEST_REQUIRED_FIELDS)
+            or value.get("schema") != PLAN_MANIFEST_SCHEMA
+            or not _valid_sha256(value.get("recipe_sha256"))
+        ):
+            raise ValueError
+        hashes = value.get("segment_sha256")
+        if (
+            not isinstance(hashes, list)
+            or not 1 <= len(hashes) <= MAXIMUM_PLAN_SEGMENTS
+            or not all(_valid_sha256(item) for item in hashes)
+        ):
+            raise ValueError
+    except (TypeError, ValueError, OverflowError):
+        raise ValueError("计划清单格式无效") from None
+    if (
+        len(hashes) != trajectory["segment_count"]
+        or hashes[trajectory["segment_index"]]
+        != trajectory["trajectory_sha256"]
+    ):
+        raise ValueError("计划清单与轨迹分段不匹配")
+    return {
+        "schema": PLAN_MANIFEST_SCHEMA,
+        "recipe_sha256": value["recipe_sha256"],
+        "segment_sha256": list(hashes),
+    }
+
+
+def _validated_v13_position_authority(
+    value: dict,
+    *,
+    targets: list[float],
+    moving_joint_mask: list[bool],
+    collision_guard_proof: dict,
+    maximum_velocity_rad_s: float,
+    maximum_acceleration_rad_s2: float,
+) -> tuple[str, dict, dict]:
+    """Bind a command/1.3 plan token and quintic descriptor to its proof."""
+
+    if any(
+        field not in value
+        for field in ("plan_token_id", "trajectory", "plan_manifest")
+    ):
+        raise ValueError("位置运动缺少计划轨迹权限")
+    plan_token_id = value.get("plan_token_id")
+    if not _valid_sha256(plan_token_id):
+        raise ValueError("计划令牌格式无效")
+    trajectory = _validated_quintic_descriptor(value.get("trajectory"))
+    plan_manifest = _validated_plan_manifest(
+        value.get("plan_manifest"), trajectory
+    )
+    start = tuple(trajectory["start_rad"])
+    target = tuple(trajectory["target_rad"])
+    moving_mask = tuple(moving_joint_mask)
+    if target != tuple(targets):
+        raise ValueError("轨迹描述符与运动目标不匹配")
+    if (
+        start != tuple(collision_guard_proof["start_relative_rad"])
+        or target != tuple(collision_guard_proof["target_relative_rad"])
+        or moving_mask != tuple(collision_guard_proof["moving_joint_mask"])
+    ):
+        raise ValueError("轨迹描述符与碰撞守卫不匹配")
+    moving_index = moving_joint_mask.index(True)
+    if any(
+        index != moving_index and start_value != target_value
+        for index, (start_value, target_value) in enumerate(zip(start, target))
+    ) or start[moving_index] == target[moving_index]:
+        raise ValueError("轨迹描述符与运动目标不匹配")
+
+    duration_s = trajectory["duration_ns"] / 1_000_000_000.0
+    displacement = abs(target[moving_index] - start[moving_index])
+    peak_velocity = (
+        QUINTIC_PEAK_VELOCITY_FACTOR * displacement / duration_s
+    )
+    peak_acceleration = (
+        QUINTIC_PEAK_ACCELERATION_FACTOR
+        * displacement
+        / (duration_s * duration_s)
+    )
+    effective_acceleration_limit = min(
+        maximum_acceleration_rad_s2,
+        JOINT_MAXIMUM_TRAJECTORY_ACCELERATION_RAD_S2[moving_index],
+    )
+    if (
+        peak_velocity > maximum_velocity_rad_s
+        or peak_acceleration > effective_acceleration_limit
+    ):
+        raise ValueError("轨迹峰值速度或加速度超过命令上限")
+    return plan_token_id, trajectory, plan_manifest
+
+
+def _v13_authority_binding(command: dict) -> Optional[tuple]:
+    """Freeze all command/1.3 authority fields for same-epoch reuse checks."""
+
+    if command.get("schema") != GUI_COMMAND_SCHEMA_V13:
+        return None
+    trajectory = command["trajectory"]
+    manifest = command["plan_manifest"]
+    return (
+        command["plan_token_id"],
+        trajectory["schema"],
+        trajectory["trajectory_sha256"],
+        trajectory["profile"],
+        tuple(trajectory["start_rad"]),
+        tuple(trajectory["target_rad"]),
+        trajectory["duration_ns"],
+        trajectory["interval_count"],
+        trajectory["execute_at_monotonic_ns"],
+        trajectory["segment_index"],
+        trajectory["segment_count"],
+        manifest["schema"],
+        manifest["recipe_sha256"],
+        tuple(manifest["segment_sha256"]),
+    )
 
 
 def canonical_collision_hardware_state_sha256(value: dict) -> str:
@@ -268,7 +539,7 @@ def _validated_collision_guard_result(
         ):
             raise ValueError
         kind = value.get("kind")
-        if kind not in {"preview", "pose_preview", "execute"}:
+        if kind not in {"preview", "pose_preview", "plan_preview", "execute"}:
             raise ValueError
         session_id = value.get("session_id")
         if not isinstance(session_id, str) or not 1 <= len(session_id) <= 512:
@@ -354,10 +625,13 @@ def _validated_collision_guard_result(
                 COLLISION_HARDWARE_MAX_ABS_VELOCITY_RAD_S + 1.0e-12
                 for velocity in hardware_velocity
             )
-            or any(
-                abs(measured - requested) >
-                COLLISION_NONMOVING_TARGET_TOLERANCE_RAD + 1.0e-12
-                for measured, requested in zip(hardware_position, start)
+            or (
+                kind != "plan_preview"
+                and any(
+                    abs(measured - requested) >
+                    COLLISION_NONMOVING_TARGET_TOLERANCE_RAD + 1.0e-12
+                    for measured, requested in zip(hardware_position, start)
+                )
             )
             or not _valid_sha256(hardware_sha256)
             or hardware_sha256 != canonical_collision_hardware_state_sha256({
@@ -480,8 +754,8 @@ class CollisionGuardProofGate:
         self.proof_max_age_ns = proof_max_age_ns
         self._last_result_by_source: OrderedDict[str, tuple[int, int]] = OrderedDict()
         self._cached: OrderedDict[tuple[str, int], dict] = OrderedDict()
-        self._bindings: OrderedDict[tuple[str, int, str], dict] = OrderedDict()
-        self._proof_to_binding: dict[tuple[str, int], tuple[str, int, str]] = {}
+        self._bindings: OrderedDict[tuple[str, int], dict] = OrderedDict()
+        self._proof_to_binding: dict[tuple[str, int], tuple[str, int]] = {}
 
     @property
     def cached_proof_count(self) -> int:
@@ -580,12 +854,12 @@ class CollisionGuardProofGate:
             moving_mask,
             command["maximum_velocity_rad_s"],
             command["maximum_acceleration_rad_s2"],
+            _v13_authority_binding(command),
         )
         proof_key = (proof["source_instance_id"], proof["request_sequence"])
         binding = (
             command["source_instance_id"],
             command["activation_epoch"],
-            target_sha256,
         )
         existing = self._bindings.get(binding)
         if existing is not None:
@@ -609,22 +883,20 @@ class CollisionGuardProofGate:
         ):
             self._cached.pop(proof_key, None)
             raise ValueError("碰撞守卫证明已过期")
+        # Never evict an accepted (source, epoch) contract: eviction would let
+        # the same epoch acquire a different target after an intermediate
+        # HOLD.  Exhaustion therefore fails closed until a deliberate Router
+        # restart establishes a new authority session.
+        if len(self._bindings) >= self.maximum_bound_proofs:
+            raise ValueError("位置权限冻结表已满")
         # Consume the independently received proof exactly once, then retain a
-        # bounded binding for high-rate repeats of this one activation epoch.
+        # permanent bounded binding for repeats of this one activation epoch.
         self._cached.pop(proof_key, None)
         self._bindings[binding] = {
             "proof": proof,
             "command_contract": command_contract,
         }
         self._proof_to_binding[proof_key] = binding
-        while len(self._bindings) > self.maximum_bound_proofs:
-            old_binding, old_record = self._bindings.popitem(last=False)
-            old_proof = old_record["proof"]
-            old_key = (
-                old_proof["source_instance_id"], old_proof["request_sequence"]
-            )
-            if self._proof_to_binding.get(old_key) == old_binding:
-                self._proof_to_binding.pop(old_key, None)
 
     def _expire_cached(self, now_ns: int) -> None:
         expired = [
@@ -635,6 +907,362 @@ class CollisionGuardProofGate:
         ]
         for key in expired:
             self._cached.pop(key, None)
+
+
+def _canonical_document_sha256(value: object) -> str:
+    encoded = json.dumps(
+        value,
+        ensure_ascii=True,
+        allow_nan=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _plan_segment_authority(command: dict) -> tuple:
+    proof = command["collision_guard_proof"]
+    return (
+        command["activation_epoch"],
+        tuple(command["moving_joint_mask"]),
+        command["maximum_velocity_rad_s"],
+        command["maximum_acceleration_rad_s2"],
+        _v13_authority_binding(command),
+        proof["source_instance_id"],
+        proof["request_sequence"],
+        _canonical_document_sha256(proof),
+    )
+
+
+class PlanManifestGate:
+    """Consume each PLAN_TOKEN's immutable segment manifest in exact order.
+
+    Records are never evicted: once the bounded table is full, a new token is
+    rejected until the Router is deliberately restarted.  This trades bounded
+    availability for the security property that a completed or abandoned token
+    can never become fresh again through cache eviction.
+    """
+
+    def __init__(
+        self,
+        *,
+        maximum_tokens: int = MAXIMUM_TRACKED_PLAN_TOKENS,
+        minimum_execute_lead_ns: int = TRAJECTORY_MINIMUM_EXECUTE_LEAD_NS,
+        maximum_execute_lead_ns: int = TRAJECTORY_MAXIMUM_EXECUTE_LEAD_NS,
+    ) -> None:
+        if (
+            type(maximum_tokens) is not int
+            or maximum_tokens <= 0
+            or type(minimum_execute_lead_ns) is not int
+            or minimum_execute_lead_ns <= 0
+            or type(maximum_execute_lead_ns) is not int
+            or maximum_execute_lead_ns < minimum_execute_lead_ns
+        ):
+            raise ValueError("plan manifest gate bounds must be positive")
+        self.maximum_tokens = maximum_tokens
+        self.minimum_execute_lead_ns = minimum_execute_lead_ns
+        self.maximum_execute_lead_ns = maximum_execute_lead_ns
+        self._records: OrderedDict[str, dict] = OrderedDict()
+
+    @property
+    def tracked_token_count(self) -> int:
+        return len(self._records)
+
+    @property
+    def completed_token_count(self) -> int:
+        return sum(bool(record["completed"]) for record in self._records.values())
+
+    def authorize(self, command: dict, now_ns: Optional[int] = None) -> None:
+        """Authorize a first/repeated/next segment without skipping indices."""
+
+        if (
+            command.get("mode") != "position"
+            or command.get("schema") != GUI_COMMAND_SCHEMA_V13
+        ):
+            return
+        checked_ns = time.monotonic_ns() if now_ns is None else now_ns
+        trajectory = command["trajectory"]
+        manifest = command["plan_manifest"]
+        token = command["plan_token_id"]
+        source = command["source_instance_id"]
+        index = trajectory["segment_index"]
+        count = trajectory["segment_count"]
+        manifest_binding = (
+            manifest["schema"],
+            manifest["recipe_sha256"],
+            tuple(manifest["segment_sha256"]),
+            count,
+        )
+        authority = _plan_segment_authority(command)
+        proof_key = (
+            command["collision_guard_proof"]["source_instance_id"],
+            command["collision_guard_proof"]["request_sequence"],
+        )
+        record = self._records.get(token)
+        if record is None:
+            if index != 0:
+                raise ValueError("计划分段必须从索引0开始")
+            if len(self._records) >= self.maximum_tokens:
+                raise ValueError("计划令牌冻结表已满")
+            self._validate_first_packet_time(trajectory, checked_ns)
+            self._records[token] = {
+                "source": source,
+                "manifest": manifest_binding,
+                "current_index": 0,
+                "current_epoch": command["activation_epoch"],
+                "current_authority": authority,
+                "current_proof_key": proof_key,
+                "current_target_rad": tuple(trajectory["target_rad"]),
+                "completed": count == 1,
+            }
+            return
+
+        if record["source"] != source:
+            raise ValueError("计划令牌已被其他来源绑定")
+        if record["manifest"] != manifest_binding:
+            raise ValueError("计划清单与轨迹分段不匹配")
+        if index == record["current_index"]:
+            if (
+                command["activation_epoch"] != record["current_epoch"]
+                or authority != record["current_authority"]
+            ):
+                raise ValueError("计划分段权限在同一索引发生变化")
+            # Exact high-rate refreshes remain valid after execute_at.  The
+            # first acceptance froze every field which could change motion.
+            return
+        if record["completed"]:
+            raise ValueError("计划令牌已完成且不得复用")
+        if (
+            index != record["current_index"] + 1
+            or command["activation_epoch"] <= record["current_epoch"]
+            or proof_key == record["current_proof_key"]
+            or tuple(trajectory["start_rad"])
+            != record["current_target_rad"]
+        ):
+            raise ValueError("计划分段顺序或激活纪元无效")
+        self._validate_first_packet_time(trajectory, checked_ns)
+        record.update({
+            "current_index": index,
+            "current_epoch": command["activation_epoch"],
+            "current_authority": authority,
+            "current_proof_key": proof_key,
+            "current_target_rad": tuple(trajectory["target_rad"]),
+            "completed": index + 1 == count,
+        })
+
+    def _validate_first_packet_time(
+        self, trajectory: dict, checked_ns: int
+    ) -> None:
+        execute_at_ns = trajectory["execute_at_monotonic_ns"]
+        lead_ns = execute_at_ns - checked_ns
+        if lead_ns < self.minimum_execute_lead_ns:
+            raise ValueError("轨迹首包执行时间过早或已过期")
+        if lead_ns > self.maximum_execute_lead_ns:
+            raise ValueError("轨迹首包执行时间超过上界")
+
+
+class GravityAuthorityGate:
+    """Translate one fresh read-only gravity status into worker authority.
+
+    GUI command JSON is never permitted to supply its own feedforward.  This
+    gate independently observes the gravity node, validates its frozen model,
+    configuration, session and bounded rotor-side values, then injects a
+    short-lived authority immediately before the Router sends local UDP.
+    """
+
+    def __init__(
+        self,
+        *,
+        maximum_age_ns: int = GRAVITY_STATUS_MAXIMUM_AGE_NS,
+        maximum_bindings: int = MAX_BOUND_COLLISION_PROOFS,
+    ) -> None:
+        if (
+            type(maximum_age_ns) is not int
+            or maximum_age_ns <= 0
+            or type(maximum_bindings) is not int
+            or maximum_bindings <= 0
+        ):
+            raise ValueError("gravity authority bounds must be positive")
+        self.maximum_age_ns = maximum_age_ns
+        self.maximum_bindings = maximum_bindings
+        self._latest: Optional[dict] = None
+        self._last_by_source: OrderedDict[str, tuple[int, int]] = OrderedDict()
+        self._session_bindings: OrderedDict[
+            tuple[str, int], tuple[str, str, str, float]
+        ] = (
+            OrderedDict()
+        )
+
+    @property
+    def available(self) -> bool:
+        return self._latest is not None
+
+    def observe_status(self, value: object, now_ns: Optional[int] = None) -> bool:
+        observed_ns = time.monotonic_ns() if now_ns is None else now_ns
+        try:
+            if not isinstance(value, dict):
+                raise ValueError
+            source = value.get("source_instance_id")
+            sequence = value.get("sequence")
+            source_ns = value.get("source_monotonic_ns")
+            session_id = value.get("session_id")
+            state_instance_id = value.get("state_instance_id")
+            if (
+                value.get("schema") != GRAVITY_STATUS_SCHEMA
+                or value.get("source") != "whole_arm_gravity_node"
+                or not _valid_source_instance_id(source)
+                or type(sequence) is not int
+                or not 1 <= sequence <= INT64_MAXIMUM
+                or type(source_ns) is not int
+                or source_ns <= 0
+                or source_ns > observed_ns
+                or observed_ns - source_ns > self.maximum_age_ns
+                or not isinstance(session_id, str)
+                or not session_id
+                or not isinstance(state_instance_id, str)
+                or not state_instance_id
+                or value.get("model_sha256") != PRODUCTION_MODEL_SHA256
+                or value.get("production_model_hash_match") is not True
+                or value.get("gravity_config_sha256") != GRAVITY_CONFIG_SHA256
+                or value.get("anchor_valid") is not True
+                or value.get("finite_bounded") is not True
+                or value.get("pose_feasibility") != "PASS"
+                or value.get("hardware_enable_requested") is not True
+                or value.get("continuous_rotor_limits_authoritative") is not True
+                or value.get("actuation_interface_present") is not True
+                or value.get("blocker") is not None
+            ):
+                raise ValueError
+            age_s = _strict_finite_number(
+                value.get("last_update_age_s"), "重力状态更新时间"
+            )
+            if age_s < 0.0 or age_s * 1.0e9 > self.maximum_age_ns:
+                raise ValueError
+            hardware_sequence = value.get("hardware_state_sequence")
+            hardware_source_ns = value.get(
+                "hardware_state_source_monotonic_ns"
+            )
+            if (
+                type(hardware_sequence) is not int
+                or hardware_sequence <= 0
+                or type(hardware_source_ns) is not int
+                or hardware_source_ns <= 0
+                or hardware_source_ns > source_ns
+                or source_ns - hardware_source_ns > self.maximum_age_ns
+                or not _valid_sha256(value.get("q_actual_sha256"))
+            ):
+                raise ValueError
+            gravity = _finite_six(value.get("gravity_joint_nm"), "重力关节力矩")
+            feedforward = _finite_six(
+                value.get("feedforward_nm"), "重力转子前馈"
+            )
+            del gravity  # Finite validation is the authority needed here.
+            scale = _strict_finite_number(value.get("gravity_scale"), "重力比例")
+            target = _strict_finite_number(
+                value.get("gravity_scale_target"), "目标重力比例"
+            )
+            if (
+                not 0.0 <= scale <= 1.0
+                or not any(abs(target - level) <= 1.0e-12
+                           for level in GRAVITY_SCALE_LEVELS)
+                or abs(feedforward[5]) > 1.0e-12
+                or any(
+                    abs(command) > limit + 1.0e-12
+                    for command, limit in zip(
+                        feedforward, GRAVITY_ROTOR_FEEDFORWARD_LIMIT_NM
+                    )
+                )
+                or value.get("hardware_tff_enabled")
+                is not bool(target > 0.0)
+            ):
+                raise ValueError
+            current = (sequence, source_ns)
+            previous = self._last_by_source.get(source)
+            if previous is not None and (
+                current[0] <= previous[0] or current[1] <= previous[1]
+            ):
+                raise ValueError
+            self._last_by_source.clear()
+            self._last_by_source[source] = current
+            self._latest = {
+                "received_monotonic_ns": observed_ns,
+                "schema": GRAVITY_COMMAND_AUTHORITY_SCHEMA,
+                "source_instance_id": source,
+                "sequence": sequence,
+                "source_monotonic_ns": source_ns,
+                "model_sha256": PRODUCTION_MODEL_SHA256,
+                "gravity_config_sha256": GRAVITY_CONFIG_SHA256,
+                "session_id": session_id,
+                "state_instance_id": state_instance_id,
+                "gravity_scale": scale,
+                "gravity_scale_target": min(
+                    GRAVITY_SCALE_LEVELS,
+                    key=lambda level: abs(level - target),
+                ),
+                "feedforward_nm": list(feedforward),
+            }
+            return True
+        except (KeyError, TypeError, ValueError, OverflowError):
+            self._latest = None
+            return False
+
+    def authorize(self, command: dict, now_ns: Optional[int] = None) -> None:
+        checked_ns = time.monotonic_ns() if now_ns is None else now_ns
+        if command.get("mode") in {"brake", "drag"}:
+            command["feedforward_nm"] = [0.0] * 6
+            command.pop("gravity_authority", None)
+            return
+        if command.get("mode") not in {"hold", "position"}:
+            return
+        # Explicitly enabled legacy POSITION exists only for isolated protocol
+        # regression with no workers; it never receives gravity authority.
+        if (
+            command.get("mode") == "position"
+            and command.get("schema") != GUI_COMMAND_SCHEMA_V13
+        ):
+            command["feedforward_nm"] = [0.0] * 6
+            command.pop("gravity_authority", None)
+            return
+        latest = self._latest
+        if (
+            latest is None
+            or checked_ns < latest["source_monotonic_ns"]
+            or checked_ns - latest["source_monotonic_ns"] > self.maximum_age_ns
+            or checked_ns < latest["received_monotonic_ns"]
+            or checked_ns - latest["received_monotonic_ns"] > self.maximum_age_ns
+        ):
+            raise ValueError("重力authority不存在或已过期")
+        binding_key = (
+            command.get("source_instance_id"),
+            command.get("activation_epoch"),
+        )
+        session_binding = (
+            latest["source_instance_id"],
+            latest["session_id"],
+            latest["state_instance_id"],
+            latest["gravity_scale_target"],
+        )
+        proof = command.get("collision_guard_proof")
+        if command.get("mode") == "position" and (
+            not isinstance(proof, dict)
+            or proof.get("session_id") != session_binding[1]
+            or proof.get("state_instance_id") != session_binding[2]
+        ):
+            raise ValueError("重力authority与碰撞证明session不匹配")
+        existing = self._session_bindings.get(binding_key)
+        if existing is not None and existing != session_binding:
+            raise ValueError("同一激活纪元的重力policy发生变化")
+        if existing is None:
+            if len(self._session_bindings) >= self.maximum_bindings:
+                raise ValueError("重力session冻结表已满")
+            self._session_bindings[binding_key] = session_binding
+        authority = {
+            key: deepcopy(value)
+            for key, value in latest.items()
+            if key != "received_monotonic_ns"
+        }
+        command["feedforward_nm"] = list(authority["feedforward_nm"])
+        command["gravity_authority"] = authority
 
 
 def _validated_command_source(
@@ -718,12 +1346,18 @@ def _normalize_brake_fields(command: dict) -> dict:
     """Remove every position or gain authority from a BRAKE payload."""
 
     normalized = dict(command)
+    normalized["schema"] = GUI_COMMAND_SCHEMA_V12
     normalized["mode"] = "brake"
     normalized["targets_rad"] = [0.0] * 6
     normalized["active_joint_mask"] = [False] * 6
     normalized["moving_joint_mask"] = [False] * 6
     normalized["kp"] = [0.0] * 6
     normalized["kd"] = [0.0] * 6
+    normalized["feedforward_nm"] = [0.0] * 6
+    normalized.pop("gravity_authority", None)
+    normalized.pop("plan_token_id", None)
+    normalized.pop("trajectory", None)
+    normalized.pop("plan_manifest", None)
     return normalized
 
 
@@ -736,12 +1370,18 @@ def _normalize_drag_fields(command: dict) -> dict:
     """
 
     normalized = dict(command)
+    normalized["schema"] = GUI_COMMAND_SCHEMA_V12
     normalized["mode"] = "drag"
     normalized["targets_rad"] = [0.0] * 6
     normalized["active_joint_mask"] = [True] * 6
     normalized["moving_joint_mask"] = [False] * 6
     normalized["kp"] = [0.0] * 6
     normalized["kd"] = [0.0] * 6
+    normalized["feedforward_nm"] = [0.0] * 6
+    normalized.pop("gravity_authority", None)
+    normalized.pop("plan_token_id", None)
+    normalized.pop("trajectory", None)
+    normalized.pop("plan_manifest", None)
     return normalized
 
 
@@ -822,24 +1462,36 @@ class RejectionTracker:
 
 
 def validate_command(
-    text: str, now_ns: Optional[int] = None
+    text: str,
+    now_ns: Optional[int] = None,
+    *,
+    allow_legacy_v12_position: bool = False,
 ) -> tuple[dict, bytes]:
     checked_at_ns = time.monotonic_ns() if now_ns is None else now_ns
     value = json.loads(text)
     if not isinstance(value, dict):
         raise ValueError("命令字段类型或数值无效")
+    if "feedforward_nm" in value or "gravity_authority" in value:
+        raise ValueError("GUI不得直接提供重力前馈authority")
     schema = value.get("schema")
     if schema not in {
         "go-m8010-gui-command/1.0",
         "go-m8010-gui-command/1.1",
-        "go-m8010-gui-command/1.2",
+        GUI_COMMAND_SCHEMA_V12,
+        GUI_COMMAND_SCHEMA_V13,
     }:
         raise ValueError("命令格式不匹配")
     mode = value.get("mode")
     if mode not in ALLOWED_MODES:
         raise ValueError("控制模式不允许")
-    if schema != "go-m8010-gui-command/1.2" and mode != "brake":
+    if schema not in {GUI_COMMAND_SCHEMA_V12, GUI_COMMAND_SCHEMA_V13} and mode != "brake":
         raise ValueError("旧版协议仅允许制动")
+    if (
+        schema == GUI_COMMAND_SCHEMA_V12
+        and mode == "position"
+        and not allow_legacy_v12_position
+    ):
+        raise ValueError("生产路由禁止旧版POSITION")
     if mode == "brake":
         source_instance_id = "emergency-brake"
         source_monotonic_ns = checked_at_ns
@@ -961,14 +1613,14 @@ def validate_command(
     else:
         activation_epoch = value.get("activation_epoch", 0)
         if (
-            schema == "go-m8010-gui-command/1.2"
+            schema in {GUI_COMMAND_SCHEMA_V12, GUI_COMMAND_SCHEMA_V13}
             and (
                 type(activation_epoch) is not int
                 or not 0 <= activation_epoch <= (1 << 63) - 1
             )
         ):
             raise ValueError("激活纪元必须是非负整数")
-        if schema != "go-m8010-gui-command/1.2":
+        if schema not in {GUI_COMMAND_SCHEMA_V12, GUI_COMMAND_SCHEMA_V13}:
             activation_epoch = 0
         if any(active_joint_mask) and activation_epoch == 0:
             raise ValueError("主动命令的激活纪元必须大于零")
@@ -988,8 +1640,31 @@ def validate_command(
         if (not math.isfinite(maximum_velocity) or maximum_velocity <= 0.0 or
                 not math.isfinite(maximum_acceleration) or maximum_acceleration <= 0.0):
             raise ValueError("速度或加速度必须为正的有限数")
+    effective_maximum_velocity = min(maximum_velocity, math.radians(5.0))
+    effective_maximum_acceleration = min(
+        maximum_acceleration, math.radians(20.0)
+    )
+    plan_token_id = None
+    trajectory = None
+    plan_manifest = None
+    if schema == GUI_COMMAND_SCHEMA_V13 and mode == "position":
+        assert collision_guard_proof is not None
+        plan_token_id, trajectory, plan_manifest = (
+            _validated_v13_position_authority(
+                value,
+                targets=targets,
+                moving_joint_mask=moving_joint_mask,
+                collision_guard_proof=collision_guard_proof,
+                maximum_velocity_rad_s=effective_maximum_velocity,
+                maximum_acceleration_rad_s2=effective_maximum_acceleration,
+            )
+        )
     normalized = {
-        "schema": "go-m8010-gui-command/1.2",
+        "schema": (
+            GUI_COMMAND_SCHEMA_V13
+            if trajectory is not None
+            else GUI_COMMAND_SCHEMA_V12
+        ),
         "sequence": sequence,
         "source_instance_id": source_instance_id,
         "source_monotonic_ns": source_monotonic_ns,
@@ -998,13 +1673,17 @@ def validate_command(
         "active_joint_mask": list(active_joint_mask),
         "moving_joint_mask": list(moving_joint_mask),
         "activation_epoch": activation_epoch,
-        "maximum_velocity_rad_s": min(maximum_velocity, math.radians(5.0)),
-        "maximum_acceleration_rad_s2": min(maximum_acceleration, math.radians(20.0)),
+        "maximum_velocity_rad_s": effective_maximum_velocity,
+        "maximum_acceleration_rad_s2": effective_maximum_acceleration,
         "kp": kp,
         "kd": kd,
     }
     if collision_guard_proof is not None:
         normalized["collision_guard_proof"] = collision_guard_proof
+    if trajectory is not None:
+        normalized["plan_token_id"] = plan_token_id
+        normalized["trajectory"] = trajectory
+        normalized["plan_manifest"] = plan_manifest
     if mode == "brake":
         normalized = _normalize_brake_fields(normalized)
     elif mode == "drag":
@@ -1017,12 +1696,13 @@ def payload_for_domain(normalized: dict, domain: str) -> bytes:
 
     if domain not in DOMAIN_JOINT_INDICES:
         raise ValueError("未知硬件故障域")
-    # Collision proof is consumed only at this ROS trust boundary.  Legacy
-    # hardware workers continue receiving the frozen command/1.2 schema.
+    # Collision proof is consumed only at this ROS trust boundary.  A moving
+    # command/1.3 fault domain receives the validated trajectory descriptor;
+    # every non-moving fault domain is deliberately downgraded to 1.2 HOLD.
     worker_command = {
         key: value
         for key, value in normalized.items()
-        if key != "collision_guard_proof"
+        if key not in {"collision_guard_proof", "plan_manifest"}
     }
     if worker_command["mode"] == "brake":
         domain_command = _normalize_brake_fields(worker_command)
@@ -1040,8 +1720,12 @@ def payload_for_domain(normalized: dict, domain: str) -> bytes:
         for index in DOMAIN_JOINT_INDICES[domain]
     ):
         domain_command = dict(worker_command)
+        domain_command["schema"] = GUI_COMMAND_SCHEMA_V12
         domain_command["mode"] = "hold"
         domain_command["moving_joint_mask"] = [False] * 6
+        domain_command.pop("plan_token_id", None)
+        domain_command.pop("trajectory", None)
+        domain_command.pop("plan_manifest", None)
     return json.dumps(domain_command, separators=(",", ":")).encode("utf-8")
 
 
@@ -1052,6 +1736,10 @@ class CommandRouter(Node):
         self.declare_parameter("j2_udp_port", 15312)
         self.declare_parameter("j345_udp_port", 15313)
         self.declare_parameter("j6_udp_port", 15311)
+        self.declare_parameter("allow_legacy_v12_position", False)
+        self.allow_legacy_v12_position = bool(
+            self.get_parameter("allow_legacy_v12_position").value
+        )
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.destinations = [
             ("J1", ("127.0.0.1", int(self.get_parameter("go_udp_port").value))),
@@ -1069,13 +1757,28 @@ class CommandRouter(Node):
             self.on_collision_guard_result,
             10,
         )
+        self.gravity_subscription = self.create_subscription(
+            String,
+            GRAVITY_STATUS_TOPIC,
+            self.on_gravity_status,
+            10,
+        )
         self.last_command: Optional[dict] = None
         self.replay_guard = CommandReplayGuard()
         self.collision_guard_gate = CollisionGuardProofGate()
+        self.plan_manifest_gate = PlanManifestGate()
+        self.gravity_authority_gate = GravityAuthorityGate()
         self.rejected = 0
         self.rejection_tracker = RejectionTracker()
         self.timer = self.create_timer(0.5, self.publish_status)
-        self.get_logger().info("GUI命令路由已启动，仅允许本机UDP目标")
+        legacy_status = (
+            "ON_OFFLINE_COMPATIBILITY_ONLY"
+            if self.allow_legacy_v12_position else "OFF_PRODUCTION"
+        )
+        self.get_logger().info(
+            "GUI命令路由已启动，仅允许本机UDP目标；"
+            f"legacy_v1_2_position={legacy_status}"
+        )
 
     def on_collision_guard_result(self, message: String) -> None:
         """Independently observe proofs; malformed/replayed results stay inert."""
@@ -1086,14 +1789,35 @@ class CommandRouter(Node):
             return
         self.collision_guard_gate.observe_result(value, now_ns=time.monotonic_ns())
 
+    def on_gravity_status(self, message: String) -> None:
+        """Observe the independent model authority; invalid data revokes it."""
+
+        try:
+            value = json.loads(message.data)
+        except (json.JSONDecodeError, TypeError):
+            self.gravity_authority_gate.observe_status(
+                None, now_ns=time.monotonic_ns()
+            )
+            return
+        self.gravity_authority_gate.observe_status(
+            value, now_ns=time.monotonic_ns()
+        )
+
     def on_command(self, message: String) -> None:
         try:
             now_ns = time.monotonic_ns()
             normalized, _payload = validate_command(
-                message.data, now_ns=now_ns
+                message.data,
+                now_ns=now_ns,
+                allow_legacy_v12_position=self.allow_legacy_v12_position,
             )
             self.replay_guard.check(normalized, now_ns=now_ns)
             self.collision_guard_gate.authorize(normalized, now_ns=now_ns)
+            # This is the final authorization before any UDP fault domain can
+            # receive data.  Exact refreshes are recognized by the frozen
+            # manifest record and do not re-apply the first-packet lead gate.
+            self.plan_manifest_gate.authorize(normalized, now_ns=now_ns)
+            self.gravity_authority_gate.authorize(normalized, now_ns=now_ns)
             self.replay_guard.commit(normalized, now_ns=now_ns)
             for domain, destination in self.destinations:
                 self.socket.sendto(payload_for_domain(normalized, domain), destination)
@@ -1135,14 +1859,26 @@ class CommandRouter(Node):
             "received": self.last_command is not None,
             "last_mode": None if self.last_command is None else self.last_command["mode"],
             "j2_active_control_blocked": J2_ACTIVE_CONTROL_BLOCKED,
-            "j2_forwarded_mode": None if self.last_command is None else
-                json.loads(payload_for_domain(self.last_command, "J2"))["mode"],
-            "last_active_joint_mask": None if self.last_command is None else
-                self.last_command["active_joint_mask"],
-            "last_moving_joint_mask": None if self.last_command is None else
-                self.last_command["moving_joint_mask"],
-            "last_activation_epoch": None if self.last_command is None else
-                self.last_command["activation_epoch"],
+            "allow_legacy_v12_position": self.allow_legacy_v12_position,
+            "tracked_plan_tokens": self.plan_manifest_gate.tracked_token_count,
+            "completed_plan_tokens": self.plan_manifest_gate.completed_token_count,
+            "gravity_authority_available": self.gravity_authority_gate.available,
+            "j2_forwarded_mode": (
+                None if self.last_command is None else
+                json.loads(payload_for_domain(self.last_command, "J2"))["mode"]
+            ),
+            "last_active_joint_mask": (
+                None if self.last_command is None else
+                self.last_command["active_joint_mask"]
+            ),
+            "last_moving_joint_mask": (
+                None if self.last_command is None else
+                self.last_command["moving_joint_mask"]
+            ),
+            "last_activation_epoch": (
+                None if self.last_command is None else
+                self.last_command["activation_epoch"]
+            ),
             "last_command_age_ms": age_ms,
             "rejected_commands": self.rejected,
             "last_rejection_age_ms": last_rejection_age_ms,

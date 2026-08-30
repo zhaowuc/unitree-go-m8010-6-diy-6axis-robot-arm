@@ -21,6 +21,8 @@ from unittest import mock
 import numpy as np
 import pytest
 
+from go_m8010_arm_gui.workflow_contract import TrajectoryPlan
+
 
 PROJECT = Path(__file__).resolve().parents[1]
 ROS_SRC = PROJECT.parent
@@ -166,6 +168,20 @@ def pipeline():
         "source_instance_id_valid",
         {"SOURCE_INSTANCE_ID_HEX_LENGTH": 32},
     )
+    gui_optional_sha256_valid = _gui_function("optional_sha256_valid", {})
+    gui_hardware_valid = _gui_function(
+        "hardware_state_contract_valid",
+        {
+            "math": math,
+            "JOINT_NAMES": tuple(f"joint{index}" for index in range(1, 7)),
+            "MOTOR_NAMES": ("J1", "J2A", "J2B", "J3", "J4", "J5", "J6"),
+            "CONTROLLER_MODES": frozenset({
+                "brake", "drag", "hold", "position", "unknown",
+            }),
+            "source_instance_id_valid": gui_source_valid,
+            "optional_sha256_valid": gui_optional_sha256_valid,
+        },
+    )
     gui_limits = _gui_function(
         "moving_targets_within_model_limits",
         {"math": math, "RAD": math.pi / 180.0},
@@ -182,10 +198,12 @@ def pipeline():
             "ArmMode": ArmMode,
             "time": clock,
             "source_instance_id_valid": gui_source_valid,
+            "hardware_state_contract_valid": gui_hardware_valid,
             "collision_motion_state_ready": lambda *_args, **_kwargs: True,
             "moving_targets_within_model_limits": gui_limits,
             "collision_target_sha256": gui_hash,
             "COLLISION_MARGIN_DEG": 2.0,
+            "TrajectoryPlan": TrajectoryPlan,
         },
     )
     matcher = _gui_function(
@@ -265,6 +283,8 @@ def _hardware_state(pipeline, position):
         "state_instance_id": "2" * 32,
         "sequence": 17,
         "source_monotonic_ns": now_ns - 1,
+        "reference": "PERSISTENT_SOFTWARE_ZERO_V1",
+        "persistent_zero_sha256": "b" * 64,
         "position_rad": list(position),
         "velocity_rad_s": [0.0] * 6,
         "per_motor": {
@@ -273,12 +293,20 @@ def _hardware_state(pipeline, position):
                 "reference_captured": True,
                 "communication_ok": True,
                 "merror": 0,
+                "q_joint_rad": (
+                    float(position[1]) if motor in {"J2A", "J2B"}
+                    else float(position[("J1", "J3", "J4", "J5", "J6").index(motor)])
+                ),
+                "dq_joint_rad_s": 0.0,
+                "temperature_c": 25.0,
             }
             for motor in motors
         },
         "controller_fault_by_motor": {motor: False for motor in motors},
         "controller_mode_by_motor": {motor: "hold" for motor in motors},
+        "lease_safe_hold_by_motor": {motor: False for motor in motors},
         "j2_sync_fault": False,
+        "j2_e_sync_rad": 0.0,
         "initial_pose_sha256": "a" * 64,
     }
 
@@ -406,6 +434,9 @@ def _router_harness(pipeline, *, last_command=None):
         last_command=last_command,
         replay_guard=router.CommandReplayGuard(),
         collision_guard_gate=router.CollisionGuardProofGate(),
+        plan_manifest_gate=router.PlanManifestGate(),
+        gravity_authority_gate=router.GravityAuthorityGate(),
+        allow_legacy_v12_position=True,
         rejection_tracker=router.RejectionTracker(),
         rejected=0,
         _log_rejection_reports=lambda _reports: None,
@@ -437,7 +468,9 @@ def test_single_moving_joint_passes_gui_mirror_matcher_and_router(pipeline):
 
     command = _position_command(pipeline, proof)
     normalized, _ = pipeline.router.validate_command(
-        json.dumps(command), now_ns=pipeline.clock.monotonic_ns()
+        json.dumps(command),
+        now_ns=pipeline.clock.monotonic_ns(),
+        allow_legacy_v12_position=True,
     )
     assert normalized["moving_joint_mask"] == [True, False, False, False, False, False]
 
@@ -473,7 +506,9 @@ def test_multi_moving_is_rejected_at_gui_and_router_without_brake(pipeline):
     )
     with pytest.raises(ValueError, match="只能选择一个移动关节"):
         pipeline.router.validate_command(
-            json.dumps(command), now_ns=pipeline.clock.monotonic_ns()
+            json.dumps(command),
+            now_ns=pipeline.clock.monotonic_ns(),
+            allow_legacy_v12_position=True,
         )
 
     sentinel = {"mode": "hold", "immutable": True}
@@ -496,7 +531,9 @@ def test_target_rewrite_and_nonmoving_start_deviation_are_inert(pipeline):
     # The command envelope itself is valid; the independently received proof
     # must be what rejects the post-check target rewrite.
     normalized, _ = pipeline.router.validate_command(
-        json.dumps(rewritten), now_ns=pipeline.clock.monotonic_ns()
+        json.dumps(rewritten),
+        now_ns=pipeline.clock.monotonic_ns(),
+        allow_legacy_v12_position=True,
     )
     gate = pipeline.router.CollisionGuardProofGate()
     assert gate.observe_result(proof, now_ns=pipeline.clock.monotonic_ns())
@@ -567,6 +604,38 @@ def test_expired_proof_is_rejected_without_brake(pipeline):
     _route(pipeline, harness, command)
     _assert_rejected_without_brake(harness, last_before=sentinel)
     assert any("已过期" in reason for reason in harness.rejection_tracker.by_reason)
+
+
+def test_hypothetical_plan_segment_is_checked_but_never_authorizes_router(pipeline):
+    target = [math.radians(2.0), 0.0, 0.0, 0.0, 0.0, 0.0]
+    _window, request, hardware = _gui_request(pipeline, target)
+    assert request is not None
+    request["kind"] = "plan_preview"
+    request["start_relative_rad"] = [
+        math.radians(1.0), 0.0, 0.0, 0.0, 0.0, 0.0
+    ]
+    parsed = pipeline.mirror.parse_collision_guard_request(
+        request,
+        now_ns=pipeline.clock.monotonic_ns(),
+        hardware_state=hardware,
+        expected_session_pose_sha256=request["session_pose_sha256"],
+    )
+    proof = pipeline.mirror.CollisionGuardEngine(
+        AlwaysSafeGuard(),
+        [0.0] * 6,
+        absolute_joint_limits_deg=(
+            pipeline.mirror.PRODUCTION_ABSOLUTE_JOINT_LIMITS_DEG
+        ),
+        model_sha256=pipeline.router.PRODUCTION_MODEL_SHA256,
+        guard_sha256=pipeline.router.PRODUCTION_KINEMATIC_GUARD_SHA256,
+        contract_sha256=pipeline.router.PRODUCTION_COLLISION_CONTRACT_SHA256,
+    ).evaluate(parsed)
+    assert proof["safe"] is True
+    assert pipeline.matcher(proof, request)
+
+    gate = pipeline.router.CollisionGuardProofGate()
+    assert gate.observe_result(proof, now_ns=pipeline.clock.monotonic_ns())
+    assert gate.cached_proof_count == 0
 
 
 def test_cross_epoch_and_command_or_result_replay_are_inert(pipeline):

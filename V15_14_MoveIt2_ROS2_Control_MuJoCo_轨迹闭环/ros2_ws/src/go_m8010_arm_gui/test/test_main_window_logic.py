@@ -16,6 +16,16 @@ from typing import Optional
 import numpy as np
 import pytest
 
+from go_m8010_arm_gui.workflow_contract import (
+    ContractViolation,
+    TrajectoryPlan,
+    TrajectoryRecipe,
+    generate_segmented_quintic_recipe,
+    trajectory_command_descriptor,
+    trajectory_plan_manifest,
+    trajectory_sample_index_at,
+)
+
 
 SOURCE = (
     Path(__file__).resolve().parents[1]
@@ -45,6 +55,9 @@ SESSION_MODEL_LIMITS_DEG = [
     (-180.0, 180.0),
 ]
 MODEL_SHA256 = "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9"
+GRAVITY_CONFIG_SHA256 = (
+    "307469b8384fd35547327ba1d5f80aa440e6b9663406ab7c9d9469bea263335d"
+)
 COLLISION_CONTRACT_SHA256 = (
     "6d802909e44f238816f007ef33b57e1b57099c5522a473cd2dcc2705397af9c9"
 )
@@ -122,6 +135,13 @@ def load_function(name, extra_namespace=None):
             ABSOLUTE_MODEL_LIMITS_DEG
         ),
         "COLLISION_START_MATCH_TOLERANCE_RAD": math.radians(0.25),
+        "ContractViolation": ContractViolation,
+        "TrajectoryPlan": TrajectoryPlan,
+        "TrajectoryRecipe": TrajectoryRecipe,
+        "trajectory_plan_manifest": trajectory_plan_manifest,
+        "trajectory_sample_index_at": trajectory_sample_index_at,
+        "TrajectoryRecipe": TrajectoryRecipe,
+        "trajectory_sample_index_at": trajectory_sample_index_at,
         "canonical_collision_hardware_state_sha256": (
             collision_hardware_state_hash
         ),
@@ -129,6 +149,13 @@ def load_function(name, extra_namespace=None):
         "COLLISION_HOLD_VELOCITY_TOLERANCE_RAD_S": math.radians(0.25),
         "TARGET_SELECTION_DEADBAND_RAD": math.radians(0.01),
         "PRODUCTION_MODEL_SHA256": MODEL_SHA256,
+        "GRAVITY_CONFIG_SHA256": GRAVITY_CONFIG_SHA256,
+        "GRAVITY_STATUS_SCHEMA": "go-m8010-gravity-status/1.1",
+        "GRAVITY_STATUS_TIMEOUT_S": 0.5,
+        "GRAVITY_SCALE_LEVELS": (0.0, 0.25, 0.5, 0.75, 1.0),
+        "GRAVITY_ROTOR_FEEDFORWARD_LIMIT_NM": (
+            0.20, 1.75, 1.10, 0.40, 0.20, 0.0,
+        ),
         "PRODUCTION_COLLISION_CONTRACT_SHA256": COLLISION_CONTRACT_SHA256,
         "PRODUCTION_KINEMATIC_GUARD_SHA256": KINEMATIC_GUARD_SHA256,
         "ROUTER_REJECTION_WARNING_WINDOW_MS": 5000.0,
@@ -178,9 +205,17 @@ def load_class_method(class_name, name, extra_namespace=None):
         "math": math,
         "time": time,
         "Optional": Optional,
+        "ContractViolation": ContractViolation,
+        "TrajectoryPlan": TrajectoryPlan,
+        "TrajectoryRecipe": TrajectoryRecipe,
+        "trajectory_sample_index_at": trajectory_sample_index_at,
         "TARGET_SELECTION_DEADBAND_RAD": math.radians(0.01),
         "COLLISION_GUARD_TIMEOUT_S": 8.0,
         "COLLISION_START_MATCH_TOLERANCE_RAD": math.radians(0.25),
+        "hardware_state_contract_valid": load_function(
+            "hardware_state_contract_valid"
+        ),
+        "collision_target_sha256": load_function("collision_target_sha256"),
     }
     if extra_namespace:
         namespace.update(extra_namespace)
@@ -201,7 +236,111 @@ def test_initial_pose_read_only_parameter_is_a_strict_boolean():
             raise AssertionError(f"non-boolean value was accepted: {invalid!r}")
 
 
-def test_read_only_initial_pose_disables_set_button():
+def _valid_gravity_status(now_ns=10_000_000_000):
+    source_ns = now_ns - 10_000_000
+    return {
+        "schema": "go-m8010-gravity-status/1.1",
+        "source": "whole_arm_gravity_node",
+        "source_instance_id": "a" * 32,
+        "sequence": 7,
+        "source_monotonic_ns": source_ns,
+        "model_sha256": MODEL_SHA256,
+        "production_model_hash_match": True,
+        "gravity_config_sha256": GRAVITY_CONFIG_SHA256,
+        "anchor_valid": True,
+        "session_id": "session-a",
+        "state_instance_id": "b" * 32,
+        "hardware_state_sequence": 41,
+        "hardware_state_source_monotonic_ns": source_ns - 10_000_000,
+        "q_actual_sha256": "c" * 64,
+        "last_update_age_s": 0.01,
+        "gravity_joint_nm": [1.0, 2.0, 3.0, 0.4, 0.5, 0.0],
+        "feedforward_nm": [0.01, 0.02, 0.03, 0.01, 0.01, 0.0],
+        "gravity_scale": 0.1,
+        "gravity_scale_target": 0.25,
+        "finite_bounded": True,
+        "pose_feasibility": "PASS",
+        "blocker": None,
+        "hardware_enable_requested": True,
+        "continuous_rotor_limits_authoritative": True,
+        "actuation_interface_present": True,
+        "hardware_tff_enabled": True,
+    }
+
+
+def test_gravity_status_authority_is_complete_fresh_and_fail_closed():
+    validate = load_function("gravity_status_authorizes_hardware")
+    checked_ns = 10_000_000_000
+    valid = _valid_gravity_status(checked_ns)
+    assert validate(
+        valid,
+        session_id="session-a",
+        state_instance_id="b" * 32,
+        now_monotonic_ns=checked_ns,
+    )
+
+    invalid_variants = []
+    for field, value in (
+        ("schema", "go-m8010-gravity-status/1.0"),
+        ("source_monotonic_ns", checked_ns - 500_000_001),
+        ("hardware_state_sequence", 0),
+        ("hardware_state_source_monotonic_ns", checked_ns - 300_000_000),
+        ("q_actual_sha256", "not-a-hash"),
+        ("gravity_config_sha256", "d" * 64),
+        ("continuous_rotor_limits_authoritative", False),
+        ("finite_bounded", False),
+        ("pose_feasibility", "BLOCKED"),
+        ("hardware_tff_enabled", False),
+    ):
+        candidate = dict(valid)
+        candidate[field] = value
+        invalid_variants.append(candidate)
+    nonfinite = dict(valid)
+    nonfinite["feedforward_nm"] = [0.0, math.nan, 0.0, 0.0, 0.0, 0.0]
+    invalid_variants.append(nonfinite)
+    j6_nonzero = dict(valid)
+    j6_nonzero["feedforward_nm"] = [0.0] * 5 + [1.0e-6]
+    invalid_variants.append(j6_nonzero)
+    over_limit = dict(valid)
+    over_limit["feedforward_nm"] = [0.21, 0.0, 0.0, 0.0, 0.0, 0.0]
+    invalid_variants.append(over_limit)
+
+    for candidate in invalid_variants:
+        assert not validate(
+            candidate,
+            session_id="session-a",
+            state_instance_id="b" * 32,
+            now_monotonic_ns=checked_ns,
+        )
+
+
+def test_gravity_callback_accepts_only_current_status_schema():
+    callback = load_class_method(
+        "ArmGuiNode", "_gravity_status_callback",
+        {
+            "GRAVITY_STATUS_SCHEMA": "go-m8010-gravity-status/1.1",
+            "String": object,
+        },
+    )
+    node = SimpleNamespace(
+        latest_gravity_status=None,
+        last_gravity_status_receipt=0.0,
+    )
+    current = SimpleNamespace(data=json.dumps({
+        "schema": "go-m8010-gravity-status/1.1", "sequence": 1,
+    }))
+    callback(node, current)
+    assert node.latest_gravity_status["sequence"] == 1
+    accepted_at = node.last_gravity_status_receipt
+    stale_schema = SimpleNamespace(data=json.dumps({
+        "schema": "go-m8010-gravity-status/1.0", "sequence": 2,
+    }))
+    callback(node, stale_schema)
+    assert node.latest_gravity_status["sequence"] == 1
+    assert node.last_gravity_status_receipt == accepted_at
+
+
+def test_control_panel_exposes_only_the_four_v15_31a_actions():
     class FakeButton:
         def __init__(self, text):
             self.text = text
@@ -234,19 +373,29 @@ def test_read_only_initial_pose_disables_set_button():
         def setWordWrap(self, _enabled):
             pass
 
+    class FakeProgress:
+        def setRange(self, *_args):
+            pass
+
+        def setValue(self, _value):
+            pass
+
+        def setFormat(self, _text):
+            pass
+
     method = load_main_window_method(
         "_control_panel",
         {
             "QGroupBox": lambda _title: object(),
             "QGridLayout": FakeLayout,
             "QLabel": FakeLabel,
+            "QProgressBar": FakeProgress,
             "Qt": SimpleNamespace(AlignCenter=0),
         },
     )
 
     class FakeWindow:
-        def __init__(self, read_only):
-            self.node = SimpleNamespace(initial_pose_read_only=read_only)
+        def __init__(self):
             self.buttons = []
 
         def _button(self, text, _callback, object_name=""):
@@ -258,20 +407,17 @@ def test_read_only_initial_pose_disables_set_button():
         def __getattr__(self, _name):
             return lambda *_args, **_kwargs: None
 
-    protected = FakeWindow(True)
-    method(protected)
-    protected_button = next(
-        button for button in protected.buttons if button.text == "设置初始化姿态"
-    )
-    assert not protected_button.enabled
-    assert "只读保护" in protected_button.tooltip
-
-    writable = FakeWindow(False)
-    method(writable)
-    writable_button = next(
-        button for button in writable.buttons if button.text == "设置初始化姿态"
-    )
-    assert writable_button.enabled
+    window = FakeWindow()
+    method(window)
+    assert [button.text for button in window.buttons] == [
+        "预演轨迹",
+        "下发到现实",
+        "恢复初始化姿态",
+        "停止并制动",
+    ]
+    submit = window.buttons[1]
+    assert not submit.enabled
+    assert "预演" in submit.tooltip
 
 
 def test_direct_save_call_cannot_change_read_only_initial_pose_bytes_or_hash():
@@ -447,14 +593,15 @@ def test_virtual_preview_does_not_flash_at_execution_source_age_boundary():
     )
 
 
-def test_virtual_widget_gate_uses_hold_health_not_motion_authorization():
+def test_virtual_widget_gate_is_non_authorizing_and_hardware_independent():
     source = SOURCE.read_text(encoding="utf-8")
     start = source.index("    def _refresh_virtual_editability(self) -> None:")
     end = source.index("    def _record_virtual_target", start)
     refresh = source[start:end]
-    assert "virtual_target_edit_state_ready(" in refresh
+    assert "virtual_target_edit_state_ready(" not in refresh
     assert "collision_motion_state_ready(" not in refresh
-    assert "and edit_ready" in refresh
+    assert "Virtual target selection is non-authorizing" in refresh
+    assert "self.direction is ArmMode.SIM_TO_REAL" in refresh
 
 
 def test_initial_pose_is_bound_to_exact_state_node_loaded_file_and_parent_zero():
@@ -614,7 +761,7 @@ def test_visible_target_inputs_expose_the_complete_model_range_without_fixed_cap
             raise AssertionError(f"invalid model limits accepted: {invalid!r}")
 
 
-def test_joint_sliders_are_long_expanding_and_use_the_full_model_bounds():
+def test_only_plan_sliders_are_long_expanding_and_use_full_model_bounds():
     source = SOURCE.read_text(encoding="utf-8")
     slider_start = source.index("    def _slider(")
     slider_end = source.index("    def _virtual_panel", slider_start)
@@ -630,7 +777,9 @@ def test_joint_sliders_are_long_expanding_and_use_the_full_model_bounds():
     real_end = source.index("    def _button", real_start)
     real = source[real_start:real_end]
     assert "layout.setColumnStretch(1, 1)" in virtual
-    assert "layout.setColumnStretch(1, 1)" in real
+    assert "self._slider(" not in real
+    assert "QDoubleSpinBox" not in real
+    assert 'QGroupBox("现实机械臂（编码器反馈）")' in real
 
 
 def test_window_fits_available_screen_and_keeps_large_content_scrollable():
@@ -1020,13 +1169,23 @@ def test_multi_joint_virtual_edit_requests_only_non_authorizing_pose_preview():
 
     class FakeWindow:
         def __init__(self, moving_mask):
-            self.pending_target_joint_mask = list(moving_mask)
+            self.command_targets = [0.0] * 6
+            self.candidate_targets = [
+                0.1 if moving else 0.0 for moving in moving_mask
+            ]
+            self.candidate_joint_mask = [False] * 6
             self.latest_collision_preview_sequence = None
             self.kinds = []
 
         def _new_collision_request(self, kind):
             self.kinds.append(kind)
             return {"request_sequence": len(self.kinds)}
+
+        def _clear_candidate_approval(self):
+            pass
+
+        def _set_workflow_state(self, *_args):
+            pass
 
     multi = FakeWindow([True, False, True, False, False, True])
     preview(multi)
@@ -1040,6 +1199,177 @@ def test_multi_joint_virtual_edit_requests_only_non_authorizing_pose_preview():
     none = FakeWindow([False] * 6)
     preview(none)
     assert none.kinds == []
+
+    recipe = generate_segmented_quintic_recipe(
+        [0.0] * 6,
+        [0.1, 0.0, 0.1, 0.0, 0.0, 0.0],
+        tuple((-math.pi, math.pi) for _ in range(6)),
+        maximum_velocity_rad_s=math.radians(5.0),
+        maximum_acceleration_rad_s2=math.radians(15.0),
+        maximum_segment_delta_rad=math.radians(30.0),
+    )
+    planned = FakeWindow([True, False, True, False, False, False])
+    planned.workflow_contract = SimpleNamespace(q_plan_trajectory=recipe)
+    planned.preview_collision_segment_index = 0
+    preview(planned)
+    assert planned.kinds == ["plan_preview"]
+
+
+def test_multi_segment_plan_preview_must_prove_every_recipe_segment():
+    consume = load_main_window_method(
+        "_consume_collision_guard_result",
+        {
+            "TrajectoryRecipe": TrajectoryRecipe,
+            "collision_guard_result_matches": lambda _result, _request: True,
+            "collision_target_sha256": load_function("collision_target_sha256"),
+        },
+    )
+    recipe = generate_segmented_quintic_recipe(
+        [0.0] * 6,
+        [0.1, 0.0, 0.1, 0.0, 0.0, 0.0],
+        tuple((-math.pi, math.pi) for _ in range(6)),
+        maximum_velocity_rad_s=math.radians(5.0),
+        maximum_acceleration_rad_s2=math.radians(15.0),
+        maximum_segment_delta_rad=math.radians(30.0),
+    )
+
+    class FakeWindow:
+        def __init__(self):
+            self.session_id = "session"
+            self.state_instance_id = "state"
+            self.candidate_targets = list(recipe.target_rad)
+            self.workflow_contract = SimpleNamespace(q_plan_trajectory=recipe)
+            self.preview_collision_segment_index = 0
+            self.preview_collision_segment_sha256 = []
+            self.preview_collision_request_segment_by_sequence = {1: 0}
+            self.latest_collision_preview_sequence = 1
+            self.last_consumed_collision_sequence = 0
+            self.preview_animation_complete = False
+            self.preview_collision_safe = False
+            self.collision_requests = {1: self.request(1, 0)}
+            self.node = SimpleNamespace(
+                latest_collision_result={"request_sequence": 1, "safe": True}
+            )
+            self.next_requests = 0
+            self.states = []
+
+        def request(self, sequence, index):
+            segment = recipe.segments[index]
+            return {
+                "kind": "plan_preview",
+                "session_id": self.session_id,
+                "state_instance_id": self.state_instance_id,
+                "start_relative_rad": list(segment.start_rad),
+                "target_relative_rad": list(segment.target_rad),
+            }
+
+        def _request_collision_preview(self):
+            self.next_requests += 1
+
+        def _set_workflow_state(self, *args):
+            self.states.append(args)
+
+        def _clear_candidate_approval(self):
+            raise AssertionError("safe immutable recipe was unexpectedly cleared")
+
+        def _notify(self, *_args):
+            raise AssertionError("safe immutable recipe was unexpectedly rejected")
+
+        def _try_finalize_preview(self):
+            raise AssertionError("animation has not completed")
+
+    window = FakeWindow()
+    consume(window)
+    assert window.preview_collision_segment_index == 1
+    assert window.preview_collision_segment_sha256 == [recipe.segments[0].sha256]
+    assert window.next_requests == 1
+
+    window.preview_collision_request_segment_by_sequence[2] = 1
+    window.latest_collision_preview_sequence = 2
+    window.collision_requests[2] = window.request(2, 1)
+    window.node.latest_collision_result = {"request_sequence": 2, "safe": True}
+    consume(window)
+    assert window.preview_collision_segment_index == 2
+    assert window.preview_collision_segment_sha256 == [
+        segment.sha256 for segment in recipe.segments
+    ]
+    assert window.preview_collision_safe is True
+
+
+def test_planned_twin_uses_exact_dispatched_integer_grid_sample():
+    update_pose = load_main_window_method("_update_planned_execution_pose")
+    recipe = generate_segmented_quintic_recipe(
+        [0.0] * 6,
+        [0.1, 0.0, 0.0, 0.0, 0.0, 0.0],
+        tuple((-math.pi, math.pi) for _ in range(6)),
+        maximum_velocity_rad_s=math.radians(5.0),
+        maximum_acceleration_rad_s2=math.radians(15.0),
+        maximum_segment_delta_rad=math.radians(30.0),
+    )
+    segment = recipe.segments[0]
+    execute_at = 50_000_000_000
+    descriptor = trajectory_command_descriptor(
+        segment,
+        plan_token_id="a" * 64,
+        execute_at_monotonic_ns=execute_at,
+        segment_index=0,
+        segment_count=1,
+    )
+    window = SimpleNamespace(
+        active_trajectory_segment=segment,
+        active_trajectory_descriptor=descriptor,
+        preview_pose=None,
+    )
+    trajectory = descriptor["trajectory"]
+    middle_time = execute_at + trajectory["duration_ns"] // 2
+    expected_index = trajectory_sample_index_at(
+        middle_time,
+        execute_at_monotonic_ns=execute_at,
+        duration_ns=trajectory["duration_ns"],
+        interval_count=trajectory["interval_count"],
+    )
+    update_pose(window, middle_time)
+    assert window.preview_pose == segment.samples[expected_index].q_rad
+    update_pose(window, execute_at + trajectory["duration_ns"])
+    assert window.preview_pose == segment.target_rad
+
+
+def test_j2_completion_requires_both_workers_to_echo_exact_terminal_segment():
+    complete = load_function("moving_trajectory_feedback_complete")
+    target = [0.0, 0.10, 0.0, 0.0, 0.0, 0.0]
+    segment = generate_segmented_quintic_recipe(
+        [0.0] * 6,
+        target,
+        tuple(
+            (lower * math.pi / 180.0, upper * math.pi / 180.0)
+            for lower, upper in SESSION_MODEL_LIMITS_DEG
+        ),
+        maximum_velocity_rad_s=math.radians(5.0),
+        maximum_acceleration_rad_s2=math.radians(15.0),
+        maximum_segment_delta_rad=math.radians(30.0),
+    ).segments[0]
+    descriptor = trajectory_command_descriptor(
+        segment,
+        plan_token_id="a" * 64,
+        execute_at_monotonic_ns=time.monotonic_ns() + 1_000_000_000,
+        segment_index=0,
+        segment_count=1,
+    )
+    state = hardware_state()
+    for motor_name in ("J2A", "J2B"):
+        state["per_motor"][motor_name].update({
+            "trajectory_plan_token_id": "a" * 64,
+            "trajectory_sha256": segment.sha256,
+            "trajectory_state": "COMPLETE",
+            "trajectory_sample_index": segment.profile.interval_count,
+            "trajectory_interval_count": segment.profile.interval_count,
+        })
+    assert complete(state, 1, descriptor)
+    state["per_motor"]["J2B"]["trajectory_state"] = "RUNNING"
+    assert not complete(state, 1, descriptor)
+    state["per_motor"]["J2B"]["trajectory_state"] = "COMPLETE"
+    state["per_motor"]["J2B"]["trajectory_sha256"] = "b" * 64
+    assert not complete(state, 1, descriptor)
 
 
 def test_collision_recommendation_never_turns_support_tracking_error_into_edit():
@@ -1202,6 +1532,9 @@ def test_only_a_matching_safe_execute_result_reaches_the_commit_step():
         def _refresh_virtual_editability(self):
             pass
 
+        def _set_workflow_state(self, *_args):
+            pass
+
     approved = FakeWindow(result)
     consume(approved)
     assert approved.commits == [(request, result)]
@@ -1292,6 +1625,9 @@ def test_execute_proof_failure_clears_queue_and_late_safe_cannot_commit(
 
         def _notify(self, message, level="warning"):
             self.notices.append((message, level))
+
+        def _set_workflow_state(self, *_args):
+            pass
 
     window = FakeWindow()
     if failure_case == "pose_changed":
@@ -1404,6 +1740,89 @@ def test_suspended_gui_still_publishes_status_and_virtual_preview_only():
     assert "self.node.publish_command(" not in suspended
 
 
+def test_first_position_publish_allocates_fresh_lead_and_sends_manifest():
+    class Message:
+        def __init__(self, data):
+            self.data = data
+
+    publish = load_main_window_method(
+        "_publish_command",
+        {
+            "String": Message,
+            "Float64MultiArray": Message,
+            "effective_active_joint_mask": load_function(
+                "effective_active_joint_mask"
+            ),
+            "trajectory_command_descriptor": trajectory_command_descriptor,
+            "TrajectoryPlan": TrajectoryPlan,
+            "TRAJECTORY_EXECUTE_LEAD_NS": 250_000_000,
+        },
+    )
+    recipe = generate_segmented_quintic_recipe(
+        [0.0] * 6,
+        [0.1, 0.0, 0.0, 0.0, 0.0, 0.0],
+        tuple((-math.pi, math.pi) for _ in range(6)),
+        maximum_velocity_rad_s=math.radians(5.0),
+        maximum_acceleration_rad_s2=math.radians(20.0),
+        maximum_segment_delta_rad=math.radians(30.0),
+    )
+
+    class Publisher:
+        def __init__(self):
+            self.messages = []
+
+        def publish(self, message):
+            self.messages.append(message)
+
+    class FakeNode:
+        def __init__(self):
+            self.mode_publisher = Publisher()
+            self.target_publisher = Publisher()
+            self.calls = []
+
+        def publish_command(self, *args):
+            self.calls.append(args)
+
+    window = SimpleNamespace(
+        requested_active_joint_mask=[True] * 6,
+        connected=[True] * 6,
+        hardware_mode="position",
+        direction=SimpleNamespace(value="sim_to_real"),
+        moving_joint_mask=[True, False, False, False, False, False],
+        pending_target_joint_mask=[False] * 6,
+        faulted_joint_mask=[False] * 6,
+        faulted=[False] * 6,
+        activation_epoch=7,
+        command_stream_suspended=False,
+        command_stream_suspended_reason="",
+        command_sequence=12,
+        command_targets=list(recipe.segments[0].target_rad),
+        targets=list(recipe.target_rad),
+        config={},
+        active_collision_proof={"safe": True},
+        active_trajectory_descriptor=None,
+        active_plan_manifest=trajectory_plan_manifest(recipe),
+        active_trajectory_first_publish_pending=True,
+        active_trajectory_segment=recipe.segments[0],
+        active_trajectory_segment_index=0,
+        trajectory_segment_count=1,
+        workflow_contract=SimpleNamespace(submitted_token_id="a" * 64),
+        task_id=None,
+        node=FakeNode(),
+    )
+    window._suspend_command_stream = lambda reason: pytest.fail(reason)
+    before_ns = time.monotonic_ns()
+    assert publish(window)
+    after_ns = time.monotonic_ns()
+    assert window.active_trajectory_first_publish_pending is False
+    assert len(window.node.calls) == 1
+    sent_descriptor = window.node.calls[0][-2]
+    sent_manifest = window.node.calls[0][-1]
+    execute_at = sent_descriptor["trajectory"]["execute_at_monotonic_ns"]
+    assert before_ns + 250_000_000 <= execute_at <= after_ns + 250_000_000
+    assert sent_manifest == trajectory_plan_manifest(recipe)
+
+
 def test_position_stop_preserves_fixed_axes_and_captures_only_moving_axes():
     stop_targets = load_function("fixed_hold_targets_after_position_stop")
     locked = [0.0, -1.0, 2.0, 3.0, 4.0, 5.0]
@@ -1459,41 +1878,60 @@ def test_initially_disconnected_joint_cannot_be_prearmed_for_recovery():
 
 
 def test_target_edit_uses_immutable_command_not_external_feedback_as_baseline():
-    record = load_main_window_method(
-        "_record_virtual_target",
-        {"COLLISION_PREVIEW_DEBOUNCE_MS": 60},
-    )
+    record = load_main_window_method("_record_virtual_target")
 
     class FakeTimer:
         def __init__(self):
-            self.starts = []
+            self.stops = 0
 
-        def start(self, milliseconds):
-            self.starts.append(milliseconds)
+        def stop(self):
+            self.stops += 1
+
+    class FakeContract:
+        def __init__(self):
+            self.plan_target = None
+
+        def change_plan_target(self, values):
+            self.plan_target = tuple(values)
+            return self
 
     class FakeWindow:
         def __init__(self):
             self.targets = [0.0] * 6
+            self.candidate_targets = [0.0] * 6
+            self.candidate_joint_mask = [False] * 6
             self.command_targets = [0.25] + [0.0] * 5
             self.actual = [0.80] + [0.0] * 5
             self.connected = [True] * 6
             self.pending_target_joint_mask = [False] * 6
             self.activation_epoch = 12345
             self.collision_preview_timer = FakeTimer()
+            self.workflow_contract = FakeContract()
             self.renders = 0
 
         def _show_targets_on_virtual(self):
             self.renders += 1
 
+        def _clear_candidate_approval(self):
+            pass
+
+        def _set_workflow_state(self, *_args):
+            pass
+
+        def _notify(self, *_args):
+            raise AssertionError("valid target unexpectedly rejected")
+
     window = FakeWindow()
     record(window, 0, 0.25)
     assert window.pending_target_joint_mask == [False] * 6
     record(window, 0, 0.30)
-    assert window.pending_target_joint_mask == [True, False, False, False, False, False]
+    assert window.pending_target_joint_mask == [False] * 6
+    assert window.candidate_joint_mask == [True, False, False, False, False, False]
+    assert window.workflow_contract.plan_target == tuple(window.candidate_targets)
     assert window.command_targets[0] == 0.25
     assert window.actual[0] == 0.80
     assert window.activation_epoch == 12345
-    assert window.collision_preview_timer.starts == [60, 60]
+    assert window.collision_preview_timer.stops == 2
 
 
 def test_execute_consumes_selection_and_connection_loss_clears_pending_bit():
@@ -1511,7 +1949,7 @@ def test_execute_consumes_selection_and_connection_loss_clears_pending_bit():
     assert "self.requested_active_joint_mask[index] = False" in apply_source
 
 
-def test_execute_without_pending_target_preserves_active_hold_or_position_authority():
+def test_execute_without_matching_preview_token_is_inert_in_every_mode():
     arm_mode = SimpleNamespace(SIM_TO_REAL=object())
     execute = load_main_window_method("_execute_target", {"ArmMode": arm_mode})
 
@@ -1519,91 +1957,23 @@ def test_execute_without_pending_target_preserves_active_hold_or_position_author
         def __init__(self, mode):
             self.hardware_mode = mode
             self.direction = arm_mode.SIM_TO_REAL
-            self.command_targets = [-0.1, 0.2, -0.3, 0.4, -0.5, 0.6]
-            self.targets = list(self.command_targets)
-            self.actual = [0.8, -0.7, 0.6, -0.5, 0.4, -0.3]
-            self.connected = [True] * 6
-            self.requested_active_joint_mask = [True, True, False, True, True, True]
-            self.pending_target_joint_mask = [False] * 6
-            self.moving_joint_mask = [False] * 6
-            self.command_stream_suspended = False
-            self.queued_pose_target = None
-            self.activation_epoch = 123456
-            self.notices = []
-
-        def _require_control_feedback(self, _message, **_kwargs):
-            return True
-
-        def _prepare_hold_at_actual(self):
-            raise AssertionError("active authoritative target must not be recaptured")
-
-        def _notify(self, message, level="warning"):
-            self.notices.append((message, level))
-
-    for mode in ("hold", "position"):
-        window = FakeWindow(mode)
-        authority_before = (
-            list(window.targets),
-            list(window.command_targets),
-            list(window.requested_active_joint_mask),
-            list(window.pending_target_joint_mask),
-            list(window.moving_joint_mask),
-            window.activation_epoch,
-        )
-        execute(window)
-        authority_after = (
-            window.targets,
-            window.command_targets,
-            window.requested_active_joint_mask,
-            window.pending_target_joint_mask,
-            window.moving_joint_mask,
-            window.activation_epoch,
-        )
-        assert authority_after == authority_before
-        assert window.hardware_mode == mode
-        assert len(window.notices) == 1
-        expected = (
-            "已有POSITION轨迹"
-            if mode == "position" else
-            "保留现有权威目标与命令流"
-        )
-        assert expected in window.notices[0][0]
-
-
-def test_execute_without_pending_target_can_capture_actual_from_brake_or_drag():
-    arm_mode = SimpleNamespace(SIM_TO_REAL=object())
-    execute = load_main_window_method("_execute_target", {"ArmMode": arm_mode})
-
-    class FakeWindow:
-        def __init__(self, mode):
-            self.hardware_mode = mode
-            self.direction = arm_mode.SIM_TO_REAL
-            self.targets = [0.0] * 6
+            self.targets = [0.1] + [0.0] * 5
             self.command_targets = [0.0] * 6
-            self.connected = [True] * 6
-            self.pending_target_joint_mask = [False] * 6
-            self.moving_joint_mask = [False] * 6
-            self.command_stream_suspended = False
-            self.queued_pose_target = None
-            self.captures = 0
             self.notices = []
 
-        def _require_control_feedback(self, _message, **_kwargs):
-            return True
-
-        def _prepare_hold_at_actual(self):
-            self.captures += 1
-            self.hardware_mode = "hold"
+        def _preview_approval_matches_candidate(self):
+            return False
 
         def _notify(self, message, level="warning"):
             self.notices.append((message, level))
 
-    for mode in ("brake", "drag"):
+    for mode in ("brake", "drag", "hold", "position"):
         window = FakeWindow(mode)
+        before = (list(window.targets), list(window.command_targets), mode)
         execute(window)
-        assert window.captures == 1
-        assert window.hardware_mode == "hold"
-        assert "已锁定当前实际姿态" in window.notices[0][0]
+        assert (window.targets, window.command_targets, window.hardware_mode) == before
+        assert len(window.notices) == 1
+        assert "PLAN_TOKEN" in window.notices[0][0]
 
 
 def test_multi_axis_virtual_pose_queues_only_one_physical_segment_at_a_time():
@@ -1620,11 +1990,29 @@ def test_multi_axis_virtual_pose_queues_only_one_physical_segment_at_a_time():
             "ArmMode": arm_mode,
             "collision_motion_state_ready": readiness,
             "moving_targets_within_model_limits": limits_valid,
+            "PLAN_ACTUAL_DRIFT_TOLERANCE_RAD": math.radians(0.25),
+            "ContractViolation": type("ContractViolation", (ValueError,), {}),
+            "RealSubmitRejected": type("RealSubmitRejected", (ValueError,), {}),
+            "TrajectoryRecipe": TrajectoryRecipe,
+            "trajectory_plan_manifest": trajectory_plan_manifest,
         },
     )
 
     class FakeWindow:
         _begin_next_queued_segment = begin
+
+        class Contract:
+            current_plan_token = SimpleNamespace(token_id="approved-plan")
+            q_hardware_command = None
+
+            def __init__(self, target, recipe):
+                self.target = tuple(target)
+                self.q_plan_trajectory = recipe
+
+            def explicit_real_submit(self, token_id, **_kwargs):
+                assert token_id == "approved-plan"
+                self.q_hardware_command = self.target
+                return self
 
         def __init__(self):
             self.hardware_mode = "hold"
@@ -1644,9 +2032,36 @@ def test_multi_axis_virtual_pose_queues_only_one_physical_segment_at_a_time():
             self.requests = []
             self.notices = []
             self.node = SimpleNamespace(latest_hardware=hardware_state())
+            recipe = generate_segmented_quintic_recipe(
+                [0.0] * 6,
+                self.targets,
+                tuple((lower * math.pi / 180.0, upper * math.pi / 180.0)
+                      for lower, upper in self.edit_limits),
+                maximum_velocity_rad_s=math.radians(5.0),
+                maximum_acceleration_rad_s2=math.radians(20.0),
+                maximum_segment_delta_rad=math.radians(30.0),
+            )
+            self.workflow_contract = self.Contract(self.targets, recipe)
+            self.queued_trajectory_segments = []
+            self.trajectory_segment_count = 0
+            self.active_trajectory_segment = None
+            self.active_trajectory_segment_index = None
+            self.active_trajectory_descriptor = None
+
+        def _preview_approval_matches_candidate(self):
+            return True
+
+        def _current_preview_checks(self, _now):
+            return SimpleNamespace(complete_success=True)
+
+        def _clear_candidate_approval(self):
+            raise AssertionError("valid approved preview was unexpectedly cleared")
 
         def _require_control_feedback(self, _message, **_kwargs):
             return True
+
+        def _authorize_active_joints(self, requested):
+            self.requested_active_joint_mask = list(requested)
 
         def _request_collision_execute(self):
             assert self.hardware_mode == "hold"
@@ -1685,10 +2100,7 @@ def test_multi_axis_virtual_pose_queues_only_one_physical_segment_at_a_time():
 
 
 def test_long_joint_move_is_split_into_bounded_fresh_proof_segments():
-    begin = load_main_window_method(
-        "_begin_next_queued_segment",
-        {"COLLISION_EXECUTE_SEGMENT_MAX_DEG": 30.0},
-    )
+    begin = load_main_window_method("_begin_next_queued_segment")
 
     class FakeWindow:
         def __init__(self):
@@ -1696,7 +2108,20 @@ def test_long_joint_move_is_split_into_bounded_fresh_proof_segments():
             self.targets = [0.0] * 6
             self.pending_target_joint_mask = [False] * 6
             self.queued_pose_target = [math.radians(75.0)] + [0.0] * 5
-            self.queued_joint_indices = [0]
+            recipe = generate_segmented_quintic_recipe(
+                [0.0] * 6,
+                self.queued_pose_target,
+                tuple((-math.pi, math.pi) for _ in range(6)),
+                maximum_velocity_rad_s=math.radians(5.0),
+                maximum_acceleration_rad_s2=math.radians(20.0),
+                maximum_segment_delta_rad=math.radians(30.0),
+            )
+            self.queued_trajectory_segments = list(recipe.segments)
+            self.trajectory_segment_count = len(recipe.segments)
+            self.queued_joint_indices = [0] * len(recipe.segments)
+            self.active_trajectory_segment = None
+            self.active_trajectory_segment_index = None
+            self.active_trajectory_descriptor = None
             self.active_sequence_joint = None
             self.pending_collision_execute_sequence = None
             self.requested = []
@@ -1741,6 +2166,10 @@ def test_matching_safe_execute_result_commits_exactly_one_moving_axis():
             "collision_guard_result_matches": matches,
             "collision_motion_state_ready": load_collision_motion_state_ready(),
             "moving_targets_within_model_limits": limits_valid,
+            "TrajectoryPlan": TrajectoryPlan,
+            "trajectory_command_descriptor": trajectory_command_descriptor,
+            "ContractViolation": type("ContractViolation", (ValueError,), {}),
+            "TRAJECTORY_EXECUTE_LEAD_NS": 250_000_000,
             "json": json,
             "time": time,
         },
@@ -1766,6 +2195,25 @@ def test_matching_safe_execute_result_commits_exactly_one_moving_axis():
             self.command_stream_suspended = False
             self.node = SimpleNamespace(latest_hardware=hardware_state())
             self.machine = FakeMachine()
+            recipe = generate_segmented_quintic_recipe(
+                self.command_targets,
+                self.targets,
+                tuple(
+                    (lower * math.pi / 180.0, upper * math.pi / 180.0)
+                    for lower, upper in self.edit_limits
+                ),
+                maximum_velocity_rad_s=math.radians(5.0),
+                maximum_acceleration_rad_s2=math.radians(20.0),
+                maximum_segment_delta_rad=math.radians(30.0),
+            )
+            self.active_trajectory_segment = recipe.segments[0]
+            self.active_trajectory_segment_index = 0
+            self.active_trajectory_descriptor = None
+            self.active_plan_manifest = trajectory_plan_manifest(recipe)
+            self.trajectory_segment_count = 1
+            self.workflow_contract = SimpleNamespace(
+                submitted_token_id="a" * 64
+            )
             self.arrival = SimpleNamespace(
                 start=lambda started_at: events.append(("arrival", started_at))
             )
@@ -1802,6 +2250,12 @@ def test_matching_safe_execute_result_commits_exactly_one_moving_axis():
     assert window.authorized == [[True] * 6]
     assert window.resumed == 1
     assert window.active_collision_proof == result
+    assert window.active_trajectory_descriptor["plan_token_id"] == "a" * 64
+    assert window.active_trajectory_first_publish_pending is True
+    assert (
+        window.active_trajectory_descriptor["trajectory"]["trajectory_sha256"]
+        == window.active_trajectory_segment.sha256
+    )
 
 
 def test_queued_segment_arrival_forces_exact_target_hold_and_waits_for_all_hold():
@@ -1814,6 +2268,9 @@ def test_queued_segment_arrival_forces_exact_target_hold_and_waits_for_all_hold(
             "DEG": 180.0 / math.pi,
             "effective_active_joint_mask": load_function(
                 "effective_active_joint_mask"
+            ),
+            "moving_trajectory_feedback_complete": load_function(
+                "moving_trajectory_feedback_complete"
             ),
             "set_widget_value_if_changed": (
                 lambda widget, value: widget.setValue(value)
@@ -1884,6 +2341,34 @@ def test_queued_segment_arrival_forces_exact_target_hold_and_waits_for_all_hold(
             state = hardware_state()
             state["position_rad"] = list(self.command_targets)
             state["controller_mode_by_motor"]["J1"] = "position"
+            segment = generate_segmented_quintic_recipe(
+                [0.0] * 6,
+                self.command_targets,
+                tuple(
+                    (lower * math.pi / 180.0, upper * math.pi / 180.0)
+                    for lower, upper in SESSION_MODEL_LIMITS_DEG
+                ),
+                maximum_velocity_rad_s=math.radians(5.0),
+                maximum_acceleration_rad_s2=math.radians(20.0),
+                maximum_segment_delta_rad=math.radians(30.0),
+            ).segments[0]
+            self.active_trajectory_descriptor = trajectory_command_descriptor(
+                segment,
+                plan_token_id="a" * 64,
+                execute_at_monotonic_ns=time.monotonic_ns() + 1_000_000_000,
+                segment_index=0,
+                segment_count=1,
+            )
+            self.active_trajectory_segment = segment
+            self.active_trajectory_segment_index = 0
+            self.active_trajectory_first_publish_pending = False
+            state["per_motor"]["J1"].update({
+                "trajectory_plan_token_id": "a" * 64,
+                "trajectory_sha256": segment.sha256,
+                "trajectory_state": "RUNNING",
+                "trajectory_sample_index": segment.profile.interval_count - 1,
+                "trajectory_interval_count": segment.profile.interval_count,
+            })
             self.node = FakeNode(state)
             self.arrival = FakeArrival()
             self.machine = FakeMachine()
@@ -1911,6 +2396,16 @@ def test_queued_segment_arrival_forces_exact_target_hold_and_waits_for_all_hold(
             self.next_segments += 1
 
     window = FakeWindow()
+    # Position tolerance alone is insufficient: the moving worker must first
+    # echo the exact token/hash and COMPLETE terminal sample.
+    refresh(window)
+    assert window.machine.holds == 0
+    assert window.hardware_mode == "position"
+    trajectory_status = window.node.latest_hardware["per_motor"]["J1"]
+    trajectory_status["trajectory_state"] = "COMPLETE"
+    trajectory_status["trajectory_sample_index"] = trajectory_status[
+        "trajectory_interval_count"
+    ]
     refresh(window)
 
     assert window.machine.holds == 1
@@ -2003,21 +2498,43 @@ def test_gui_brake_payload_is_normalized_and_position_payload_is_policy_independ
             target_publisher=Publisher(),
         )
         proof = None
+        descriptor = None
+        manifest = None
+        command_target = [0.1, 0.0, 0.0, 0.0, 0.0, 0.0]
+        moving_mask = [True, False, False, False, False, False]
         if mode == "position":
             proof = position_proof
             if proof is None:
-                _, proof = collision_request_and_result(target=[0.1] * 6)
+                _, proof = collision_request_and_result(target=command_target)
+            recipe = generate_segmented_quintic_recipe(
+                [0.0] * 6,
+                command_target,
+                tuple((-math.pi, math.pi) for _ in range(6)),
+                maximum_velocity_rad_s=math.radians(5.0),
+                maximum_acceleration_rad_s2=math.radians(20.0),
+                maximum_segment_delta_rad=math.radians(30.0),
+            )
+            descriptor = trajectory_command_descriptor(
+                recipe.segments[0],
+                plan_token_id="a" * 64,
+                execute_at_monotonic_ns=time.monotonic_ns() + 250_000_000,
+                segment_index=0,
+                segment_count=1,
+            )
+            manifest = trajectory_plan_manifest(recipe)
         publish(
             fake,
             9,
             mode,
-            [0.1] * 6,
+            command_target,
             [0.2] * 6,
             [True] * 6,
-            [True] * 6,
+            moving_mask,
             77,
             config,
             proof,
+            descriptor,
+            manifest,
         )
         return json.loads(fake.command_publisher.messages[-1].data)
 
@@ -2032,16 +2549,29 @@ def test_gui_brake_payload_is_normalized_and_position_payload_is_policy_independ
 
     # The post-arrival policy is intentionally not a wire-level motion gate.
     # Both policy states therefore publish this exact same POSITION document.
-    _, shared_position_proof = collision_request_and_result(target=[0.1] * 6)
+    _, shared_position_proof = collision_request_and_result(
+        target=[0.1, 0.0, 0.0, 0.0, 0.0, 0.0]
+    )
     position_policy_on = publish_once("position", shared_position_proof)
     position_policy_off = publish_once("position", shared_position_proof)
     position_policy_on.pop("source_monotonic_ns")
     position_policy_off.pop("source_monotonic_ns")
+    position_policy_on["trajectory"].pop("execute_at_monotonic_ns")
+    position_policy_off["trajectory"].pop("execute_at_monotonic_ns")
     assert position_policy_on == position_policy_off
     assert position_policy_on["mode"] == "position"
-    assert position_policy_on["targets_rad"] == [0.1] * 6
+    assert position_policy_on["schema"] == "go-m8010-gui-command/1.3"
+    assert position_policy_on["targets_rad"] == [0.1, 0.0, 0.0, 0.0, 0.0, 0.0]
     assert position_policy_on["active_joint_mask"] == [True] * 6
-    assert position_policy_on["moving_joint_mask"] == [True] * 6
+    assert position_policy_on["moving_joint_mask"] == [True, False, False, False, False, False]
+    assert position_policy_on["plan_token_id"] == "a" * 64
+    assert position_policy_on["trajectory"]["profile"] == "quintic-rest-to-rest-v1"
+    assert position_policy_on["plan_manifest"] == position_policy_off[
+        "plan_manifest"
+    ]
+    assert position_policy_on["plan_manifest"]["schema"] == (
+        "go-m8010-plan-manifest/1.0"
+    )
     assert position_policy_on["collision_guard_proof"]["safe"] is True
 
 
@@ -2240,24 +2770,20 @@ def test_unselected_j2_forwarded_as_brake_is_normal_domain_isolation():
     assert "J2转发矛盾" not in text
 
 
-def test_fixed_hold_policy_buttons_are_distinct_from_the_only_ordinary_release():
+def test_v15_31a_panel_removes_legacy_drive_policy_buttons():
     source = SOURCE.read_text(encoding="utf-8")
     panel_start = source.index("    def _control_panel(self) -> QGroupBox:")
     panel_end = source.index("    def _set_virtual_editable", panel_start)
     panel = source[panel_start:panel_end]
-    assert 'self._fixed_hold_after_arrival_on' in panel
-    assert 'self._fixed_hold_after_arrival_off' in panel
-    assert panel.count("self._drag_mode") == 1
-    assert "可拖动模式（普通脱力）" in panel
-    assert "位置伺服始终有效" in panel
-    assert "“关”不是物理脱力" in panel
-
-    drag_start = source.index("    def _drag_mode(self) -> None:")
-    drag_end = source.index("    def _emergency_brake", drag_start)
-    drag = source[drag_start:drag_end]
-    assert drag.index("dialog.clickedButton() is not confirm") < drag.index(
-        "self._enter_drag_after_confirmation()"
-    )
+    for legacy in (
+        "self._fixed_hold_after_arrival_on",
+        "self._fixed_hold_after_arrival_off",
+        "self._drag_mode",
+        "可拖动模式（普通脱力）",
+    ):
+        assert legacy not in panel
+    for required in ("预演轨迹", "下发到现实", "恢复初始化姿态", "停止并制动"):
+        assert panel.count(required) >= 1
 
 
 def test_only_drive_release_confirmations_are_modal_and_collision_alert_is_nonmodal():
@@ -2905,27 +3431,18 @@ def test_gui_subscribes_to_and_displays_router_acknowledgement_state():
     assert "驱动状态：已制动" not in source
 
 
-def test_stop_holds_fresh_feedback_and_does_not_brake_an_unconfirmed_active_hold():
+def test_stop_and_brake_is_the_single_feedback_independent_stop_action():
     source = SOURCE.read_text(encoding="utf-8")
-    assert 'self._button("停止轨迹并保持（承重HOLD）", self._stop)' in source
-    stop_start = source.index("    def _stop(self) -> None:")
-    stop_end = source.index("    def _save_initial_pose", stop_start)
+    assert '("停止并制动", self._emergency_brake)' in source
+    stop_start = source.index("    def _emergency_brake(self) -> None:")
+    stop_end = source.index("    def _hold_current", stop_start)
     stop = source[stop_start:stop_end]
-    assert "control_feedback_ready(" in stop
-    assert stop.index("self.active_observation_uncertain") < stop.index(
-        'if self.hardware_mode == "position":'
-    ) < stop.rindex("self._suspend_command_stream(") < stop.index(
-        "self.machine.stop()"
-    )
+    assert "control_feedback_ready(" not in stop
+    assert "bypasses state freshness" in stop
+    assert "self.machine.stop()" in stop
     assert 'self.hardware_mode = "brake"' in stop
-    assert "GUI已停止发送新命令" in stop
-    assert stop.count("self._publish_command()") == 2
-    hold_branch = stop[
-        stop.index('elif self.hardware_mode == "hold":'):
-        stop.index("            else:", stop.index('elif self.hardware_mode == "hold":'))
-    ]
-    assert "self.command_targets = list(self.actual)" not in hold_branch
-    assert "self.targets = list(self.command_targets)" in hold_branch
+    assert "self.requested_active_joint_mask = [False] * 6" in stop
+    assert "self._publish_command()" in stop
 
 
 def test_close_holds_when_fresh_and_sends_nothing_for_unconfirmed_active_hold():
@@ -2944,6 +3461,30 @@ def test_close_holds_when_fresh_and_sends_nothing_for_unconfirmed_active_hold():
     assert "for _ in range(5):" in close
     assert 'if self.hardware_mode == "position":' in close
     assert "Closing the window is not permission to recapture a HOLD" in close
+
+
+def test_both_mujoco_twins_render_off_qt_thread_and_close_their_contexts():
+    source = SOURCE.read_text(encoding="utf-8")
+    preview_start = source.index("class EmbeddedMujocoPreview(QGroupBox):")
+    preview_end = source.index("\n\ndef receipt_is_fresh", preview_start)
+    preview = source[preview_start:preview_end]
+    for token in (
+        "concurrent.futures.ThreadPoolExecutor(",
+        "max_workers=1",
+        "self._pending_render = request",
+        "self._render_executor.submit(self._render_request, request)",
+        "self.render_completed.emit(result)",
+        "self.render_failed.emit(str(exc))",
+        "self._latest_requested_sequence",
+        "self._render_executor.submit(close_on_worker)",
+        "self._render_executor.shutdown(wait=True, cancel_futures=False)",
+    ):
+        assert token in preview
+    close_start = source.index("    def closeEvent(self, event: QCloseEvent) -> None:")
+    close_end = source.index("\n\n\ndef main", close_start)
+    close = source[close_start:close_end]
+    assert "self.planned_mujoco_preview, self.actual_mujoco_preview" in close
+    assert "preview.close_renderer()" in close
 
 def test_position_to_hold_transition_keeps_epoch_and_fixed_targets():
     source = SOURCE.read_text(encoding="utf-8")
@@ -3034,7 +3575,8 @@ def test_single_joint_target_keeps_every_healthy_load_bearing_joint_active():
     execute_end = source.index("    def _stop(self) -> None:", execute_start)
     execute = source[execute_start:execute_end]
     assert "self.queued_pose_target = list(self.targets)" in execute
-    assert "self.queued_joint_indices = list(pending_indices)" in execute
+    assert "self.queued_trajectory_segments = list(trajectory.segments)" in execute
+    assert "trajectory_command_descriptor(" in execute
     assert "self._begin_next_queued_segment()" in execute
     assert "candidate_moving_joint_mask = [" in execute
     assert "self.moving_joint_mask = candidate_moving_joint_mask" in execute
