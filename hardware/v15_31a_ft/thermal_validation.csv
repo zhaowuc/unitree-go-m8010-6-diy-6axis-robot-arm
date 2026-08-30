@@ -1,0 +1,14 @@
+test_id,motor_or_joint,test_phase,planned_duration_min,ambient_temperature_c,start_temperature_c,max_temperature_c,end_temperature_c,final_slope_c_per_min,tau_feedback_rotor_nm,position_error_deg,saturation_time_ratio,j2_sync_error_deg,thermal_stop,derating,status,reason
+SHORT_J1,J1,short_position_test,,,,,,,,,,,,,NOT_RUN,POWER_OFF
+SHORT_J2A,J2A,short_position_test,,,,,,,,,,,,,NOT_RUN,POWER_OFF
+SHORT_J2B,J2B,short_position_test,,,,,,,,,,,,,NOT_RUN,POWER_OFF
+SHORT_J3,J3,short_position_test,,,,,,,,,,,,,NOT_RUN,POWER_OFF
+SHORT_J4,J4,short_position_test,,,,,,,,,,,,,NOT_RUN,POWER_OFF
+SHORT_J5,J5,short_position_test,,,,,,,,,,,,,NOT_RUN,POWER_OFF
+SHORT_J6,J6,short_position_test,,,,,,,,,,,,,NOT_RUN,POWER_OFF
+J2_HOLD_5MIN,J2,representative_loaded_hold,5,,,,,,,,,,,,NOT_RUN,POWER_OFF
+J2_HOLD_15MIN,J2,representative_loaded_hold,15,,,,,,,,,,,,NOT_RUN,POWER_OFF
+J2_HOLD_30MIN,J2,representative_loaded_hold,30,,,,,,,,,,,,NOT_RUN,POWER_OFF
+J3_HOLD_5MIN,J3,representative_loaded_hold,5,,,,,,,,,,,,NOT_RUN,POWER_OFF
+J3_HOLD_15MIN,J3,representative_loaded_hold,15,,,,,,,,,,,,NOT_RUN,POWER_OFF
+J3_HOLD_30MIN,J3,representative_loaded_hold,30,,,,,,,,,,,,NOT_RUN,POWER_OFF

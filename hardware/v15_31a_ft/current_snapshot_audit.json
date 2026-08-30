@@ -1,0 +1,186 @@
+{
+  "schema_version": "V15.31A-FT-evidence-v1",
+  "generated_at": "2026-08-31T02:20:35+08:00",
+  "audit_scope": "software-only; robot arm powered off",
+  "source_authority": {
+    "repository": "zhaowuc/go-m8010-robot-arm",
+    "source_branch": "snapshot/v15-30e-current-20260830",
+    "source_commit": "093bebcce2aaa98dc75171a826e7714f0024b399",
+    "working_branch": "agent/v15-31a-ft-gravity-position-thermal-dual-twin-gui",
+    "source_commit_resolves_locally": true,
+    "working_tree_state_at_generation": "TESTED_PRE_COMMIT_2; FINAL_COMMIT_AND_REMOTE_SYNC_RECORDED_IN_USER_REPORT"
+  },
+  "frozen_assets": {
+    "production_mjcf": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/mujoco_v15_14/go_m8010_arm_v15_14_kinematic.xml",
+    "expected_sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9",
+    "observed_sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9",
+    "status": "PASS",
+    "modified": false
+  },
+  "software_validation": {
+    "status": "PASS_OFFLINE",
+    "executed_at": "2026-08-31T02:20:35+08:00",
+    "safety_scope": "Robot arm powered off. No ROS node, CAN interface, serial device, motor enable, Flash write or EEPROM write was started.",
+    "colcon_build": {
+      "status": "PASS",
+      "host": "car Ubuntu 22.04; isolated /tmp workspace",
+      "command": "source /opt/ros/humble/setup.bash; cd /tmp/v15_31a_final_build_quYB6E/ros2_ws; PYTHONDONTWRITEBYTECODE=1 colcon build --packages-select go_m8010_arm_hardware go_m8010_arm_gui --event-handlers console_direct+",
+      "exit_code": 0,
+      "result": "2 packages finished"
+    },
+    "colcon_test": {
+      "status": "PASS",
+      "host": "car Ubuntu 22.04; isolated /tmp workspace",
+      "command": "source /opt/ros/humble/setup.bash; source /tmp/v15_31a_final_build_quYB6E/ros2_ws/install/setup.bash; cd /tmp/v15_31a_final_build_quYB6E/ros2_ws; PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 colcon test --packages-select go_m8010_arm_hardware go_m8010_arm_gui --event-handlers console_direct+ --return-code-on-test-failure",
+      "exit_code": 0,
+      "result": "go_m8010_arm_hardware 188 passed; go_m8010_arm_gui 390 passed; 578 total"
+    },
+    "pytest": {
+      "status": "PASS",
+      "aggregate": "863 passed plus 86 subtests passed; 0 skipped; 0 failed",
+      "groups": [
+        {
+          "name": "GUI non-Router on Windows",
+          "command": "python -m pytest -q -o cache_dir=C:/temp/codex-v15-31a-offline-4f3036ae006f4da88923890faa7eba1c/gui-nonrouter --ignore=V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/test/test_command_router.py V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/test",
+          "exit_code": 0,
+          "result": "192 passed"
+        },
+        {
+          "name": "GUI Router on Ubuntu ROS 2 Python",
+          "command": "source /opt/ros/humble/setup.bash; PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=/tmp/v15_31a_offline_pytest_kCov5X/go_m8010_arm_gui:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages python3 -m pytest -q -o cache_dir=/tmp/v15_31a_offline_pytest_kCov5X/pytest-cache-noautoload-3 /tmp/v15_31a_offline_pytest_kCov5X/go_m8010_arm_gui/test/test_command_router.py",
+          "exit_code": 0,
+          "result": "198 passed"
+        },
+        {
+          "name": "hardware package on Windows",
+          "command": "python -m pytest -q -o cache_dir=C:/temp/codex-v15-31a-offline-4f3036ae006f4da88923890faa7eba1c/hardware V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/test",
+          "exit_code": 0,
+          "result": "188 passed"
+        },
+        {
+          "name": "hardware tools on Windows",
+          "command": "python -m pytest -q -o cache_dir=C:/temp/codex-v15-31a-offline-4f3036ae006f4da88923890faa7eba1c/tools tools/hardware",
+          "exit_code": 0,
+          "result": "285 passed plus 86 subtests passed"
+        }
+      ]
+    },
+    "cpp_strict_compile": {
+      "status": "PASS",
+      "command": "g++ -std=c++17 -Wall -Wextra -Werror -I/home/car/vendor/unitree_actuator_sdk/include /tmp/v15_31a_final_build_quYB6E/go_compile/v15_30a_gui_go_controller.cpp -L/home/car/vendor/unitree_actuator_sdk/lib -lUnitreeMotorSDK_Linux64 -lpthread -o /tmp/v15_31a_final_build_quYB6E/go_compile/v15_30a_gui_go_controller",
+      "exit_code": 0
+    },
+    "go_no_hardware_self_test": {
+      "status": "PASS",
+      "command": "LD_LIBRARY_PATH=/home/car/vendor/unitree_actuator_sdk/lib /tmp/v15_31a_final_build_quYB6E/go_compile/v15_30a_gui_go_controller",
+      "exit_code": 0,
+      "result": "DRY_RUN=YES; SERIAL_OPENED=NO; all compiled-in policy self-tests passed"
+    },
+    "j6_no_hardware_self_test": {
+      "status": "PASS",
+      "command": "/home/car/go-m8010-robot-arm-v15-20a/.venv/j6-dm313/bin/python /tmp/v15_31a_final_build_quYB6E/j6_dryrun/j6_dm_g6220/v15_30a_gui_j6_controller.py --thermal-config /tmp/v15_31a_final_build_quYB6E/ros2_ws/src/go_m8010_arm_hardware/config/thermal_limits.yaml",
+      "exit_code": 0,
+      "result": "DRY_RUN=YES; CAN_OPENED=NO; DEFAULT_STATE=DISABLED"
+    },
+    "git_diff_check": {
+      "status": "PASS",
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  },
+  "conclusions": [
+    {
+      "area": "git_and_provenance",
+      "status": "PASS",
+      "conclusion": "The requested source commit is the local baseline and the working branch name matches the contract.",
+      "paths": [".git"]
+    },
+    {
+      "area": "gui_state_separation",
+      "status": "OFFLINE_PASS",
+      "conclusion": "q_actual, q_plan_target, q_plan_trajectory and q_hardware_command are represented separately; slider changes do not submit hardware commands.",
+      "paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/main_window.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/workflow_contract.py"
+      ]
+    },
+    {
+      "area": "command_chain",
+      "status": "OFFLINE_PASS",
+      "conclusion": "The router validates active_joint_mask, activation_epoch, command lease, exact trajectory descriptors and fresh non-replayable execute proofs. It independently consumes gravity status and can inject a session-bound gravity authority immediately before UDP dispatch; the frozen continuous-load authority is false, so the current path intentionally rejects real POSITION.",
+      "paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/command_router.py",
+        "tools/hardware/v15_30a_gui_go_controller.cpp",
+        "tools/hardware/j6_dm_g6220/v15_30a_gui_j6_controller.py"
+      ]
+    },
+    {
+      "area": "go_controller",
+      "status": "IMPLEMENTED_OFFLINE_REVIEW_POWERED_VALIDATION_NOT_RUN",
+      "conclusion": "GO requires endpoint residence inside the 0.5 degree window for at least 0.5 s and at least 50 valid frames, revokes arrival after drift, and latches domain BRAKE if stable arrival is absent at 90 s. Exact v1.3 trajectories entering the >=55 C protection region abort to a thermal latch and require re-preview; only legacy profiles and HOLD retain live derating.",
+      "paths": [
+        "tools/hardware/v15_30a_gui_go_controller.cpp",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/test/test_static_contract.py"
+      ]
+    },
+    {
+      "area": "j6_controller",
+      "status": "IMPLEMENTED_OFFLINE_REVIEW_POWERED_VALIDATION_NOT_RUN",
+      "conclusion": "J6 exact v1.3 trajectories entering the >=55 C protection region latch and verify DISABLED without independently scaling signed q/dq samples; release, cooldown, a higher activation epoch, next-cycle rearm and a fresh preview are required. Legacy POS_VEL profiles and HOLD retain live 55-60 C derating.",
+      "paths": [
+        "tools/hardware/j6_dm_g6220/v15_30a_gui_j6_controller.py",
+        "tools/hardware/j6_dm_g6220/test_v15_30a_gui_profile.py"
+      ]
+    },
+    {
+      "area": "thermal_management",
+      "status": "IMPLEMENTED_OFFLINE_REVIEW_POWERED_VALIDATION_NOT_RUN",
+      "conclusion": "GO and J6 validate thermal_limits.yaml SHA256 1926264805858f62fffc9360ef0c9d4d7f8a7e232e171105450769d493ff5467 before opening hardware. GO publishes per-motor thermal_state_by_motor while retaining the top-level domain thermal_state. No powered thermal data were collected.",
+      "paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/thermal_manager.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/config/thermal_limits.yaml",
+        "tools/hardware/v15_30a_gui_go_controller.cpp",
+        "tools/hardware/j6_dm_g6220/v15_30a_gui_j6_controller.py"
+      ]
+    },
+    {
+      "area": "immediate_brake_state_atomicity",
+      "status": "IMPLEMENTED_OFFLINE_REVIEW_POWERED_VALIDATION_NOT_RUN",
+      "conclusion": "Immediate GO domain-BRAKE transactions commit their returned mode and telemetry into the same state snapshot. An unconfirmed response is represented per motor as controller mode unknown with brake_observed=false; commanded intent is not reported as observed BRAKE.",
+      "paths": [
+        "tools/hardware/v15_30a_gui_go_controller.cpp",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/state_model.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/whole_arm_state_node.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/test/test_state_node_shutdown.py"
+      ]
+    },
+    {
+      "area": "gravity_mapping",
+      "status": "BLOCKED_POWER_OFF",
+      "conclusion": "The gravity-node to Router to GO software feedforward chain is connected and independently guarded, but the frozen gravity configuration deliberately declares continuous_rotor_limits_authoritative=false. With no powered current-session MODEL_SESSION_ANCHOR_V2 or direction/load evidence, Router rejects authority and Tff remains zero.",
+      "paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/gravity_model.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/whole_arm_gravity_node.py"
+      ]
+    },
+    {
+      "area": "dual_twin_rendering",
+      "status": "OFFLINE_PASS",
+      "conclusion": "Planned and actual twins own independent MjData objects. Each renderer uses one dedicated background thread with latest-frame coalescing, and both renderer contexts are closed through their owning worker threads.",
+      "paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/main_window.py"
+      ]
+    },
+    {
+      "area": "powered_acceptance",
+      "status": "NOT_RUN",
+      "conclusion": "J1-J6 position, multi-joint, thermal endurance and final BRAKE/DISABLED acceptance were not run because the robot arm is powered off.",
+      "paths": [
+        "hardware/v15_31a_ft/per_joint_position_validation.csv",
+        "hardware/v15_31a_ft/multi_joint_position_validation.csv",
+        "hardware/v15_31a_ft/thermal_validation.csv"
+      ]
+    }
+  ],
+  "primary_blocker": "机械臂断电导致无法建立MODEL_SESSION_ANCHOR_V2及执行实机验收"
+}

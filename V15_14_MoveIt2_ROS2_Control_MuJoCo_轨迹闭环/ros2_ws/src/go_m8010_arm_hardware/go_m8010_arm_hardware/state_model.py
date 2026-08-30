@@ -17,6 +17,35 @@ GEAR_RATIO = 6.329999923706055
 MOTOR_NAMES = ("J1", "J2A", "J2B", "J3", "J4", "J5", "J6")
 JOINT_NAMES = ("joint1", "joint2", "joint3", "joint4", "joint5", "joint6")
 FEEDBACK_SOURCE_MAX_AGE_NS = 100_000_000
+LOAD_LIMIT_WATCHDOG_AUTHORITY = "SOFTWARE_GUARD_NOT_CONTINUOUS_RATING"
+J6_NO_PROGRESS_WATCHDOG_AUTHORITY = "J6_TARGET_TIMEOUT_POSITION_ERROR_V1"
+THERMAL_CONFIG_SHA256 = (
+    "1926264805858f62fffc9360ef0c9d4d7f8a7e232e171105450769d493ff5467"
+)
+THERMAL_STATES = frozenset({
+    "OFFLINE",
+    "NORMAL",
+    "WARNING",
+    "DERATING",
+    "THERMAL_STOP",
+    "COOLDOWN",
+    "WAIT_OPERATOR_CONFIRM",
+})
+THERMAL_TRIP_REASONS = frozenset({
+    "",
+    "RAW_TEMPERATURE_LIMIT",
+    "EXACT_TRAJECTORY_DERATING_ABORT",
+})
+GRAVITY_SCALE_TARGET_LEVELS = frozenset({0.0, 0.25, 0.5, 0.75, 1.0})
+# These are frozen-model software envelopes.  They are deliberately not
+# represented as continuous motor ratings anywhere in the state contract.
+GRAVITY_FEEDFORWARD_LIMITS_NM = (0.20, 1.75, 1.10, 0.40, 0.20, 0.0)
+PRODUCTION_MODEL_SHA256 = (
+    "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9"
+)
+GRAVITY_CONFIG_SHA256 = (
+    "307469b8384fd35547327ba1d5f80aa440e6b9663406ab7c9d9469bea263335d"
+)
 WORKER_SUPERVISOR_STATUS_SCHEMA = "go-m8010-worker-supervisor-status/1.0"
 WORKER_CONTROL_DOMAINS = ("J1", "J2", "J345", "J6")
 WORKER_COMMAND_PORT_BY_DOMAIN = {
@@ -232,6 +261,21 @@ class MotorFeedback:
     communication_ok: bool
     source_monotonic_ns: int
     receipt_monotonic_ns: int
+    # GO workers keep actual wire feed-forward, measured rotor torque, and the
+    # signed reducer-side estimate distinct.  J6 publishes explicit None for
+    # all three because POS_VEL supplies no authoritative torque channel.
+    tau_cmd_rotor_nm: Optional[float] = None
+    tau_feedback_rotor_nm: Optional[float] = None
+    tau_joint_estimated_nm: Optional[float] = None
+    last_valid_feedback_monotonic_ns: Optional[int] = None
+    trajectory_plan_token_id: Optional[str] = None
+    trajectory_sha256: Optional[str] = None
+    trajectory_state: str = "INACTIVE"
+    trajectory_sample_index: int = 0
+    trajectory_interval_count: int = 0
+    gravity_feedforward_rotor_nm: Optional[float] = None
+    thermal_fault_latched: Optional[bool] = None
+    load_limit_no_progress: Optional[bool] = None
 
 
 def feedback_sample_is_fresh(
@@ -688,11 +732,32 @@ class MirrorSessionReferenceV1:
             )
             joint_velocity = spec.sign * sample.velocity_rad_s / spec.gear_ratio
             per_motor[name] = {
+                "raw_position_rad": sample.position_rad,
                 "q_joint_rad": joint_position,
                 "dq_joint_rad_s": joint_velocity,
+                "tau_cmd_rotor_nm": sample.tau_cmd_rotor_nm,
+                "tau_feedback_rotor_nm": sample.tau_feedback_rotor_nm,
+                "tau_joint_estimated_nm": sample.tau_joint_estimated_nm,
+                # Compatibility alias for pre-V15.31A log readers.
+                "estimated_joint_torque_nm": sample.tau_joint_estimated_nm,
+                "trajectory_plan_token_id": sample.trajectory_plan_token_id,
+                "trajectory_sha256": sample.trajectory_sha256,
+                "trajectory_state": sample.trajectory_state,
+                "trajectory_sample_index": sample.trajectory_sample_index,
+                "trajectory_interval_count": sample.trajectory_interval_count,
+                "gravity_feedforward_rotor_nm": (
+                    sample.gravity_feedforward_rotor_nm
+                ),
+                "thermal_fault_latched_sample": sample.thermal_fault_latched,
+                "load_limit_no_progress_sample": sample.load_limit_no_progress,
                 "temperature_c": sample.temperature_c,
                 "merror": sample.merror,
                 "communication_ok": sample.communication_ok,
+                "feedback_source_monotonic_ns": sample.source_monotonic_ns,
+                "feedback_receipt_monotonic_ns": sample.receipt_monotonic_ns,
+                "last_valid_feedback_monotonic_ns": (
+                    sample.last_valid_feedback_monotonic_ns
+                ),
                 "fresh": feedback_sample_is_fresh(
                     sample, now_monotonic_ns, self.freshness_ns
                 ),
@@ -734,6 +799,13 @@ class MirrorSessionReferenceV1:
             "j2_dqB_rad_s": per_motor["J2B"]["dq_joint_rad_s"],
             "j2_e_sync_rad": per_motor["J2A"]["q_joint_rad"]
             - per_motor["J2B"]["q_joint_rad"],
+            "tau_j2_logical_total_nm": (
+                None
+                if per_motor["J2A"]["tau_joint_estimated_nm"] is None
+                or per_motor["J2B"]["tau_joint_estimated_nm"] is None
+                else per_motor["J2A"]["tau_joint_estimated_nm"]
+                + per_motor["J2B"]["tau_joint_estimated_nm"]
+            ),
             "per_motor": per_motor,
             "healthy": all(
                 value["communication_ok"]
@@ -776,11 +848,59 @@ class MirrorSessionReferenceV1:
                 fresh = False
                 source_latency_ms = None
             per_motor[name] = {
+                "raw_position_rad": None if sample is None else sample.position_rad,
                 "q_joint_rad": joint_position,
                 "dq_joint_rad_s": joint_velocity,
+                "tau_cmd_rotor_nm": (
+                    None if sample is None else sample.tau_cmd_rotor_nm
+                ),
+                "tau_feedback_rotor_nm": (
+                    None if sample is None else sample.tau_feedback_rotor_nm
+                ),
+                "tau_joint_estimated_nm": (
+                    None if sample is None else sample.tau_joint_estimated_nm
+                ),
+                "estimated_joint_torque_nm": (
+                    None if sample is None else sample.tau_joint_estimated_nm
+                ),
+                "trajectory_plan_token_id": (
+                    None if sample is None else sample.trajectory_plan_token_id
+                ),
+                "trajectory_sha256": (
+                    None if sample is None else sample.trajectory_sha256
+                ),
+                "trajectory_state": (
+                    "INACTIVE" if sample is None else sample.trajectory_state
+                ),
+                "trajectory_sample_index": (
+                    0 if sample is None else sample.trajectory_sample_index
+                ),
+                "trajectory_interval_count": (
+                    0 if sample is None else sample.trajectory_interval_count
+                ),
+                "gravity_feedforward_rotor_nm": (
+                    None if sample is None else sample.gravity_feedforward_rotor_nm
+                ),
+                "thermal_fault_latched_sample": (
+                    None if sample is None else sample.thermal_fault_latched
+                ),
+                "load_limit_no_progress_sample": (
+                    None if sample is None else sample.load_limit_no_progress
+                ),
                 "temperature_c": 0.0 if sample is None else sample.temperature_c,
                 "merror": -1 if sample is None else sample.merror,
                 "communication_ok": bool(available and sample and sample.communication_ok),
+                "feedback_source_monotonic_ns": (
+                    None if sample is None else sample.source_monotonic_ns
+                ),
+                "feedback_receipt_monotonic_ns": (
+                    None if sample is None else sample.receipt_monotonic_ns
+                ),
+                "last_valid_feedback_monotonic_ns": (
+                    None
+                    if sample is None
+                    else sample.last_valid_feedback_monotonic_ns
+                ),
                 "fresh": fresh,
                 "age_ms": age_ms,
                 "source_latency_ms": source_latency_ms,
@@ -818,6 +938,13 @@ class MirrorSessionReferenceV1:
             "j2_e_sync_rad": (
                 per_motor["J2A"]["q_joint_rad"] - per_motor["J2B"]["q_joint_rad"]
                 if j2_available else 0.0
+            ),
+            "tau_j2_logical_total_nm": (
+                None
+                if per_motor["J2A"]["tau_joint_estimated_nm"] is None
+                or per_motor["J2B"]["tau_joint_estimated_nm"] is None
+                else per_motor["J2A"]["tau_joint_estimated_nm"]
+                + per_motor["J2B"]["tau_joint_estimated_nm"]
             ),
             "per_motor": per_motor,
             "available_motors": sorted(self.references),
@@ -877,6 +1004,121 @@ def parse_feedback_payload(
         merror = item["merror"]
         if type(merror) is not int:
             raise ValueError("merror must be an integer")
+        torque_values: dict[str, Optional[float]] = {}
+        for torque_field in (
+            "tau_cmd_rotor_nm",
+            "tau_feedback_rotor_nm",
+            "tau_joint_estimated_nm",
+        ):
+            if torque_field not in item:
+                raise ValueError(f"{torque_field} is required")
+            torque_value = item.get(torque_field)
+            if torque_value is not None:
+                if type(torque_value) not in {int, float} or not math.isfinite(
+                    float(torque_value)
+                ):
+                    raise ValueError(f"{torque_field} must be finite or null")
+                torque_value = float(torque_value)
+            torque_values[torque_field] = torque_value
+        tau_command = torque_values["tau_cmd_rotor_nm"]
+        tau_feedback = torque_values["tau_feedback_rotor_nm"]
+        tau_joint_estimated = torque_values["tau_joint_estimated_nm"]
+        if motor == "J6" and any(
+            value is not None for value in torque_values.values()
+        ):
+            raise ValueError("J6 POS_VEL torque fields must be null")
+        if tau_joint_estimated is not None:
+            if tau_feedback is None:
+                raise ValueError(
+                    "tau_joint_estimated_nm requires tau_feedback_rotor_nm"
+                )
+            expected_joint_torque = (
+                MOTOR_SPECS[motor].sign
+                * tau_feedback
+                * MOTOR_SPECS[motor].gear_ratio
+            )
+            if not math.isclose(
+                tau_joint_estimated,
+                expected_joint_torque,
+                rel_tol=1.0e-9,
+                abs_tol=1.0e-9,
+            ):
+                raise ValueError(
+                    "tau_joint_estimated_nm disagrees with rotor feedback"
+                )
+        if "last_valid_feedback_monotonic_ns" not in item:
+            raise ValueError("last_valid_feedback_monotonic_ns is required")
+        last_valid_feedback_ns = item["last_valid_feedback_monotonic_ns"]
+        if last_valid_feedback_ns is not None and (
+            type(last_valid_feedback_ns) is not int
+            or last_valid_feedback_ns <= 0
+            or last_valid_feedback_ns > receipt_monotonic_ns
+        ):
+            raise ValueError(
+                "last_valid_feedback_monotonic_ns must be a past positive integer or null"
+            )
+        if item["communication_ok"] and last_valid_feedback_ns is None:
+            raise ValueError(
+                "communication_ok requires last_valid_feedback_monotonic_ns"
+            )
+        trajectory_plan_token_id = item.get("trajectory_plan_token_id")
+        trajectory_sha256 = item.get("trajectory_sha256")
+        if trajectory_plan_token_id == "":
+            trajectory_plan_token_id = None
+        if trajectory_sha256 == "":
+            trajectory_sha256 = None
+        for field_name, field_value in (
+            ("trajectory_plan_token_id", trajectory_plan_token_id),
+            ("trajectory_sha256", trajectory_sha256),
+        ):
+            if field_value is not None and (
+                not isinstance(field_value, str)
+                or len(field_value) != 64
+                or any(character not in "0123456789abcdef" for character in field_value)
+            ):
+                raise ValueError(f"{field_name} must be lowercase SHA256 or null")
+        if (trajectory_plan_token_id is None) != (trajectory_sha256 is None):
+            raise ValueError("trajectory token and hash must be present together")
+        trajectory_state = item.get("trajectory_state", "INACTIVE")
+        if trajectory_state not in {"PREPARED", "RUNNING", "COMPLETE", "INACTIVE"}:
+            raise ValueError("trajectory_state is invalid")
+        trajectory_sample_index = item.get("trajectory_sample_index", 0)
+        trajectory_interval_count = item.get("trajectory_interval_count", 0)
+        if (
+            type(trajectory_sample_index) is not int
+            or type(trajectory_interval_count) is not int
+            or trajectory_sample_index < 0
+            or trajectory_interval_count < 0
+            or trajectory_sample_index > trajectory_interval_count
+        ):
+            raise ValueError("trajectory sample index/count is invalid")
+        if trajectory_state in {"PREPARED", "RUNNING", "COMPLETE"} and (
+            trajectory_plan_token_id is None
+            or trajectory_interval_count <= 0
+        ):
+            raise ValueError("active trajectory state requires identity and samples")
+        gravity_feedforward_rotor_nm = item.get(
+            "gravity_feedforward_rotor_nm"
+        )
+        if gravity_feedforward_rotor_nm is not None:
+            if (
+                type(gravity_feedforward_rotor_nm) not in {int, float}
+                or not math.isfinite(float(gravity_feedforward_rotor_nm))
+            ):
+                raise ValueError(
+                    "gravity_feedforward_rotor_nm must be finite or null"
+                )
+            gravity_feedforward_rotor_nm = float(
+                gravity_feedforward_rotor_nm
+            )
+        thermal_fault_latched = item.get("thermal_fault_latched")
+        load_limit_no_progress = item.get("load_limit_no_progress")
+        for field_name, field_value in (
+            ("thermal_fault_latched", thermal_fault_latched),
+            ("load_limit_no_progress", load_limit_no_progress),
+        ):
+            if field_value is not None and type(field_value) is not bool:
+                raise ValueError(f"{field_name} must be boolean or null")
         feedback = MotorFeedback(
             motor=motor,
             position_rad=float(item["position_rad"]),
@@ -886,6 +1128,18 @@ def parse_feedback_payload(
             communication_ok=item["communication_ok"],
             source_monotonic_ns=source_ns,
             receipt_monotonic_ns=receipt_monotonic_ns,
+            tau_cmd_rotor_nm=tau_command,
+            tau_feedback_rotor_nm=tau_feedback,
+            tau_joint_estimated_nm=tau_joint_estimated,
+            last_valid_feedback_monotonic_ns=last_valid_feedback_ns,
+            trajectory_plan_token_id=trajectory_plan_token_id,
+            trajectory_sha256=trajectory_sha256,
+            trajectory_state=trajectory_state,
+            trajectory_sample_index=trajectory_sample_index,
+            trajectory_interval_count=trajectory_interval_count,
+            gravity_feedforward_rotor_nm=gravity_feedforward_rotor_nm,
+            thermal_fault_latched=thermal_fault_latched,
+            load_limit_no_progress=load_limit_no_progress,
         )
         if not all(math.isfinite(value) for value in (
             feedback.position_rad,
@@ -896,4 +1150,582 @@ def parse_feedback_payload(
         feedbacks.append(feedback)
     if frozenset(seen_motors) not in VALID_FEEDBACK_MOTOR_SETS:
         raise ValueError("feedback samples do not form one complete fault domain")
+    if "tau_j2_logical_total_nm" not in payload:
+        raise ValueError("tau_j2_logical_total_nm is required")
+    reported_j2_total = payload["tau_j2_logical_total_nm"]
+    if seen_motors == {"J2A", "J2B"}:
+        if type(reported_j2_total) not in {int, float} or not math.isfinite(
+            float(reported_j2_total)
+        ):
+            raise ValueError(
+                "tau_j2_logical_total_nm must be finite for the J2 domain"
+            )
+        estimated_by_motor = {
+            sample.motor: sample.tau_joint_estimated_nm
+            for sample in feedbacks
+        }
+        if any(value is None for value in estimated_by_motor.values()):
+            raise ValueError(
+                "tau_j2_logical_total_nm requires both J2 torque estimates"
+            )
+        expected_j2_total = sum(
+            float(value) for value in estimated_by_motor.values()
+        )
+        if not math.isclose(
+            float(reported_j2_total),
+            expected_j2_total,
+            rel_tol=1.0e-9,
+            abs_tol=1.0e-9,
+        ):
+            raise ValueError("tau_j2_logical_total_nm disagrees with J2 samples")
+    elif reported_j2_total is not None:
+        raise ValueError(
+            "tau_j2_logical_total_nm must be null outside the J2 domain"
+        )
     return tuple(feedbacks)
+
+
+def _finite_float(value: object, field_name: str) -> float:
+    if type(value) not in {int, float} or not math.isfinite(float(value)):
+        raise ValueError(f"{field_name} must be a finite number")
+    return float(value)
+
+
+def _non_negative_int(value: object, field_name: str) -> int:
+    if type(value) is not int or value < 0:
+        raise ValueError(f"{field_name} must be a non-negative integer")
+    return value
+
+
+def _optional_finite_float(value: object, field_name: str) -> Optional[float]:
+    if value is None:
+        return None
+    return _finite_float(value, field_name)
+
+
+def parse_controller_feedback_metadata(
+    payload: Mapping, feedbacks: Iterable[MotorFeedback]
+) -> dict[str, dict]:
+    """Normalize one worker datagram's controller metadata per motor.
+
+    The motor samples and these records are intended to be committed together
+    by the state node.  Older feedback/1.0 producers remain readable, but an
+    absent optional metadata group is represented as ``UNKNOWN``/``None``;
+    absence is never converted to a healthy latch, a thermal PASS, or an
+    authoritative load rating.
+    """
+
+    if not isinstance(payload, Mapping):
+        raise ValueError("feedback payload must be an object")
+    samples = tuple(feedbacks)
+    if not samples or len({sample.motor for sample in samples}) != len(samples):
+        raise ValueError("controller metadata requires unique motor feedback")
+    motors = {sample.motor for sample in samples}
+
+    controller_mode = payload.get("controller_mode", "unknown")
+    if controller_mode not in {"brake", "drag", "hold", "position", "unknown"}:
+        raise ValueError("controller mode is invalid")
+    modes_by_motor = payload.get("controller_mode_by_motor", {})
+    if not isinstance(modes_by_motor, Mapping):
+        raise ValueError("controller_mode_by_motor must be an object")
+    if set(modes_by_motor) != motors:
+        raise ValueError(
+            "controller_mode_by_motor must contain exactly this domain"
+        )
+    normalized_modes = {}
+    for motor in motors:
+        mode = modes_by_motor[motor]
+        if mode not in {"brake", "drag", "hold", "position", "unknown"}:
+            raise ValueError("controller mode is invalid")
+        normalized_modes[motor] = mode
+
+    if "domain_fault" not in payload or type(payload["domain_fault"]) is not bool:
+        raise ValueError("domain_fault must be present and boolean")
+    domain_fault = payload["domain_fault"]
+    lease_value = payload.get("lease_safe_hold")
+    if lease_value is not None and type(lease_value) is not bool:
+        raise ValueError("lease_safe_hold must be boolean or absent")
+
+    thermal_fields = {
+        "thermal_fault_latched",
+        "thermal_cooldown_ready",
+        "thermal_release_observed",
+        "thermal_rearm_pending",
+        "thermal_rearm_pending_next_cycle",
+        "thermal_cooldown_valid_brake_frames",
+        "thermal_trip_activation_epoch",
+        "thermal_minimum_rearm_epoch",
+        "thermal_state",
+        "thermal_state_by_motor",
+        "thermal_trip_reason",
+        "thermal_config_sha256",
+        "thermal_derating_factor",
+        "thermal_raw_temperature_c",
+        "thermal_window_median_c",
+        "thermal_slope_c_per_min",
+    }
+    thermal_observed = bool(thermal_fields.intersection(payload))
+    if thermal_observed:
+        required = {
+            "thermal_fault_latched",
+            "thermal_cooldown_ready",
+            "thermal_release_observed",
+            "thermal_cooldown_valid_brake_frames",
+            "thermal_trip_activation_epoch",
+            "thermal_minimum_rearm_epoch",
+            "thermal_state",
+            "thermal_state_by_motor",
+            "thermal_trip_reason",
+            "thermal_config_sha256",
+        }
+        if not required.issubset(payload) or not (
+            "thermal_rearm_pending_next_cycle" in payload
+            or "thermal_rearm_pending" in payload
+        ):
+            raise ValueError("thermal controller metadata is incomplete")
+        thermal_fault_latched = payload["thermal_fault_latched"]
+        thermal_cooldown_ready = payload["thermal_cooldown_ready"]
+        thermal_release_observed = payload["thermal_release_observed"]
+        thermal_rearm_pending = payload.get(
+            "thermal_rearm_pending_next_cycle",
+            payload.get("thermal_rearm_pending"),
+        )
+        for field_name, field_value in (
+            ("thermal_fault_latched", thermal_fault_latched),
+            ("thermal_cooldown_ready", thermal_cooldown_ready),
+            ("thermal_release_observed", thermal_release_observed),
+            ("thermal_rearm_pending_next_cycle", thermal_rearm_pending),
+        ):
+            if type(field_value) is not bool:
+                raise ValueError(f"{field_name} must be boolean")
+        if (
+            "thermal_rearm_pending" in payload
+            and "thermal_rearm_pending_next_cycle" in payload
+            and payload["thermal_rearm_pending"]
+            is not payload["thermal_rearm_pending_next_cycle"]
+        ):
+            raise ValueError("thermal rearm aliases disagree")
+        if "thermal_fault" in payload and (
+            type(payload["thermal_fault"]) is not bool
+            or payload["thermal_fault"] is not thermal_fault_latched
+        ):
+            raise ValueError("thermal fault aliases disagree")
+        thermal_cooldown_frames = _non_negative_int(
+            payload["thermal_cooldown_valid_brake_frames"],
+            "thermal_cooldown_valid_brake_frames",
+        )
+        thermal_trip_epoch = _non_negative_int(
+            payload["thermal_trip_activation_epoch"],
+            "thermal_trip_activation_epoch",
+        )
+        thermal_minimum_epoch = _non_negative_int(
+            payload["thermal_minimum_rearm_epoch"],
+            "thermal_minimum_rearm_epoch",
+        )
+        reported_thermal_state = payload["thermal_state"]
+        if reported_thermal_state not in THERMAL_STATES:
+            raise ValueError("thermal_state is invalid")
+        thermal_state_by_motor = payload["thermal_state_by_motor"]
+        if (
+            not isinstance(thermal_state_by_motor, Mapping)
+            or set(thermal_state_by_motor) != motors
+        ):
+            raise ValueError(
+                "thermal_state_by_motor must contain exactly this domain"
+            )
+        normalized_thermal_state_by_motor = {}
+        for motor in motors:
+            motor_thermal_state = thermal_state_by_motor[motor]
+            if motor_thermal_state not in THERMAL_STATES:
+                raise ValueError("thermal_state_by_motor contains an invalid state")
+            normalized_thermal_state_by_motor[motor] = motor_thermal_state
+        thermal_trip_reason = payload["thermal_trip_reason"]
+        if thermal_trip_reason not in THERMAL_TRIP_REASONS:
+            raise ValueError("thermal_trip_reason is invalid")
+        if bool(thermal_trip_reason) is not thermal_fault_latched:
+            raise ValueError("thermal trip reason disagrees with latch")
+        thermal_config_sha256 = payload["thermal_config_sha256"]
+        if thermal_config_sha256 != THERMAL_CONFIG_SHA256:
+            raise ValueError("thermal config hash mismatch")
+        thermal_derating_factor = payload.get("thermal_derating_factor")
+        if thermal_derating_factor is not None:
+            thermal_derating_factor = _finite_float(
+                thermal_derating_factor, "thermal_derating_factor"
+            )
+            if not 0.0 <= thermal_derating_factor <= 1.0:
+                raise ValueError("thermal_derating_factor is outside [0,1]")
+        thermal_raw_temperature_c = _optional_finite_float(
+            payload.get("thermal_raw_temperature_c"),
+            "thermal_raw_temperature_c",
+        )
+        thermal_window_median_c = _optional_finite_float(
+            payload.get("thermal_window_median_c"),
+            "thermal_window_median_c",
+        )
+        thermal_slope_c_per_min = _optional_finite_float(
+            payload.get("thermal_slope_c_per_min"),
+            "thermal_slope_c_per_min",
+        )
+        thermal = {
+            "metadata_status": "OBSERVED",
+            "fault_latched": thermal_fault_latched,
+            "cooldown_ready": thermal_cooldown_ready,
+            "release_observed": thermal_release_observed,
+            "rearm_pending_next_cycle": thermal_rearm_pending,
+            "cooldown_valid_brake_frames": thermal_cooldown_frames,
+            "trip_activation_epoch": thermal_trip_epoch,
+            "minimum_rearm_epoch": thermal_minimum_epoch,
+            "domain_reported_state": reported_thermal_state,
+            "reported_state_by_motor": normalized_thermal_state_by_motor,
+            "trip_reason": thermal_trip_reason,
+            "thermal_config_sha256": thermal_config_sha256,
+            "derating_factor": thermal_derating_factor,
+            "raw_temperature_c": thermal_raw_temperature_c,
+            "window_median_c": thermal_window_median_c,
+            "slope_c_per_min": thermal_slope_c_per_min,
+        }
+    else:
+        thermal = {
+            "metadata_status": "UNKNOWN",
+            "fault_latched": None,
+            "cooldown_ready": None,
+            "release_observed": None,
+            "rearm_pending_next_cycle": None,
+            "cooldown_valid_brake_frames": None,
+            "trip_activation_epoch": None,
+            "minimum_rearm_epoch": None,
+            "domain_reported_state": None,
+            "reported_state_by_motor": None,
+            "reported_state": None,
+            "trip_reason": None,
+            "thermal_config_sha256": None,
+            "derating_factor": None,
+            "raw_temperature_c": None,
+            "window_median_c": None,
+            "slope_c_per_min": None,
+        }
+
+    no_progress_fields = {
+        "no_progress_fault",
+        "load_limit_fault",
+        "load_limit_no_progress",
+        "no_progress_release_observed",
+        "no_progress_rearm_pending_next_cycle",
+        "no_progress_watchdog_qualifying_frames",
+        "no_progress_observation_valid",
+        "no_progress_position_error_rad",
+        "no_progress_trip_position_error_rad",
+        "position_safety_trip_reason",
+        "software_saturation_observed",
+        "load_limit_watchdog_authority",
+        "no_progress_trip_activation_epoch",
+        "no_progress_minimum_rearm_epoch",
+    }
+    no_progress_observed = bool(no_progress_fields.intersection(payload))
+    if no_progress_observed:
+        required = {
+            "no_progress_fault",
+            "load_limit_no_progress",
+            "no_progress_release_observed",
+            "no_progress_rearm_pending_next_cycle",
+            "no_progress_watchdog_qualifying_frames",
+            "no_progress_observation_valid",
+            "no_progress_position_error_rad",
+            "no_progress_trip_position_error_rad",
+            "load_limit_watchdog_authority",
+            "no_progress_trip_activation_epoch",
+            "no_progress_minimum_rearm_epoch",
+        }
+        if not required.issubset(payload):
+            raise ValueError("no-progress controller metadata is incomplete")
+        no_progress_fault = payload["no_progress_fault"]
+        load_limit_no_progress = payload["load_limit_no_progress"]
+        release_observed = payload["no_progress_release_observed"]
+        rearm_pending = payload["no_progress_rearm_pending_next_cycle"]
+        observation_valid = payload["no_progress_observation_valid"]
+        for field_name, field_value in (
+            ("no_progress_fault", no_progress_fault),
+            ("load_limit_no_progress", load_limit_no_progress),
+            ("no_progress_release_observed", release_observed),
+            ("no_progress_rearm_pending_next_cycle", rearm_pending),
+            ("no_progress_observation_valid", observation_valid),
+        ):
+            if type(field_value) is not bool:
+                raise ValueError(f"{field_name} must be boolean")
+        if load_limit_no_progress is not no_progress_fault:
+            raise ValueError("no-progress fault aliases disagree")
+        if "load_limit_fault" in payload and (
+            type(payload["load_limit_fault"]) is not bool
+            or payload["load_limit_fault"] is not no_progress_fault
+        ):
+            raise ValueError("load-limit fault aliases disagree")
+        software_saturation = payload.get("software_saturation_observed")
+        if software_saturation is not None and type(software_saturation) is not bool:
+            raise ValueError("software_saturation_observed must be boolean")
+        authority = payload["load_limit_watchdog_authority"]
+        if motors == {"J6"}:
+            expected_no_progress_authority = J6_NO_PROGRESS_WATCHDOG_AUTHORITY
+        elif "J6" not in motors:
+            expected_no_progress_authority = LOAD_LIMIT_WATCHDOG_AUTHORITY
+        else:
+            raise ValueError("no-progress metadata mixes producer domains")
+        if authority != expected_no_progress_authority:
+            raise ValueError("load-limit watchdog authority is invalid")
+        position_error = _finite_float(
+            payload["no_progress_position_error_rad"],
+            "no_progress_position_error_rad",
+        )
+        trip_position_error = _finite_float(
+            payload["no_progress_trip_position_error_rad"],
+            "no_progress_trip_position_error_rad",
+        )
+        if position_error < 0.0 or trip_position_error < 0.0:
+            raise ValueError("no-progress position errors must be non-negative")
+        trip_reason = payload.get("position_safety_trip_reason")
+        if trip_reason is not None:
+            if trip_reason not in {
+                "",
+                "LOAD_LIMIT_NO_PROGRESS",
+                "POSITION_ARRIVAL_TIMEOUT",
+                "EXACT_TRAJECTORY_LOAD_GOVERNOR_ABORT",
+            }:
+                raise ValueError("position safety trip reason is invalid")
+            if bool(trip_reason) is not no_progress_fault:
+                raise ValueError("position safety trip reason disagrees with latch")
+        no_progress = {
+            "metadata_status": "OBSERVED",
+            "fault_latched": no_progress_fault,
+            "release_observed": release_observed,
+            "rearm_pending_next_cycle": rearm_pending,
+            "qualifying_frames": _non_negative_int(
+                payload["no_progress_watchdog_qualifying_frames"],
+                "no_progress_watchdog_qualifying_frames",
+            ),
+            "observation_valid": observation_valid,
+            "position_error_rad": position_error,
+            "trip_position_error_rad": trip_position_error,
+            "trip_reason": trip_reason,
+            "software_saturation_observed": software_saturation,
+            "watchdog_authority": authority,
+            # This wording is a software guard disclaimer, not continuous
+            # rotor-load evidence.  Keep that distinction machine-readable.
+            "continuous_rating_authoritative": False,
+            "trip_activation_epoch": _non_negative_int(
+                payload["no_progress_trip_activation_epoch"],
+                "no_progress_trip_activation_epoch",
+            ),
+            "minimum_rearm_epoch": _non_negative_int(
+                payload["no_progress_minimum_rearm_epoch"],
+                "no_progress_minimum_rearm_epoch",
+            ),
+        }
+    else:
+        no_progress = {
+            "metadata_status": "UNKNOWN",
+            "fault_latched": None,
+            "release_observed": None,
+            "rearm_pending_next_cycle": None,
+            "qualifying_frames": None,
+            "observation_valid": None,
+            "position_error_rad": None,
+            "trip_position_error_rad": None,
+            "trip_reason": None,
+            "software_saturation_observed": None,
+            "watchdog_authority": None,
+            "continuous_rating_authoritative": False,
+            "trip_activation_epoch": None,
+            "minimum_rearm_epoch": None,
+        }
+
+    gravity_fields = {
+        "gravity_authority_present",
+        "gravity_scale",
+        "gravity_scale_target",
+        "feedforward_nm",
+    }
+    gravity_identity_fields = {
+        "gravity_policy_identity_status",
+        "gravity_source_instance_id",
+        "gravity_session_id",
+        "gravity_state_instance_id",
+        "gravity_model_sha256",
+        "gravity_config_sha256",
+        "gravity_continuous_rotor_limits_authoritative",
+    }
+    gravity_observed = bool(
+        (gravity_fields | gravity_identity_fields).intersection(payload)
+    )
+    if gravity_observed:
+        if not gravity_fields.issubset(payload):
+            raise ValueError("gravity controller metadata is incomplete")
+        authority_present = payload["gravity_authority_present"]
+        if type(authority_present) is not bool:
+            raise ValueError("gravity_authority_present must be boolean")
+        gravity_scale = _finite_float(payload["gravity_scale"], "gravity_scale")
+        gravity_scale_target = _finite_float(
+            payload["gravity_scale_target"], "gravity_scale_target"
+        )
+        if not 0.0 <= gravity_scale <= 1.0:
+            raise ValueError("gravity_scale is outside [0,1]")
+        if gravity_scale_target not in GRAVITY_SCALE_TARGET_LEVELS:
+            raise ValueError("gravity_scale_target is not a discrete level")
+        feedforward = payload["feedforward_nm"]
+        if not isinstance(feedforward, (list, tuple)) or len(feedforward) != 6:
+            raise ValueError("feedforward_nm must contain six values")
+        feedforward_nm = tuple(
+            _finite_float(value, "feedforward_nm") for value in feedforward
+        )
+        if any(
+            abs(value) > limit + 1.0e-12
+            for value, limit in zip(
+                feedforward_nm, GRAVITY_FEEDFORWARD_LIMITS_NM
+            )
+        ):
+            raise ValueError("feedforward_nm exceeds the software envelope")
+        if feedforward_nm[5] != 0.0:
+            raise ValueError("J6 gravity feedforward must be zero")
+        identity_observed = bool(gravity_identity_fields.intersection(payload))
+        if identity_observed and not gravity_identity_fields.issubset(payload):
+            raise ValueError("gravity policy identity metadata is incomplete")
+        identity_status = "NOT_ECHOED"
+        source_instance_id = session_id = state_instance_id = None
+        model_sha256 = gravity_config_sha256 = None
+        continuous_authoritative = None
+        if identity_observed:
+            identity_status = payload["gravity_policy_identity_status"]
+            source_instance_id = payload["gravity_source_instance_id"]
+            session_id = payload["gravity_session_id"]
+            state_instance_id = payload["gravity_state_instance_id"]
+            model_sha256 = payload["gravity_model_sha256"]
+            gravity_config_sha256 = payload["gravity_config_sha256"]
+            continuous_authoritative = payload[
+                "gravity_continuous_rotor_limits_authoritative"
+            ]
+            if type(continuous_authoritative) is not bool:
+                raise ValueError("gravity continuous authority must be boolean")
+            if authority_present:
+                if (
+                    identity_status != "ECHOED"
+                    or not isinstance(source_instance_id, str)
+                    or len(source_instance_id) != 32
+                    or any(
+                        character not in "0123456789abcdef"
+                        for character in source_instance_id
+                    )
+                    or not isinstance(session_id, str)
+                    or not 1 <= len(session_id) <= 512
+                    or not isinstance(state_instance_id, str)
+                    or not 1 <= len(state_instance_id) <= 512
+                    or model_sha256 != PRODUCTION_MODEL_SHA256
+                    or gravity_config_sha256 != GRAVITY_CONFIG_SHA256
+                    or continuous_authoritative is not True
+                ):
+                    raise ValueError("gravity policy identity is invalid")
+            elif (
+                identity_status != "NO_AUTHORITY"
+                or any(
+                    value != ""
+                    for value in (
+                        source_instance_id, session_id, state_instance_id,
+                        model_sha256, gravity_config_sha256,
+                    )
+                )
+                or continuous_authoritative is not False
+                or gravity_scale != 0.0
+                or gravity_scale_target != 0.0
+                or any(value != 0.0 for value in feedforward_nm)
+            ):
+                raise ValueError("absent gravity authority metadata is inconsistent")
+        gravity = {
+            "metadata_status": "OBSERVED",
+            "policy_identity_status": identity_status,
+            "authority_present": authority_present,
+            "scale": gravity_scale,
+            "scale_target": gravity_scale_target,
+            "feedforward_nm": list(feedforward_nm),
+            "source_instance_id": source_instance_id,
+            "session_id": session_id,
+            "state_instance_id": state_instance_id,
+            "model_sha256": model_sha256,
+            "gravity_config_sha256": gravity_config_sha256,
+            "continuous_rotor_limits_authoritative": continuous_authoritative,
+        }
+    else:
+        gravity = {
+            "metadata_status": "UNKNOWN",
+            "policy_identity_status": "UNKNOWN",
+            "authority_present": None,
+            "scale": None,
+            "scale_target": None,
+            "feedforward_nm": None,
+            "source_instance_id": None,
+            "session_id": None,
+            "state_instance_id": None,
+            "model_sha256": None,
+            "gravity_config_sha256": None,
+            "continuous_rotor_limits_authoritative": None,
+        }
+
+    by_motor = {}
+    for sample in samples:
+        if sample.thermal_fault_latched is not None:
+            if not thermal_observed or (
+                sample.thermal_fault_latched is not thermal["fault_latched"]
+            ):
+                raise ValueError("sample thermal latch disagrees with domain")
+        elif thermal_observed and sample.motor != "J6":
+            raise ValueError("GO sample is missing its thermal latch")
+        if sample.load_limit_no_progress is not None:
+            if not no_progress_observed or (
+                sample.load_limit_no_progress is not no_progress["fault_latched"]
+            ):
+                raise ValueError("sample no-progress latch disagrees with domain")
+        elif no_progress_observed and sample.motor != "J6":
+            raise ValueError("GO sample is missing its no-progress latch")
+
+        rotor_feedforward = sample.gravity_feedforward_rotor_nm
+        if gravity_observed and sample.motor != "J6":
+            if rotor_feedforward is None:
+                raise ValueError("GO sample is missing gravity feedforward")
+            joint_index = {
+                "J1": 0,
+                "J2A": 1,
+                "J2B": 1,
+                "J3": 2,
+                "J4": 3,
+                "J5": 4,
+            }[sample.motor]
+            expected = MOTOR_SPECS[sample.motor].sign * gravity[
+                "feedforward_nm"
+            ][joint_index]
+            if abs(rotor_feedforward - expected) > 1.0e-9:
+                raise ValueError(
+                    "sample gravity feedforward disagrees with domain"
+                )
+        elif not gravity_observed and rotor_feedforward is not None:
+            raise ValueError("sample gravity feedforward lacks domain policy")
+
+        motor_thermal = dict(thermal)
+        motor_thermal["reported_state"] = (
+            thermal["reported_state_by_motor"][sample.motor]
+            if thermal_observed else None
+        )
+        by_motor[sample.motor] = {
+            "source_monotonic_ns": sample.source_monotonic_ns,
+            "receipt_monotonic_ns": sample.receipt_monotonic_ns,
+            "controller_mode": normalized_modes[sample.motor],
+            "domain_fault": domain_fault,
+            "lease_safe_hold": lease_value,
+            "thermal": motor_thermal,
+            "no_progress": dict(no_progress),
+            "gravity": {
+                **gravity,
+                "feedforward_nm": (
+                    None
+                    if gravity["feedforward_nm"] is None
+                    else list(gravity["feedforward_nm"])
+                ),
+                "applied_rotor_nm": rotor_feedforward,
+            },
+        }
+    return by_motor

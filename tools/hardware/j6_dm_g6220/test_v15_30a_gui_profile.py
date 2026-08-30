@@ -22,12 +22,38 @@ MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
 
-def load_parse_command():
+def load_thermal_config_function():
     tree = ast.parse(CONTROLLER.read_text(encoding="utf-8"))
     function = next(
         node for node in tree.body
-        if isinstance(node, ast.FunctionDef) and node.name == "parse_command"
+        if isinstance(node, ast.FunctionDef) and node.name == "load_thermal_limits"
     )
+    namespace = {
+        "Path": Path,
+        "hashlib": __import__("hashlib"),
+        "math": math,
+        "THERMAL_CONFIG_SHA256": (
+            "1926264805858f62fffc9360ef0c9d4d7f8a7e232e171105450769d493ff5467"
+        ),
+    }
+    exec(
+        compile(
+            ast.fix_missing_locations(ast.Module(body=[function], type_ignores=[])),
+            str(CONTROLLER),
+            "exec",
+        ),
+        namespace,
+    )
+    return namespace["load_thermal_limits"]
+
+
+def load_parse_command():
+    tree = ast.parse(CONTROLLER.read_text(encoding="utf-8"))
+    names = {"valid_lower_sha256", "parse_command"}
+    functions = [
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name in names
+    ]
     namespace = {
         "json": json,
         "math": math,
@@ -37,9 +63,13 @@ def load_parse_command():
         "VMAX_LIMIT": math.radians(5.0),
         "AMAX_LIMIT": math.radians(20.0),
         "COMMAND_SOURCE_MAX_AGE_NS": 250_000_000,
+        "QUINTIC_COMMAND_SCHEMA": "go-m8010-quintic-command/1.0",
+        "QUINTIC_PROFILE": "quintic-rest-to-rest-v1",
+        "QUINTIC_MAX_INTERVALS": 1_000_000,
+        "QUINTIC_MAX_SAMPLE_PERIOD_NS": 10_000_000,
     }
     exec(
-        compile(ast.fix_missing_locations(ast.Module(body=[function], type_ignores=[])),
+        compile(ast.fix_missing_locations(ast.Module(body=functions, type_ignores=[])),
                 str(CONTROLLER), "exec"),
         namespace,
     )
@@ -99,6 +129,7 @@ def load_mode_functions():
         "RESTORE_VELOCITY_LIMIT": math.radians(1.0),
         "ACTIVE_DEADLINE_CYCLE_LIMIT_S": 0.02,
         "FAULT_STATES": {8, 9, 0xA, 0xB, 0xC, 0xD, 0xE},
+        "ACTIVE_THERMAL_LIMITS": {"thermal_stop_c": 60.0},
     }
     exec(
         compile(ast.fix_missing_locations(ast.Module(body=functions, type_ignores=[])),
@@ -119,14 +150,20 @@ def load_command_channel_functions():
         "flush_command_rejection_reports",
         "make_command_rejection_state",
         "make_command_source_replay_state",
+        "make_command_receive_events",
         "command_source_takeover_is_blocked",
         "command_source_is_newer",
         "commit_command_source",
+        "commit_position_execution_binding",
         "observe_valid_command_epoch",
         "command_epoch_is_acceptable",
         "minimum_epoch_after_interarrival_lease",
         "record_command_rejection",
         "receive_latest",
+        "valid_lower_sha256",
+        "command_is_v13_quintic_position",
+        "position_execution_contract",
+        "validate_position_execution_transition",
     }
     functions = [
         node for node in tree.body
@@ -147,6 +184,72 @@ def load_command_channel_functions():
         "MODEL_COMMAND_UPPER": math.pi,
         "VMAX_LIMIT": math.radians(5.0),
         "AMAX_LIMIT": math.radians(20.0),
+        "QUINTIC_COMMAND_SCHEMA": "go-m8010-quintic-command/1.0",
+        "QUINTIC_PROFILE": "quintic-rest-to-rest-v1",
+        "QUINTIC_MAX_INTERVALS": 1_000_000,
+        "QUINTIC_MAX_SAMPLE_PERIOD_NS": 10_000_000,
+    }
+    exec(
+        compile(ast.fix_missing_locations(ast.Module(body=functions, type_ignores=[])),
+                str(CONTROLLER), "exec"),
+        namespace,
+    )
+    return namespace
+
+
+def load_interlock_functions():
+    tree = ast.parse(CONTROLLER.read_text(encoding="utf-8"))
+    names = {
+        "saturating_next_activation_epoch",
+        "make_thermal_interlock_state",
+        "reset_thermal_cooldown_evidence",
+        "latch_thermal_interlock",
+        "observe_raw_temperature_thermal_trip",
+        "observe_thermal_cooldown_frame",
+        "make_no_progress_watchdog_state",
+        "reset_no_progress_observation",
+        "observe_no_progress_watchdog",
+        "observe_explicit_interlock_release",
+        "request_interlock_rearm_for_next_cycle",
+        "apply_pending_interlock_rearm_at_cycle_start",
+        "temperature_window_statistics",
+        "command_requests_j6_active",
+    }
+    functions = [
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name in names
+    ]
+    namespace = {
+        "math": math,
+        "statistics": __import__("statistics"),
+        "ARRIVAL_TOLERANCE": math.radians(0.08),
+        "TARGET_TIMEOUT_S": 90.0,
+        "NO_PROGRESS_MINIMUM_IMPROVEMENT": math.radians(0.05),
+        "NO_PROGRESS_MINIMUM_QUALIFYING_FRAMES": 3,
+    }
+    exec(
+        compile(ast.fix_missing_locations(ast.Module(body=functions, type_ignores=[])),
+                str(CONTROLLER), "exec"),
+        namespace,
+    )
+    return namespace
+
+
+def load_quintic_controller_functions():
+    tree = ast.parse(CONTROLLER.read_text(encoding="utf-8"))
+    names = {
+        "command_is_v13_quintic_position",
+        "v13_position_posvel_reference",
+        "trajectory_feedback_status",
+    }
+    functions = [
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name in names
+    ]
+    namespace = {
+        "quintic_reference_at": MODULE.quintic_reference_at,
+        "quintic_posvel_speed_limit": MODULE.quintic_posvel_speed_limit,
+        "RESTORE_VELOCITY_LIMIT": math.radians(1.0),
     }
     exec(
         compile(ast.fix_missing_locations(ast.Module(body=functions, type_ignores=[])),
@@ -167,6 +270,12 @@ def load_send_feedback():
         "socket": __import__("socket"),
         "time": __import__("time"),
         "FAULT_STATES": {8, 9, 0xA, 0xB, 0xC, 0xD, 0xE},
+        "NO_PROGRESS_WATCHDOG_AUTHORITY": (
+            "J6_TARGET_TIMEOUT_POSITION_ERROR_V1"
+        ),
+        "THERMAL_CONFIG_SHA256": (
+            "1926264805858f62fffc9360ef0c9d4d7f8a7e232e171105450769d493ff5467"
+        ),
     }
     exec(
         compile(ast.fix_missing_locations(ast.Module(body=[function], type_ignores=[])),
@@ -201,6 +310,46 @@ def command_payload(
     }).encode()
 
 
+def quintic_command_document(
+    *,
+    received_monotonic_ns=None,
+    execute_at_monotonic_ns=None,
+    sequence=1,
+    activation_epoch=7,
+    start_rad=0.0,
+    target_rad=0.01,
+):
+    if received_monotonic_ns is None:
+        received_monotonic_ns = time.monotonic_ns()
+    if execute_at_monotonic_ns is None:
+        execute_at_monotonic_ns = received_monotonic_ns + 100_000_000
+    document = json.loads(command_payload(
+        schema="go-m8010-gui-command/1.3",
+        source_monotonic_ns=received_monotonic_ns,
+        sequence=sequence,
+    ))
+    document["activation_epoch"] = activation_epoch
+    document["targets_rad"][5] = target_rad
+    document["plan_token_id"] = "a" * 64
+    start = [0.0] * 6
+    target = [0.0] * 6
+    start[5] = start_rad
+    target[5] = target_rad
+    document["trajectory"] = {
+        "schema": "go-m8010-quintic-command/1.0",
+        "trajectory_sha256": "b" * 64,
+        "profile": "quintic-rest-to-rest-v1",
+        "start_rad": start,
+        "target_rad": target,
+        "duration_ns": 1_000_000_000,
+        "interval_count": 100,
+        "execute_at_monotonic_ns": execute_at_monotonic_ns,
+        "segment_index": 0,
+        "segment_count": 1,
+    }
+    return document
+
+
 def test_profile_converges_without_velocity_or_acceleration_jump():
     q_command = 0.0
     dq_command = 0.0
@@ -219,6 +368,290 @@ def test_profile_converges_without_velocity_or_acceleration_jump():
             reached_exactly = True
             break
     assert reached_exactly
+
+
+def test_j6_thermal_config_has_fixed_hash_and_no_external_yaml_dependency():
+    thermal_config = (
+        CONTROLLER.resolve().parents[3]
+        / "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环"
+        / "ros2_ws"
+        / "src"
+        / "go_m8010_arm_hardware"
+        / "config"
+        / "thermal_limits.yaml"
+    )
+    limits = load_thermal_config_function()(thermal_config)
+    assert limits["normal_below_c"] == 45.0
+    assert limits["warning_below_c"] == 50.0
+    assert limits["derating_start_c"] == 55.0
+    assert limits["thermal_stop_c"] == 60.0
+    assert limits["rearm_below_c"] == 55.0
+    assert limits["cooldown_seconds"] == 30.0
+    assert limits["slope_window_seconds"] == 120.0
+    source = CONTROLLER.read_text(encoding="utf-8")
+    assert "import yaml" not in source
+    assert "yaml.safe_load" not in source
+
+
+def test_j6_thermal_derating_scales_speed_acceleration_and_hold_authority():
+    factor = MODULE.thermal_derating_factor
+    limits = MODULE.thermal_derated_posvel_limits
+    assert factor(54.999, 55.0, 60.0) == 1.0
+    assert factor(55.0, 55.0, 60.0) == 1.0
+    assert math.isclose(factor(57.5, 55.0, 60.0), 0.5)
+    assert math.isclose(factor(59.0, 55.0, 60.0), 0.2)
+    assert math.isclose(factor(59.9, 55.0, 60.0), 0.1)
+    assert factor(60.0, 55.0, 60.0) == 0.0
+    assert limits(1.0, 2.0, 0.2, 0.5) == (0.5, 1.0, 0.1)
+    assert limits(1.0, 2.0, 0.2, 0.0) == (0.0, 0.0, 0.0)
+
+    source = CONTROLLER.read_text(encoding="utf-8")
+    assert "J6_V13_THERMAL_DERATING_TRAJECTORY_ABORT" in source
+    assert '"EXACT_TRAJECTORY_DERATING_ABORT"' in source
+    assert "speed_limit *= thermal_factor" not in source
+    assert "thermal_derated_posvel_limits(" in source
+    assert "fixed_hold_velocity_limit() * thermal_factor" in source
+
+
+def test_j6_single_60c_frame_latches_until_cooldown_release_and_higher_epoch():
+    functions = load_interlock_functions()
+    state = functions["make_thermal_interlock_state"]()
+    trip = functions["observe_raw_temperature_thermal_trip"]
+    cooldown = functions["observe_thermal_cooldown_frame"]
+    release = functions["observe_explicit_interlock_release"]
+    request = functions["request_interlock_rearm_for_next_cycle"]
+    apply = functions["apply_pending_interlock_rearm_at_cycle_start"]
+
+    assert trip(state, 60.0, 60.0, 7, 0, 0)
+    assert state["fault_latched"] is True
+    assert state["minimum_rearm_epoch"] == 8
+    assert not release(state, True, cooldown_required=True)
+    assert not cooldown(state, True, 0.0, 30.0, 3)
+    assert not cooldown(state, True, 15.0, 30.0, 3)
+    assert cooldown(state, True, 30.0, 30.0, 3)
+    assert state["cooldown_ready"] is True
+    assert release(state, True, cooldown_required=True)
+
+    stale_epoch = {
+        "mode": "position",
+        "active_joint_mask": [False] * 5 + [True],
+        "activation_epoch": 7,
+    }
+    higher_epoch = dict(stale_epoch, activation_epoch=8)
+    assert not request(
+        state, stale_epoch, True, True, 0, cooldown_required=True
+    )
+    assert request(
+        state, higher_epoch, True, True, 0, cooldown_required=True
+    )
+    assert state["fault_latched"] is True
+    assert state["rearm_pending_next_cycle"] is True
+    assert apply(state)
+    assert state["fault_latched"] is False
+    assert state["rearm_pending_next_cycle"] is False
+
+
+def test_j6_exact_trajectory_derating_abort_uses_thermal_latch():
+    functions = load_interlock_functions()
+    state = functions["make_thermal_interlock_state"]()
+    assert functions["latch_thermal_interlock"](
+        state,
+        "EXACT_TRAJECTORY_DERATING_ABORT",
+        11,
+        0,
+        11,
+    )
+    assert state["fault_latched"] is True
+    assert state["trip_reason"] == "EXACT_TRAJECTORY_DERATING_ABORT"
+    assert state["minimum_rearm_epoch"] == 12
+
+
+def test_j6_thermal_cooldown_gap_or_hot_sample_revokes_release_evidence():
+    functions = load_interlock_functions()
+    state = functions["make_thermal_interlock_state"]()
+    functions["observe_raw_temperature_thermal_trip"](
+        state, 61.0, 60.0, 2, 0, 0
+    )
+    cooldown = functions["observe_thermal_cooldown_frame"]
+    assert not cooldown(state, True, 0.0, 1.0, 2)
+    assert cooldown(state, True, 1.0, 1.0, 2)
+    assert functions["observe_explicit_interlock_release"](
+        state, True, cooldown_required=True
+    )
+    assert not cooldown(state, False, 1.1, 1.0, 2)
+    assert state["cooldown_frames"] == 0
+    assert state["cooldown_ready"] is False
+    assert state["release_observed"] is False
+
+
+def test_j6_no_progress_improvement_resets_window_then_timeout_latches():
+    functions = load_interlock_functions()
+    state = functions["make_no_progress_watchdog_state"]()
+    observe = functions["observe_no_progress_watchdog"]
+    assert not observe(
+        state, True, 0.20, 0.0, 5, 0, 0,
+        timeout_seconds=10.0, minimum_improvement_rad=0.05,
+        minimum_frames=3,
+    )
+    assert not observe(
+        state, True, 0.14, 5.0, 5, 0, 0,
+        timeout_seconds=10.0, minimum_improvement_rad=0.05,
+        minimum_frames=3,
+    )
+    assert state["window_started_at"] == 5.0
+    assert not observe(
+        state, True, 0.14, 14.9, 5, 0, 0,
+        timeout_seconds=10.0, minimum_improvement_rad=0.05,
+        minimum_frames=3,
+    )
+    assert observe(
+        state, True, 0.14, 15.0, 5, 0, 0,
+        timeout_seconds=10.0, minimum_improvement_rad=0.05,
+        minimum_frames=3,
+    )
+    assert state["fault_latched"] is True
+    assert state["trip_activation_epoch"] == 5
+    assert state["minimum_rearm_epoch"] == 6
+    source = CONTROLLER.read_text(encoding="utf-8")
+    new_profile = source.split(
+        "if position_command_starts_new_profile(", 1
+    )[1].split("            else:", 1)[0]
+    assert "reset_no_progress_observation(no_progress_watchdog)" in new_profile
+
+
+def test_j6_no_progress_rearm_requires_release_disabled_feedback_and_higher_epoch():
+    functions = load_interlock_functions()
+    state = functions["make_no_progress_watchdog_state"]()
+    state.update({
+        "fault_latched": True,
+        "trip_activation_epoch": 11,
+        "minimum_rearm_epoch": 12,
+    })
+    request = functions["request_interlock_rearm_for_next_cycle"]
+    command = {
+        "mode": "position",
+        "active_joint_mask": [False] * 5 + [True],
+        "activation_epoch": 12,
+    }
+    assert not request(
+        state, command, True, True, 0, cooldown_required=False
+    )
+    assert functions["observe_explicit_interlock_release"](
+        state, True, cooldown_required=False
+    )
+    assert not request(
+        state, command, True, False, 0, cooldown_required=False
+    )
+    assert request(
+        state, command, True, True, 0, cooldown_required=False
+    )
+    assert state["fault_latched"] is True
+    assert functions["apply_pending_interlock_rearm_at_cycle_start"](state)
+    assert state["fault_latched"] is False
+
+
+def test_j6_receive_events_marks_only_a_newly_accepted_domain_release_packet():
+    functions = load_command_channel_functions()
+    receive_latest = functions["receive_latest"]
+    events = functions["make_command_receive_events"]()
+
+    class FakeSocket:
+        def __init__(self, packets):
+            self.packets = list(packets)
+
+        def recv(self, _size):
+            if not self.packets:
+                raise BlockingIOError
+            return self.packets.pop(0)
+
+    active = command_payload(sequence=1)
+    current, minimum, last_seen = receive_latest(
+        FakeSocket([active]), None, 0, 0, None, None, events
+    )
+    assert events["domain_release_received"] is False
+
+    brake = json.loads(command_payload(sequence=2))
+    brake["mode"] = "brake"
+    brake["active_joint_mask"] = [False] * 6
+    brake["moving_joint_mask"] = [False] * 6
+    brake["source_monotonic_ns"] = time.monotonic_ns()
+    current, minimum, last_seen = receive_latest(
+        FakeSocket([json.dumps(brake).encode()]),
+        current,
+        minimum,
+        last_seen,
+        None,
+        None,
+        events,
+    )
+    assert current["mode"] == "brake"
+    assert events["domain_release_received"] is True
+
+
+def test_quintic_reference_uses_integer_grid_and_exact_endpoint_pins():
+    start = -0.2
+    target = 0.4
+    execute_at = 10_000_000_000
+    duration_ns = 1_000_000_000
+    intervals = 100
+    assert MODULE.quintic_sample_index(
+        execute_at - 1, execute_at, duration_ns, intervals
+    ) == 0
+    assert MODULE.quintic_sample_index(
+        execute_at + 499_999_999, execute_at, duration_ns, intervals
+    ) == 49
+    assert MODULE.quintic_sample_index(
+        execute_at + 500_000_000, execute_at, duration_ns, intervals
+    ) == 50
+    assert MODULE.quintic_sample_index(
+        execute_at + duration_ns, execute_at, duration_ns, intervals
+    ) == intervals
+
+    prepared = MODULE.quintic_reference_at(
+        start, target, duration_ns, intervals, execute_at, execute_at - 1
+    )
+    midpoint = MODULE.quintic_reference_at(
+        start, target, duration_ns, intervals, execute_at,
+        execute_at + duration_ns // 2,
+    )
+    complete = MODULE.quintic_reference_at(
+        start, target, duration_ns, intervals, execute_at,
+        execute_at + duration_ns,
+    )
+    assert prepared == (start, 0.0, 0, "PREPARED")
+    assert math.isclose(midpoint[0], 0.1, abs_tol=1e-15)
+    assert midpoint[1] > 0.0
+    assert midpoint[2:] == (50, "RUNNING")
+    assert complete == (target, 0.0, intervals, "COMPLETE")
+
+
+def test_quintic_posvel_cap_is_unsigned_and_never_changes_q_reference():
+    vmax = math.radians(5.0)
+    restore = math.radians(1.0)
+    assert MODULE.quintic_posvel_speed_limit(-0.02, vmax, restore) == 0.02
+    assert MODULE.quintic_posvel_speed_limit(0.0, vmax, restore) == restore
+    assert MODULE.quintic_posvel_speed_limit(1.0, vmax, restore) == vmax
+
+
+def test_quintic_evaluator_rejects_coerced_or_nonfinite_grid_inputs():
+    invalid_calls = (
+        lambda: MODULE.quintic_sample_index(True, 1, 1, 1),
+        lambda: MODULE.quintic_sample_index(1, True, 1, 1),
+        lambda: MODULE.quintic_sample_index(1, 1, 0, 1),
+        lambda: MODULE.quintic_sample_index(1, 1, 1, 1_000_001),
+        lambda: MODULE.quintic_sample(math.nan, 0.0, 1, 1, 0),
+        lambda: MODULE.quintic_sample(0.0, math.inf, 1, 1, 0),
+        lambda: MODULE.quintic_sample(0.0, 1.0, 1, 1, True),
+        lambda: MODULE.quintic_posvel_speed_limit(-0.1, 0.0, 0.0),
+        lambda: MODULE.quintic_posvel_speed_limit(-0.1, 0.2, -0.01),
+    )
+    for call in invalid_calls:
+        try:
+            call()
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("quintic evaluator accepted an invalid value")
 
 
 def test_posvel_speed_limit_is_positive_bounded_and_acceleration_limited():
@@ -334,6 +767,7 @@ def test_j6_parser_keeps_legacy_brake_compatibility():
         "go-m8010-gui-command/1.0",
         "go-m8010-gui-command/1.1",
         "go-m8010-gui-command/1.2",
+        "go-m8010-gui-command/1.3",
     ):
         document = json.loads(command_payload(schema=schema))
         document["mode"] = "brake"
@@ -345,6 +779,364 @@ def test_j6_parser_keeps_legacy_brake_compatibility():
             document.pop("active_joint_mask")
         parsed = parse_command(json.dumps(document).encode())
         assert parsed["active_joint_mask"] == [False] * 6
+
+
+def test_j6_parser_accepts_and_normalizes_v13_quintic_descriptor():
+    parse_command = load_parse_command()
+    received_ns = 20_000_000_000
+    document = quintic_command_document(
+        received_monotonic_ns=received_ns,
+        execute_at_monotonic_ns=received_ns + 100_000_000,
+    )
+    parsed = parse_command(json.dumps(document).encode(), received_ns)
+    assert parsed["schema"] == "go-m8010-gui-command/1.3"
+    assert parsed["plan_token_id"] == "a" * 64
+    assert parsed["trajectory"]["trajectory_sha256"] == "b" * 64
+    assert parsed["trajectory"]["start_rad"][5] == 0.0
+    assert parsed["trajectory"]["target_rad"] == parsed["targets_rad"]
+    assert parsed["trajectory"]["duration_ns"] == 1_000_000_000
+    assert parsed["trajectory"]["interval_count"] == 100
+
+
+def test_j6_parser_rejects_malformed_or_unbounded_v13_quintic_fields():
+    parse_command = load_parse_command()
+    received_ns = 30_000_000_000
+    base = quintic_command_document(
+        received_monotonic_ns=received_ns,
+        execute_at_monotonic_ns=received_ns + 100_000_000,
+    )
+    mutations = []
+
+    def changed(mutator):
+        document = json.loads(json.dumps(base))
+        mutator(document)
+        mutations.append(document)
+
+    changed(lambda value: value.__setitem__("plan_token_id", "A" * 64))
+    changed(lambda value: value.__setitem__("plan_token_id", "a" * 63))
+    changed(lambda value: value.__setitem__("trajectory", None))
+    changed(lambda value: value["trajectory"].__setitem__("extra", 1))
+    changed(lambda value: value["trajectory"].__setitem__("schema", "bad"))
+    changed(lambda value: value["trajectory"].__setitem__(
+        "trajectory_sha256", "g" * 64
+    ))
+    changed(lambda value: value["trajectory"].__setitem__("profile", "linear"))
+    changed(lambda value: value["trajectory"].__setitem__("start_rad", [0.0] * 5))
+    changed(lambda value: value["trajectory"]["start_rad"].__setitem__(5, True))
+    changed(lambda value: value["trajectory"]["target_rad"].__setitem__(5, 0.02))
+    changed(lambda value: value["trajectory"]["start_rad"].__setitem__(0, 0.01))
+    changed(lambda value: value.__setitem__(
+        "moving_joint_mask", [True] + [False] * 4 + [True]
+    ))
+    changed(lambda value: value["trajectory"].__setitem__("duration_ns", True))
+    changed(lambda value: value["trajectory"].__setitem__("duration_ns", 0))
+    changed(lambda value: value["trajectory"].__setitem__("interval_count", 0))
+    changed(lambda value: value["trajectory"].__setitem__(
+        "interval_count", 1_000_001
+    ))
+    changed(lambda value: value["trajectory"].__setitem__("interval_count", 99))
+    changed(lambda value: value["trajectory"].__setitem__(
+        "execute_at_monotonic_ns", 0
+    ))
+    changed(lambda value: value["trajectory"].__setitem__("segment_index", -1))
+    changed(lambda value: value["trajectory"].__setitem__("segment_count", 0))
+    changed(lambda value: value["trajectory"].__setitem__("segment_index", 1))
+    # 0.1 rad in one second exceeds the frozen 5 deg/s quintic peak.
+    def excessive_velocity(value):
+        value["targets_rad"][5] = 0.1
+        value["trajectory"]["target_rad"][5] = 0.1
+    changed(excessive_velocity)
+
+    for document in mutations:
+        try:
+            parse_command(json.dumps(document).encode(), received_ns)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"accepted malformed v1.3 descriptor: {document!r}")
+
+
+def test_j6_v13_position_reference_uses_descriptor_grid_not_final_endpoint():
+    parse_command = load_parse_command()
+    functions = load_quintic_controller_functions()
+    reference = functions["v13_position_posvel_reference"]
+    received_ns = 40_000_000_000
+    execute_at_ns = received_ns + 100_000_000
+    command = parse_command(
+        json.dumps(quintic_command_document(
+            received_monotonic_ns=received_ns,
+            execute_at_monotonic_ns=execute_at_ns,
+            start_rad=-0.01,
+            target_rad=0.01,
+        )).encode(),
+        received_ns,
+    )
+
+    prepared = reference(command, execute_at_ns - 1)
+    started = reference(command, execute_at_ns)
+    midpoint = reference(command, execute_at_ns + 500_000_000)
+    complete = reference(command, execute_at_ns + 1_000_000_000)
+
+    assert prepared[0] == -0.01
+    assert prepared[0] != command["targets_rad"][5]
+    assert prepared[2:] == ("PREPARED", 0)
+    assert started[0] == -0.01
+    assert started[2:] == ("RUNNING", 0)
+    assert math.isclose(midpoint[0], 0.0, abs_tol=1e-15)
+    assert midpoint[2:] == ("RUNNING", 50)
+    assert complete[0] == command["targets_rad"][5]
+    assert complete[2:] == ("COMPLETE", 100)
+    for _q_ref, speed_limit, _state, _index in (
+        prepared, started, midpoint, complete
+    ):
+        assert 0.0 <= speed_limit <= command["maximum_velocity_rad_s"]
+
+
+def test_j6_v13_transition_rejects_late_first_packet_and_same_epoch_mutation():
+    parse_command = load_parse_command()
+    validate = load_command_channel_functions()[
+        "validate_position_execution_transition"
+    ]
+    received_ns = 50_000_000_000
+    execute_at_ns = received_ns + 100_000_000
+    current_document = quintic_command_document(
+        received_monotonic_ns=received_ns,
+        execute_at_monotonic_ns=execute_at_ns,
+        sequence=1,
+    )
+    current = parse_command(
+        json.dumps(current_document).encode(), received_ns
+    )
+    validate(None, current, received_ns)
+
+    heartbeat_received_ns = execute_at_ns + 10_000_000
+    heartbeat_document = quintic_command_document(
+        received_monotonic_ns=heartbeat_received_ns,
+        execute_at_monotonic_ns=execute_at_ns,
+        sequence=2,
+    )
+    heartbeat = parse_command(
+        json.dumps(heartbeat_document).encode(), heartbeat_received_ns
+    )
+    # A previously prepared, byte-equivalent descriptor may renew its lease
+    # after the common start; it is not a new first packet.
+    validate(current, heartbeat, heartbeat_received_ns)
+
+    mutations = []
+
+    def changed(mutator):
+        document = json.loads(json.dumps(heartbeat_document))
+        mutator(document)
+        mutations.append(document)
+
+    changed(lambda value: value.__setitem__("plan_token_id", "c" * 64))
+    changed(lambda value: value["trajectory"].__setitem__(
+        "trajectory_sha256", "d" * 64
+    ))
+    changed(lambda value: value["trajectory"].__setitem__(
+        "execute_at_monotonic_ns", execute_at_ns + 1
+    ))
+    changed(lambda value: value["trajectory"].__setitem__(
+        "segment_count", 2
+    ))
+    for document in mutations:
+        candidate = parse_command(
+            json.dumps(document).encode(), heartbeat_received_ns
+        )
+        try:
+            validate(current, candidate, heartbeat_received_ns)
+        except ValueError as error:
+            assert "同一激活纪元轨迹描述符发生变化" in str(error)
+        else:
+            raise AssertionError("same-epoch quintic descriptor mutation accepted")
+
+    late_received_ns = 60_000_000_000
+    late_document = quintic_command_document(
+        received_monotonic_ns=late_received_ns,
+        execute_at_monotonic_ns=late_received_ns - 1,
+    )
+    late = parse_command(json.dumps(late_document).encode(), late_received_ns)
+    try:
+        validate(None, late, late_received_ns)
+    except ValueError as error:
+        assert "首包晚于执行起点" in str(error)
+    else:
+        raise AssertionError("late first v1.3 POSITION packet was accepted")
+
+
+def test_j6_position_authority_survives_hold_for_v13_and_v12_contracts():
+    functions = load_command_channel_functions()
+    receive_latest = functions["receive_latest"]
+
+    class FakeSocket:
+        def __init__(self, packet):
+            self.packets = [json.dumps(packet).encode()]
+
+        def recv(self, _size):
+            if not self.packets:
+                raise BlockingIOError
+            return self.packets.pop(0)
+
+    for schema in (
+        "go-m8010-gui-command/1.3",
+        "go-m8010-gui-command/1.2",
+    ):
+        base_ns = time.monotonic_ns() - 10_000_000
+        execute_at_ns = base_ns + 1_000_000_000
+        source_id = (
+            "11111111111111111111111111111111"
+            if schema.endswith("1.3")
+            else "22222222222222222222222222222222"
+        )
+
+        def position(target, sequence, source_ns):
+            if schema.endswith("1.3"):
+                document = quintic_command_document(
+                    received_monotonic_ns=source_ns,
+                    execute_at_monotonic_ns=execute_at_ns,
+                    sequence=sequence,
+                    activation_epoch=7,
+                    target_rad=target,
+                )
+                document["source_instance_id"] = source_id
+                return document
+            document = json.loads(command_payload(
+                schema=schema,
+                source_instance_id=source_id,
+                source_monotonic_ns=source_ns,
+                sequence=sequence,
+            ))
+            document["activation_epoch"] = 7
+            document["targets_rad"][5] = target
+            return document
+
+        accepted = position(0.01, 1, base_ns)
+        hold = json.loads(command_payload(
+            source_instance_id=source_id,
+            source_monotonic_ns=base_ns + 1,
+            sequence=2,
+        ))
+        hold["mode"] = "hold"
+        hold["activation_epoch"] = 7
+        hold["moving_joint_mask"] = [False] * 6
+        hold["targets_rad"][5] = 0.01
+        mutation = position(0.02, 3, base_ns + 2)
+        retry_original = position(0.01, 3, base_ns + 3)
+
+        replay_state = functions["make_command_source_replay_state"]()
+        rejection_state = functions["make_command_rejection_state"]()
+        current = None
+        minimum = last_seen = 0
+        current, minimum, last_seen = receive_latest(
+            FakeSocket(accepted),
+            current,
+            minimum,
+            last_seen,
+            rejection_state,
+            replay_state,
+        )
+        binding_key = (source_id, 7)
+        frozen_contract = replay_state["position_execution_bindings"][binding_key]
+
+        current, minimum, last_seen = receive_latest(
+            FakeSocket(hold),
+            current,
+            minimum,
+            last_seen,
+            rejection_state,
+            replay_state,
+        )
+        assert current["mode"] == "hold", schema
+        assert replay_state["position_execution_bindings"][binding_key] == frozen_contract
+
+        with redirect_stdout(io.StringIO()):
+            current, minimum, last_seen = receive_latest(
+                FakeSocket(mutation),
+                current,
+                minimum,
+                last_seen,
+                rejection_state,
+                replay_state,
+            )
+        assert current["mode"] == "hold", schema
+        assert rejection_state["last_reason"] == (
+            "POSITION同一激活纪元轨迹描述符发生变化"
+        )
+        assert replay_state["sources"][source_id]["sequence"] == 2
+        assert replay_state["position_execution_bindings"][binding_key] == frozen_contract
+
+        # The rejected sequence did not poison source replay or authority; an
+        # exact-contract retry with that sequence remains acceptable.
+        current, minimum, last_seen = receive_latest(
+            FakeSocket(retry_original),
+            current,
+            minimum,
+            last_seen,
+            rejection_state,
+            replay_state,
+        )
+        assert current["mode"] == "position", schema
+        assert current["targets_rad"][5] == 0.01
+        assert replay_state["sources"][source_id]["sequence"] == 3
+        assert replay_state["position_execution_bindings"][binding_key] == frozen_contract
+
+
+def test_j6_late_first_v13_packet_does_not_commit_source_or_authority():
+    functions = load_command_channel_functions()
+    receive_latest = functions["receive_latest"]
+    replay_state = functions["make_command_source_replay_state"]()
+    rejection_state = functions["make_command_rejection_state"]()
+    base_ns = time.monotonic_ns() - 10_000_000
+
+    class FakeSocket:
+        def __init__(self, packet):
+            self.packets = [json.dumps(packet).encode()]
+
+        def recv(self, _size):
+            if not self.packets:
+                raise BlockingIOError
+            return self.packets.pop(0)
+
+    late = quintic_command_document(
+        received_monotonic_ns=base_ns,
+        execute_at_monotonic_ns=base_ns - 1,
+        sequence=1,
+        activation_epoch=7,
+    )
+    with redirect_stdout(io.StringIO()):
+        current, minimum, last_seen = receive_latest(
+            FakeSocket(late),
+            None,
+            0,
+            0,
+            rejection_state,
+            replay_state,
+        )
+    assert current is None
+    assert (minimum, last_seen) == (0, 0)
+    assert replay_state["sources"] == {}
+    assert replay_state["position_execution_bindings"] == {}
+
+    # Reuse the rejected sequence and source timestamp with a future start.
+    # Acceptance proves the late packet committed neither replay nor binding.
+    valid = quintic_command_document(
+        received_monotonic_ns=base_ns,
+        execute_at_monotonic_ns=time.monotonic_ns() + 1_000_000_000,
+        sequence=1,
+        activation_epoch=7,
+    )
+    current, minimum, last_seen = receive_latest(
+        FakeSocket(valid),
+        current,
+        minimum,
+        last_seen,
+        rejection_state,
+        replay_state,
+    )
+    assert current is not None
+    assert current["mode"] == "position"
+    assert len(replay_state["sources"]) == 1
+    assert len(replay_state["position_execution_bindings"]) == 1
 
 
 def test_j6_parser_requires_fresh_strict_source_metadata_for_every_non_brake_mode():
@@ -566,8 +1358,8 @@ def test_j6_control_loop_checks_its_own_active_bit_before_enable():
     assert "protocol_velocity = dq_command" in source
     assert "hold_velocity_limit" in source
     assert "reference - fixed_hold_target" in source
-    assert "if position_error <= ARRIVAL_TOLERANCE:" in source
-    assert "A later external displacement must be restored" in source
+    assert "no_progress_position_error_rad <= ARRIVAL_TOLERANCE" in source
+    assert "observe_no_progress_watchdog(" in source
     assert "J6_EXTERNAL_MOTION_OBSERVED" in source
     assert "J6_POSITION_ARRIVAL_OVERDUE" in source
     assert "ACTIVE_DEADLINE_CONSECUTIVE_LIMIT" in source
@@ -590,6 +1382,15 @@ def test_j6_posvel_frame_contract_keeps_final_target_and_positive_restore_cap():
     assert "fixed_hold_target,\n                    0.0" not in hold_block
     assert 'command["maximum_velocity_rad_s"]' not in hold_block
     assert "fixed_hold_velocity_limit()" in hold_block
+    quintic_block = position_block.split(
+        "if command_is_v13_quintic_position(command):", 1
+    )[1].split("                else:", 1)[0]
+    assert "v13_position_posvel_reference(" in quintic_block
+    assert "protocol_position = reference - q_ref" in quintic_block
+    assert "protocol_velocity = speed_limit" in quintic_block
+    assert "requested_target" not in quintic_block
+    assert "update_posvel_speed_limit(" not in quintic_block
+    assert '"GUI_POSITION_QUINTIC_REFRESH"' in quintic_block
 
 
 def test_j6_rejected_packet_cannot_reduce_fixed_hold_restore_cap():
@@ -598,22 +1399,31 @@ def test_j6_rejected_packet_cannot_reduce_fixed_hold_restore_cap():
 
 
 def test_j6_arrival_timeout_is_not_cleared_by_stationary_point_two_degree_error():
-    source = CONTROLLER.read_text(encoding="utf-8")
-    assert "ARRIVAL_TOLERANCE = math.radians(0.08)" in source
-    assert "TARGET_TIMEOUT_S = 90.0" in source
-    assert math.radians(0.20) > math.radians(0.08)
-    timeout_block = source.split("position_error = abs(", 1)[1].split(
-        "if fault_latched:", 1
-    )[0]
-    assert "position_started_at = None" in timeout_block
-    assert "time.monotonic() - position_started_at >= TARGET_TIMEOUT_S" in timeout_block
+    functions = load_interlock_functions()
+    state = functions["make_no_progress_watchdog_state"]()
+    observe = functions["observe_no_progress_watchdog"]
+    error = math.radians(0.20)
+    assert not observe(
+        state, True, error, 0.0, 7, 0, 0,
+        timeout_seconds=90.0, minimum_frames=3,
+    )
+    assert not observe(
+        state, True, error, 89.999, 7, 0, 0,
+        timeout_seconds=90.0, minimum_frames=3,
+    )
+    assert observe(
+        state, True, error, 90.0, 7, 0, 0,
+        timeout_seconds=90.0, minimum_frames=3,
+    )
+    assert state["fault_latched"] is True
+    assert state["minimum_rearm_epoch"] == 8
 
 
 def test_j6_external_push_after_arrival_keeps_position_authority():
     source = CONTROLLER.read_text(encoding="utf-8")
     velocity_observer = source.split(
         "rapid_motion = bool", 1
-    )[1].split("if decoded.mos_temp", 1)[0]
+    )[1].split("current_temperature_c = float", 1)[0]
     assert "abs(decoded.velocity) > 0.7" in velocity_observer
     assert "fault_latched = True" not in velocity_observer
     assert "J6_EXTERNAL_MOTION_OBSERVED" in source
@@ -974,14 +1784,17 @@ def test_j6_rejected_epoch_lease_expiry_preserves_authoritative_target():
     assert not math.isclose(captured, -(displaced.position - 2.0), abs_tol=1e-12)
 
 
-def test_j6_arrival_timeout_reports_overdue_without_disabling_position():
+def test_j6_arrival_timeout_latches_safe_brake_and_keeps_worker_online():
     source = CONTROLLER.read_text(encoding="utf-8")
-    timeout_block = source.split("position_error = abs(", 1)[1].split(
-        "if fault_latched:", 1
-    )[0]
+    timeout_block = source.split(
+        "if observe_no_progress_watchdog(", 1
+    )[1].split("elif decoded_events:", 1)[0]
     assert "J6_POSITION_ARRIVAL_OVERDUE" in timeout_block
-    assert "J6_POSITION_ARRIVAL_RECOVERED" in timeout_block
-    assert "fault_latched = True" not in timeout_block
+    assert "action=LATCHED_SAFE_BRAKE" in timeout_block
+    assert "J6_LOAD_LIMIT_NO_PROGRESS" in timeout_block
+    assert 'mode = "brake"' in source
+    assert "disable_and_verify(transport, logger)" in source
+    assert "worker_continues_online=YES" in source
 
 
 def test_j6_deadline_guard_detects_sustained_40hz_active_loop():
@@ -1701,6 +2514,7 @@ def test_j6_feedback_reports_lease_safe_hold_state():
         False,
         True,
         rejection_state,
+        last_valid_feedback_monotonic_ns=123456789,
     )
     payload = json.loads(fake_socket.sent[0][0])
     assert payload["controller_mode"] == "hold"
@@ -1708,6 +2522,145 @@ def test_j6_feedback_reports_lease_safe_hold_state():
     assert payload["rejected_commands"] == 3
     assert payload["last_rejection_reason"] == "JSON格式无效"
     assert payload["suppressed_rejection_logs_pending"] == {"JSON格式无效": 2}
+    assert payload["trajectory_plan_token_id"] == ""
+    assert payload["trajectory_sha256"] == ""
+    assert payload["trajectory_state"] == "INACTIVE"
+    assert payload["trajectory_sample_index"] == 0
+    assert payload["trajectory_interval_count"] == 0
+    assert payload["samples"][0]["trajectory_state"] == "INACTIVE"
+    assert payload["samples"][0]["trajectory_plan_token_id"] == ""
+    assert payload["samples"][0]["tau_cmd_rotor_nm"] is None
+    assert payload["samples"][0]["tau_feedback_rotor_nm"] is None
+    assert payload["samples"][0]["tau_joint_estimated_nm"] is None
+    assert payload["tau_j2_logical_total_nm"] is None
+    assert (
+        payload["samples"][0]["last_valid_feedback_monotonic_ns"]
+        == 123456789
+    )
+
+
+def test_j6_feedback_reports_thermal_and_no_progress_latches_consistently():
+    send_feedback = load_send_feedback()
+
+    class FakeSocket:
+        def __init__(self):
+            self.sent = []
+
+        def sendto(self, payload, destination):
+            self.sent.append((payload, destination))
+
+    socket = FakeSocket()
+    decoded = SimpleNamespace(
+        position=0.1,
+        velocity=0.0,
+        mos_temp=54,
+        coil_temp=56,
+        state=0,
+    )
+    thermal = {
+        "thermal_state": "DERATING",
+        "thermal_derating_factor": 0.8,
+        "thermal_raw_temperature_c": 56.0,
+        "thermal_window_median_c": 55.0,
+        "thermal_slope_c_per_min": 0.25,
+        "thermal_fault_latched": True,
+        "thermal_cooldown_ready": False,
+        "thermal_release_observed": False,
+        "thermal_rearm_pending_next_cycle": False,
+        "thermal_cooldown_valid_brake_frames": 12,
+        "thermal_trip_activation_epoch": 7,
+        "thermal_minimum_rearm_epoch": 8,
+    }
+    no_progress = {
+        "no_progress_fault": True,
+        "no_progress_release_observed": True,
+        "no_progress_rearm_pending_next_cycle": False,
+        "no_progress_watchdog_qualifying_frames": 9001,
+        "no_progress_observation_valid": False,
+        "no_progress_position_error_rad": 0.0,
+        "no_progress_trip_position_error_rad": 0.2,
+        "load_limit_watchdog_authority": (
+            "J6_TARGET_TIMEOUT_POSITION_ERROR_V1"
+        ),
+        "no_progress_trip_activation_epoch": 7,
+        "no_progress_minimum_rearm_epoch": 8,
+    }
+    send_feedback(
+        socket, 15300, decoded, True, "brake", False, False,
+        None, None, thermal, no_progress, 987654321,
+    )
+    payload = json.loads(socket.sent[0][0])
+    assert payload["domain_fault"] is True
+    assert payload["thermal_fault_latched"] is True
+    assert payload["no_progress_fault"] is True
+    assert payload["load_limit_no_progress"] is True
+    assert payload["thermal_derating_factor"] == 0.8
+    assert payload["no_progress_minimum_rearm_epoch"] == 8
+    assert payload["samples"][0]["thermal_fault_latched"] is True
+    assert payload["samples"][0]["load_limit_no_progress"] is True
+    assert payload["samples"][0]["last_valid_feedback_monotonic_ns"] == 987654321
+
+
+def test_j6_feedback_echoes_v13_token_hash_state_index_and_grid_size():
+    parse_command = load_parse_command()
+    feedback_status = load_quintic_controller_functions()[
+        "trajectory_feedback_status"
+    ]
+    send_feedback = load_send_feedback()
+    received_ns = 70_000_000_000
+    execute_at_ns = received_ns + 100_000_000
+    command = parse_command(
+        json.dumps(quintic_command_document(
+            received_monotonic_ns=received_ns,
+            execute_at_monotonic_ns=execute_at_ns,
+        )).encode(),
+        received_ns,
+    )
+
+    prepared = feedback_status(command, execute_at_ns - 1)
+    running = feedback_status(command, execute_at_ns + 500_000_000)
+    complete = feedback_status(command, execute_at_ns + 1_000_000_000)
+    assert prepared["trajectory_state"] == "PREPARED"
+    assert prepared["trajectory_sample_index"] == 0
+    assert running["trajectory_state"] == "RUNNING"
+    assert running["trajectory_sample_index"] == 50
+    assert complete["trajectory_state"] == "COMPLETE"
+    assert complete["trajectory_sample_index"] == 100
+    for status in (prepared, running, complete):
+        assert status["trajectory_plan_token_id"] == "a" * 64
+        assert status["trajectory_sha256"] == "b" * 64
+        assert status["trajectory_interval_count"] == 100
+
+    class FakeSocket:
+        def __init__(self):
+            self.sent = []
+
+        def sendto(self, payload, destination):
+            self.sent.append((payload, destination))
+
+    fake_socket = FakeSocket()
+    send_feedback(
+        fake_socket,
+        15300,
+        None,
+        False,
+        "position",
+        False,
+        False,
+        None,
+        running,
+    )
+    payload = json.loads(fake_socket.sent[0][0])
+    assert payload["trajectory_plan_token_id"] == "a" * 64
+    assert payload["trajectory_sha256"] == "b" * 64
+    assert payload["trajectory_state"] == "RUNNING"
+    assert payload["trajectory_sample_index"] == 50
+    assert payload["trajectory_interval_count"] == 100
+    assert payload["samples"][0]["trajectory_plan_token_id"] == "a" * 64
+    assert payload["samples"][0]["trajectory_sha256"] == "b" * 64
+    assert payload["samples"][0]["trajectory_state"] == "RUNNING"
+    assert payload["samples"][0]["trajectory_sample_index"] == 50
+    assert payload["samples"][0]["trajectory_interval_count"] == 100
 
 
 def test_j6_control_loop_refreshes_captured_safe_hold_without_reprofiling():
@@ -2136,6 +3089,34 @@ def test_j6_source_replay_state_is_bounded_to_32_recent_sources():
     assert replay_state["active_source_instance_id"] == f"{32:032x}"
 
 
+def test_j6_position_execution_authority_is_bounded_to_32_recent_bindings():
+    functions = load_command_channel_functions()
+    replay_state = functions["make_command_source_replay_state"]()
+    validate = functions["validate_position_execution_transition"]
+    commit = functions["commit_position_execution_binding"]
+
+    for index in range(33):
+        command = {
+            "schema": "go-m8010-gui-command/1.2",
+            "mode": "position",
+            "targets_rad": [0.0] * 5 + [0.01],
+            "active_joint_mask": [False] * 5 + [True],
+            "moving_joint_mask": [False] * 5 + [True],
+            "activation_epoch": 1,
+            "maximum_velocity_rad_s": math.radians(5.0),
+            "maximum_acceleration_rad_s2": math.radians(20.0),
+            "source_instance_id": f"{index:032x}",
+        }
+        pending = validate(None, command, index, replay_state)
+        commit(replay_state, pending)
+
+    bindings = replay_state["position_execution_bindings"]
+    assert len(bindings) == 32
+    assert (f"{0:032x}", 1) not in bindings
+    assert (f"{1:032x}", 1) in bindings
+    assert (f"{32:032x}", 1) in bindings
+
+
 def test_j6_active_source_blocks_takeover_for_500ms_then_allows_it():
     functions = load_command_channel_functions()
     replay_state = functions["make_command_source_replay_state"]()
@@ -2173,8 +3154,15 @@ def test_j6_brake_bypasses_and_does_not_mutate_source_replay_state():
     }
     replay_state["active_source_instance_id"] = source_id
     replay_state["active_source_last_received_monotonic_ns"] = 456789
+    binding_key = (source_id, 7)
+    replay_state["position_execution_bindings"][binding_key] = (
+        "frozen-position-contract",
+    )
     state_before_brake = {
         "sources": {source_id: dict(replay_state["sources"][source_id])},
+        "position_execution_bindings": {
+            binding_key: ("frozen-position-contract",)
+        },
         "active_source_instance_id": source_id,
         "active_source_last_received_monotonic_ns": 456789,
     }

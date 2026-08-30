@@ -27,6 +27,8 @@ import yaml
 import mujoco
 import numpy as np
 
+from go_m8010_arm_hardware.thermal_manager import load_thermal_limits
+
 from PySide6.QtCore import QEvent, Qt, QTimer, Signal
 from PySide6.QtGui import QCloseEvent, QColor, QFont, QImage, QPixmap
 from PySide6.QtWidgets import (
@@ -45,6 +47,7 @@ from .workflow_contract import (
     TrajectoryRecipe,
     WorkflowState,
     generate_segmented_quintic_recipe,
+    planned_trajectory_feasibility_request,
     trajectory_command_descriptor,
     trajectory_plan_manifest,
     trajectory_sample_index_at,
@@ -83,6 +86,11 @@ MUJOCO_STREAM_TIMEOUT_S = 0.5
 ROUTER_STATUS_TIMEOUT_S = 1.5
 GRAVITY_STATUS_TIMEOUT_S = 0.5
 GRAVITY_STATUS_SCHEMA = "go-m8010-gravity-status/1.1"
+PLANNED_FEASIBILITY_SCHEMA = (
+    "go-m8010-planned-load-thermal-feasibility/1.0"
+)
+PREVIEW_PLAN_BUILD_TIMEOUT_S = 15.0
+PLANNED_REQUEST_PUBLISH_MAX_AGE_NS = 1_000_000_000
 GRAVITY_SCALE_LEVELS = (0.0, 0.25, 0.50, 0.75, 1.0)
 GRAVITY_ROTOR_FEEDFORWARD_LIMIT_NM = (0.20, 1.75, 1.10, 0.40, 0.20, 0.0)
 TRAJECTORY_EXECUTE_LEAD_NS = 250_000_000
@@ -119,6 +127,9 @@ PRODUCTION_MODEL_SHA256 = (
 GRAVITY_CONFIG_SHA256 = (
     "307469b8384fd35547327ba1d5f80aa440e6b9663406ab7c9d9469bea263335d"
 )
+THERMAL_CONFIG_SHA256 = (
+    "1926264805858f62fffc9360ef0c9d4d7f8a7e232e171105450769d493ff5467"
+)
 PLAN_ACTUAL_DRIFT_TOLERANCE_RAD = math.radians(0.25)
 PRODUCTION_COLLISION_CONTRACT_SHA256 = (
     "6d802909e44f238816f007ef33b57e1b57099c5522a473cd2dcc2705397af9c9"
@@ -126,6 +137,88 @@ PRODUCTION_COLLISION_CONTRACT_SHA256 = (
 PRODUCTION_KINEMATIC_GUARD_SHA256 = (
     "648b9de953a84be46cd5f95e24daf9f683f3025e73048dc068ef7bd8e5670c6a"
 )
+
+
+def build_virtual_preview_plan(snapshot: dict) -> dict:
+    """Build and serialize one immutable preview request off the Qt thread.
+
+    ``snapshot`` contains only frozen values captured by the event thread.  In
+    particular this worker never reads a widget, mutates ``MainWindow``, calls
+    a ROS publisher, or grants hardware authority.  The request timestamp is
+    taken only after the potentially long trajectory generation has finished,
+    leaving the independent proof node its full freshness budget.
+    """
+
+    required = {
+        "generation", "workflow", "actual_rad", "target_rad", "limits_rad",
+        "maximum_velocity_rad_s", "maximum_acceleration_rad_s2",
+        "maximum_segment_delta_rad", "maximum_sample_period_s",
+        "source_instance_id", "request_sequence", "session_id",
+        "state_instance_id", "base_candidate_revision",
+    }
+    if not isinstance(snapshot, dict) or set(snapshot) != required:
+        raise ContractViolation("preview-plan worker snapshot fields are not exact")
+    workflow = snapshot["workflow"]
+    if not isinstance(workflow, WorkflowState):
+        raise ContractViolation("preview-plan worker requires WorkflowState")
+    workflow = workflow.replace_authority(
+        joint_limits_rad=snapshot["limits_rad"],
+        model_sha256=PRODUCTION_MODEL_SHA256,
+        session_id=snapshot["session_id"],
+        state_instance_id=snapshot["state_instance_id"],
+        gravity_config_sha256=GRAVITY_CONFIG_SHA256,
+    )
+    workflow = workflow.update_actual(snapshot["actual_rad"])
+    workflow = workflow.change_plan_target(snapshot["target_rad"])
+    trajectory = generate_segmented_quintic_recipe(
+        workflow.q_actual,
+        workflow.q_plan_target,
+        workflow.joint_limits_rad,
+        maximum_velocity_rad_s=snapshot["maximum_velocity_rad_s"],
+        maximum_acceleration_rad_s2=snapshot["maximum_acceleration_rad_s2"],
+        maximum_segment_delta_rad=snapshot["maximum_segment_delta_rad"],
+        maximum_sample_period_s=snapshot["maximum_sample_period_s"],
+    )
+    workflow = workflow.set_plan_trajectory(trajectory)
+    source_monotonic_ns = time.monotonic_ns()
+    payload = planned_trajectory_feasibility_request(
+        trajectory,
+        source_instance_id=snapshot["source_instance_id"],
+        sequence=snapshot["request_sequence"],
+        source_monotonic_ns=source_monotonic_ns,
+        session_id=snapshot["session_id"],
+        state_instance_id=snapshot["state_instance_id"],
+        model_sha256=PRODUCTION_MODEL_SHA256,
+        gravity_config_sha256=GRAVITY_CONFIG_SHA256,
+        thermal_config_sha256=THERMAL_CONFIG_SHA256,
+    )
+    serialized_request = json.dumps(
+        payload,
+        ensure_ascii=False,
+        allow_nan=False,
+        separators=(",", ":"),
+    )
+    return {
+        "generation": snapshot["generation"],
+        "base_candidate_revision": snapshot["base_candidate_revision"],
+        "actual_rad": tuple(snapshot["actual_rad"]),
+        "target_rad": tuple(snapshot["target_rad"]),
+        "session_id": snapshot["session_id"],
+        "state_instance_id": snapshot["state_instance_id"],
+        "maximum_velocity_rad_s": snapshot["maximum_velocity_rad_s"],
+        "maximum_acceleration_rad_s2": snapshot[
+            "maximum_acceleration_rad_s2"
+        ],
+        "maximum_segment_delta_rad": snapshot["maximum_segment_delta_rad"],
+        "maximum_sample_period_s": snapshot["maximum_sample_period_s"],
+        "limits_rad": tuple(tuple(pair) for pair in snapshot["limits_rad"]),
+        "workflow": workflow,
+        "trajectory": trajectory,
+        "request_source_monotonic_ns": source_monotonic_ns,
+        "serialized_request": serialized_request,
+    }
+
+
 HARDWARE_STATE_SOURCE_MAX_AGE_NS = 250_000_000
 HARDWARE_STATE_SOURCE_TAKEOVER_TIMEOUT_NS = 500_000_000
 SOURCE_INSTANCE_ID_HEX_LENGTH = 32
@@ -784,6 +877,24 @@ def moving_trajectory_feedback_complete(
 ) -> bool:
     """Require the moving worker(s) to echo this exact completed segment."""
 
+    return moving_trajectory_feedback_fraction(
+        hardware, moving_joint_index, trajectory_descriptor
+    ) == 1.0
+
+
+def moving_trajectory_feedback_fraction(
+    hardware: object,
+    moving_joint_index: object,
+    trajectory_descriptor: object,
+) -> Optional[float]:
+    """Return conservative progress from fresh, identity-matched workers.
+
+    The returned value is based only on the integer trajectory sample echoed
+    by every motor in the logical joint.  In particular, local GUI wall time
+    and the already-finished virtual preview can never advance real progress.
+    ``None`` means that no trustworthy progress value is available.
+    """
+
     if (
         not isinstance(hardware, dict)
         or type(moving_joint_index) is not int
@@ -791,7 +902,7 @@ def moving_trajectory_feedback_complete(
         or not isinstance(trajectory_descriptor, dict)
         or set(trajectory_descriptor) != {"plan_token_id", "trajectory"}
     ):
-        return False
+        return None
     token_id = trajectory_descriptor.get("plan_token_id")
     trajectory = trajectory_descriptor.get("trajectory")
     per_motor = hardware.get("per_motor")
@@ -800,7 +911,7 @@ def moving_trajectory_feedback_complete(
         or not isinstance(trajectory, dict)
         or not isinstance(per_motor, dict)
     ):
-        return False
+        return None
     trajectory_sha256 = trajectory.get("trajectory_sha256")
     interval_count = trajectory.get("interval_count")
     if (
@@ -808,20 +919,332 @@ def moving_trajectory_feedback_complete(
         or type(interval_count) is not int
         or interval_count <= 0
     ):
-        return False
+        return None
+    fractions: list[float] = []
     for motor_name in MOTOR_GROUPS[moving_joint_index]:
         sample = per_motor.get(motor_name)
+        state = sample.get("trajectory_state") if isinstance(sample, dict) else None
+        sample_index = (
+            sample.get("trajectory_sample_index")
+            if isinstance(sample, dict) else None
+        )
         if (
             not isinstance(sample, dict)
             or sample.get("fresh") is not True
             or sample.get("trajectory_plan_token_id") != token_id
             or sample.get("trajectory_sha256") != trajectory_sha256
-            or sample.get("trajectory_state") != "COMPLETE"
             or sample.get("trajectory_interval_count") != interval_count
-            or sample.get("trajectory_sample_index") != interval_count
+            or state not in {"PREPARED", "RUNNING", "COMPLETE"}
+            or type(sample_index) is not int
+            or not 0 <= sample_index <= interval_count
+            or (state == "PREPARED" and sample_index != 0)
+            or (state == "RUNNING" and sample_index >= interval_count)
+            or (state == "COMPLETE" and sample_index != interval_count)
         ):
-            return False
-    return True
+            return None
+        fractions.append(sample_index / interval_count)
+    return min(fractions)
+
+
+def planned_load_feasibility_authorizes(
+    status: object,
+    *,
+    trajectory_sha256: str,
+    session_id: str,
+    state_instance_id: str,
+    now_monotonic_ns: Optional[int] = None,
+) -> bool:
+    """Require an authoritative PASS proof bound to the exact planned path.
+
+    Current-pose gravity authority is intentionally insufficient.  A producer
+    that has not evaluated the immutable trajectory simply omits this nested
+    proof (or reports a non-PASS result), which keeps PLAN_TOKEN fail-closed.
+    """
+
+    if not isinstance(status, dict):
+        return False
+    proof = status.get("planned_trajectory_feasibility")
+    if not isinstance(proof, dict):
+        return False
+    checked_ns = (
+        time.monotonic_ns()
+        if now_monotonic_ns is None else now_monotonic_ns
+    )
+    source_ns = proof.get("source_monotonic_ns")
+    minimum_load_margin = proof.get("minimum_rotor_torque_margin_nm")
+    minimum_thermal_margin = proof.get("minimum_thermal_margin_c")
+    request_sha256 = proof.get("request_sha256")
+    sample_count = proof.get("sample_count")
+    evaluated_sample_count = proof.get("evaluated_sample_count")
+    gravity_maxima = proof.get(
+        "maximum_abs_gravity_rotor_torque_nm_by_motor"
+    )
+    gravity_joint_maxima = proof.get(
+        "maximum_abs_gravity_joint_torque_nm_by_joint"
+    )
+    predicted_maxima = proof.get(
+        "maximum_abs_predicted_rotor_torque_nm_by_motor"
+    )
+    continuous_limits = proof.get(
+        "continuous_rotor_torque_limit_nm_by_motor"
+    )
+    short_peak_limits = proof.get(
+        "short_peak_rotor_torque_limit_nm_by_motor"
+    )
+    exact_named_loads = bool(
+        isinstance(gravity_maxima, dict)
+        and isinstance(gravity_joint_maxima, dict)
+        and set(gravity_joint_maxima)
+        == {"J1", "J2", "J3", "J4", "J5", "J6"}
+        and all(
+            type(value) in {int, float}
+            and math.isfinite(float(value))
+            and float(value) >= 0.0
+            for value in gravity_joint_maxima.values()
+        )
+        and isinstance(predicted_maxima, dict)
+        and isinstance(continuous_limits, dict)
+        and isinstance(short_peak_limits, dict)
+        and set(gravity_maxima) == set(MOTOR_NAMES)
+        and set(predicted_maxima) == set(MOTOR_NAMES)
+        and set(continuous_limits) == set(MOTOR_NAMES)
+        and set(short_peak_limits) == set(MOTOR_NAMES)
+        and all(
+            type(gravity_maxima[name]) in {int, float}
+            and math.isfinite(float(gravity_maxima[name]))
+            and float(gravity_maxima[name]) >= 0.0
+            and type(predicted_maxima[name]) in {int, float}
+            and math.isfinite(float(predicted_maxima[name]))
+            and float(predicted_maxima[name]) >= 0.0
+            and type(continuous_limits[name]) in {int, float}
+            and math.isfinite(float(continuous_limits[name]))
+            and float(continuous_limits[name]) > 0.0
+            and type(short_peak_limits[name]) in {int, float}
+            and math.isfinite(float(short_peak_limits[name]))
+            and float(short_peak_limits[name]) > 0.0
+            for name in MOTOR_NAMES
+        )
+    )
+    reproduced_continuous_margin = (
+        min(
+            float(continuous_limits[name]) - float(gravity_maxima[name])
+            for name in MOTOR_NAMES
+        ) if exact_named_loads else None
+    )
+    reproduced_short_peak_margin = (
+        min(
+            float(short_peak_limits[name]) - float(predicted_maxima[name])
+            for name in MOTOR_NAMES
+        ) if exact_named_loads else None
+    )
+    reproduced_predicted_continuous_margin = (
+        min(
+            float(continuous_limits[name]) - float(predicted_maxima[name])
+            for name in MOTOR_NAMES
+        ) if exact_named_loads else None
+    )
+    reproduced_minimum_margin = (
+        min(reproduced_continuous_margin, reproduced_short_peak_margin)
+        if reproduced_continuous_margin is not None
+        and reproduced_short_peak_margin is not None
+        else None
+    )
+    return bool(
+        proof.get("schema") == PLANNED_FEASIBILITY_SCHEMA
+        and proof.get("source") == "whole_arm_gravity_node"
+        and proof.get("source_instance_id") == status.get("source_instance_id")
+        and type(proof.get("sequence")) is int
+        and proof["sequence"] > 0
+        and proof.get("sequence") == status.get("sequence")
+        and type(source_ns) is int
+        and source_ns == status.get("source_monotonic_ns")
+        and 0 < source_ns <= checked_ns
+        and checked_ns - source_ns <= int(GRAVITY_STATUS_TIMEOUT_S * 1.0e9)
+        and proof.get("result") == "PASS"
+        and proof.get("load_feasibility") == "PASS"
+        and proof.get("thermal_feasibility") == "PASS"
+        and proof.get("current_temperature_margin_result") == "PASS"
+        and proof.get("trajectory_sha256") == trajectory_sha256
+        and isinstance(trajectory_sha256, str)
+        and len(trajectory_sha256) == 64
+        and all(character in "0123456789abcdef"
+                for character in trajectory_sha256)
+        and proof.get("session_id") == session_id
+        and proof.get("state_instance_id") == state_instance_id
+        and proof.get("model_sha256") == PRODUCTION_MODEL_SHA256
+        and proof.get("gravity_config_sha256") == GRAVITY_CONFIG_SHA256
+        and proof.get("thermal_config_sha256") == THERMAL_CONFIG_SHA256
+        and isinstance(request_sha256, str)
+        and len(request_sha256) == 64
+        and all(character in "0123456789abcdef" for character in request_sha256)
+        and proof.get("continuous_rotor_limits_authoritative") is True
+        and proof.get("temperature_limits_authoritative") is True
+        and proof.get("load_evaluation_basis")
+        == "MUJOCO_QFRC_BIAS_CONTINUOUS_PLUS_MJ_INVERSE_SHORT_PEAK_EVERY_SAMPLE"
+        and proof.get("thermal_evaluation_basis")
+        == (
+            "CURRENT_MEASURED_TEMPERATURE_TO_DERATING_THRESHOLD_PLUS_"
+            "ALL_SAMPLE_PREDICTED_LOAD_WITHIN_CONTINUOUS_RATING_"
+            "NO_HEAT_RISE_MODEL"
+        )
+        and type(sample_count) is int
+        and sample_count > 0
+        and evaluated_sample_count == sample_count
+        and exact_named_loads
+        and type(proof.get("minimum_continuous_rotor_torque_margin_nm"))
+        in {int, float}
+        and math.isfinite(float(
+            proof["minimum_continuous_rotor_torque_margin_nm"]
+        ))
+        and type(proof.get("minimum_short_peak_rotor_torque_margin_nm"))
+        in {int, float}
+        and math.isfinite(float(
+            proof["minimum_short_peak_rotor_torque_margin_nm"]
+        ))
+        and type(proof.get(
+            "minimum_predicted_continuous_rotor_torque_margin_nm"
+        )) in {int, float}
+        and math.isfinite(float(
+            proof["minimum_predicted_continuous_rotor_torque_margin_nm"]
+        ))
+        and reproduced_continuous_margin is not None
+        and reproduced_short_peak_margin is not None
+        and abs(
+            float(proof["minimum_continuous_rotor_torque_margin_nm"])
+            - reproduced_continuous_margin
+        ) <= 1.0e-12
+        and abs(
+            float(proof["minimum_short_peak_rotor_torque_margin_nm"])
+            - reproduced_short_peak_margin
+        ) <= 1.0e-12
+        and reproduced_continuous_margin > 0.0
+        and reproduced_short_peak_margin > 0.0
+        and reproduced_predicted_continuous_margin is not None
+        and reproduced_predicted_continuous_margin > 0.0
+        and abs(float(
+            proof["minimum_predicted_continuous_rotor_torque_margin_nm"]
+        ) - reproduced_predicted_continuous_margin) <= 1.0e-12
+        and type(minimum_load_margin) in {int, float}
+        and math.isfinite(float(minimum_load_margin))
+        and float(minimum_load_margin) > 0.0
+        and reproduced_minimum_margin is not None
+        and abs(float(minimum_load_margin) - reproduced_minimum_margin) <= 1.0e-12
+        and type(minimum_thermal_margin) in {int, float}
+        and math.isfinite(float(minimum_thermal_margin))
+        and float(minimum_thermal_margin) > 0.0
+    )
+
+
+def planned_path_preview_display(
+    status: object,
+    *,
+    trajectory_sha256: Optional[str],
+    session_id: Optional[str],
+    state_instance_id: Optional[str],
+    limits_pass: bool,
+    collision_result: str,
+    now_monotonic_ns: Optional[int] = None,
+) -> tuple[str, str, str]:
+    """Format the required read-only whole-path preview evidence summary."""
+
+    limit_text = "PASS" if limits_pass else "NOT_EVALUATED"
+    if collision_result not in {"PASS", "CHECKING", "FAIL", "NOT_EVALUATED"}:
+        collision_result = "NOT_EVALUATED"
+    if not isinstance(status, dict):
+        return (
+            "等待整轨重力证明",
+            "等待整轨电机负载证明",
+            f"限位 {limit_text} ｜ 碰撞 {collision_result} ｜ 热负载 NOT_EVALUATED",
+        )
+    proof = status.get("planned_trajectory_feasibility")
+    if (
+        not isinstance(proof, dict)
+        or proof.get("trajectory_sha256") != trajectory_sha256
+        or proof.get("schema") != PLANNED_FEASIBILITY_SCHEMA
+        or proof.get("source") != "whole_arm_gravity_node"
+        or proof.get("source_instance_id") != status.get("source_instance_id")
+        or proof.get("sequence") != status.get("sequence")
+        or proof.get("source_monotonic_ns")
+        != status.get("source_monotonic_ns")
+        or proof.get("session_id") != session_id
+        or proof.get("state_instance_id") != state_instance_id
+        or status.get("session_id") != session_id
+        or status.get("state_instance_id") != state_instance_id
+    ):
+        return (
+            "等待与当前会话和轨迹绑定的重力证明",
+            "等待与当前会话和轨迹绑定的电机负载证明",
+            f"限位 {limit_text} ｜ 碰撞 {collision_result} ｜ 热负载 NOT_EVALUATED",
+        )
+    checked_ns = (
+        time.monotonic_ns()
+        if now_monotonic_ns is None else now_monotonic_ns
+    )
+    source_ns = proof.get("source_monotonic_ns")
+    if (
+        type(source_ns) is not int
+        or source_ns <= 0
+        or source_ns > checked_ns
+        or checked_ns - source_ns
+        > int(GRAVITY_STATUS_TIMEOUT_S * 1.0e9)
+    ):
+        return (
+            "整轨重力证明已过期（STALE）",
+            "整轨电机负载证明已过期（STALE）",
+            f"限位 {limit_text} ｜ 碰撞 {collision_result} ｜ "
+            "负载 STALE ｜ 热负载 STALE",
+        )
+    joint = proof.get("maximum_abs_gravity_joint_torque_nm_by_joint")
+    if isinstance(joint, dict):
+        joint_values = {
+            name: float(value)
+            for name, value in joint.items()
+            if name in {"J1", "J2", "J3", "J4", "J5", "J6"}
+            and type(value) in {int, float}
+            and math.isfinite(float(value))
+            and float(value) >= 0.0
+        }
+    else:
+        joint_values = {}
+    if len(joint_values) == 6:
+        gravity_name, gravity_value = max(
+            joint_values.items(), key=lambda item: item[1]
+        )
+        gravity_text = f"{gravity_name} {gravity_value:.3f} N·m（qfrc_bias）"
+    else:
+        gravity_text = "正在计算逐样本 qfrc_bias"
+    motor = proof.get("maximum_abs_predicted_rotor_torque_nm_by_motor")
+    if isinstance(motor, dict):
+        motor_values = {
+            name: float(value)
+            for name, value in motor.items()
+            if name in MOTOR_NAMES
+            and type(value) in {int, float}
+            and math.isfinite(float(value))
+            and float(value) >= 0.0
+        }
+    else:
+        motor_values = {}
+    if motor_values:
+        motor_name, motor_value = max(
+            motor_values.items(), key=lambda item: item[1]
+        )
+        missing = [name for name in MOTOR_NAMES if name not in motor_values]
+        motor_text = f"{motor_name} {motor_value:.3f} N·m（mj_inverse转子侧）"
+        if missing:
+            motor_text += "；" + "/".join(missing) + "映射未授权"
+    else:
+        motor_text = "正在计算逐样本 mj_inverse 电机力矩"
+    load_result = str(proof.get("load_feasibility", "NOT_EVALUATED"))
+    thermal_result = str(proof.get("thermal_feasibility", "NOT_EVALUATED"))
+    blocker = proof.get("blocker_code")
+    checks = (
+        f"限位 {limit_text} ｜ 碰撞 {collision_result} ｜ "
+        f"负载 {load_result} ｜ 热负载 {thermal_result}"
+    )
+    if isinstance(blocker, str) and blocker:
+        checks += f" ｜ {blocker}"
+    return gravity_text, motor_text, checks
 
 
 def gravity_status_authorizes_hardware(
@@ -1586,6 +2009,7 @@ class ArmGuiNode(Node):
         self.declare_parameter("log_directory", "logs/arm_gui")
         self.declare_parameter("embedded_model_path", "")
         self.declare_parameter("embedded_session_pose_deg", "0,0,0,0,0,0")
+        self.declare_parameter("thermal_config_path", "")
         self.config_path = Path(str(self.get_parameter("config_path").value)).resolve()
         self.joint_limits_path = Path(
             str(self.get_parameter("joint_limits_path").value)
@@ -1602,11 +2026,22 @@ class ArmGuiNode(Node):
         self.embedded_session_pose_deg = str(
             self.get_parameter("embedded_session_pose_deg").value
         )
+        thermal_config_text = str(
+            self.get_parameter("thermal_config_path").value
+        )
+        if not thermal_config_text:
+            raise ValueError("thermal_config_path is required")
+        self.thermal_limits = load_thermal_limits(
+            Path(thermal_config_text).resolve()
+        )
         self.command_publisher = self.create_publisher(String, "/whole_arm/gui_command", 10)
         self.target_publisher = self.create_publisher(Float64MultiArray, "/whole_arm/gui_targets", 10)
         self.mode_publisher = self.create_publisher(String, "/whole_arm/gui_mode", 10)
         self.collision_request_publisher = self.create_publisher(
             String, "/whole_arm/collision_guard_request", 10
+        )
+        self.planned_path_request_publisher = self.create_publisher(
+            String, "/whole_arm/planned_path_feasibility_request", 10
         )
         self.latest_joint_state: Optional[JointState] = None
         self.latest_hardware: Optional[dict] = None
@@ -1621,6 +2056,7 @@ class ArmGuiNode(Node):
         self.last_gravity_status_receipt = 0.0
         self.last_collision_result_receipt = 0.0
         self.command_source_instance_id = secrets.token_hex(16)
+        self.planned_path_request_sequence = 0
         self.hardware_sequences_by_instance: dict[str, int] = {}
         self.active_hardware_state_instance_id: Optional[str] = None
         self.active_hardware_source_received_ns: Optional[int] = None
@@ -1829,8 +2265,50 @@ class ArmGuiNode(Node):
             String(data=json.dumps(payload, ensure_ascii=False))
         )
 
+    def publish_planned_path_request(
+        self,
+        recipe: TrajectoryRecipe,
+        *,
+        session_id: str,
+        state_instance_id: str,
+    ) -> dict:
+        """Request an independent proof; this publishes no motor command."""
+
+        sequence = self.reserve_planned_path_request_sequence()
+        payload = planned_trajectory_feasibility_request(
+            recipe,
+            source_instance_id=self.command_source_instance_id,
+            sequence=sequence,
+            source_monotonic_ns=time.monotonic_ns(),
+            session_id=session_id,
+            state_instance_id=state_instance_id,
+            model_sha256=PRODUCTION_MODEL_SHA256,
+            gravity_config_sha256=GRAVITY_CONFIG_SHA256,
+            thermal_config_sha256=THERMAL_CONFIG_SHA256,
+        )
+        self.publish_serialized_planned_path_request(
+            json.dumps(payload, ensure_ascii=False, allow_nan=False)
+        )
+        return payload
+
+    def reserve_planned_path_request_sequence(self) -> int:
+        """Reserve one monotonic request identity on the Qt/ROS owner thread."""
+
+        self.planned_path_request_sequence += 1
+        return self.planned_path_request_sequence
+
+    def publish_serialized_planned_path_request(self, serialized: str) -> None:
+        """Publish worker-built JSON without doing its serialization in Qt."""
+
+        if not isinstance(serialized, str) or not serialized:
+            raise ValueError("planned-path request JSON is required")
+        self.planned_path_request_publisher.publish(String(data=serialized))
+
 
 class MainWindow(QMainWindow):
+    preview_plan_completed = Signal(object)
+    preview_plan_failed = Signal(object)
+
     def __init__(self, node: ArmGuiNode) -> None:
         super().__init__()
         self.node = node
@@ -1909,6 +2387,10 @@ class MainWindow(QMainWindow):
         self.task_id: Optional[str] = None
         self.task_started_at: Optional[float] = None
         self.task_started_wall_utc: Optional[str] = None
+        self.task_execution_started_at: Optional[float] = None
+        self.task_completed_at: Optional[float] = None
+        self.task_segment_count = 0
+        self.task_completed_segments = 0
         self.last_task_heartbeat = time.monotonic()
         self.task_status_labels: dict[str, QLabel] = {}
         self.motor_status_table: Optional[QTableWidget] = None
@@ -1971,6 +2453,20 @@ class MainWindow(QMainWindow):
         # Compatibility alias for old diagnostics; it always names the plan
         # renderer and is never fed encoder state.
         self.mujoco_preview: Optional[EmbeddedMujocoPreview] = None
+        # Exact trajectory construction is CPU-heavy (several seconds for a
+        # wide six-axis pose).  One worker plus cancellation of the one queued
+        # future implements latest-only coalescing without an unbounded queue.
+        self._preview_plan_lock = threading.Lock()
+        self._preview_plan_executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=1,
+            thread_name_prefix="m8010-preview-plan",
+        )
+        self._preview_plan_generation = 0
+        self._preview_plan_future = None
+        self._preview_plan_started_at: Optional[float] = None
+        self._preview_plan_closed = False
+        self.preview_plan_completed.connect(self._apply_preview_plan_result)
+        self.preview_plan_failed.connect(self._apply_preview_plan_failure)
         self.setWindowTitle(
             "纯仿真零位调姿（不连接真机）"
             if node.joint_limits_path.name == "gui_joint_limits_pose_adjust.yaml"
@@ -2158,7 +2654,11 @@ class MainWindow(QMainWindow):
             ("最后编码器反馈", "encoder"), ("当前目标", "target"),
             ("当前实际", "actual"), ("最大位置误差", "max_error"),
             ("当前最大温度", "max_temperature"),
-            ("当前热状态", "thermal"), ("失败原因", "failure"),
+            ("当前热状态", "thermal"),
+            ("计划最大重力矩", "planned_gravity"),
+            ("计划最大电机矩", "planned_motor"),
+            ("限位/碰撞/热负载", "planned_checks"),
+            ("失败原因", "failure"),
         )
         for index, (title, key) in enumerate(fields):
             row = index // 3
@@ -2177,7 +2677,7 @@ class MainWindow(QMainWindow):
             "逻辑关节", "物理电机", "ID", "在线", "新鲜度ms", "当前模式",
             "原始位置rad", "逻辑位置°", "速度°/s",
             "tau反馈\nrotor N·m", "估算关节力矩\nN·m", "温度°C",
-            "merror", "热状态", "控制状态",
+            "merror", "热状态", "控制状态", "最后反馈时间\nmonotonic s",
         )
         table = QTableWidget(len(MOTOR_NAMES), len(headers))
         table.setHorizontalHeaderLabels(list(headers))
@@ -2259,6 +2759,12 @@ class MainWindow(QMainWindow):
         """Keep virtual solving/approval/real execution state permanently visible."""
 
         self.collision_preview_state = state
+        if (
+            state in {"complete", "timeout", "blocked", "unsafe", "stale"}
+            and getattr(self, "task_id", None) is not None
+            and getattr(self, "task_completed_at", None) is None
+        ):
+            self.task_completed_at = time.monotonic()
         label = getattr(self, "workflow_status", None)
         if label is not None:
             set_widget_text_if_changed(label, f"工作流：{text}")
@@ -2273,9 +2779,239 @@ class MainWindow(QMainWindow):
                 bar.setFormat(f"%p% — {text}")
         self._refresh_execute_target_enabled()
 
+    def _invalidate_preview_plan_build(self) -> int:
+        """Invalidate the running/queued planner and return the new generation."""
+
+        with self._preview_plan_lock:
+            self._preview_plan_generation += 1
+            generation = self._preview_plan_generation
+            future = self._preview_plan_future
+            self._preview_plan_future = None
+            self._preview_plan_started_at = None
+        if future is not None:
+            # A running pure worker may finish, but its generation can no
+            # longer publish or mutate the workflow.  A queued worker is
+            # removed immediately, which bounds the executor to latest-only.
+            future.cancel()
+        return generation
+
+    def _preview_plan_future_done(
+        self, generation: int, future: concurrent.futures.Future,
+    ) -> None:
+        """Bridge a worker result to Qt without touching GUI state here."""
+
+        if future.cancelled():
+            return
+        try:
+            result = future.result()
+        except Exception as exc:  # delivered and rendered on the Qt thread
+            event = {"generation": generation, "detail": str(exc)}
+            with self._preview_plan_lock:
+                closed = self._preview_plan_closed
+            if not closed:
+                self.preview_plan_failed.emit(event)
+            return
+        with self._preview_plan_lock:
+            closed = self._preview_plan_closed
+        if not closed:
+            self.preview_plan_completed.emit(result)
+
+    def _apply_preview_plan_failure(self, event: object) -> None:
+        """Fail one current planning generation on the Qt event thread."""
+
+        if not isinstance(event, dict):
+            return
+        generation = event.get("generation")
+        with self._preview_plan_lock:
+            if (
+                self._preview_plan_closed
+                or type(generation) is not int
+                or generation != self._preview_plan_generation
+            ):
+                return
+        detail = event.get("detail")
+        if not isinstance(detail, str) or not detail:
+            detail = "未知后台规划错误"
+        state = event.get("state", "unsafe")
+        if state not in {"unsafe", "stale", "timeout"}:
+            state = "unsafe"
+        self._clear_candidate_approval()
+        message = f"轨迹解算失败：{detail}"
+        if state == "timeout":
+            message = detail
+        elif state == "stale":
+            message = f"轨迹解算结果已过期：{detail}"
+        self._notify(message, "warning")
+        self._set_workflow_state(state, message, 0)
+
+    def _apply_preview_plan_result(self, result: object) -> None:
+        """Freshness-check and publish one worker result on the Qt thread."""
+
+        if not isinstance(result, dict):
+            self._apply_preview_plan_failure({
+                "generation": self._preview_plan_generation,
+                "detail": "后台规划结果格式无效",
+            })
+            return
+        generation = result.get("generation")
+        with self._preview_plan_lock:
+            if (
+                self._preview_plan_closed
+                or type(generation) is not int
+                or generation != self._preview_plan_generation
+            ):
+                return
+
+        workflow = result.get("workflow")
+        trajectory = result.get("trajectory")
+        serialized = result.get("serialized_request")
+        source_ns = result.get("request_source_monotonic_ns")
+        now = time.monotonic()
+        now_ns = time.monotonic_ns()
+        try:
+            control = self.config["控制"]
+            current_velocity = float(control["最大速度_度每秒"]) * RAD
+            current_acceleration = (
+                float(control["最大加速度_度每二次方秒"]) * RAD
+            )
+            current_limits = tuple(
+                (lower * RAD, upper * RAD) for lower, upper in self.edit_limits
+            )
+            current_actual = tuple(float(value) for value in self.actual)
+            result_actual = tuple(result["actual_rad"])
+            result_target = tuple(result["target_rad"])
+        except (KeyError, TypeError, ValueError):
+            self._apply_preview_plan_failure({
+                "generation": generation,
+                "detail": "当前配置或位姿无法重新验证",
+                "state": "stale",
+            })
+            return
+        result_shape_valid = bool(
+            isinstance(workflow, WorkflowState)
+            and isinstance(trajectory, TrajectoryRecipe)
+            and workflow.q_plan_trajectory is trajectory
+            and isinstance(serialized, str)
+            and bool(serialized)
+            and type(source_ns) is int
+            and source_ns > 0
+            and len(result_actual) == 6
+            and len(result_target) == 6
+            and all(
+                type(value) in {int, float} and math.isfinite(float(value))
+                for value in result_actual + result_target
+            )
+        )
+        identity_fresh = bool(
+            result_shape_valid
+            and result.get("session_id") == self.session_id
+            and result.get("state_instance_id") == self.state_instance_id
+            and result_target == tuple(self.candidate_targets)
+            and result_target == self.workflow_contract.q_plan_target
+            and result.get("base_candidate_revision")
+            == self.workflow_contract.candidate_revision
+            and result.get("limits_rad") == current_limits
+            and result.get("maximum_velocity_rad_s") == current_velocity
+            and result.get("maximum_acceleration_rad_s2")
+            == current_acceleration
+            and result.get("maximum_segment_delta_rad")
+            == float(COLLISION_EXECUTE_SEGMENT_MAX_DEG) * RAD
+            and result.get("maximum_sample_period_s") == 0.01
+            and self.node.control_streams_fresh(now)
+            and self.connected == [True] * 6
+            and len(current_actual) == 6
+            and all(
+                math.isfinite(current) and math.isfinite(source)
+                and abs(current - source) <= PLAN_ACTUAL_DRIFT_TOLERANCE_RAD
+                for current, source in zip(current_actual, result_actual)
+            )
+            and 0 <= now_ns - source_ns
+            <= PLANNED_REQUEST_PUBLISH_MAX_AGE_NS
+        )
+        if not identity_fresh:
+            self._apply_preview_plan_failure({
+                "generation": generation,
+                "detail": (
+                    "session/状态实例/候选目标/实际姿态/配置或"
+                    "请求新鲜度已变化，未发布证明请求"
+                ),
+                "state": "stale",
+            })
+            return
+        try:
+            # ROS publication remains on the Qt/ROS owner thread.  The JSON
+            # bytes and their identity hash were already built by the worker.
+            self.node.publish_serialized_planned_path_request(serialized)
+        except Exception as exc:
+            self._apply_preview_plan_failure({
+                "generation": generation,
+                "detail": f"计划路径证明请求发布失败：{exc}",
+            })
+            return
+        with self._preview_plan_lock:
+            if (
+                self._preview_plan_closed
+                or generation != self._preview_plan_generation
+            ):
+                return
+            self._preview_plan_future = None
+            self._preview_plan_started_at = None
+        self.workflow_contract = workflow
+        self.preview_animation_started_at = time.monotonic()
+        self.preview_animation_complete = False
+        self.preview_collision_safe = False
+        self.preview_frame_index = 0
+        self.preview_pose = trajectory.start_rad
+        self.last_task_heartbeat = self.preview_animation_started_at
+        self._set_workflow_state(
+            "previewing",
+            f"后台轨迹已生成；正在虚拟预演，预计"
+            f"{trajectory.profile.duration_s:.2f}秒",
+            10,
+        )
+        self._request_collision_preview()
+
+    def _update_preview_plan_build_heartbeat(self, now: float) -> None:
+        """Keep planning visibly alive and fail one bounded stage on timeout."""
+
+        with self._preview_plan_lock:
+            future = self._preview_plan_future
+            generation = self._preview_plan_generation
+            started_at = self._preview_plan_started_at
+            closed = self._preview_plan_closed
+        if closed or future is None or started_at is None or future.done():
+            return
+        self.last_task_heartbeat = now
+        if now - started_at <= PREVIEW_PLAN_BUILD_TIMEOUT_S:
+            return
+        self._apply_preview_plan_failure({
+            "generation": generation,
+            "state": "timeout",
+            "detail": (
+                "阶段超时：节点=arm_control_gui，关节=六轴计划，"
+                "等待=后台分段五次轨迹与证明请求序列化"
+            ),
+        })
+
+    def _shutdown_preview_plan_executor(self) -> None:
+        """Cancel planning without waiting in the Qt close callback."""
+
+        with self._preview_plan_lock:
+            if self._preview_plan_closed:
+                return
+            self._preview_plan_closed = True
+            self._preview_plan_generation += 1
+            future = self._preview_plan_future
+            self._preview_plan_future = None
+            self._preview_plan_started_at = None
+        if future is not None:
+            future.cancel()
+        self._preview_plan_executor.shutdown(wait=False, cancel_futures=True)
+
     def _clear_candidate_approval(self) -> None:
         """Revoke a preview approval without changing any hardware authority."""
 
+        self._invalidate_preview_plan_build()
         self.approved_candidate_sha256 = None
         self.approved_candidate_session_id = None
         self.approved_candidate_state_instance_id = None
@@ -2443,7 +3179,7 @@ class MainWindow(QMainWindow):
         self._record_virtual_target(index, float(hundredths_degree) * 0.01 * RAD)
 
     def _start_virtual_preview(self) -> None:
-        """Build and animate the exact segmented quintic execution recipe."""
+        """Queue the exact recipe without blocking the Qt event thread."""
 
         if not self._require_control_feedback(
             "轨迹预演需要六轴新鲜编码器和硬件状态。", require_all=True
@@ -2453,58 +3189,93 @@ class MainWindow(QMainWindow):
             self._notify("当前session/状态实例无效，不能建立PLAN_TOKEN。", "warning")
             return
         self._clear_candidate_approval()
+        with self._preview_plan_lock:
+            if self._preview_plan_closed:
+                self._notify("后台轨迹规划器已关闭。", "warning")
+                return
+            generation = self._preview_plan_generation
         self.preview_requested_by_operator = True
         try:
             limits_rad = tuple(
                 (lower * RAD, upper * RAD) for lower, upper in self.edit_limits
             )
-            workflow = self.workflow_contract.replace_authority(
-                joint_limits_rad=limits_rad,
-                model_sha256=PRODUCTION_MODEL_SHA256,
-                session_id=self.session_id,
-                state_instance_id=self.state_instance_id,
-                gravity_config_sha256=GRAVITY_CONFIG_SHA256,
-            )
-            workflow = workflow.update_actual(self.actual)
-            workflow = workflow.change_plan_target(self.candidate_targets)
             control = self.config["控制"]
-            trajectory = generate_segmented_quintic_recipe(
-                workflow.q_actual,
-                workflow.q_plan_target,
-                workflow.joint_limits_rad,
-                maximum_velocity_rad_s=(
+            actual_rad = tuple(float(value) for value in self.actual)
+            target_rad = tuple(float(value) for value in self.candidate_targets)
+            request_sequence = (
+                self.node.reserve_planned_path_request_sequence()
+            )
+            snapshot = {
+                "generation": generation,
+                "workflow": self.workflow_contract,
+                "actual_rad": actual_rad,
+                "target_rad": target_rad,
+                "limits_rad": limits_rad,
+                "maximum_velocity_rad_s": (
                     float(control["最大速度_度每秒"]) * RAD
                 ),
-                maximum_acceleration_rad_s2=(
+                "maximum_acceleration_rad_s2": (
                     float(control["最大加速度_度每二次方秒"]) * RAD
                 ),
-                maximum_segment_delta_rad=(
+                "maximum_segment_delta_rad": (
                     float(COLLISION_EXECUTE_SEGMENT_MAX_DEG) * RAD
                 ),
-                maximum_sample_period_s=0.01,
-            )
-            self.workflow_contract = workflow.set_plan_trajectory(trajectory)
+                "maximum_sample_period_s": 0.01,
+                "source_instance_id": self.node.command_source_instance_id,
+                "request_sequence": request_sequence,
+                "session_id": self.session_id,
+                "state_instance_id": self.state_instance_id,
+                "base_candidate_revision": (
+                    self.workflow_contract.candidate_revision
+                ),
+            }
         except (ContractViolation, KeyError, TypeError, ValueError) as exc:
-            self.preview_requested_by_operator = False
-            self._set_workflow_state(
-                "unsafe", f"轨迹解算失败：{exc}", 0
-            )
+            self._apply_preview_plan_failure({
+                "generation": generation,
+                "detail": str(exc),
+            })
             return
         self.task_id = secrets.token_hex(8)
         self.task_started_at = time.monotonic()
         self.task_started_wall_utc = datetime.now(timezone.utc).isoformat()
+        self.task_execution_started_at = None
+        self.task_completed_at = None
+        self.task_segment_count = 0
+        self.task_completed_segments = 0
         self.last_task_heartbeat = self.task_started_at
-        self.preview_animation_started_at = self.task_started_at
+        self.preview_animation_started_at = None
         self.preview_animation_complete = False
         self.preview_collision_safe = False
         self.preview_frame_index = 0
-        self.preview_pose = trajectory.start_rad
+        self.preview_pose = actual_rad
         self._set_workflow_state(
-            "previewing",
-            f"正在进行虚拟预演；预计{trajectory.profile.duration_s:.2f}秒",
-            0,
+            "planning",
+            "正在后台生成精确分段五次轨迹；Qt界面保持响应",
+            None,
         )
-        self._request_collision_preview()
+        try:
+            future = self._preview_plan_executor.submit(
+                build_virtual_preview_plan, snapshot
+            )
+        except RuntimeError as exc:
+            self._apply_preview_plan_failure({
+                "generation": generation,
+                "detail": f"后台规划器不可用：{exc}",
+            })
+            return
+        with self._preview_plan_lock:
+            if (
+                self._preview_plan_closed
+                or generation != self._preview_plan_generation
+            ):
+                future.cancel()
+                return
+            self._preview_plan_future = future
+            self._preview_plan_started_at = self.task_started_at
+        future.add_done_callback(
+            lambda completed, requested_generation=generation:
+            self._preview_plan_future_done(requested_generation, completed)
+        )
 
     def _update_preview_animation(self, now: float) -> None:
         if (
@@ -2577,11 +3348,20 @@ class MainWindow(QMainWindow):
             )
         )
         thermal_allowed_states = {"NORMAL", "WARNING"}
+        thermal_stop_c = getattr(
+            getattr(self.node, "thermal_limits", None),
+            "thermal_stop_c",
+            None,
+        )
         thermal_pass = bool(
             communication_pass
+            and type(thermal_stop_c) in {int, float}
+            and math.isfinite(float(thermal_stop_c))
             and all(
                 isinstance(per_motor[name].get("temperature_c"), (int, float))
-                and float(per_motor[name]["temperature_c"]) < 60.0
+                and math.isfinite(float(per_motor[name]["temperature_c"]))
+                and float(per_motor[name]["temperature_c"])
+                < float(thermal_stop_c)
                 and per_motor[name].get("thermal_state") in thermal_allowed_states
                 for name in MOTOR_NAMES
             )
@@ -2597,6 +3377,17 @@ class MainWindow(QMainWindow):
             )
         )
         trajectory = self.workflow_contract.q_plan_trajectory
+        planned_load_thermal_pass = bool(
+            gravity_pass
+            and isinstance(trajectory, TrajectoryRecipe)
+            and planned_load_feasibility_authorizes(
+                gravity,
+                trajectory_sha256=trajectory.sha256,
+                session_id=self.session_id,
+                state_instance_id=self.state_instance_id,
+                now_monotonic_ns=time.monotonic_ns(),
+            )
+        )
         exact_recipe_proof = bool(
             isinstance(trajectory, TrajectoryRecipe)
             and getattr(self, "preview_collision_segment_sha256", [])
@@ -2610,6 +3401,7 @@ class MainWindow(QMainWindow):
             limits_pass=isinstance(trajectory, TrajectoryRecipe),
             collision_pass=bool(self.preview_collision_safe and exact_recipe_proof),
             gravity_pass=gravity_pass,
+            planned_load_thermal_pass=planned_load_thermal_pass,
             thermal_pass=thermal_pass,
             feedback_fresh=self.node.control_streams_fresh(now),
             communication_pass=communication_pass,
@@ -2943,6 +3735,13 @@ class MainWindow(QMainWindow):
             self._cancel_queued_pose(restore_command_target=True)
             return
 
+        if getattr(self, "task_execution_started_at", None) is not None:
+            self.task_completed_segments = max(
+                getattr(self, "task_completed_segments", 0),
+                getattr(self, "task_segment_count", 0),
+            )
+            if getattr(self, "task_completed_at", None) is None:
+                self.task_completed_at = time.monotonic()
         self._cancel_queued_pose(restore_command_target=True)
         self._set_workflow_state(
             "complete",
@@ -3356,6 +4155,11 @@ class MainWindow(QMainWindow):
             self.pending_collision_execute_sequence = None
             if self.queued_pose_target is not None:
                 self._cancel_queued_pose(restore_command_target=True)
+            self._set_workflow_state(
+                "timeout",
+                "现实分段复核请求已丢失；轨迹已取消，迟到结果不会授权运动",
+                0,
+            )
             return
         age = now - request["source_monotonic_ns"] * 1.0e-9
         if age <= COLLISION_GUARD_TIMEOUT_S:
@@ -3367,6 +4171,11 @@ class MainWindow(QMainWindow):
         self._notify(
             "3D碰撞检查超时；新目标未下发，现有POSITION/HOLD保持继续。",
             "warning",
+        )
+        self._set_workflow_state(
+            "timeout",
+            "现实分段3D碰撞复核超时；轨迹已取消，迟到结果不会授权运动",
+            0,
         )
 
     def _real_to_sim(self) -> None:
@@ -3804,6 +4613,10 @@ class MainWindow(QMainWindow):
         self.queued_pose_target = list(self.targets)
         self.queued_trajectory_segments = list(trajectory.segments)
         self.trajectory_segment_count = len(trajectory.segments)
+        self.task_execution_started_at = time.monotonic()
+        self.task_completed_at = None
+        self.task_segment_count = self.trajectory_segment_count
+        self.task_completed_segments = 0
         self.active_plan_manifest = trajectory_plan_manifest(trajectory)
         self.queued_joint_indices = [
             next(
@@ -4224,31 +5037,116 @@ class MainWindow(QMainWindow):
         if not labels:
             return
         state_map = {
-            "idle": "空闲", "pending": "正在解算轨迹",
-            "previewing": "正在进行虚拟预演", "solving": "正在检查碰撞",
+            "idle": "空闲", "pending": "正在检查限位",
+            "planning": "正在解算轨迹",
+            "previewing": "正在计算重力", "solving": "正在检查碰撞",
             "waiting_hardware": "读取现实状态", "safe": "等待用户下发",
-            "execute_proof": "正在下发", "blocked": "负载超限",
-            "unsafe": "已取消", "stale": "通信故障",
+            "execute_proof": "正在下发", "blocked": "安全门禁阻止",
+            "unsafe": "已取消", "stale": "状态已过期",
+            "timeout": "阶段超时", "complete": "已完成",
         }
-        state_text = state_map.get(self.collision_preview_state, "空闲")
-        if self.hardware_mode == "position":
-            state_text = "现实机械臂执行中"
-        elif self.hardware_mode == "hold" and self.task_id:
-            state_text = "正在到位稳定"
-        progress = (
-            self.workflow_progress.value()
-            if self.workflow_progress.maximum() > 0 else 0
+        workflow_state = self.collision_preview_state
+        terminal_states = {"complete", "timeout", "blocked", "unsafe", "stale"}
+        execution_started = getattr(self, "task_execution_started_at", None)
+        completed_at = getattr(self, "task_completed_at", None)
+        state_text = state_map.get(workflow_state, "空闲")
+        if workflow_state not in terminal_states and execution_started is not None:
+            if self.hardware_mode == "position":
+                state_text = "现实机械臂执行中"
+            elif self.pending_collision_execute_sequence is not None:
+                state_text = "正在复核现实分段"
+            elif self.queued_pose_target is not None:
+                state_text = "正在到位稳定"
+
+        segment_count = max(0, int(getattr(self, "task_segment_count", 0)))
+        completed_segments = min(
+            segment_count,
+            max(0, int(getattr(self, "task_completed_segments", 0))),
         )
+        active_fraction: Optional[float] = None
+        active_index = self.active_trajectory_segment_index
+        moving_indices = [
+            index for index, moving in enumerate(self.moving_joint_mask) if moving
+        ]
+        if (
+            execution_started is not None
+            and type(active_index) is int
+            and len(moving_indices) == 1
+            and isinstance(self.active_trajectory_descriptor, dict)
+        ):
+            active_fraction = moving_trajectory_feedback_fraction(
+                self.node.latest_hardware,
+                moving_indices[0],
+                self.active_trajectory_descriptor,
+            )
+        if execution_started is None:
+            progress = (
+                self.workflow_progress.value()
+                if self.workflow_progress.maximum() > 0 else 0
+            )
+        elif workflow_state == "complete":
+            progress = 100
+        elif segment_count > 0:
+            progress_units = float(completed_segments)
+            if type(active_index) is int and active_fraction is not None:
+                progress_units = max(
+                    progress_units, float(active_index) + active_fraction
+                )
+            progress = round(
+                100.0 * min(segment_count, progress_units) / segment_count
+            )
+        else:
+            progress = 0
         elapsed = (
             0.0 if self.task_started_at is None
-            else max(0.0, now - self.task_started_at)
+            else max(
+                0.0,
+                (completed_at if completed_at is not None else now)
+                - self.task_started_at,
+            )
         )
         trajectory = self.workflow_contract.q_plan_trajectory
-        remaining = (
-            max(0.0, trajectory.profile.duration_s - elapsed)
-            if trajectory is not None and not self.preview_animation_complete else 0.0
-        )
-        per_motor = (self.node.latest_hardware or {}).get("per_motor", {})
+        if execution_started is not None:
+            if workflow_state == "complete":
+                remaining_text = "0.0s"
+            elif workflow_state in terminal_states:
+                remaining_text = "已终止"
+            elif isinstance(trajectory, TrajectoryRecipe) and segment_count > 0:
+                remaining_s = sum(
+                    segment.profile.duration_s
+                    for segment in trajectory.segments[completed_segments:]
+                )
+                if (
+                    type(active_index) is int
+                    and active_fraction is not None
+                    and completed_segments <= active_index < len(trajectory.segments)
+                ):
+                    remaining_s -= (
+                        trajectory.segments[active_index].profile.duration_s
+                        * active_fraction
+                    )
+                remaining_text = f"{max(0.0, remaining_s):.1f}s"
+            else:
+                remaining_text = "待反馈"
+        elif workflow_state == "planning":
+            remaining_text = "后台规划中"
+        elif trajectory is None:
+            remaining_text = "—"
+        elif workflow_state in terminal_states:
+            remaining_text = "已终止"
+        elif self.preview_animation_complete:
+            remaining_text = (
+                "等待下发" if workflow_state == "safe" else "0.0s"
+            )
+        else:
+            preview_elapsed = max(
+                0.0, now - (self.preview_animation_started_at or now)
+            )
+            remaining_text = (
+                f"{max(0.0, trajectory.profile.duration_s - preview_elapsed):.1f}s"
+            )
+        hardware = self.node.latest_hardware or {}
+        per_motor = hardware.get("per_motor", {})
         temperatures = [
             float(item["temperature_c"])
             for item in per_motor.values()
@@ -4269,6 +5167,123 @@ class MainWindow(QMainWindow):
             (item for item in thermal_priority if item in observed_states),
             "OFFLINE",
         )
+        controller_modes = (
+            hardware.get("controller_mode_by_motor", {})
+            if isinstance(hardware, dict) else {}
+        )
+        brake_observed = (
+            hardware.get("brake_observed_by_motor", {})
+            if isinstance(hardware, dict) else {}
+        )
+        load_limit_status = (
+            hardware.get("load_limit_no_progress_by_motor", {})
+            if isinstance(hardware, dict) else {}
+        )
+        no_progress_status = (
+            hardware.get("no_progress_status_by_motor", {})
+            if isinstance(hardware, dict) else {}
+        )
+        communication_fault = bool(
+            self.task_id is not None
+            and (
+                not isinstance(per_motor, dict)
+                or any(
+                    not isinstance(per_motor.get(name), dict)
+                    or per_motor[name].get("fresh") is not True
+                    or per_motor[name].get("communication_ok") is not True
+                    or per_motor[name].get("merror") != 0
+                    for name in MOTOR_NAMES
+                )
+            )
+        )
+        load_limit_fault = bool(
+            isinstance(load_limit_status, dict)
+            and any(load_limit_status.get(name) is True for name in MOTOR_NAMES)
+        )
+        trip_reasons = {
+            record.get("trip_reason")
+            for record in no_progress_status.values()
+            if isinstance(record, dict) and record.get("fault_latched") is True
+        } if isinstance(no_progress_status, dict) else set()
+        arrival_timeout_fault = "POSITION_ARRIVAL_TIMEOUT" in trip_reasons
+        overload_fault = bool(
+            trip_reasons.intersection({
+                "LOAD_LIMIT_NO_PROGRESS",
+                "EXACT_TRAJECTORY_LOAD_GOVERNOR_ABORT",
+            })
+            or (load_limit_fault and not trip_reasons)
+        )
+        all_braked = bool(
+            self.hardware_mode == "brake"
+            and isinstance(controller_modes, dict)
+            and isinstance(brake_observed, dict)
+            and all(
+                controller_modes.get(name) == "brake"
+                and brake_observed.get(name) is True
+                for name in MOTOR_NAMES
+            )
+        )
+        planned_proof = (
+            (self.node.latest_gravity_status or {}).get(
+                "planned_trajectory_feasibility"
+            )
+            if isinstance(self.node.latest_gravity_status, dict)
+            else None
+        )
+        planned_result = (
+            planned_proof.get("result")
+            if isinstance(planned_proof, dict)
+            and isinstance(trajectory, TrajectoryRecipe)
+            and planned_proof.get("trajectory_sha256") == trajectory.sha256
+            and planned_proof.get("session_id")
+            == getattr(self, "session_id", None)
+            and planned_proof.get("state_instance_id")
+            == getattr(self, "state_instance_id", None)
+            else None
+        )
+        valid_feedback_times_ns = [
+            sample["last_valid_feedback_monotonic_ns"]
+            for sample in per_motor.values()
+            if isinstance(sample, dict)
+            and type(sample.get("last_valid_feedback_monotonic_ns")) is int
+            and sample["last_valid_feedback_monotonic_ns"] > 0
+        ] if isinstance(per_motor, dict) else []
+        all_motor_last_feedback_age_ms = (
+            max(0.0, now - min(valid_feedback_times_ns) / 1.0e9) * 1000.0
+            if len(valid_feedback_times_ns) == len(MOTOR_NAMES)
+            else None
+        )
+
+        # Contract state taxonomy uses measured safety conditions ahead of
+        # nominal workflow phases.  It never turns missing authority into a
+        # load PASS or a fabricated overload measurement.
+        if workflow_state == "timeout":
+            state_text = "阶段超时"
+        elif worst_thermal in {"THERMAL_STOP", "COOLDOWN", "WAIT_OPERATOR_CONFIRM"}:
+            state_text = "热停机"
+        elif overload_fault or planned_result == "FAIL":
+            state_text = "负载超限"
+        elif arrival_timeout_fault:
+            state_text = "未到位"
+        elif communication_fault:
+            state_text = "通信故障"
+        elif all_braked:
+            state_text = "已停止并制动"
+        elif worst_thermal == "DERATING" and self.task_id is not None:
+            state_text = "热降额"
+        elif self.pending_collision_execute_sequence is not None:
+            state_text = "正在下发"
+        elif self.hardware_mode == "position" and execution_started is not None:
+            if getattr(self, "active_trajectory_first_publish_pending", False):
+                state_text = "正在下发"
+            elif active_fraction is not None and active_fraction >= 1.0:
+                state_text = "正在到位稳定"
+            else:
+                state_text = "现实机械臂执行中"
+        elif workflow_state == "safe":
+            state_text = "预演通过"
+        elif workflow_state == "previewing" and isinstance(planned_proof, dict):
+            state_text = "正在检查热负载"
         target_text = " ".join(
             f"J{i + 1}{value * DEG:+.1f}°"
             for i, value in enumerate(self.candidate_targets)
@@ -4284,9 +5299,36 @@ class MainWindow(QMainWindow):
         phase = self.workflow_status.text().removeprefix("工作流：")
         failure = (
             self.operator_notice_text
-            if self.collision_preview_state in {"blocked", "unsafe", "stale"}
+            if self.collision_preview_state
+            in {"blocked", "unsafe", "stale", "timeout"}
             else "—"
         )
+        trajectory_sha256 = (
+            trajectory.sha256
+            if isinstance(trajectory, TrajectoryRecipe) else None
+        )
+        if self.preview_collision_safe:
+            collision_result = "PASS"
+        elif workflow_state in {"blocked", "unsafe", "timeout"}:
+            collision_result = "FAIL"
+        elif isinstance(trajectory, TrajectoryRecipe):
+            collision_result = "CHECKING"
+        else:
+            collision_result = "NOT_EVALUATED"
+        (
+            planned_gravity_text,
+            planned_motor_text,
+            planned_checks_text,
+        ) = planned_path_preview_display(
+            self.node.latest_gravity_status,
+            trajectory_sha256=trajectory_sha256,
+            session_id=getattr(self, "session_id", None),
+            state_instance_id=getattr(self, "state_instance_id", None),
+            limits_pass=isinstance(trajectory, TrajectoryRecipe),
+            collision_result=collision_result,
+            now_monotonic_ns=time.monotonic_ns(),
+        )
+        heartbeat_now = completed_at if completed_at is not None else now
         values = {
             "task_id": self.task_id or "—",
             "state": state_text,
@@ -4294,11 +5336,13 @@ class MainWindow(QMainWindow):
             "progress": f"{progress}%",
             "started": self.task_started_wall_utc or "—",
             "elapsed": f"{elapsed:.1f}s" if self.task_started_at is not None else "—",
-            "remaining": f"{remaining:.1f}s" if trajectory is not None else "—",
-            "heartbeat": f"{max(0.0, now - self.last_task_heartbeat) * 1000.0:.0f}ms前",
+            "remaining": remaining_text,
+            "heartbeat": (
+                f"{max(0.0, heartbeat_now - self.last_task_heartbeat) * 1000.0:.0f}ms前"
+            ),
             "encoder": (
-                f"{max(0.0, now - self.node.last_joint_receipt) * 1000.0:.0f}ms前"
-                if self.node.last_joint_receipt > 0.0 else "未收到"
+                f"{all_motor_last_feedback_age_ms:.0f}ms前"
+                if all_motor_last_feedback_age_ms is not None else "未收到"
             ),
             "target": target_text,
             "actual": actual_text,
@@ -4307,6 +5351,9 @@ class MainWindow(QMainWindow):
                 f"{max(temperatures):.0f}°C" if temperatures else "离线"
             ),
             "thermal": THERMAL_STATE_CN.get(worst_thermal, worst_thermal),
+            "planned_gravity": planned_gravity_text,
+            "planned_motor": planned_motor_text,
+            "planned_checks": planned_checks_text,
             "failure": failure,
         }
         for key, text in values.items():
@@ -4321,6 +5368,11 @@ class MainWindow(QMainWindow):
         modes = hardware.get("controller_mode_by_motor", {})
         faults = hardware.get("controller_fault_by_motor", {})
         lease_holds = hardware.get("lease_safe_hold_by_motor", {})
+        warning_orange_c = getattr(
+            getattr(self.node, "thermal_limits", None),
+            "warning_below_c",
+            None,
+        )
         for row, name in enumerate(MOTOR_NAMES):
             sample = per_motor.get(name, {}) if isinstance(per_motor, dict) else {}
             fresh = sample.get("fresh") is True
@@ -4361,7 +5413,7 @@ class MainWindow(QMainWindow):
                 number("q_joint_rad", DEG),
                 number("dq_joint_rad_s", DEG),
                 number("tau_feedback_rotor_nm"),
-                number("estimated_joint_torque_nm"),
+                number("tau_joint_estimated_nm"),
                 (
                     f"{float(temperature):.0f}"
                     if type(temperature) in {int, float} else "N/A"
@@ -4369,6 +5421,12 @@ class MainWindow(QMainWindow):
                 str(sample.get("merror", "N/A")),
                 THERMAL_STATE_CN.get(str(thermal_state), str(thermal_state)),
                 control_state,
+                (
+                    f"{float(sample['last_valid_feedback_monotonic_ns']) / 1.0e9:.3f}"
+                    if type(sample.get("last_valid_feedback_monotonic_ns")) is int
+                    and sample["last_valid_feedback_monotonic_ns"] > 0
+                    else "N/A"
+                ),
             )
             for column, text in enumerate(values):
                 item = table.item(row, column)
@@ -4381,7 +5439,18 @@ class MainWindow(QMainWindow):
                 background, foreground = "#616161", "#ffffff"
             elif thermal_state == "NORMAL":
                 background, foreground = "#2e7d32", "#ffffff"
-            elif thermal_state == "WARNING" and type(temperature) in {int, float} and float(temperature) >= 50.0:
+            elif (
+                thermal_state == "WARNING"
+                and (
+                    type(temperature) not in {int, float}
+                    or not math.isfinite(float(temperature))
+                    or type(warning_orange_c) not in {int, float}
+                    or not math.isfinite(float(warning_orange_c))
+                    or float(temperature) >= float(
+                        warning_orange_c
+                    )
+                )
+            ):
                 background, foreground = "#ef6c00", "#ffffff"
             elif thermal_state == "WARNING":
                 background, foreground = "#fdd835", "#000000"
@@ -4442,6 +5511,7 @@ class MainWindow(QMainWindow):
                 self.have_first_state = True
         self._update_connected(now)
         self._sync_workflow_contract(now)
+        self._update_preview_plan_build_heartbeat(now)
         self._update_preview_animation(now)
         self._update_planned_execution_pose(time.monotonic_ns())
         self._consume_collision_guard_result()
@@ -4729,6 +5799,12 @@ class MainWindow(QMainWindow):
                 )
             ):
                 sequence_joint = self.active_sequence_joint
+                completed_segment_index = self.active_trajectory_segment_index
+                if type(completed_segment_index) is int:
+                    self.task_completed_segments = max(
+                        getattr(self, "task_completed_segments", 0),
+                        completed_segment_index + 1,
+                    )
                 if (
                     sequence_joint is not None
                     or self.machine.fixed_hold_after_arrival
@@ -5114,6 +6190,7 @@ class MainWindow(QMainWindow):
         self.log_stream.flush()
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        self._shutdown_preview_plan_executor()
         self._cancel_queued_pose(restore_command_target=True)
         now = time.monotonic()
         streams_fresh = self.node.control_streams_fresh(now)

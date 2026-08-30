@@ -1,0 +1,7 @@
+joint,test_sequence,plus5_endpoint_error_deg,first_center_error_deg,minus5_endpoint_error_deg,final_center_error_deg,min_dwell_s,max_sync_error_deg,merror,invalid_frames,communication_interrupts,max_temperature_c,final_brake_or_disabled,status,reason
+J1,0_to_plus5_to_0_to_minus5_to_0,,,,,,,,,,,,NOT_RUN,POWER_OFF
+J2,0_to_plus5_to_0_to_minus5_to_0,,,,,,,,,,,,NOT_RUN,POWER_OFF
+J3,0_to_plus5_to_0_to_minus5_to_0,,,,,,,,,,,,NOT_RUN,POWER_OFF
+J4,0_to_plus5_to_0_to_minus5_to_0,,,,,,,,,,,,NOT_RUN,POWER_OFF
+J5,0_to_plus5_to_0_to_minus5_to_0,,,,,,,,,,,,NOT_RUN,POWER_OFF
+J6,0_to_plus5_to_0_to_minus5_to_0,,,,,,,,,,,,NOT_RUN,POWER_OFF

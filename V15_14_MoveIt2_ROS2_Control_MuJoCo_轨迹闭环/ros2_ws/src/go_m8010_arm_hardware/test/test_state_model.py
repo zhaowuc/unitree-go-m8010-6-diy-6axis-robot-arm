@@ -13,6 +13,7 @@ from go_m8010_arm_hardware.state_model import (
     WORKER_CONTROL_DOMAINS,
     WORKER_SUPERVISOR_STATUS_SCHEMA,
     WorkerSupervisorStatusError,
+    parse_controller_feedback_metadata,
     parse_feedback_payload,
     unavailable_worker_control_status,
     validate_worker_supervisor_status,
@@ -122,6 +123,357 @@ class WorkerSupervisorStatusTest(unittest.TestCase):
             set(result["control_reason_by_domain"].values()),
             {"supervisor_status_missing"},
         )
+
+
+class ControllerFeedbackMetadataTest(unittest.TestCase):
+    @staticmethod
+    def payload(motors=("J1",), now=None):
+        stamp = time.monotonic_ns() if now is None else now
+        logical_feedforward = [0.1, 0.4, -0.2, 0.1, -0.05, 0.0]
+        sample_feedforward = {
+            "J1": logical_feedforward[0],
+            "J2A": -logical_feedforward[1],
+            "J2B": logical_feedforward[1],
+            "J3": logical_feedforward[2],
+            "J4": logical_feedforward[3],
+            "J5": logical_feedforward[4],
+        }
+        return {
+            "schema": "go-m8010-motor-feedback/1.0",
+            "source_monotonic_ns": stamp,
+            "samples": [
+                {
+                    "motor": motor,
+                    "position_rad": 0.0,
+                    "velocity_rad_s": 0.0,
+                    "temperature_c": 45.0,
+                    "communication_ok": True,
+                    "merror": 0,
+                    "tau_cmd_rotor_nm": None if motor == "J6" else 0.0,
+                    "tau_feedback_rotor_nm": None if motor == "J6" else 0.0,
+                    "tau_joint_estimated_nm": None if motor == "J6" else 0.0,
+                    "last_valid_feedback_monotonic_ns": stamp,
+                    "thermal_fault_latched": False,
+                    "load_limit_no_progress": False,
+                    **(
+                        {"gravity_feedforward_rotor_nm": sample_feedforward[motor]}
+                        if motor != "J6" else {}
+                    ),
+                }
+                for motor in motors
+            ],
+            "controller_mode": "hold",
+            "tau_j2_logical_total_nm": (
+                0.0 if set(motors) == {"J2A", "J2B"} else None
+            ),
+            "controller_mode_by_motor": {
+                motor: "hold" for motor in motors
+            },
+            "domain_fault": False,
+            "lease_safe_hold": False,
+            "thermal_fault_latched": False,
+            "thermal_cooldown_ready": False,
+            "thermal_release_observed": False,
+            "thermal_rearm_pending": False,
+            "thermal_rearm_pending_next_cycle": False,
+            "thermal_cooldown_valid_brake_frames": 0,
+            "thermal_trip_activation_epoch": 0,
+            "thermal_minimum_rearm_epoch": 0,
+            "thermal_state": "WARNING",
+            "thermal_state_by_motor": {
+                motor: "WARNING" for motor in motors
+            },
+            "thermal_trip_reason": "",
+            "thermal_config_sha256": (
+                "1926264805858f62fffc9360ef0c9d4d7f8a7e232e171105450769d493ff5467"
+            ),
+            "no_progress_fault": False,
+            "load_limit_fault": False,
+            "load_limit_no_progress": False,
+            "no_progress_release_observed": False,
+            "no_progress_rearm_pending_next_cycle": False,
+            "no_progress_watchdog_qualifying_frames": 0,
+            "no_progress_observation_valid": False,
+            "no_progress_position_error_rad": 0.0,
+            "no_progress_trip_position_error_rad": 0.0,
+            "position_safety_trip_reason": "",
+            "software_saturation_observed": False,
+            "load_limit_watchdog_authority": (
+                "SOFTWARE_GUARD_NOT_CONTINUOUS_RATING"
+            ),
+            "no_progress_trip_activation_epoch": 0,
+            "no_progress_minimum_rearm_epoch": 0,
+            "gravity_authority_present": True,
+            "gravity_policy_identity_status": "ECHOED",
+            "gravity_source_instance_id": "1" * 32,
+            "gravity_session_id": "vertical-session",
+            "gravity_state_instance_id": "2" * 32,
+            "gravity_model_sha256": (
+                "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9"
+            ),
+            "gravity_config_sha256": (
+                "307469b8384fd35547327ba1d5f80aa440e6b9663406ab7c9d9469bea263335d"
+            ),
+            "gravity_continuous_rotor_limits_authoritative": True,
+            "gravity_scale": 0.5,
+            "gravity_scale_target": 0.5,
+            "feedforward_nm": logical_feedforward,
+        }
+
+    def parse(self, payload):
+        receipt = payload["source_monotonic_ns"] + 1
+        samples = parse_feedback_payload(payload, receipt)
+        return parse_controller_feedback_metadata(payload, samples)
+
+    def test_go_metadata_is_atomic_machine_readable_and_not_a_rating(self):
+        result = self.parse(self.payload())
+        record = result["J1"]
+        self.assertEqual(record["controller_mode"], "hold")
+        self.assertFalse(record["domain_fault"])
+        self.assertEqual(record["thermal"]["metadata_status"], "OBSERVED")
+        self.assertFalse(record["thermal"]["fault_latched"])
+        self.assertEqual(
+            record["no_progress"]["metadata_status"], "OBSERVED"
+        )
+        self.assertFalse(
+            record["no_progress"]["continuous_rating_authoritative"]
+        )
+        self.assertEqual(record["no_progress"]["trip_reason"], "")
+        self.assertEqual(record["gravity"]["metadata_status"], "OBSERVED")
+        self.assertEqual(record["gravity"]["policy_identity_status"], "ECHOED")
+        self.assertEqual(
+            record["gravity"]["source_instance_id"], "1" * 32
+        )
+        self.assertEqual(record["gravity"]["applied_rotor_nm"], 0.1)
+
+    def test_j2_physical_feedforward_signs_are_checked(self):
+        payload = self.payload(("J2A", "J2B"))
+        result = self.parse(payload)
+        self.assertEqual(result["J2A"]["gravity"]["applied_rotor_nm"], -0.4)
+        self.assertEqual(result["J2B"]["gravity"]["applied_rotor_nm"], 0.4)
+        payload["samples"][0]["gravity_feedforward_rotor_nm"] = 0.4
+        with self.assertRaisesRegex(ValueError, "gravity feedforward disagrees"):
+            self.parse(payload)
+
+    def test_legacy_optional_groups_are_unknown_not_healthy_defaults(self):
+        now = time.monotonic_ns()
+        payload = {
+            "schema": "go-m8010-motor-feedback/1.0",
+            "source_monotonic_ns": now,
+            "samples": [{
+                "motor": "J1",
+                "position_rad": 0.0,
+                "velocity_rad_s": 0.0,
+                "temperature_c": 25.0,
+                "communication_ok": True,
+                "merror": 0,
+                "tau_cmd_rotor_nm": 0.0,
+                "tau_feedback_rotor_nm": 0.0,
+                "tau_joint_estimated_nm": 0.0,
+                "last_valid_feedback_monotonic_ns": now,
+            }],
+            "tau_j2_logical_total_nm": None,
+            "controller_mode": "brake",
+            "controller_mode_by_motor": {"J1": "brake"},
+            "domain_fault": False,
+        }
+        record = self.parse(payload)["J1"]
+        self.assertEqual(record["thermal"]["metadata_status"], "UNKNOWN")
+        self.assertIsNone(record["thermal"]["fault_latched"])
+        self.assertEqual(record["no_progress"]["metadata_status"], "UNKNOWN")
+        self.assertIsNone(record["no_progress"]["fault_latched"])
+        self.assertEqual(record["gravity"]["metadata_status"], "UNKNOWN")
+        self.assertIsNone(record["gravity"]["authority_present"])
+        self.assertIsNone(record["lease_safe_hold"])
+
+    def test_partial_or_contradictory_safety_groups_are_rejected(self):
+        mutations = (
+            lambda value: value.pop("thermal_cooldown_ready"),
+            lambda value: value.__setitem__("load_limit_fault", True),
+            lambda value: value.__setitem__(
+                "position_safety_trip_reason", "POSITION_ARRIVAL_TIMEOUT"
+            ),
+            lambda value: value.__setitem__(
+                "load_limit_watchdog_authority", "CONTINUOUS_RATING"
+            ),
+            lambda value: value.__setitem__("gravity_scale_target", 0.4),
+            lambda value: value["samples"][0].__setitem__(
+                "thermal_fault_latched", True
+            ),
+        )
+        for mutation in mutations:
+            payload = self.payload()
+            mutation(payload)
+            with self.assertRaises(ValueError):
+                self.parse(payload)
+
+    def test_position_arrival_timeout_reason_is_atomic_with_latch(self):
+        for reason in (
+            "POSITION_ARRIVAL_TIMEOUT",
+            "EXACT_TRAJECTORY_LOAD_GOVERNOR_ABORT",
+        ):
+            payload = self.payload()
+            payload.update({
+                "no_progress_fault": True,
+                "load_limit_fault": True,
+                "load_limit_no_progress": True,
+                "no_progress_trip_position_error_rad": 0.25,
+                "position_safety_trip_reason": reason,
+                "no_progress_trip_activation_epoch": 7,
+                "no_progress_minimum_rearm_epoch": 8,
+            })
+            for sample in payload["samples"]:
+                sample["load_limit_no_progress"] = True
+            record = self.parse(payload)["J1"]["no_progress"]
+            self.assertTrue(record["fault_latched"])
+            self.assertEqual(record["trip_reason"], reason)
+            self.assertEqual(record["trip_position_error_rad"], 0.25)
+
+    def test_j6_extended_thermal_metadata_is_strict(self):
+        payload = self.payload(("J6",))
+        for field in (
+            "gravity_authority_present",
+            "gravity_policy_identity_status",
+            "gravity_source_instance_id",
+            "gravity_session_id",
+            "gravity_state_instance_id",
+            "gravity_model_sha256",
+            "gravity_config_sha256",
+            "gravity_continuous_rotor_limits_authoritative",
+            "gravity_scale",
+            "gravity_scale_target",
+            "feedforward_nm",
+        ):
+            payload.pop(field)
+        payload.update({
+            "thermal_state": "DERATING",
+            "thermal_state_by_motor": {"J6": "DERATING"},
+            "thermal_derating_factor": 0.6,
+            "thermal_raw_temperature_c": 57.0,
+            "thermal_window_median_c": 56.0,
+            "thermal_slope_c_per_min": 0.5,
+            "load_limit_watchdog_authority": (
+                "J6_TARGET_TIMEOUT_POSITION_ERROR_V1"
+            ),
+        })
+        payload["samples"][0]["temperature_c"] = 57.0
+        result = self.parse(payload)["J6"]
+        self.assertEqual(result["thermal"]["reported_state"], "DERATING")
+        self.assertEqual(result["thermal"]["derating_factor"], 0.6)
+        self.assertEqual(result["gravity"]["metadata_status"], "UNKNOWN")
+        payload["thermal_derating_factor"] = 1.1
+        with self.assertRaisesRegex(ValueError, "outside"):
+            self.parse(payload)
+
+    def test_j345_thermal_state_map_preserves_cross_temperature_states(self):
+        payload = self.payload(("J3", "J4", "J5"))
+        temperatures = {"J3": 44.0, "J4": 55.0, "J5": 57.0}
+        states = {"J3": "NORMAL", "J4": "DERATING", "J5": "DERATING"}
+        for sample in payload["samples"]:
+            sample["temperature_c"] = temperatures[sample["motor"]]
+        payload.update({
+            "thermal_state": "DERATING",
+            "thermal_state_by_motor": states,
+            "thermal_raw_temperature_c": 57.0,
+            "thermal_derating_factor": 0.6,
+        })
+        result = self.parse(payload)
+        self.assertEqual(
+            {name: result[name]["thermal"]["reported_state"] for name in states},
+            states,
+        )
+        for name in states:
+            self.assertEqual(
+                result[name]["thermal"]["domain_reported_state"], "DERATING"
+            )
+
+    def test_thermal_state_map_hash_and_trip_reason_are_strict(self):
+        mutations = (
+            lambda value: value["thermal_state_by_motor"].pop("J5"),
+            lambda value: value["thermal_state_by_motor"].update(J6="NORMAL"),
+            lambda value: value["thermal_state_by_motor"].update(J4="HOT"),
+            lambda value: value.__setitem__("thermal_config_sha256", "0" * 64),
+            lambda value: value.__setitem__(
+                "thermal_trip_reason", "RAW_TEMPERATURE_LIMIT"
+            ),
+            lambda value: value.__setitem__("thermal_trip_reason", "UNKNOWN"),
+        )
+        for mutation in mutations:
+            payload = self.payload(("J3", "J4", "J5"))
+            mutation(payload)
+            with self.assertRaises(ValueError):
+                self.parse(payload)
+
+        payload = self.payload(("J3", "J4", "J5"))
+        payload.update({
+            "thermal_fault_latched": True,
+            "thermal_state": "THERMAL_STOP",
+            "thermal_state_by_motor": {
+                name: "THERMAL_STOP" for name in ("J3", "J4", "J5")
+            },
+            "thermal_trip_reason": "EXACT_TRAJECTORY_DERATING_ABORT",
+            "thermal_trip_activation_epoch": 4,
+            "thermal_minimum_rearm_epoch": 5,
+        })
+        for sample in payload["samples"]:
+            sample["thermal_fault_latched"] = True
+        result = self.parse(payload)
+        self.assertEqual(
+            result["J4"]["thermal"]["trip_reason"],
+            "EXACT_TRAJECTORY_DERATING_ABORT",
+        )
+
+    def test_no_progress_authority_is_bound_to_producer(self):
+        go_record = self.parse(self.payload())["J1"]["no_progress"]
+        self.assertEqual(
+            go_record["watchdog_authority"],
+            "SOFTWARE_GUARD_NOT_CONTINUOUS_RATING",
+        )
+        self.assertFalse(go_record["continuous_rating_authoritative"])
+
+        j6_payload = self.payload(("J6",))
+        j6_payload["load_limit_watchdog_authority"] = (
+            "J6_TARGET_TIMEOUT_POSITION_ERROR_V1"
+        )
+        j6_record = self.parse(j6_payload)["J6"]["no_progress"]
+        self.assertEqual(
+            j6_record["watchdog_authority"],
+            "J6_TARGET_TIMEOUT_POSITION_ERROR_V1",
+        )
+        self.assertFalse(j6_record["continuous_rating_authoritative"])
+
+        j6_payload["load_limit_watchdog_authority"] = "UNKNOWN"
+        with self.assertRaisesRegex(ValueError, "authority"):
+            self.parse(j6_payload)
+
+    def test_gravity_policy_identity_is_strict_and_absent_authority_is_zero(self):
+        payload = self.payload()
+        payload["gravity_model_sha256"] = "3" * 64
+        with self.assertRaisesRegex(ValueError, "identity"):
+            self.parse(payload)
+
+        payload = self.payload()
+        payload.update({
+            "gravity_authority_present": False,
+            "gravity_policy_identity_status": "NO_AUTHORITY",
+            "gravity_source_instance_id": "",
+            "gravity_session_id": "",
+            "gravity_state_instance_id": "",
+            "gravity_model_sha256": "",
+            "gravity_config_sha256": "",
+            "gravity_continuous_rotor_limits_authoritative": False,
+            "gravity_scale": 0.0,
+            "gravity_scale_target": 0.0,
+            "feedforward_nm": [0.0] * 6,
+        })
+        payload["samples"][0]["gravity_feedforward_rotor_nm"] = 0.0
+        result = self.parse(payload)["J1"]["gravity"]
+        self.assertEqual(result["policy_identity_status"], "NO_AUTHORITY")
+        self.assertFalse(result["authority_present"])
+
+        payload["feedforward_nm"][0] = 0.01
+        with self.assertRaisesRegex(ValueError, "absent gravity"):
+            self.parse(payload)
 
 
 class StateModelTest(unittest.TestCase):
@@ -382,10 +734,109 @@ class StateModelTest(unittest.TestCase):
                 "motor": "j1", "position_rad": 1.2,
                 "velocity_rad_s": 0.0, "temperature_c": 25.0,
                 "communication_ok": True, "merror": 0,
+                "tau_cmd_rotor_nm": 0.25,
+                "tau_feedback_rotor_nm": -3.4453125,
+                "tau_joint_estimated_nm": -3.4453125 * GEAR_RATIO,
+                "last_valid_feedback_monotonic_ns": now,
+                "trajectory_plan_token_id": "a" * 64,
+                "trajectory_sha256": "b" * 64,
+                "trajectory_state": "RUNNING",
+                "trajectory_sample_index": 5,
+                "trajectory_interval_count": 20,
             }],
+            "tau_j2_logical_total_nm": None,
         }, now))
         self.assertEqual(samples[0].motor, "J1")
         self.assertEqual(samples[0].receipt_monotonic_ns, now)
+        self.assertEqual(samples[0].tau_cmd_rotor_nm, 0.25)
+        self.assertEqual(samples[0].tau_feedback_rotor_nm, -3.4453125)
+        self.assertAlmostEqual(
+            samples[0].tau_joint_estimated_nm,
+            -3.4453125 * GEAR_RATIO,
+        )
+        self.assertEqual(samples[0].last_valid_feedback_monotonic_ns, now)
+        self.assertEqual(samples[0].trajectory_plan_token_id, "a" * 64)
+        self.assertEqual(samples[0].trajectory_sha256, "b" * 64)
+        self.assertEqual(samples[0].trajectory_state, "RUNNING")
+        self.assertEqual(samples[0].trajectory_sample_index, 5)
+        self.assertEqual(samples[0].trajectory_interval_count, 20)
+
+    def test_torque_contract_validates_j2_total_j6_nulls_and_required_fields(self):
+        now = time.monotonic_ns()
+
+        def j2_sample(motor, tau_feedback):
+            sign = -1 if motor == "J2A" else 1
+            return {
+                "motor": motor,
+                "position_rad": 0.0,
+                "velocity_rad_s": 0.0,
+                "temperature_c": 25.0,
+                "communication_ok": True,
+                "merror": 0,
+                "tau_cmd_rotor_nm": 0.1 * sign,
+                "tau_feedback_rotor_nm": tau_feedback,
+                "tau_joint_estimated_nm": sign * tau_feedback * GEAR_RATIO,
+                "last_valid_feedback_monotonic_ns": now,
+            }
+
+        j2_payload = {
+            "source_monotonic_ns": now,
+            "samples": [j2_sample("J2A", -0.2), j2_sample("J2B", 0.2)],
+            "tau_j2_logical_total_nm": 0.4 * GEAR_RATIO,
+        }
+        pair = parse_feedback_payload(j2_payload, now)
+        self.assertAlmostEqual(
+            sum(sample.tau_joint_estimated_nm for sample in pair),
+            0.4 * GEAR_RATIO,
+        )
+        j2_payload["tau_j2_logical_total_nm"] = 0.0
+        with self.assertRaisesRegex(ValueError, "disagrees"):
+            parse_feedback_payload(j2_payload, now)
+
+        j6_sample = {
+            "motor": "J6",
+            "position_rad": 0.0,
+            "velocity_rad_s": 0.0,
+            "temperature_c": 25.0,
+            "communication_ok": True,
+            "merror": 0,
+            "tau_cmd_rotor_nm": None,
+            "tau_feedback_rotor_nm": None,
+            "tau_joint_estimated_nm": None,
+            "last_valid_feedback_monotonic_ns": now,
+        }
+        j6_payload = {
+            "source_monotonic_ns": now,
+            "samples": [j6_sample],
+            "tau_j2_logical_total_nm": None,
+        }
+        self.assertEqual(parse_feedback_payload(j6_payload, now)[0].motor, "J6")
+        j6_sample["tau_cmd_rotor_nm"] = 0.0
+        with self.assertRaisesRegex(ValueError, "POS_VEL"):
+            parse_feedback_payload(j6_payload, now)
+
+        required_payload = {
+            "source_monotonic_ns": now,
+            "samples": [j2_sample("J1", 0.0)],
+            "tau_j2_logical_total_nm": None,
+        }
+        for field in (
+            "tau_cmd_rotor_nm",
+            "tau_feedback_rotor_nm",
+            "tau_joint_estimated_nm",
+            "last_valid_feedback_monotonic_ns",
+        ):
+            missing = {
+                **required_payload,
+                "samples": [dict(required_payload["samples"][0])],
+            }
+            missing["samples"][0].pop(field)
+            with self.assertRaisesRegex(ValueError, "required"):
+                parse_feedback_payload(missing, now)
+        missing_total = dict(required_payload)
+        missing_total.pop("tau_j2_logical_total_nm")
+        with self.assertRaisesRegex(ValueError, "tau_j2_logical_total_nm is required"):
+            parse_feedback_payload(missing_total, now)
 
     def test_payload_contract_rejects_duplicate_nonfinite_and_coerced_health(self):
         now = time.monotonic_ns()
@@ -413,6 +864,30 @@ class StateModelTest(unittest.TestCase):
                 "motor": "J1", "position_rad": 0.0,
                 "velocity_rad_s": 0.0, "temperature_c": 25.0,
                 "communication_ok": True,
+            }]},
+            {"source_monotonic_ns": now, "samples": [{
+                "motor": "J1", "position_rad": 0.0,
+                "velocity_rad_s": 0.0, "temperature_c": 25.0,
+                "communication_ok": True, "merror": 0,
+                "tau_feedback_rotor_nm": float("nan"),
+            }]},
+            {"source_monotonic_ns": now, "samples": [{
+                "motor": "J1", "position_rad": 0.0,
+                "velocity_rad_s": 0.0, "temperature_c": 25.0,
+                "communication_ok": True, "merror": 0,
+                "trajectory_state": "RUNNING",
+                "trajectory_sample_index": 1,
+                "trajectory_interval_count": 10,
+            }]},
+            {"source_monotonic_ns": now, "samples": [{
+                "motor": "J1", "position_rad": 0.0,
+                "velocity_rad_s": 0.0, "temperature_c": 25.0,
+                "communication_ok": True, "merror": 0,
+                "trajectory_plan_token_id": "a" * 64,
+                "trajectory_sha256": "b" * 64,
+                "trajectory_state": "RUNNING",
+                "trajectory_sample_index": 11,
+                "trajectory_interval_count": 10,
             }]},
         )
         for payload in invalid_payloads:
@@ -452,20 +927,29 @@ class StateModelTest(unittest.TestCase):
         now = time.monotonic_ns()
 
         def sample(motor):
+            sign = -1.0 if motor == "J2A" else 1.0
             return {
                 "motor": motor, "position_rad": 0.0,
                 "velocity_rad_s": 0.0, "temperature_c": 25.0,
                 "communication_ok": True, "merror": 0,
+                "tau_cmd_rotor_nm": 0.0,
+                "tau_feedback_rotor_nm": sign,
+                "tau_joint_estimated_nm": sign * (
+                    -1.0 if motor == "J2A" else 1.0
+                ) * GEAR_RATIO,
+                "last_valid_feedback_monotonic_ns": now,
             }
 
         with self.assertRaises(ValueError):
             list(parse_feedback_payload({
                 "source_monotonic_ns": now,
                 "samples": [sample("J2A")],
+                "tau_j2_logical_total_nm": None,
             }, now))
         pair = list(parse_feedback_payload({
             "source_monotonic_ns": now,
             "samples": [sample("J2A"), sample("J2B")],
+            "tau_j2_logical_total_nm": 2.0 * GEAR_RATIO,
         }, now))
         self.assertEqual({item.motor for item in pair}, {"J2A", "J2B"})
 

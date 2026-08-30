@@ -218,6 +218,10 @@ def build_worker_command(args: argparse.Namespace) -> list[str]:
         "j2",
         "--feedback-port",
         str(args.feedback_port),
+        "--thermal-config",
+        str(args.thermal_config),
+        "--expected-thermal-config-sha256",
+        args.expected_thermal_config_sha256,
     ]
 
 
@@ -632,7 +636,12 @@ def run(args: argparse.Namespace) -> int:
     listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
     listener.bind(("127.0.0.1", args.feedback_port))
     listener.settimeout(0.20)
-    command_args = argparse.Namespace(worker=worker, feedback_port=args.feedback_port)
+    command_args = argparse.Namespace(
+        worker=worker,
+        feedback_port=args.feedback_port,
+        thermal_config=args.thermal_config,
+        expected_thermal_config_sha256=args.expected_thermal_config_sha256,
+    )
     command = build_worker_command(command_args)
     process: subprocess.Popen[str] | None = None
     packets: list[dict[str, Any]] = []
@@ -741,6 +750,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--worker", type=Path, required=True)
     parser.add_argument("--expected-worker-sha256", required=True)
+    parser.add_argument("--thermal-config", type=Path, required=True)
+    parser.add_argument("--expected-thermal-config-sha256", required=True)
     parser.add_argument("--feedback-port", type=int, default=15300)
     parser.add_argument("--target-packets", type=int, default=TARGET_PACKETS)
     parser.add_argument("--maximum-runtime-s", type=float, default=8.0)

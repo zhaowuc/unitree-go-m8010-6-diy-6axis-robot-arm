@@ -432,7 +432,8 @@ def _parse_terminal(stdout: str, bus: str) -> dict[str, str]:
 
 def _capture_domain(
     *, worker: Path, feedback_port: int, bus: str, target_packets: int,
-    maximum_runtime_s: float,
+    maximum_runtime_s: float, thermal_config: Path,
+    expected_thermal_config_sha256: str,
 ) -> dict[str, Any]:
     global RUNTIME_HARDWARE_ACCESSED
     names = BUS_MOTORS[bus]
@@ -444,6 +445,8 @@ def _capture_domain(
         str(worker), "--execute", "--brake-only", "--confirm",
         raw_base.brake_verify.WORKER_GATE, "--bus", bus,
         "--feedback-port", str(feedback_port),
+        "--thermal-config", str(thermal_config),
+        "--expected-thermal-config-sha256", expected_thermal_config_sha256,
     ]
     process: subprocess.Popen[str] | None = None
     packets: list[Any] = []
@@ -621,6 +624,8 @@ def run(args: argparse.Namespace) -> int:
             worker=worker, feedback_port=args.feedback_port, bus=bus,
             target_packets=args.target_packets,
             maximum_runtime_s=args.maximum_runtime_s,
+            thermal_config=args.thermal_config,
+            expected_thermal_config_sha256=args.expected_thermal_config_sha256,
         )
         motors.update(domains[bus]["motors"])
     timestamp = instant.strftime("%Y%m%dT%H%M%S%fZ")
@@ -689,6 +694,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--worker", type=Path, required=True)
     parser.add_argument("--expected-worker-sha256", required=True)
+    parser.add_argument("--thermal-config", type=Path, required=True)
+    parser.add_argument("--expected-thermal-config-sha256", required=True)
     parser.add_argument("--feedback-port", type=int, default=15300)
     parser.add_argument("--target-packets", type=int, default=TARGET_PACKETS)
     parser.add_argument("--maximum-runtime-s", type=float, default=8.0)

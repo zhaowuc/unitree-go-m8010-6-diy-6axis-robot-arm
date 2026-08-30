@@ -40,6 +40,7 @@ def generate_launch_description() -> LaunchDescription:
             "go_aux_session_reference_path": LaunchConfiguration(
                 "go_aux_session_reference_path"
             ),
+            "thermal_config_path": hardware_share + "/config/thermal_limits.yaml",
         }],
     )
     router = Node(
@@ -81,6 +82,7 @@ def generate_launch_description() -> LaunchDescription:
         parameters=[{
             "model_path": LaunchConfiguration("model_path"),
             "gravity_config_path": hardware_share + "/config/gravity_control.yaml",
+            "thermal_config_path": hardware_share + "/config/thermal_limits.yaml",
             "anchor_path": LaunchConfiguration("gravity_anchor_path"),
             "calculation_rate_hz": 100.0,
             "joint_state_maximum_age_ms": 250.0,
@@ -114,6 +116,7 @@ def generate_launch_description() -> LaunchDescription:
             "log_directory": LaunchConfiguration("runtime_log_directory"),
             "embedded_model_path": LaunchConfiguration("model_path"),
             "embedded_session_pose_deg": LaunchConfiguration("session_pose_deg"),
+            "thermal_config_path": hardware_share + "/config/thermal_limits.yaml",
         }],
     )
 

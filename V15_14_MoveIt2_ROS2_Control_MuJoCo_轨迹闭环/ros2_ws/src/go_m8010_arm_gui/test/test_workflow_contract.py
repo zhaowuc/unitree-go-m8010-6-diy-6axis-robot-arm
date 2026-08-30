@@ -19,6 +19,7 @@ from go_m8010_arm_gui.workflow_contract import (
     generate_segmented_quintic_recipe,
     joint_limits_sha256,
     joint_vector_sha256,
+    planned_trajectory_feasibility_request,
     quintic_duration_for_limits,
     trajectory_command_descriptor,
     trajectory_plan_manifest,
@@ -242,6 +243,7 @@ def test_actual_target_trajectory_and_hardware_command_are_isolated():
         "limits_pass",
         "collision_pass",
         "gravity_pass",
+        "planned_load_thermal_pass",
         "thermal_pass",
         "feedback_fresh",
         "communication_pass",
@@ -685,3 +687,68 @@ def test_shared_integer_sample_index_pins_both_endpoints():
         duration_ns=1_000_000_003,
         interval_count=101,
     ) == 101
+
+
+def test_planned_path_request_contains_exact_reproducible_recipe_before_token():
+    recipe = generate_segmented_quintic_recipe(
+        ACTUAL,
+        TARGET,
+        LIMITS,
+        maximum_velocity_rad_s=0.5,
+        maximum_acceleration_rad_s2=1.0,
+        maximum_segment_delta_rad=0.25,
+        maximum_sample_period_s=0.01,
+    )
+    request = planned_trajectory_feasibility_request(
+        recipe,
+        source_instance_id="1" * 32,
+        sequence=7,
+        source_monotonic_ns=123456789,
+        session_id="session-a",
+        state_instance_id="2" * 32,
+        model_sha256="3" * 64,
+        gravity_config_sha256="4" * 64,
+        thermal_config_sha256="5" * 64,
+    )
+    assert request["schema"] == (
+        "go-m8010-planned-path-feasibility-request/1.0"
+    )
+    assert request["trajectory_sha256"] == recipe.sha256
+    assert request["trajectory"]["trajectory_sha256"] == recipe.sha256
+    assert [
+        item["trajectory_sha256"]
+        for item in request["trajectory"]["segments"]
+    ] == [segment.sha256 for segment in recipe.segments]
+    assert len(request["request_sha256"]) == 64
+    assert request["thermal_config_sha256"] == "5" * 64
+    assert "plan_token_id" not in request
+
+
+def test_planned_path_request_rejects_invalid_source_or_clock():
+    recipe = generate_segmented_quintic_recipe(
+        ACTUAL,
+        TARGET,
+        LIMITS,
+        maximum_velocity_rad_s=0.5,
+        maximum_acceleration_rad_s2=1.0,
+        maximum_segment_delta_rad=0.25,
+    )
+    common = dict(
+        recipe=recipe,
+        source_instance_id="1" * 32,
+        sequence=1,
+        source_monotonic_ns=1,
+        session_id="session-a",
+        state_instance_id="2" * 32,
+        model_sha256="3" * 64,
+        gravity_config_sha256="4" * 64,
+        thermal_config_sha256="5" * 64,
+    )
+    for replacement in ("short", "g" * 32):
+        candidate = dict(common, source_instance_id=replacement)
+        with pytest.raises(ContractViolation, match="source_instance_id"):
+            planned_trajectory_feasibility_request(**candidate)
+    with pytest.raises(ContractViolation, match="timestamp"):
+        planned_trajectory_feasibility_request(
+            **dict(common, source_monotonic_ns=0)
+        )

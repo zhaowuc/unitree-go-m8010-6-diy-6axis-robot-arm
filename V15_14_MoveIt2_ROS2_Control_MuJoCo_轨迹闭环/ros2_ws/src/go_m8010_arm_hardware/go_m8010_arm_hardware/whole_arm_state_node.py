@@ -37,9 +37,16 @@ from .state_model import (
     MirrorSessionReferenceV1,
     PositionSpanVelocityObserver,
     WorkerSupervisorStatusError,
+    parse_controller_feedback_metadata,
     parse_feedback_payload,
     unavailable_worker_control_status,
     validate_worker_supervisor_status,
+)
+from .thermal_manager import (
+    THERMAL_CONFIG_SHA256,
+    ThermalLimits,
+    load_thermal_limits,
+    thermal_state_from_controller_metadata,
 )
 
 
@@ -119,6 +126,141 @@ def update_j2_sync_fault(previous: bool, samples: Iterable, payload: dict) -> bo
     if any(getattr(sample, "motor", None) in J2_MOTOR_NAMES for sample in samples):
         return bool(payload.get("j2_sync_fault", False))
     return previous
+
+
+def controller_metadata_for_hardware_state(
+    record: Optional[dict], motor_state: dict, thermal_limits: ThermalLimits,
+) -> dict:
+    """Pair safety metadata with exactly the fresh encoder sample it described."""
+
+    current = bool(
+        isinstance(record, dict)
+        and motor_state.get("fresh") is True
+        and record.get("source_monotonic_ns")
+        == motor_state.get("feedback_source_monotonic_ns")
+        and record.get("receipt_monotonic_ns")
+        == motor_state.get("feedback_receipt_monotonic_ns")
+    )
+    if not current:
+        return {
+            "metadata_status": "UNKNOWN",
+            "controller_mode": "unknown",
+            "domain_fault": None,
+            "lease_safe_hold": None,
+            "brake_observed": None,
+            "thermal": {
+                "metadata_status": "UNKNOWN",
+                "state": "UNKNOWN",
+                "fault_latched": None,
+                "cooldown_ready": None,
+                "release_observed": None,
+                "rearm_pending_next_cycle": None,
+                "cooldown_valid_brake_frames": None,
+                "trip_activation_epoch": None,
+                "minimum_rearm_epoch": None,
+                "domain_reported_state": None,
+                "reported_state_by_motor": None,
+                "reported_state": None,
+                "reported_state_consistent": None,
+                "trip_reason": None,
+                "thermal_config_sha256": None,
+                "derating_factor": None,
+                "raw_temperature_c": None,
+                "window_median_c": None,
+                "slope_c_per_min": None,
+            },
+            "no_progress": {
+                "metadata_status": "UNKNOWN",
+                "fault_latched": None,
+                "release_observed": None,
+                "rearm_pending_next_cycle": None,
+                "qualifying_frames": None,
+                "observation_valid": None,
+                "position_error_rad": None,
+                "trip_position_error_rad": None,
+                "software_saturation_observed": None,
+                "watchdog_authority": None,
+                "continuous_rating_authoritative": False,
+                "trip_activation_epoch": None,
+                "minimum_rearm_epoch": None,
+            },
+            "gravity": {
+                "metadata_status": "UNKNOWN",
+                "authority_present": None,
+                "scale": None,
+                "scale_target": None,
+                "feedforward_nm": None,
+                "applied_rotor_nm": None,
+            },
+        }
+
+    assert record is not None
+    thermal = dict(record["thermal"])
+    if thermal["metadata_status"] == "OBSERVED":
+        temperature = motor_state.get("temperature_c")
+        if (
+            type(temperature) in {int, float}
+            and math.isfinite(float(temperature))
+            and float(temperature) < 0.0
+        ):
+            derived_thermal_state = "OFFLINE"
+        else:
+            derived_thermal_state = thermal_state_from_controller_metadata(
+                motor_state.get("temperature_c"),
+                fault_latched=thermal["fault_latched"],
+                cooldown_ready=thermal["cooldown_ready"],
+                limits=thermal_limits,
+            ).value
+        reported_state = thermal.get("reported_state")
+        reported_state_consistent = (
+            None if reported_state is None
+            else reported_state == derived_thermal_state
+        )
+        # A contradictory worker display state is not promoted to a healthy
+        # shared state.  The raw latch/temperature remain available to diagnose
+        # the producer, while motion authorization stays fail-closed.
+        thermal_state = (
+            "UNKNOWN"
+            if reported_state_consistent is False
+            else derived_thermal_state
+        )
+    else:
+        temperature = motor_state.get("temperature_c")
+        thermal_state = (
+            "THERMAL_STOP"
+            if type(temperature) in {int, float}
+            and math.isfinite(float(temperature))
+            and float(temperature) >= thermal_limits.thermal_stop_c
+            else "UNKNOWN"
+        )
+        reported_state_consistent = None
+    thermal.update({
+        "state": thermal_state,
+        "reported_state_consistent": reported_state_consistent,
+    })
+
+    mode = record["controller_mode"]
+    communication_ok = bool(
+        motor_state.get("communication_ok") is True
+        and motor_state.get("merror") == 0
+    )
+    return {
+        "metadata_status": "OBSERVED",
+        "controller_mode": mode,
+        "domain_fault": record["domain_fault"],
+        "lease_safe_hold": record["lease_safe_hold"],
+        "brake_observed": bool(communication_ok and mode == "brake"),
+        "thermal": thermal,
+        "no_progress": dict(record["no_progress"]),
+        "gravity": {
+            **record["gravity"],
+            "feedforward_nm": (
+                None
+                if record["gravity"]["feedforward_nm"] is None
+                else list(record["gravity"]["feedforward_nm"])
+            ),
+        },
+    }
 
 
 def load_persistent_zero(path: Path) -> tuple[dict[str, float], str]:
@@ -412,12 +554,21 @@ class WholeArmStateNode(Node):
         self.declare_parameter("initial_pose_path", "")
         self.declare_parameter("j2_session_reference_path", "")
         self.declare_parameter("go_aux_session_reference_path", "")
+        self.declare_parameter("thermal_config_path", "")
         self.declare_parameter("worker_supervisor_freshness_s", 1.0)
 
         rate_hz = float(self.get_parameter("publish_rate_hz").value)
         monitor_rate_hz = float(self.get_parameter("monitor_rate_hz").value)
         if rate_hz < 50.0 or monitor_rate_hz <= 0.0:
             raise ValueError("publish_rate_hz must be >=50 and monitor_rate_hz >0")
+        thermal_config_text = str(
+            self.get_parameter("thermal_config_path").value
+        )
+        if not thermal_config_text:
+            raise ValueError("thermal_config_path is required")
+        self.thermal_limits = load_thermal_limits(
+            Path(thermal_config_text).resolve()
+        )
         zero_path_text = str(self.get_parameter("persistent_zero_path").value)
         persistent_references = None
         self.persistent_zero_sha256: Optional[str] = None
@@ -560,6 +711,11 @@ class WholeArmStateNode(Node):
         self.controller_modes: dict[str, str] = {}
         self.controller_faults: dict[str, bool] = {}
         self.controller_lease_safe_hold: dict[str, bool] = {}
+        self.controller_thermal: dict[str, dict] = {}
+        # One immutable-by-convention record per latest accepted motor sample.
+        # A complete copy is swapped only after the model accepts the same
+        # datagram, so publishers never pair new safety metadata with old q.
+        self.controller_feedback: dict[str, dict] = {}
         self.j2_sync_fault = False
         self.reference_announced = False
         self.session_id: Optional[str] = None
@@ -650,45 +806,38 @@ class WholeArmStateNode(Node):
             if payload.get("schema") != "go-m8010-motor-feedback/1.0":
                 raise ValueError("feedback payload schema mismatch")
             samples = list(parse_feedback_payload(payload, receipt_ns))
-            controller_mode = str(payload.get("controller_mode", "unknown"))
-            if controller_mode not in CONTROLLER_MODES:
-                raise ValueError("controller mode is invalid")
-            controller_mode_by_motor = payload.get("controller_mode_by_motor", {})
-            if not isinstance(controller_mode_by_motor, dict):
-                raise ValueError("controller_mode_by_motor must be an object")
-            if "domain_fault" not in payload:
-                raise ValueError("domain_fault is required")
-            controller_fault = payload["domain_fault"]
-            if type(controller_fault) is not bool:
-                raise ValueError("domain_fault must be boolean")
-            lease_safe_hold = payload.get("lease_safe_hold", False)
-            if type(lease_safe_hold) is not bool:
-                raise ValueError("lease_safe_hold must be boolean")
+            metadata_updates = parse_controller_feedback_metadata(
+                payload, samples
+            )
             if any(sample.motor in J2_MOTOR_NAMES for sample in samples):
                 if "j2_sync_fault" not in payload:
                     raise ValueError("j2_sync_fault is required for J2 feedback")
                 if type(payload["j2_sync_fault"]) is not bool:
                     raise ValueError("j2_sync_fault must be boolean")
-            mode_updates = {}
-            for sample in samples:
-                motor_mode = str(
-                    controller_mode_by_motor.get(sample.motor, controller_mode)
-                )
-                if motor_mode not in CONTROLLER_MODES:
-                    raise ValueError("controller mode is invalid")
-                mode_updates[sample.motor] = motor_mode
             next_j2_sync_fault = update_j2_sync_fault(
                 self.j2_sync_fault, samples, payload
             )
+            next_controller_feedback = dict(self.controller_feedback)
+            next_controller_feedback.update(metadata_updates)
+            next_modes = dict(self.controller_modes)
+            next_faults = dict(self.controller_faults)
+            next_lease_holds = dict(self.controller_lease_safe_hold)
+            next_thermal = dict(self.controller_thermal)
+            for motor, metadata in metadata_updates.items():
+                next_modes[motor] = metadata["controller_mode"]
+                next_faults[motor] = metadata["domain_fault"]
+                next_lease_holds[motor] = metadata["lease_safe_hold"] is True
+                next_thermal[motor] = metadata["thermal"]
             # The model and safety metadata form one accepted datagram. The
-            # transactional model update must finish before any confirmation
-            # or J2 interlock flag becomes externally visible.
+            # transactional model update must finish before the complete
+            # replacement maps become externally visible.
             self.model.update_batch(samples)
             self.j2_sync_fault = next_j2_sync_fault
-            for sample in samples:
-                self.controller_modes[sample.motor] = mode_updates[sample.motor]
-                self.controller_faults[sample.motor] = controller_fault
-                self.controller_lease_safe_hold[sample.motor] = lease_safe_hold
+            self.controller_feedback = next_controller_feedback
+            self.controller_modes = next_modes
+            self.controller_faults = next_faults
+            self.controller_lease_safe_hold = next_lease_holds
+            self.controller_thermal = next_thermal
         except Exception as exc:
             self.record_invalid_payload(exc)
 
@@ -802,30 +951,226 @@ class WholeArmStateNode(Node):
             self.go_aux_session_reference_sha256
         )
         snapshot["j2_active_motion_used"] = False
-        snapshot["zero_gravity"] = "NOT_IMPLEMENTED"
-        snapshot["controller_mode_by_motor"] = {
-            name: (
-                self.controller_modes.get(name, "unknown")
-                if snapshot["per_motor"][name]["fresh"]
-                else "unknown"
+        feedback_records = self.controller_feedback
+        controller_metadata = {
+            name: controller_metadata_for_hardware_state(
+                feedback_records.get(name), snapshot["per_motor"][name],
+                self.thermal_limits,
             )
             for name in MOTOR_NAMES
         }
+        for name in MOTOR_NAMES:
+            metadata = controller_metadata[name]
+            thermal = metadata["thermal"]
+            no_progress = metadata["no_progress"]
+            gravity = metadata["gravity"]
+            snapshot["per_motor"][name].update({
+                "controller_metadata_status": metadata["metadata_status"],
+                "thermal_metadata_status": thermal["metadata_status"],
+                "thermal_state": thermal["state"],
+                "thermal_fault_latched": thermal["fault_latched"],
+                "thermal_cooldown_ready": thermal["cooldown_ready"],
+                "thermal_release_observed": thermal["release_observed"],
+                "thermal_rearm_pending_next_cycle": thermal[
+                    "rearm_pending_next_cycle"
+                ],
+                "thermal_cooldown_valid_brake_frames": thermal[
+                    "cooldown_valid_brake_frames"
+                ],
+                "thermal_trip_activation_epoch": thermal[
+                    "trip_activation_epoch"
+                ],
+                "thermal_minimum_rearm_epoch": thermal[
+                    "minimum_rearm_epoch"
+                ],
+                "thermal_domain_reported_state": thermal[
+                    "domain_reported_state"
+                ],
+                "thermal_reported_state": thermal["reported_state"],
+                "thermal_reported_state_consistent": thermal[
+                    "reported_state_consistent"
+                ],
+                "thermal_trip_reason": thermal["trip_reason"],
+                "thermal_config_sha256": thermal[
+                    "thermal_config_sha256"
+                ],
+                "thermal_derating_factor": thermal["derating_factor"],
+                "thermal_raw_temperature_c": thermal["raw_temperature_c"],
+                "thermal_window_median_c": thermal["window_median_c"],
+                "thermal_slope_c_per_min": thermal["slope_c_per_min"],
+                "no_progress_metadata_status": no_progress[
+                    "metadata_status"
+                ],
+                "load_limit_no_progress": no_progress["fault_latched"],
+                "no_progress_release_observed": no_progress[
+                    "release_observed"
+                ],
+                "no_progress_rearm_pending_next_cycle": no_progress[
+                    "rearm_pending_next_cycle"
+                ],
+                "no_progress_watchdog_qualifying_frames": no_progress[
+                    "qualifying_frames"
+                ],
+                "no_progress_observation_valid": no_progress[
+                    "observation_valid"
+                ],
+                "no_progress_position_error_rad": no_progress[
+                    "position_error_rad"
+                ],
+                "no_progress_trip_position_error_rad": no_progress[
+                    "trip_position_error_rad"
+                ],
+                "load_limit_watchdog_authority": no_progress[
+                    "watchdog_authority"
+                ],
+                "continuous_rating_authoritative": no_progress[
+                    "continuous_rating_authoritative"
+                ],
+                "no_progress_trip_activation_epoch": no_progress[
+                    "trip_activation_epoch"
+                ],
+                "no_progress_minimum_rearm_epoch": no_progress[
+                    "minimum_rearm_epoch"
+                ],
+                "gravity_metadata_status": gravity["metadata_status"],
+                "gravity_authority_present": gravity["authority_present"],
+                "gravity_scale": gravity["scale"],
+                "gravity_scale_target": gravity["scale_target"],
+                "gravity_feedforward_nm": gravity["feedforward_nm"],
+                "gravity_feedforward_rotor_nm": gravity[
+                    "applied_rotor_nm"
+                ],
+            })
+        snapshot["thermal_state_by_motor"] = {
+            name: snapshot["per_motor"][name]["thermal_state"]
+            for name in MOTOR_NAMES
+        }
+        snapshot["thermal_limits"] = self.thermal_limits.as_mapping()
+        snapshot["thermal_config_sha256"] = THERMAL_CONFIG_SHA256
+        snapshot["thermal_fault_latched_by_motor"] = {
+            name: snapshot["per_motor"][name]["thermal_fault_latched"]
+            for name in MOTOR_NAMES
+        }
+        snapshot["thermal_status_by_motor"] = {
+            name: dict(controller_metadata[name]["thermal"])
+            for name in MOTOR_NAMES
+        }
+        snapshot["no_progress_status_by_motor"] = {
+            name: dict(controller_metadata[name]["no_progress"])
+            for name in MOTOR_NAMES
+        }
+        snapshot["load_limit_no_progress_by_motor"] = {
+            name: controller_metadata[name]["no_progress"]["fault_latched"]
+            for name in MOTOR_NAMES
+        }
+        snapshot["gravity_policy_by_motor"] = {
+            name: {
+                **controller_metadata[name]["gravity"],
+                "feedforward_nm": (
+                    None
+                    if controller_metadata[name]["gravity"]["feedforward_nm"]
+                    is None
+                    else list(
+                        controller_metadata[name]["gravity"]["feedforward_nm"]
+                    )
+                ),
+            }
+            for name in MOTOR_NAMES
+        }
+        snapshot["gravity_feedforward_rotor_nm_by_motor"] = {
+            name: controller_metadata[name]["gravity"]["applied_rotor_nm"]
+            for name in MOTOR_NAMES
+        }
+        go_gravity_feedback_observed = all(
+            controller_metadata[name]["gravity"]["metadata_status"]
+            == "OBSERVED"
+            for name in MOTOR_NAMES
+            if name != "J6"
+        )
+        snapshot["gravity_feedback_status"] = (
+            "OBSERVED" if go_gravity_feedback_observed else "UNKNOWN"
+        )
+        # Legacy field retained, but no longer claims that the implemented
+        # worker feedback path is absent.
+        snapshot["zero_gravity"] = (
+            "WORKER_APPLIED_FEEDBACK"
+            if go_gravity_feedback_observed else "UNKNOWN"
+        )
+        snapshot["trajectory_status_by_motor"] = {
+            name: {
+                "plan_token_id": snapshot["per_motor"][name][
+                    "trajectory_plan_token_id"
+                ],
+                "trajectory_sha256": snapshot["per_motor"][name][
+                    "trajectory_sha256"
+                ],
+                "state": snapshot["per_motor"][name]["trajectory_state"],
+                "sample_index": snapshot["per_motor"][name][
+                    "trajectory_sample_index"
+                ],
+                "interval_count": snapshot["per_motor"][name][
+                    "trajectory_interval_count"
+                ],
+            }
+            for name in MOTOR_NAMES
+        }
+        snapshot["controller_mode_by_motor"] = {
+            name: controller_metadata[name]["controller_mode"]
+            for name in MOTOR_NAMES
+        }
         snapshot["controller_fault_by_motor"] = {
-            name: bool(self.controller_faults.get(name, False))
+            # Compatibility bool for GUI/1.1.  The parallel observation map is
+            # authoritative about UNKNOWN; callers must not treat False as a
+            # complete observation when metadata_status is UNKNOWN.
+            name: controller_metadata[name]["domain_fault"] is True
+            for name in MOTOR_NAMES
+        }
+        snapshot["controller_fault_observed_by_motor"] = {
+            name: controller_metadata[name]["domain_fault"]
+            for name in MOTOR_NAMES
+        }
+        snapshot["controller_metadata_status_by_motor"] = {
+            name: controller_metadata[name]["metadata_status"]
+            for name in MOTOR_NAMES
+        }
+        snapshot["brake_observed_by_motor"] = {
+            name: controller_metadata[name]["brake_observed"]
             for name in MOTOR_NAMES
         }
         snapshot["lease_safe_hold_by_motor"] = {
             name: bool(
-                self.controller_lease_safe_hold.get(name, False)
-                and self.controller_modes.get(name) == "hold"
-                and snapshot["per_motor"][name]["fresh"]
+                controller_metadata[name]["lease_safe_hold"] is True
+                and controller_metadata[name]["controller_mode"] == "hold"
                 and snapshot["per_motor"][name]["communication_ok"]
                 and snapshot["per_motor"][name]["merror"] == 0
-                and not self.controller_faults.get(name, False)
+                and controller_metadata[name]["domain_fault"] is False
             )
             for name in MOTOR_NAMES
         }
+        snapshot["telemetry_healthy"] = snapshot["healthy"]
+        snapshot["safety_metadata_ready"] = all(
+            controller_metadata[name]["metadata_status"] == "OBSERVED"
+            and controller_metadata[name]["domain_fault"] is False
+            and controller_metadata[name]["thermal"]["metadata_status"]
+            == "OBSERVED"
+            and controller_metadata[name]["thermal"]["state"]
+            in {"NORMAL", "WARNING"}
+            and controller_metadata[name]["no_progress"]["metadata_status"]
+            == "OBSERVED"
+            and controller_metadata[name]["no_progress"]["fault_latched"]
+            is False
+            and (
+                name == "J6"
+                or controller_metadata[name]["gravity"]["metadata_status"]
+                == "OBSERVED"
+            )
+            for name in MOTOR_NAMES
+        )
+        snapshot["healthy"] = bool(
+            snapshot["telemetry_healthy"]
+            and snapshot["safety_metadata_ready"]
+            and not self.j2_sync_fault
+        )
         snapshot["j2_sync_fault"] = self.j2_sync_fault
         # Feedback freshness and controller_mode describe only observed
         # telemetry.  PID/UDP-owner command-receiver liveness is a separate,

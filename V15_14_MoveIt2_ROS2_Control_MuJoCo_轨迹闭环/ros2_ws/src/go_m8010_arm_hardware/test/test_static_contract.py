@@ -92,6 +92,128 @@ class StaticContractTest(unittest.TestCase):
         self.assertLess(prime_call, feedback_socket)
         self.assertLess(feedback_socket, main_feedback_send)
 
+    def test_go_worker_thermal_stop_is_latched_and_requires_two_phase_rearm(self):
+        source = (
+            REPOSITORY / "tools" / "hardware" / "v15_30a_gui_go_controller.cpp"
+        ).read_text(encoding="utf-8")
+        for token in (
+            "constexpr char kThermalConfigSha256[]",
+            "ThermalPolicy g_thermal_policy",
+            "parse_thermal_policy_yaml",
+            "read_secure_owned_policy_file",
+            '"THERMAL_CONFIG_EXPECTED_SHA256_MISMATCH"',
+            '"THERMAL_CONFIG_SHA256_MISMATCH"',
+            "g_thermal_policy = parse_thermal_policy_yaml",
+            "g_thermal_policy.thermal_stop_c",
+            "g_thermal_policy.derating_start_c",
+            "g_thermal_policy.cooldown_seconds",
+            "kThermalCooldownConsecutiveFrames = 500",
+            "observe_raw_temperature_thermal_trip",
+            "all_domain_motors_thermal_cooldown_qualified",
+            "observe_thermal_cooldown_frame",
+            "observe_explicit_thermal_release",
+            "request_thermal_rearm_for_next_cycle",
+            "apply_pending_thermal_rearm_at_cycle_start",
+            "thermal_derating_factor_for_raw_temperature",
+            "thermal_derating_self_test();",
+            "thermally_derated_command.vmax *= thermal_derating_factor",
+            "thermally_derated_command.amax *= thermal_derating_factor",
+            "thermally_derated_command.kp[joint] *= thermal_derating_factor",
+            "thermally_derated_command.kd[joint] *= thermal_derating_factor",
+            "if (!control_command.quintic.present)",
+            "dq_command[index] *= thermal_derating_factor",
+            '"EXACT_TRAJECTORY_DERATING_ABORT"',
+            '"thermal_derating_factor"',
+            "activation_epoch > state.trip_activation_epoch",
+            "activation_epoch >= state.minimum_rearm_epoch",
+            "activation_epoch > highest_rejected_active_epoch",
+            "thermal_interlock_self_test();",
+            '"THERMAL_TRIP"',
+            '"THERMAL_COOLDOWN_READY"',
+            '"THERMAL_RELEASE_OBSERVED"',
+            '"THERMAL_REARM_PENDING_NEXT_CYCLE"',
+            '"thermal_fault", thermal_interlock.fault_latched',
+            '"thermal_minimum_rearm_epoch"',
+            '"thermal_cooldown_valid_brake_frames"',
+            '"THERMAL_59_AUTO_RECOVERY_SELF_TEST_FAILED"',
+            '"THERMAL_FIVE_SECOND_COOLDOWN_SELF_TEST_FAILED"',
+            '"THERMAL_30_SECOND_COOLDOWN_SELF_TEST_FAILED"',
+            '"THERMAL_NEXT_CYCLE_REARM_SELF_TEST_FAILED"',
+        ):
+            self.assertIn(token, source)
+        thermal_clear = source.split(
+            "bool apply_pending_thermal_rearm_at_cycle_start", 1
+        )[1].split("void reset_no_progress_observation", 1)[0]
+        self.assertEqual(thermal_clear.count("state.fault_latched = false;"), 1)
+
+        cooldown_domain = source.split(
+            "bool all_domain_motors_thermal_cooldown_qualified", 1
+        )[1].split("void publish_thermal_latch_to_motors", 1)[0]
+        for token in (
+            "motor.last_frame_valid && motor.valid",
+            "motor.merror == 0",
+            "motor.returned_mode == kBrakeMode",
+            "motor.temperature < g_thermal_policy.rearm_below_c",
+        ):
+            self.assertIn(token, cooldown_domain)
+        release_policy = source.split(
+            "bool observe_explicit_thermal_release", 1
+        )[1].split("bool request_thermal_rearm_for_next_cycle", 1)[0]
+        self.assertIn("!state.cooldown_ready", release_policy)
+
+        runtime = source.split("int run(const Options& options)", 1)[1]
+        trip = runtime.split(
+            "const bool newly_latched = observe_raw_temperature_thermal_trip", 1
+        )[1].split("if (feedback.continuity_valid)", 1)[0]
+        for token in (
+            "feedback.data.temp >= g_thermal_policy.thermal_stop_c",
+            "publish_thermal_latch_to_motors(motors, true)",
+            "motor_domain_brake_this_cycle = true",
+            'effective_mode = "brake"',
+            "position_tracking.fill(false)",
+            "reset_bounded_hold_integral(state)",
+        ):
+            self.assertIn(token, trip)
+        self.assertIn("!thermal_interlock.fault_latched", runtime)
+
+        thermal_config_gate = runtime.index(
+            "options.expected_thermal_config_sha256 != kThermalConfigSha256"
+        )
+        thermal_config_read = runtime.index(
+            "read_secure_owned_policy_file", thermal_config_gate
+        )
+        bus_definition = runtime.index(
+            "const BusDefinition definition", thermal_config_read
+        )
+        stable_port_access = runtime.index("::access(definition.port", bus_definition)
+        self.assertLess(thermal_config_gate, thermal_config_read)
+        self.assertLess(thermal_config_read, bus_definition)
+        self.assertLess(bus_definition, stable_port_access)
+
+        exact_abort = runtime.split(
+            "const bool exact_trajectory_thermal_derating_region", 1
+        )[1].split("std::array<double, 6> q_command", 1)[0]
+        self.assertIn("control_command.quintic.present", exact_abort)
+        self.assertIn("g_thermal_policy.derating_start_c", exact_abort)
+        self.assertIn('"EXACT_TRAJECTORY_DERATING_ABORT"', exact_abort)
+
+        rearm_request = runtime.index("request_thermal_rearm_for_next_cycle(")
+        feedback_publish = runtime.index("const std::string payload = feedback_payload(")
+        self.assertLess(rearm_request, feedback_publish)
+        self.assertIn(
+            "The latch deliberately remains set for this complete decision cycle",
+            runtime[rearm_request:feedback_publish],
+        )
+
+        continuity = source.split("result.continuity_valid =", 1)[1].split(
+            "result.actuation_safe =", 1
+        )[0]
+        self.assertNotIn("data.temp", continuity)
+        self.assertNotIn("data.merror", continuity)
+        actuation = source.split("result.actuation_safe =", 1)[1].split(";", 1)[0]
+        self.assertIn("data.merror", actuation)
+        self.assertIn("data.temp", actuation)
+
     def test_go_gui_socket_rejects_unauthenticated_recovery_commands(self):
         source = (
             REPOSITORY / "tools" / "hardware" / "v15_30a_gui_go_controller.cpp"
@@ -207,15 +329,20 @@ class StaticContractTest(unittest.TestCase):
         )[0]
         self.assertNotIn("fault_latched", observer)
 
-    def test_arrival_overdue_is_reported_without_stopping_position_servo(self):
+    def test_arrival_timeout_latches_domain_brake_and_reuses_safe_rearm(self):
         source = (
             REPOSITORY / "tools" / "hardware" / "v15_30a_gui_go_controller.cpp"
         ).read_text(encoding="utf-8")
         for token in (
             "position_arrival_overdue",
             '"POSITION_ARRIVAL_OVERDUE"',
-            '"POSITION_ARRIVAL_RECOVERED"',
-            "POSITION_ARRIVAL_TIMEOUT_POLICY=TRANSITION_LOG_ONLY_CONTINUE_HOLDING",
+            "position_arrival_timeout_detected",
+            "position_arrival_timeout_latched",
+            "latch_position_safety_watchdog",
+            '"POSITION_ARRIVAL_TIMEOUT"',
+            "POSITION_ARRIVAL_TIMEOUT_POLICY=",
+            "LATCHED_DOMAIN_BRAKE_EXPLICIT_RELEASE_HIGHER_EPOCH_NEXT_CYCLE",
+            'std::cerr << "POSITION_SAFETY_LATCH"',
         ):
             self.assertIn(token, source)
         self.assertNotIn('latch_domain_fault("J2_ARRIVAL_TIMEOUT")', source)
@@ -271,6 +398,106 @@ class StaticContractTest(unittest.TestCase):
             '"COMMAND_MIXED_LEASE_CAPTURE_SELF_TEST_FAILED"',
         ):
             self.assertIn(token, source)
+
+    def test_go_worker_v13_quintic_authority_is_strict_and_time_indexed(self):
+        source = (
+            REPOSITORY / "tools" / "hardware" / "v15_30a_gui_go_controller.cpp"
+        ).read_text(encoding="utf-8")
+        for token in (
+            '"go-m8010-gui-command/1.3"',
+            '"go-m8010-quintic-command/1.0"',
+            '"quintic-rest-to-rest-v1"',
+            "struct QuinticTrajectoryDescriptor",
+            "kMaximumQuinticIntervalCount = 1000000ULL",
+            "kMaximumQuinticSamplePeriodNs = 10000000ULL",
+            "trajectory.size() != kRequiredFields.size()",
+            "result.duration_ns % result.interval_count != 0U",
+            "COMMAND_QUINTIC_SAMPLE_GRID_INVALID",
+            "COMMAND_QUINTIC_TARGETS_MISMATCH",
+            "COMMAND_QUINTIC_NONMOVING_AXIS_CHANGED",
+            "COMMAND_QUINTIC_MOVING_JOINT_COUNT_INVALID",
+            "COMMAND_QUINTIC_MOVING_DISPLACEMENT_ZERO",
+            "COMMAND_QUINTIC_ENDPOINT_STEP_INVALID",
+            "COMMAND_QUINTIC_MOVING_MASK_MISSING",
+            "COMMAND_QUINTIC_PEAK_VELOCITY_LIMIT",
+            "COMMAND_QUINTIC_PEAK_ACCELERATION_LIMIT",
+            "COMMAND_QUINTIC_START_MODEL_ENVELOPE",
+            "COMMAND_QUINTIC_FIRST_PACKET_TOO_LATE",
+            "validate_first_quintic_start_against_feedback",
+            "COMMAND_QUINTIC_START_FEEDBACK_UNHEALTHY",
+            "COMMAND_QUINTIC_START_FEEDBACK_MISMATCH",
+            "COMMAND_QUINTIC_DESCRIPTOR_CHANGED_SAME_EPOCH",
+            "same_quintic_trajectory_descriptor",
+            "quintic_sample_clock",
+            "unsigned __int128",
+            "floor((now-execute_at)*N/duration_ns)",
+            "apply_quintic_reference",
+            "q_command[index] = command.quintic.target_rad[index]",
+            '"trajectory_plan_token_id"',
+            '"trajectory_sha256"',
+            '"trajectory_state"',
+            '"trajectory_sample_index"',
+            '"trajectory_interval_count"',
+            'const char* state = "PREPARED"',
+            '"RUNNING"',
+            '"COMPLETE"',
+            'reported_trajectory_state = "INACTIVE"',
+            '"COMMAND_QUINTIC_STRICT_FIELDS_SELF_TEST_FAILED"',
+            '"COMMAND_QUINTIC_START_ENVELOPE_SELF_TEST_FAILED"',
+            '"COMMAND_QUINTIC_MOVING_MASK_SELF_TEST_FAILED"',
+            '"COMMAND_QUINTIC_INTEGER_GRID_SELF_TEST_FAILED"',
+            '"COMMAND_QUINTIC_TEN_MS_GRID_SELF_TEST_FAILED"',
+            '"COMMAND_QUINTIC_ENDPOINT_STEP_SELF_TEST_FAILED"',
+            '"COMMAND_QUINTIC_ZERO_DISPLACEMENT_SELF_TEST_FAILED"',
+            '"COMMAND_QUINTIC_START_MISMATCH_SELF_TEST_FAILED"',
+            '"COMMAND_QUINTIC_START_HEALTH_SELF_TEST_FAILED"',
+            '"COMMAND_QUINTIC_LATE_FIRST_PACKET_SELF_TEST_FAILED"',
+            '"COMMAND_QUINTIC_IMMUTABLE_SELF_TEST_FAILED"',
+            '"COMMAND_QUINTIC_INTEGER_SAMPLE_SELF_TEST_FAILED"',
+            '"COMMAND_QUINTIC_EXACT_ENDPOINT_SELF_TEST_FAILED"',
+        ):
+            self.assertIn(token, source)
+
+        start_feedback_guard = source.split(
+            "void validate_first_quintic_start_against_feedback", 2
+        )[2].split("bool maximum_moving_owned_position_error", 1)[0]
+        self.assertIn("healthy_logical_position_for_joint(", start_feedback_guard)
+        self.assertIn("kFixedHoldCaptureWindow + 1e-12", start_feedback_guard)
+
+        parser = source.split("void parse_command", 1)[1].split(
+            "std::uint64_t minimum_epoch_after_lease", 1
+        )[0]
+        self.assertIn("candidate.quintic = QuinticTrajectoryDescriptor{}", parser)
+        self.assertIn(
+            'if (schema == "go-m8010-gui-command/1.3" && mode == "position")',
+            parser,
+        )
+
+        runtime = source.split("int run(const Options& options)", 1)[1]
+        measured_replan = runtime.split(
+            "const bool active_transition", 1
+        )[1].split("if (is_position_holding_mode(effective_mode))", 1)[0]
+        self.assertIn("!control_command.quintic.present", measured_replan)
+        planned = runtime.split("std::set<int> planned", 1)[1].split(
+            "std::array<bool, 6> profile_endpoint_phase", 1
+        )[0]
+        self.assertIn("if (control_command.quintic.present)", planned)
+        self.assertIn("apply_quintic_reference(", planned)
+        self.assertIn("else {\n            update_profile(", planned)
+        self.assertIn(
+            'std::string(trajectory_sample.state) != "PREPARED"', runtime
+        )
+        feedback_sample = source.split("samples.push_back({", 1)[1].split(
+            "controller_mode_by_motor[motor.name]", 1
+        )[0]
+        for field in (
+            '"trajectory_plan_token_id"',
+            '"trajectory_sha256"',
+            '"trajectory_state"',
+            '"trajectory_sample_index"',
+            '"trajectory_interval_count"',
+        ):
+            self.assertIn(field, feedback_sample)
 
     def test_release_commands_atomically_fence_same_epoch_backlog(self):
         source = (
@@ -381,9 +608,12 @@ class StaticContractTest(unittest.TestCase):
 
     def test_state_node_prefers_per_motor_controller_mode(self):
         source = (PACKAGE / "whole_arm_state_node.py").read_text(encoding="utf-8")
-        self.assertIn('payload.get("controller_mode_by_motor", {})', source)
-        self.assertIn("controller_mode_by_motor.get(sample.motor, controller_mode)", source)
-        self.assertIn('payload.get("lease_safe_hold", False)', source)
+        model = (PACKAGE / "state_model.py").read_text(encoding="utf-8")
+        self.assertIn('payload.get("controller_mode_by_motor", {})', model)
+        self.assertIn("set(modes_by_motor) != motors", model)
+        self.assertIn("mode = modes_by_motor[motor]", model)
+        self.assertIn('lease_value = payload.get("lease_safe_hold")', model)
+        self.assertIn("parse_controller_feedback_metadata", source)
         self.assertIn('snapshot["lease_safe_hold_by_motor"]', source)
 
     def test_j2_sync_warning_is_live_and_only_updated_by_j2_payloads(self):
@@ -417,16 +647,21 @@ class StaticContractTest(unittest.TestCase):
             source,
         )
         self.assertIn("self.model.update_batch(samples)", source)
-        self.assertIn('if "domain_fault" not in payload:', source)
+        self.assertIn("parse_controller_feedback_metadata", source)
         self.assertIn('if "j2_sync_fault" not in payload:', source)
         self.assertLess(
             source.index("self.model.update_batch(samples)"),
             source.index("self.j2_sync_fault = next_j2_sync_fault"),
         )
+        self.assertLess(
+            source.index("self.model.update_batch(samples)"),
+            source.index("self.controller_feedback = next_controller_feedback"),
+        )
         self.assertIn('snapshot["schema"] = "go-m8010-hardware-state/1.1"', source)
         self.assertIn('snapshot["state_instance_id"] = self.state_instance_id', source)
         self.assertIn('snapshot["source_monotonic_ns"] = now_monotonic_ns', source)
-        self.assertIn('and snapshot["per_motor"][name]["fresh"]', source)
+        self.assertIn("controller_metadata_for_hardware_state", source)
+        self.assertIn('motor_state.get("fresh") is True', source)
 
     def test_mock_feedback_implements_the_strict_safety_contract(self):
         source = (PACKAGE / "mock_feedback_node.py").read_text(encoding="utf-8")
@@ -493,7 +728,7 @@ class StaticContractTest(unittest.TestCase):
         self.assertNotIn('latch_domain_fault("J2_FEEDFORWARD_BASE_INFEASIBLE")', source)
         self.assertNotIn('latch_domain_fault("J2_PD_PREDICTION_LIMIT")', source)
 
-    def test_j2_torque_saturation_keeps_foc_and_never_latches_brake(self):
+    def test_software_saturation_feeds_latched_no_progress_watchdog(self):
         source = (
             REPOSITORY / "tools" / "hardware" / "v15_30a_gui_go_controller.cpp"
         ).read_text(encoding="utf-8")
@@ -502,11 +737,15 @@ class StaticContractTest(unittest.TestCase):
         )[1].split("if (any_foc_sent)", 1)[0]
         for token in (
             "any_foc_sent",
-            '"J2_TORQUE_FEEDBACK_SATURATED_KEEPING_FOC"',
-            '"J2_TORQUE_FEEDBACK_SATURATION_RECOVERED"',
+            "software_saturation_observed_this_cycle",
+            '"J2_TORQUE_FEEDBACK_SOFTWARE_SATURATION_OBSERVED"',
+            '"J2_TORQUE_FEEDBACK_SOFTWARE_SATURATION_RECOVERED"',
+            "kLoadLimitWatchdogAuthority",
             "j2_torque_feedback_saturated_reported = torque_feedback_saturated",
         ):
             self.assertIn(token, saturation)
+        # One saturated frame remains an observation; only the persistent
+        # error/no-improvement watchdog below may latch and brake.
         for forbidden in (
             "fault_latched",
             "latch_domain_fault",
@@ -514,6 +753,151 @@ class StaticContractTest(unittest.TestCase):
             "kBrakeMode",
         ):
             self.assertNotIn(forbidden, saturation)
+
+        for token in (
+            '"SOFTWARE_GUARD_NOT_CONTINUOUS_RATING"',
+            "kNoProgressMinimumPositionError = 2.0",
+            "kNoProgressMinimumImprovement = 0.25",
+            "kNoProgressWindowSeconds = 3.0",
+            "kNoProgressMinimumQualifyingFrames = 100",
+            "struct NoProgressWatchdogState",
+            "latch_position_safety_watchdog",
+            "observe_no_progress_watchdog",
+            "maximum_moving_owned_position_error",
+            "software_saturation_joint_mask",
+            "!saturated_joint_mask[joint]",
+            "software_saturation_observed",
+            "position_error_rad >= kNoProgressMinimumPositionError",
+            "state.window_baseline_error_rad - position_error_rad",
+            "elapsed_seconds < kNoProgressWindowSeconds",
+            "observe_explicit_no_progress_release",
+            "request_no_progress_rearm_for_next_cycle",
+            "apply_pending_no_progress_rearm_at_cycle_start",
+            "activation_epoch > state.trip_activation_epoch",
+            "activation_epoch >= state.minimum_rearm_epoch",
+            "activation_epoch > highest_rejected_active_epoch",
+            "all_domain_motors_valid_brake_for_rearm",
+            "no_progress_watchdog_self_test();",
+            '"NO_PROGRESS_SHORT_WINDOW_SELF_TEST_FAILED"',
+            '"NO_PROGRESS_IMPROVEMENT_RESET_SELF_TEST_FAILED"',
+            '"NO_PROGRESS_GAP_RESET_SELF_TEST_FAILED"',
+            '"NO_PROGRESS_NEXT_CYCLE_REARM_SELF_TEST_FAILED"',
+            '"POSITION_ARRIVAL_TIMEOUT_LATCH_SELF_TEST_FAILED"',
+            '"POSITION_ARRIVAL_TIMEOUT"',
+            '"EXACT_TRAJECTORY_LOAD_GOVERNOR_ABORT"',
+            '"EXACT_TRAJECTORY_LOAD_GOVERNOR_ABORT_SELF_TEST_FAILED"',
+            '"V13_LOAD_GOVERNOR_TRAJECTORY_ABORT"',
+            "LATCHED_DOMAIN_BRAKE_EXPLICIT_RELEASE_HIGHER_EPOCH_NEXT_CYCLE",
+        ):
+            self.assertIn(token, source)
+
+        self.assertEqual(source.count("governed.alpha != 1.0"), 2)
+        self.assertNotIn("governed.alpha < 1.0 - 1e-9", source)
+        self.assertEqual(source.count("exact_recipe && governed.alpha == 1.0"), 4)
+
+        runtime = source.split("int run(const Options& options)", 1)[1]
+        exact_abort = runtime.index(
+            '"EXACT_TRAJECTORY_LOAD_GOVERNOR_ABORT"'
+        )
+        motor_send_loop = runtime.index("std::size_t motor_runtime_index", exact_abort)
+        self.assertLess(exact_abort, motor_send_loop)
+        trip = runtime.split(
+            "const bool no_progress_tripped_this_cycle", 1
+        )[1].split("bool lease_safe_hold_aborted_this_cycle", 1)[0]
+        for token in (
+            "motor_domain_brake_reason = no_progress_watchdog.trip_reason",
+            'effective_mode = "brake"',
+            "position_tracking.fill(false)",
+            "position_tracking_epoch.fill(0U)",
+            "reset_bounded_hold_integral(state)",
+            "hold_integral_wire_nm.fill(0.0)",
+            'std::cerr << "POSITION_SAFETY_LATCH"',
+            "transact_and_commit_brake(motor)",
+        ):
+            self.assertIn(token, trip)
+        brake_helper = runtime.split(
+            "auto transact_and_commit_brake", 1
+        )[1].split("if (motor_domain_brake_this_cycle)", 1)[0]
+        self.assertIn("make_command(", brake_helper)
+        self.assertIn("kBrakeMode", brake_helper)
+        self.assertNotIn("latch_domain_fault", trip)
+
+        pending = runtime.index("request_no_progress_rearm_for_next_cycle(")
+        publish = runtime.index("const std::string payload = feedback_payload(")
+        self.assertLess(pending, publish)
+        self.assertIn(
+            "decision cycle stays in domain BRAKE",
+            runtime[pending:publish],
+        )
+        payload = source.split("std::string feedback_payload", 1)[1].split(
+            "bool send_terminal_brake", 1
+        )[0]
+        for token in (
+            '"tau_cmd_rotor_nm", motor.last_tau_cmd_rotor_nm',
+            '"tau_feedback_rotor_nm", motor.last_tau',
+            '"tau_joint_estimated_nm", motor.sign * motor.last_tau * kGear',
+            '"tau_j2_logical_total_nm", tau_j2_logical_total_nm',
+            '"last_valid_feedback_monotonic_ns"',
+            '"load_limit_no_progress"',
+            '"no_progress_fault"',
+            '"no_progress_release_observed"',
+            '"no_progress_minimum_rearm_epoch"',
+            '"position_safety_trip_reason"',
+            '"software_saturation_observed"',
+            '"load_limit_watchdog_authority"',
+        ):
+            self.assertIn(token, payload)
+        self.assertNotIn('{"torque",', payload)
+        command_window = runtime.split(
+            "const double tau = send_mode == kFocMode", 1
+        )[1].split("const Feedback feedback = transact(", 1)[0]
+        self.assertIn(
+            "motor.last_tau_cmd_rotor_nm = send_mode == kFocMode ? tau : 0.0",
+            command_window,
+        )
+        self.assertIn("motor.last_tau_cmd_rotor_nm = 0.0", brake_helper)
+
+    def test_torque_runtime_fields_and_last_valid_feedback_are_end_to_end(self):
+        controller = (
+            REPOSITORY / "tools" / "hardware" / "v15_30a_gui_go_controller.cpp"
+        ).read_text(encoding="utf-8")
+        j6 = (
+            REPOSITORY
+            / "tools"
+            / "hardware"
+            / "j6_dm_g6220"
+            / "v15_30a_gui_j6_controller.py"
+        ).read_text(encoding="utf-8")
+        state_model = (PACKAGE / "state_model.py").read_text(encoding="utf-8")
+        gui = (
+            REPOSITORY
+            / "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环"
+            / "ros2_ws"
+            / "src"
+            / "go_m8010_arm_gui"
+            / "go_m8010_arm_gui"
+            / "main_window.py"
+        ).read_text(encoding="utf-8")
+        exact_fields = (
+            "tau_cmd_rotor_nm",
+            "tau_feedback_rotor_nm",
+            "tau_joint_estimated_nm",
+            "tau_j2_logical_total_nm",
+        )
+        for field in exact_fields:
+            self.assertIn(field, controller)
+            self.assertIn(field, j6)
+            self.assertIn(field, state_model)
+        self.assertIn('"tau_cmd_rotor_nm": None', j6)
+        self.assertIn('"tau_feedback_rotor_nm": None', j6)
+        self.assertIn('"tau_joint_estimated_nm": None', j6)
+        self.assertIn('"tau_j2_logical_total_nm": None', j6)
+        self.assertIn("last_valid_feedback_monotonic_ns", controller)
+        self.assertIn("last_valid_feedback_monotonic_ns", j6)
+        self.assertIn("last_valid_feedback_monotonic_ns", state_model)
+        self.assertIn("last_valid_feedback_monotonic_ns", gui)
+        self.assertIn('number("tau_joint_estimated_nm")', gui)
+        self.assertNotIn('number("estimated_joint_torque_nm")', gui)
 
     def test_j2_power_session_reference_is_fail_closed_across_processes(self):
         controller = (

@@ -320,10 +320,23 @@ class J2BrakeRawCaptureTests(unittest.TestCase):
             MODULE.analyze_raw_packets(packets, received, sources)
 
     def test_worker_command_is_brake_only_and_has_no_reference_inputs(self):
-        args = argparse.Namespace(worker=Path("/tmp/worker"), feedback_port=15300)
+        args = argparse.Namespace(
+            worker=Path("/tmp/worker"),
+            feedback_port=15300,
+            thermal_config=Path("/tmp/thermal_limits.yaml"),
+            expected_thermal_config_sha256="a" * 64,
+        )
         command = MODULE.build_worker_command(args)
         self.assertIn("--brake-only", command)
         self.assertEqual(command[command.index("--bus") + 1], "j2")
+        self.assertEqual(
+            command[command.index("--thermal-config") + 1],
+            str(Path("/tmp/thermal_limits.yaml")),
+        )
+        self.assertEqual(
+            command[command.index("--expected-thermal-config-sha256") + 1],
+            "a" * 64,
+        )
         for forbidden in (
             "--zero-file",
             "--recovery-hint-file",
@@ -434,6 +447,8 @@ class J2BrakeRawCaptureTests(unittest.TestCase):
         base = [
             "--worker", "/tmp/worker",
             "--expected-worker-sha256", "a" * 64,
+            "--thermal-config", "/tmp/thermal_limits.yaml",
+            "--expected-thermal-config-sha256", "b" * 64,
             "--output", "/tmp/out.json",
             "--confirm", MODULE.CONFIRM_GATE,
             "--physical-confirmation", MODULE.PHYSICAL_GATE,
@@ -459,6 +474,10 @@ class J2BrakeRawCaptureTests(unittest.TestCase):
             "/tmp/worker",
             "--expected-worker-sha256",
             "a" * 64,
+            "--thermal-config",
+            "/tmp/thermal_limits.yaml",
+            "--expected-thermal-config-sha256",
+            "b" * 64,
             "--target-packets",
             "499",
             "--output",

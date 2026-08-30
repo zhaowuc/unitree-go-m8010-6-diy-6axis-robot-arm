@@ -1,0 +1,51 @@
+{
+  "schema_version": "V15.31A-FT-thermal-summary-v1",
+  "generated_at": "2026-08-31T02:20:35+08:00",
+  "software_thermal_manager": {
+    "status": "IMPLEMENTED_OFFLINE_REVIEW_POWERED_VALIDATION_NOT_RUN",
+    "scope": "offline implementation review; robot arm powered off",
+    "features": [
+      "per-motor warning and derating states",
+      "GO publishes thermal_state_by_motor while retaining top-level domain thermal_state",
+      "thermal_limits.yaml SHA256 1926264805858f62fffc9360ef0c9d4d7f8a7e232e171105450769d493ff5467 is validated before GO serial or J6 CAN hardware is opened",
+      "GO and J6 exact v1.3 trajectories entering >=55 C latch to BRAKE or verified DISABLED without independent q/dq scaling and require a fresh preview",
+      "legacy GO profiles/HOLD and legacy J6 POS_VEL profiles/HOLD retain dynamic 55-60 C derating",
+      "60 C latched thermal stop",
+      "GO workers remain online in BRAKE and J6 remains online after verified DISABLED",
+      "cooldown requires temperature below 55 C for at least 30 s and at least 500 valid frames",
+      "explicit operator release, cooldown, higher activation epoch and next-cycle rearm are all required",
+      "immediate GO BRAKE responses are committed atomically; unconfirmed per-motor mode is unknown and brake_observed is false",
+      "temperature state text and color mapping are independent of color alone"
+    ],
+    "evidence_paths": [
+      "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/thermal_manager.py",
+      "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/test/test_thermal_manager.py",
+      "tools/hardware/v15_30a_gui_go_controller.cpp",
+      "tools/hardware/j6_dm_g6220/v15_30a_gui_j6_controller.py",
+      "tools/hardware/j6_dm_g6220/test_v15_30a_gui_profile.py"
+    ]
+  },
+  "measured_results": {
+    "J1": {"max_temperature_c": null, "final_slope_c_per_min": null, "status": "NOT_RUN_POWER_OFF"},
+    "J2A": {"max_temperature_c": null, "final_slope_c_per_min": null, "status": "NOT_RUN_POWER_OFF"},
+    "J2B": {"max_temperature_c": null, "final_slope_c_per_min": null, "status": "NOT_RUN_POWER_OFF"},
+    "J3": {"max_temperature_c": null, "final_slope_c_per_min": null, "status": "NOT_RUN_POWER_OFF"},
+    "J4": {"max_temperature_c": null, "final_slope_c_per_min": null, "status": "NOT_RUN_POWER_OFF"},
+    "J5": {"max_temperature_c": null, "final_slope_c_per_min": null, "status": "NOT_RUN_POWER_OFF"},
+    "J6": {"max_temperature_c": null, "final_slope_c_per_min": null, "status": "NOT_RUN_POWER_OFF"}
+  },
+  "short_position_thermal_tests": "NOT_RUN_POWER_OFF",
+  "j2_loaded_hold_5min": "NOT_RUN_POWER_OFF",
+  "j2_loaded_hold_15min": "NOT_RUN_POWER_OFF",
+  "j2_loaded_hold_30min": "NOT_RUN_POWER_OFF",
+  "j3_loaded_hold_5min": "NOT_RUN_POWER_OFF",
+  "j3_loaded_hold_15min": "NOT_RUN_POWER_OFF",
+  "j3_loaded_hold_30min": "NOT_RUN_POWER_OFF",
+  "j2_sustained_torque_before_nm": null,
+  "j2_sustained_torque_after_nm": null,
+  "continuous_load_classification": "UNDETERMINED_POWER_OFF",
+  "mechanical_counterbalance_required": "UNDETERMINED",
+  "THERMAL_MANAGER": "IMPLEMENTED_OFFLINE_REVIEW_POWERED_VALIDATION_NOT_RUN",
+  "J2_30MIN_THERMAL_STABILITY": "BLOCKED_POWER_OFF",
+  "primary_blocker": "机械臂断电导致无法建立MODEL_SESSION_ANCHOR_V2及执行实机验收"
+}

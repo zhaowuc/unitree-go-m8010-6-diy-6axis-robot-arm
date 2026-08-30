@@ -384,6 +384,10 @@ def build_worker_command(args: argparse.Namespace) -> list[str]:
         "j2",
         "--feedback-port",
         str(args.feedback_port),
+        "--thermal-config",
+        str(args.thermal_config),
+        "--expected-thermal-config-sha256",
+        args.expected_thermal_config_sha256,
         "--zero-file",
         str(args.zero_file),
         "--recovery-hint-file",
@@ -680,6 +684,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--worker", type=Path, required=True)
     parser.add_argument("--expected-worker-sha256", required=True)
+    parser.add_argument("--thermal-config", type=Path, required=True)
+    parser.add_argument("--expected-thermal-config-sha256", required=True)
     parser.add_argument("--zero-file", type=Path, required=True)
     parser.add_argument("--expected-zero-sha256", required=True)
     parser.add_argument("--recovery-hint-file", type=Path, required=True)

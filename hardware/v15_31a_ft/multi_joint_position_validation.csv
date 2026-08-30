@@ -1,0 +1,2 @@
+test_id,planned_target_deg,activated_joints,preview_status,real_execution_status,max_error_deg,min_dwell_s,return_initial_status,max_temperature_c,j2_max_sync_error_deg,final_brake_or_disabled,status,reason
+V15_31A_MULTI_001,,,NOT_RUN,NOT_RUN,,,,,,NOT_RUN,NOT_RUN,POWER_OFF

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import ctypes
 import fcntl
+import hashlib
 import json
 import math
 import os
@@ -23,7 +24,13 @@ from j6_raw_can_diagnostic import (
     refresh_request,
     strict_decode,
 )
-from v15_30a_profile import update_posvel_speed_limit
+from v15_30a_profile import (
+    quintic_posvel_speed_limit,
+    quintic_reference_at,
+    thermal_derated_posvel_limits,
+    thermal_derating_factor,
+    update_posvel_speed_limit,
+)
 
 
 GATE = "V15_30A_GUI_J6_CONTROL_AUTHORIZED=YES"
@@ -51,11 +58,32 @@ FEEDBACK_HARD_UPPER = MODEL_COMMAND_UPPER + FEEDBACK_ENVELOPE_TOLERANCE
 VMAX_LIMIT = math.radians(5.0)
 AMAX_LIMIT = math.radians(20.0)
 RESTORE_VELOCITY_LIMIT = math.radians(1.0)
+QUINTIC_COMMAND_SCHEMA = "go-m8010-quintic-command/1.0"
+QUINTIC_PROFILE = "quintic-rest-to-rest-v1"
+QUINTIC_MAX_INTERVALS = 1_000_000
+QUINTIC_MAX_SAMPLE_PERIOD_NS = 10_000_000
 # The 16-bit G6220 position feedback is about 0.02186 deg/LSB.  Keep the
 # tolerance above three LSBs, but below the commissioned 0.20 deg small step so
 # a stationary motor cannot be mistaken for an arrived one.
 ARRIVAL_TOLERANCE = math.radians(0.08)
 TARGET_TIMEOUT_S = 90.0
+NO_PROGRESS_MINIMUM_IMPROVEMENT = math.radians(0.05)
+NO_PROGRESS_MINIMUM_QUALIFYING_FRAMES = 3
+NO_PROGRESS_WATCHDOG_AUTHORITY = "J6_TARGET_TIMEOUT_POSITION_ERROR_V1"
+THERMAL_CONFIG_SHA256 = (
+    "1926264805858f62fffc9360ef0c9d4d7f8a7e232e171105450769d493ff5467"
+)
+THERMAL_MINIMUM_ACTIVE_FACTOR = 0.1
+ACTIVE_THERMAL_LIMITS: dict[str, float] = {}
+DEFAULT_THERMAL_CONFIG = (
+    Path(__file__).resolve().parents[3]
+    / "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环"
+    / "ros2_ws"
+    / "src"
+    / "go_m8010_arm_hardware"
+    / "config"
+    / "thermal_limits.yaml"
+)
 FAULT_STATES = {8, 9, 0xA, 0xB, 0xC, 0xD, 0xE}
 STOP = False
 
@@ -72,7 +100,72 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--command-port", type=int, default=15311)
     parser.add_argument("--feedback-port", type=int, default=15300)
     parser.add_argument("--zero-file", type=Path)
+    parser.add_argument(
+        "--thermal-config", type=Path, default=DEFAULT_THERMAL_CONFIG
+    )
     return parser.parse_args()
+
+
+def load_thermal_limits(path: Path) -> dict:
+    """Load the shared V15.31A thresholds before any hardware is opened."""
+
+    raw = path.read_bytes()
+    actual_sha256 = hashlib.sha256(raw).hexdigest()
+    if actual_sha256 != THERMAL_CONFIG_SHA256:
+        raise RuntimeError("J6热管理配置SHA256不匹配")
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise RuntimeError("J6热管理配置不是有效UTF-8") from exc
+    scalars: dict[str, str] = {}
+    for original_line in text.splitlines():
+        line = original_line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        key, separator, encoded = line.partition(":")
+        key = key.strip()
+        encoded = encoded.strip()
+        if separator != ":" or not key or not encoded or key in scalars:
+            raise RuntimeError("J6热管理配置格式不匹配")
+        scalars[key] = encoded
+    required = {
+        "normal_below_c",
+        "warning_below_c",
+        "derating_start_c",
+        "thermal_stop_c",
+        "rearm_below_c",
+        "cooldown_seconds",
+        "slope_window_seconds",
+    }
+    if (
+        scalars.get("schema") != "go-m8010-thermal-limits/1.0"
+        or not required.issubset(scalars)
+    ):
+        raise RuntimeError("J6热管理配置格式不匹配")
+    limits = {}
+    for name in required:
+        try:
+            value = float(scalars[name])
+        except ValueError as exc:
+            raise RuntimeError(f"J6热管理配置{name}无效") from exc
+        if not math.isfinite(value):
+            raise RuntimeError(f"J6热管理配置{name}无效")
+        limits[name] = value
+    if not (
+        limits["normal_below_c"]
+        < limits["warning_below_c"]
+        < limits["derating_start_c"]
+        < limits["thermal_stop_c"]
+        and limits["normal_below_c"]
+        < limits["rearm_below_c"]
+        < limits["thermal_stop_c"]
+        and limits["cooldown_seconds"] > 0.0
+        and limits["slope_window_seconds"] > 0.0
+    ):
+        raise RuntimeError("J6热管理配置阈值顺序无效")
+    limits["threshold_authority"] = scalars.get("threshold_authority", "")
+    limits["config_sha256"] = actual_sha256
+    return limits
 
 
 def load_persistent_zero(path: Path | None) -> float | None:
@@ -100,6 +193,14 @@ def load_persistent_zero(path: Path | None) -> float | None:
     return reference
 
 
+def valid_lower_sha256(value: object) -> bool:
+    return bool(
+        type(value) is str
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
 def parse_command(
     payload: bytes, received_monotonic_ns: int | None = None
 ) -> dict:
@@ -111,12 +212,21 @@ def parse_command(
         "go-m8010-gui-command/1.0",
         "go-m8010-gui-command/1.1",
         "go-m8010-gui-command/1.2",
+        "go-m8010-gui-command/1.3",
     }:
         raise ValueError("命令格式不匹配")
     if value.get("mode") not in {"brake", "drag", "hold", "position"}:
         raise ValueError("模式不允许")
-    if schema != "go-m8010-gui-command/1.2" and value["mode"] != "brake":
+    if schema in {
+        "go-m8010-gui-command/1.0",
+        "go-m8010-gui-command/1.1",
+    } and value["mode"] != "brake":
         raise ValueError("旧版协议仅允许制动")
+    if (
+        schema == "go-m8010-gui-command/1.3"
+        and value["mode"] not in {"position", "brake"}
+    ):
+        raise ValueError("1.3协议仅允许轨迹位置命令或制动")
     if received_monotonic_ns is None:
         received_monotonic_ns = time.monotonic_ns()
     if type(received_monotonic_ns) is not int or received_monotonic_ns <= 0:
@@ -223,8 +333,303 @@ def parse_command(
         raise ValueError("速度或加速度无效")
     value["maximum_velocity_rad_s"] = min(vmax, VMAX_LIMIT)
     value["maximum_acceleration_rad_s2"] = min(amax, AMAX_LIMIT)
+    if schema == "go-m8010-gui-command/1.3" and value["mode"] == "position":
+        plan_token_id = value.get("plan_token_id")
+        if not valid_lower_sha256(plan_token_id):
+            raise ValueError("POSITION quintic计划令牌无效")
+        trajectory = value.get("trajectory")
+        required_trajectory_fields = {
+            "schema",
+            "trajectory_sha256",
+            "profile",
+            "start_rad",
+            "target_rad",
+            "duration_ns",
+            "interval_count",
+            "execute_at_monotonic_ns",
+            "segment_index",
+            "segment_count",
+        }
+        if (
+            not isinstance(trajectory, dict)
+            or set(trajectory) != required_trajectory_fields
+        ):
+            raise ValueError("POSITION quintic描述符无效")
+        if trajectory.get("schema") != QUINTIC_COMMAND_SCHEMA:
+            raise ValueError("POSITION quintic描述符格式不匹配")
+        trajectory_sha256 = trajectory.get("trajectory_sha256")
+        if not valid_lower_sha256(trajectory_sha256):
+            raise ValueError("POSITION quintic轨迹哈希无效")
+        if trajectory.get("profile") != QUINTIC_PROFILE:
+            raise ValueError("POSITION quintic轨迹类型不匹配")
+        raw_start = trajectory.get("start_rad")
+        raw_target = trajectory.get("target_rad")
+        for name, vector in (("起点", raw_start), ("终点", raw_target)):
+            if (
+                not isinstance(vector, list)
+                or len(vector) != 6
+                or not all(type(item) in {int, float} for item in vector)
+                or not all(math.isfinite(float(item)) for item in vector)
+            ):
+                raise ValueError(f"POSITION quintic{name}必须是六个有限数")
+        start = [float(item) for item in raw_start]
+        trajectory_target = [float(item) for item in raw_target]
+        if trajectory_target != targets:
+            raise ValueError("POSITION quintic终点与命令目标不匹配")
+        if not active_joint_mask[5] or moving_joint_mask != [False] * 5 + [True]:
+            raise ValueError("POSITION quintic J6必须是唯一移动关节")
+        if any(
+            index != 5 and start[index] != trajectory_target[index]
+            for index in range(6)
+        ):
+            raise ValueError("POSITION quintic非移动关节起终点不匹配")
+        if not (
+            MODEL_COMMAND_LOWER <= start[5] <= MODEL_COMMAND_UPPER
+            and MODEL_COMMAND_LOWER
+            <= trajectory_target[5]
+            <= MODEL_COMMAND_UPPER
+        ):
+            raise ValueError("POSITION quintic J6起终点超出模型机械限位")
+        if start[5] == trajectory_target[5]:
+            raise ValueError("POSITION quintic移动关节位移必须非零")
+        duration_ns = trajectory.get("duration_ns")
+        interval_count = trajectory.get("interval_count")
+        execute_at_monotonic_ns = trajectory.get("execute_at_monotonic_ns")
+        segment_index = trajectory.get("segment_index")
+        segment_count = trajectory.get("segment_count")
+        if type(duration_ns) is not int or duration_ns <= 0:
+            raise ValueError("POSITION quintic时长无效")
+        if (
+            type(interval_count) is not int
+            or not 1 <= interval_count <= QUINTIC_MAX_INTERVALS
+            or duration_ns > interval_count * QUINTIC_MAX_SAMPLE_PERIOD_NS
+        ):
+            raise ValueError("POSITION quintic采样网格无效")
+        if (
+            type(execute_at_monotonic_ns) is not int
+            or execute_at_monotonic_ns <= 0
+        ):
+            raise ValueError("POSITION quintic执行时钟无效")
+        if (
+            type(segment_index) is not int
+            or type(segment_count) is not int
+            or segment_index < 0
+            or segment_count <= 0
+            or segment_index >= segment_count
+        ):
+            raise ValueError("POSITION quintic分段索引无效")
+        duration_s = duration_ns * 1.0e-9
+        displacement = abs(trajectory_target[5] - start[5])
+        peak_velocity = (15.0 / 8.0) * displacement / duration_s
+        peak_acceleration = (
+            10.0 / math.sqrt(3.0)
+        ) * displacement / (duration_s * duration_s)
+        if (
+            peak_velocity > value["maximum_velocity_rad_s"] + 1.0e-12
+            or peak_acceleration
+            > value["maximum_acceleration_rad_s2"] + 1.0e-12
+        ):
+            raise ValueError("POSITION quintic轨迹超过速度或加速度上限")
+        value["plan_token_id"] = plan_token_id
+        value["trajectory"] = {
+            "schema": QUINTIC_COMMAND_SCHEMA,
+            "trajectory_sha256": trajectory_sha256,
+            "profile": QUINTIC_PROFILE,
+            "start_rad": start,
+            "target_rad": trajectory_target,
+            "duration_ns": duration_ns,
+            "interval_count": interval_count,
+            "execute_at_monotonic_ns": execute_at_monotonic_ns,
+            "segment_index": segment_index,
+            "segment_count": segment_count,
+        }
     value["received_at"] = received_monotonic_ns / 1_000_000_000.0
     return value
+
+
+def command_is_v13_quintic_position(command: dict | None) -> bool:
+    return bool(
+        command is not None
+        and command.get("schema") == "go-m8010-gui-command/1.3"
+        and command.get("mode") == "position"
+        and isinstance(command.get("moving_joint_mask"), list)
+        and command["moving_joint_mask"][5] is True
+        and isinstance(command.get("trajectory"), dict)
+    )
+
+
+def position_execution_contract(command: dict) -> tuple:
+    """Freeze every field that could alter one accepted POSITION reference."""
+
+    base = (
+        command.get("schema"),
+        tuple(command.get("targets_rad", ())),
+        tuple(command.get("active_joint_mask", ())),
+        tuple(command.get("moving_joint_mask", ())),
+        command.get("maximum_velocity_rad_s"),
+        command.get("maximum_acceleration_rad_s2"),
+    )
+    if not command_is_v13_quintic_position(command):
+        return base
+    trajectory = command["trajectory"]
+    return base + (
+        command["plan_token_id"],
+        trajectory["schema"],
+        trajectory["trajectory_sha256"],
+        trajectory["profile"],
+        tuple(trajectory["start_rad"]),
+        tuple(trajectory["target_rad"]),
+        trajectory["duration_ns"],
+        trajectory["interval_count"],
+        trajectory["execute_at_monotonic_ns"],
+        trajectory["segment_index"],
+        trajectory["segment_count"],
+    )
+
+
+def validate_position_execution_transition(
+    current: dict | None,
+    candidate: dict,
+    received_monotonic_ns: int,
+    source_replay_state: dict | None = None,
+) -> tuple | None:
+    """Validate one POSITION authority transition without committing it.
+
+    A source/activation-epoch pair owns one immutable POSITION execution
+    contract.  The optional replay state keeps that authority across HOLD and
+    BRAKE packets; returning a pending binding keeps rejected packets from
+    mutating the authority table.
+    """
+
+    candidate_is_quintic = command_is_v13_quintic_position(candidate)
+    candidate_is_position = bool(
+        candidate.get("mode") == "position"
+        and isinstance(candidate.get("moving_joint_mask"), list)
+        and candidate["moving_joint_mask"][5] is True
+    )
+    if not candidate_is_position:
+        return None
+
+    binding_key = (
+        candidate.get("source_instance_id"),
+        candidate.get("activation_epoch"),
+    )
+    candidate_contract = position_execution_contract(candidate)
+    if source_replay_state is not None:
+        bindings = source_replay_state.get("position_execution_bindings", {})
+        if binding_key in bindings:
+            if bindings[binding_key] != candidate_contract:
+                raise ValueError("POSITION同一激活纪元轨迹描述符发生变化")
+            return binding_key, candidate_contract
+
+    current_is_position = bool(
+        current is not None
+        and current.get("mode") == "position"
+        and isinstance(current.get("moving_joint_mask"), list)
+        and current["moving_joint_mask"][5] is True
+    )
+    same_epoch_position = bool(
+        current_is_position
+        and candidate.get("mode") == "position"
+        and isinstance(candidate.get("moving_joint_mask"), list)
+        and candidate["moving_joint_mask"][5] is True
+        and current.get("source_instance_id")
+        == candidate.get("source_instance_id")
+        and current.get("activation_epoch") == candidate.get("activation_epoch")
+    )
+    if source_replay_state is None and same_epoch_position:
+        if position_execution_contract(current) != candidate_contract:
+            raise ValueError("POSITION同一激活纪元轨迹描述符发生变化")
+        return None
+    if (
+        candidate_is_quintic
+        and received_monotonic_ns
+        >= candidate["trajectory"]["execute_at_monotonic_ns"]
+    ):
+        raise ValueError("POSITION quintic首包晚于执行起点")
+    if source_replay_state is not None:
+        return binding_key, candidate_contract
+    return None
+
+
+def v13_position_posvel_reference(
+    command: dict,
+    now_monotonic_ns: int,
+    restore_velocity_limit: float = RESTORE_VELOCITY_LIMIT,
+) -> tuple[float, float, str, int]:
+    """Return descriptor-derived J6 p_des reference and unsigned speed cap."""
+
+    if not command_is_v13_quintic_position(command):
+        raise ValueError("command is not a J6 command/1.3 quintic POSITION")
+    trajectory = command["trajectory"]
+    q_ref, dq_ref, sample_index, trajectory_state = quintic_reference_at(
+        trajectory["start_rad"][5],
+        trajectory["target_rad"][5],
+        trajectory["duration_ns"],
+        trajectory["interval_count"],
+        trajectory["execute_at_monotonic_ns"],
+        now_monotonic_ns,
+    )
+    speed_limit = quintic_posvel_speed_limit(
+        dq_ref,
+        command["maximum_velocity_rad_s"],
+        min(restore_velocity_limit, command["maximum_velocity_rad_s"]),
+    )
+    return q_ref, speed_limit, trajectory_state, sample_index
+
+
+def trajectory_feedback_status(
+    command: dict | None,
+    now_monotonic_ns: int,
+    *,
+    state_override: str | None = None,
+    sample_index_override: int | None = None,
+) -> dict:
+    """Build the optional feedback echo without granting any authority."""
+
+    if not command_is_v13_quintic_position(command):
+        return {
+            "trajectory_plan_token_id": "",
+            "trajectory_sha256": "",
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0,
+        }
+    trajectory = command["trajectory"]
+    _q_ref, _dq_ref, sample_index, state = quintic_reference_at(
+        trajectory["start_rad"][5],
+        trajectory["target_rad"][5],
+        trajectory["duration_ns"],
+        trajectory["interval_count"],
+        trajectory["execute_at_monotonic_ns"],
+        now_monotonic_ns,
+    )
+    if state_override is not None and state_override not in {
+        "PREPARED",
+        "RUNNING",
+        "COMPLETE",
+        "INACTIVE",
+    }:
+        raise ValueError("trajectory feedback state is invalid")
+    if (
+        sample_index_override is not None
+        and (
+            type(sample_index_override) is not int
+            or not 0 <= sample_index_override <= trajectory["interval_count"]
+        )
+    ):
+        raise ValueError("trajectory feedback sample index is invalid")
+    return {
+        "trajectory_plan_token_id": command["plan_token_id"],
+        "trajectory_sha256": trajectory["trajectory_sha256"],
+        "trajectory_state": state if state_override is None else state_override,
+        "trajectory_sample_index": (
+            sample_index
+            if sample_index_override is None
+            else sample_index_override
+        ),
+        "trajectory_interval_count": trajectory["interval_count"],
+    }
 
 
 def command_requests_j6_active(command: dict | None) -> bool:
@@ -307,8 +712,8 @@ def enabled_feedback_is_healthy(
         and math.isfinite(latest.position)
         and math.isfinite(latest.velocity)
         and FEEDBACK_HARD_LOWER <= logical <= FEEDBACK_HARD_UPPER
-        and 0 <= latest.mos_temp < 60
-        and 0 <= latest.coil_temp < 60
+        and 0 <= latest.mos_temp < ACTIVE_THERMAL_LIMITS["thermal_stop_c"]
+        and 0 <= latest.coil_temp < ACTIVE_THERMAL_LIMITS["thermal_stop_c"]
     )
 
 
@@ -448,6 +853,310 @@ def fault_dominant_mode(mode: str, fault_latched: bool) -> str:
     return "brake" if fault_latched else mode
 
 
+def saturating_next_activation_epoch(epoch: int) -> int:
+    maximum = (1 << 63) - 1
+    if type(epoch) is not int or not 0 <= epoch <= maximum:
+        raise ValueError("activation epoch is outside the command domain")
+    return epoch if epoch == maximum else epoch + 1
+
+
+def make_thermal_interlock_state() -> dict:
+    return {
+        "fault_latched": False,
+        "release_observed": False,
+        "cooldown_ready": False,
+        "rearm_pending_next_cycle": False,
+        "cooldown_frames": 0,
+        "cooldown_started_at": None,
+        "trip_reason": "",
+        "trip_activation_epoch": 0,
+        "minimum_rearm_epoch": 0,
+    }
+
+
+def reset_thermal_cooldown_evidence(state: dict) -> None:
+    state["cooldown_ready"] = False
+    state["cooldown_frames"] = 0
+    state["cooldown_started_at"] = None
+
+
+def latch_thermal_interlock(
+    state: dict,
+    trip_reason: str,
+    active_epoch: int,
+    current_minimum_epoch: int,
+    highest_rejected_active_epoch: int,
+) -> bool:
+    """Latch one thermal policy edge without terminating the worker."""
+
+    if trip_reason not in {
+        "RAW_TEMPERATURE_LIMIT",
+        "EXACT_TRAJECTORY_DERATING_ABORT",
+    }:
+        raise ValueError("J6热锁存原因无效")
+    newly_latched = not state["fault_latched"]
+    state["fault_latched"] = True
+    state["release_observed"] = False
+    state["rearm_pending_next_cycle"] = False
+    reset_thermal_cooldown_evidence(state)
+    if newly_latched:
+        state["trip_reason"] = trip_reason
+    state["trip_activation_epoch"] = max(
+        state["trip_activation_epoch"], active_epoch
+    )
+    state["minimum_rearm_epoch"] = max(
+        state["minimum_rearm_epoch"],
+        current_minimum_epoch,
+        saturating_next_activation_epoch(active_epoch),
+        saturating_next_activation_epoch(highest_rejected_active_epoch),
+    )
+    return newly_latched
+
+
+def observe_raw_temperature_thermal_trip(
+    state: dict,
+    raw_temperature_c: float,
+    thermal_stop_c: float,
+    active_epoch: int,
+    current_minimum_epoch: int,
+    highest_rejected_active_epoch: int,
+) -> bool:
+    """Latch one raw sample at/above stop without terminating the worker."""
+
+    if not math.isfinite(raw_temperature_c) or raw_temperature_c < thermal_stop_c:
+        return False
+    return latch_thermal_interlock(
+        state,
+        "RAW_TEMPERATURE_LIMIT",
+        active_epoch,
+        current_minimum_epoch,
+        highest_rejected_active_epoch,
+    )
+
+
+def observe_thermal_cooldown_frame(
+    state: dict,
+    valid_disabled_below_rearm: bool,
+    observed_at: float,
+    cooldown_seconds: float,
+    minimum_frames: int,
+) -> bool:
+    """Require a continuous cool DISABLED window; any gap resets evidence."""
+
+    if not state["fault_latched"]:
+        reset_thermal_cooldown_evidence(state)
+        return False
+    if (
+        not valid_disabled_below_rearm
+        or not math.isfinite(observed_at)
+        or cooldown_seconds <= 0.0
+        or type(minimum_frames) is not int
+        or minimum_frames <= 0
+    ):
+        reset_thermal_cooldown_evidence(state)
+        state["release_observed"] = False
+        state["rearm_pending_next_cycle"] = False
+        return False
+    if state["cooldown_frames"] == 0:
+        state["cooldown_started_at"] = observed_at
+    if (
+        state["cooldown_started_at"] is None
+        or observed_at < state["cooldown_started_at"]
+    ):
+        reset_thermal_cooldown_evidence(state)
+        state["cooldown_started_at"] = observed_at
+    state["cooldown_frames"] += 1
+    elapsed = observed_at - state["cooldown_started_at"]
+    was_ready = state["cooldown_ready"]
+    state["cooldown_ready"] = bool(
+        state["cooldown_frames"] >= minimum_frames
+        and elapsed >= cooldown_seconds
+    )
+    return state["cooldown_ready"] and not was_ready
+
+
+def make_no_progress_watchdog_state() -> dict:
+    return {
+        "fault_latched": False,
+        "release_observed": False,
+        "rearm_pending_next_cycle": False,
+        "qualifying_frames": 0,
+        "window_started_at": None,
+        "window_baseline_error_rad": 0.0,
+        "trip_position_error_rad": 0.0,
+        "trip_activation_epoch": 0,
+        "minimum_rearm_epoch": 0,
+    }
+
+
+def reset_no_progress_observation(state: dict) -> None:
+    state["qualifying_frames"] = 0
+    state["window_started_at"] = None
+    state["window_baseline_error_rad"] = 0.0
+
+
+def observe_no_progress_watchdog(
+    state: dict,
+    observation_valid: bool,
+    position_error_rad: float,
+    observed_at: float,
+    active_epoch: int,
+    current_minimum_epoch: int,
+    highest_rejected_active_epoch: int,
+    *,
+    timeout_seconds: float = TARGET_TIMEOUT_S,
+    minimum_improvement_rad: float = NO_PROGRESS_MINIMUM_IMPROVEMENT,
+    minimum_frames: int = NO_PROGRESS_MINIMUM_QUALIFYING_FRAMES,
+) -> bool:
+    """Latch a large endpoint error that fails to improve before timeout."""
+
+    if state["fault_latched"]:
+        return False
+    qualifying = bool(
+        observation_valid
+        and math.isfinite(position_error_rad)
+        and position_error_rad > ARRIVAL_TOLERANCE
+        and math.isfinite(observed_at)
+    )
+    if not qualifying:
+        reset_no_progress_observation(state)
+        return False
+    if (
+        timeout_seconds <= 0.0
+        or minimum_improvement_rad <= 0.0
+        or type(minimum_frames) is not int
+        or minimum_frames <= 0
+    ):
+        raise ValueError("no-progress watchdog limits are invalid")
+    if (
+        state["qualifying_frames"] == 0
+        or state["window_started_at"] is None
+        or observed_at < state["window_started_at"]
+    ):
+        state["qualifying_frames"] = 1
+        state["window_started_at"] = observed_at
+        state["window_baseline_error_rad"] = position_error_rad
+        return False
+    if (
+        state["window_baseline_error_rad"] - position_error_rad
+        >= minimum_improvement_rad
+    ):
+        state["qualifying_frames"] = 1
+        state["window_started_at"] = observed_at
+        state["window_baseline_error_rad"] = position_error_rad
+        return False
+    state["qualifying_frames"] += 1
+    elapsed = observed_at - state["window_started_at"]
+    if (
+        state["qualifying_frames"] < minimum_frames
+        or elapsed < timeout_seconds
+    ):
+        return False
+    state["fault_latched"] = True
+    state["release_observed"] = False
+    state["rearm_pending_next_cycle"] = False
+    state["trip_position_error_rad"] = position_error_rad
+    state["trip_activation_epoch"] = max(
+        state["trip_activation_epoch"], active_epoch
+    )
+    state["minimum_rearm_epoch"] = max(
+        state["minimum_rearm_epoch"],
+        current_minimum_epoch,
+        saturating_next_activation_epoch(active_epoch),
+        saturating_next_activation_epoch(highest_rejected_active_epoch),
+    )
+    return True
+
+
+def observe_explicit_interlock_release(
+    state: dict,
+    explicit_release_packet_received: bool,
+    *,
+    cooldown_required: bool,
+) -> bool:
+    """Record an operator/domain release; a cached command is insufficient."""
+
+    if (
+        not state["fault_latched"]
+        or not explicit_release_packet_received
+        or (cooldown_required and not state["cooldown_ready"])
+    ):
+        return False
+    newly_observed = not state["release_observed"]
+    state["release_observed"] = True
+    return newly_observed
+
+
+def request_interlock_rearm_for_next_cycle(
+    state: dict,
+    command: dict | None,
+    command_lease_fresh: bool,
+    valid_disabled_feedback: bool,
+    highest_rejected_active_epoch: int,
+    *,
+    cooldown_required: bool,
+) -> bool:
+    """Accept only a fresh higher-epoch active command after explicit release."""
+
+    if not (
+        state["fault_latched"]
+        and state["release_observed"]
+        and (not cooldown_required or state["cooldown_ready"])
+        and command_lease_fresh
+        and command_requests_j6_active(command)
+        and valid_disabled_feedback
+        and command["activation_epoch"] > state["trip_activation_epoch"]
+        and command["activation_epoch"] >= state["minimum_rearm_epoch"]
+        and command["activation_epoch"] > highest_rejected_active_epoch
+    ):
+        return False
+    state["rearm_pending_next_cycle"] = True
+    return True
+
+
+def apply_pending_interlock_rearm_at_cycle_start(state: dict) -> bool:
+    """Keep the complete decision cycle braked, then clear at the next edge."""
+
+    if not state["fault_latched"] or not state["rearm_pending_next_cycle"]:
+        return False
+    state["fault_latched"] = False
+    state["release_observed"] = False
+    state["rearm_pending_next_cycle"] = False
+    if "trip_reason" in state:
+        state["trip_reason"] = ""
+    if "cooldown_ready" in state:
+        reset_thermal_cooldown_evidence(state)
+    else:
+        reset_no_progress_observation(state)
+    return True
+
+
+def temperature_window_statistics(
+    samples: list[tuple[float, float]],
+    temperature_c: float,
+    observed_at: float,
+    window_seconds: float,
+) -> tuple[float, float | None]:
+    """Update a bounded time window and return median plus degC/min slope."""
+
+    if not (
+        math.isfinite(temperature_c)
+        and math.isfinite(observed_at)
+        and window_seconds > 0.0
+    ):
+        raise ValueError("temperature window sample is invalid")
+    samples.append((observed_at, temperature_c))
+    cutoff = observed_at - window_seconds
+    while len(samples) > 1 and samples[0][0] < cutoff:
+        del samples[0]
+    median_c = statistics.median(value for _stamp, value in samples)
+    elapsed = samples[-1][0] - samples[0][0]
+    slope = None
+    if elapsed > 0.0:
+        slope = (samples[-1][1] - samples[0][1]) * 60.0 / elapsed
+    return float(median_c), slope
+
+
 def hold_command_entry_is_safe(
     command: dict | None,
     previous_mode: str,
@@ -490,8 +1199,8 @@ def hold_command_entry_is_safe(
         or not math.isfinite(latest.position)
         or not math.isfinite(latest.velocity)
         or latest.state in FAULT_STATES
-        or not 0 <= latest.mos_temp < 60
-        or not 0 <= latest.coil_temp < 60
+        or not 0 <= latest.mos_temp < ACTIVE_THERMAL_LIMITS["thermal_stop_c"]
+        or not 0 <= latest.coil_temp < ACTIVE_THERMAL_LIMITS["thermal_stop_c"]
     ):
         return False
     logical = -(latest.position - reference)
@@ -838,6 +1547,7 @@ def command_rejection_reason(error: Exception) -> str:
         "命令格式不匹配",
         "模式不允许",
         "旧版协议仅允许制动",
+        "1.3协议仅允许轨迹位置命令或制动",
         "命令接收时钟无效",
         "命令来源实例无效",
         "命令来源时钟无效",
@@ -854,6 +1564,25 @@ def command_rejection_reason(error: Exception) -> str:
         "激活纪元必须是非负整数",
         "主动命令的激活纪元必须大于零",
         "速度或加速度无效",
+        "POSITION quintic计划令牌无效",
+        "POSITION quintic描述符无效",
+        "POSITION quintic描述符格式不匹配",
+        "POSITION quintic轨迹哈希无效",
+        "POSITION quintic轨迹类型不匹配",
+        "POSITION quintic起点必须是六个有限数",
+        "POSITION quintic终点必须是六个有限数",
+        "POSITION quintic终点与命令目标不匹配",
+        "POSITION quintic J6必须是唯一移动关节",
+        "POSITION quintic非移动关节起终点不匹配",
+        "POSITION quintic J6起终点超出模型机械限位",
+        "POSITION quintic移动关节位移必须非零",
+        "POSITION quintic时长无效",
+        "POSITION quintic采样网格无效",
+        "POSITION quintic执行时钟无效",
+        "POSITION quintic分段索引无效",
+        "POSITION quintic轨迹超过速度或加速度上限",
+        "POSITION同一激活纪元轨迹描述符发生变化",
+        "POSITION quintic首包晚于执行起点",
         "主动命令激活纪元发生回放",
         "HOLD新目标超出当前反馈捕获窗口",
         "POSITION同一激活纪元目标发生变化",
@@ -953,9 +1682,14 @@ def minimum_epoch_after_interarrival_lease(
 def make_command_source_replay_state() -> dict:
     return {
         "sources": {},
+        "position_execution_bindings": {},
         "active_source_instance_id": None,
         "active_source_last_received_monotonic_ns": None,
     }
+
+
+def make_command_receive_events() -> dict:
+    return {"domain_release_received": False}
 
 
 def command_source_takeover_is_blocked(
@@ -1023,6 +1757,22 @@ def commit_command_source(
     ] = received_monotonic_ns
 
 
+def commit_position_execution_binding(
+    replay_state: dict, pending_binding: tuple | None
+) -> None:
+    """Commit a fully validated POSITION binding with bounded LRU retention."""
+
+    if pending_binding is None:
+        return
+    binding_key, execution_contract = pending_binding
+    bindings = replay_state.setdefault("position_execution_bindings", {})
+    # Reinsert an accepted heartbeat so eviction follows recent authority use.
+    bindings.pop(binding_key, None)
+    bindings[binding_key] = execution_contract
+    while len(bindings) > COMMAND_SOURCE_REPLAY_LIMIT:
+        del bindings[next(iter(bindings))]
+
+
 def receive_latest(
     sock: socket.socket,
     current: dict | None,
@@ -1030,6 +1780,7 @@ def receive_latest(
     last_seen_activation_epoch: int,
     rejection_state: dict | None = None,
     source_replay_state: dict | None = None,
+    receive_events: dict | None = None,
 ) -> tuple[dict | None, int, int]:
     if rejection_state is None:
         rejection_state = make_command_rejection_state()
@@ -1067,6 +1818,12 @@ def receive_latest(
                 ):
                     raise ValueError("当前命令来源租约仍有效")
                 raise ValueError("命令来源序列或时钟发生回放")
+            pending_position_binding = validate_position_execution_transition(
+                current,
+                candidate,
+                received_monotonic_ns,
+                source_replay_state,
+            )
             minimum_activation_epoch, last_seen_activation_epoch = (
                 observe_valid_command_epoch(
                     candidate,
@@ -1077,6 +1834,13 @@ def receive_latest(
             commit_command_source(
                 source_replay_state, candidate, received_monotonic_ns
             )
+            commit_position_execution_binding(
+                source_replay_state, pending_position_binding
+            )
+            if receive_events is not None and not command_requests_j6_active(
+                candidate
+            ):
+                receive_events["domain_release_received"] = True
             current = candidate
         except Exception as exc:
             emit_command_rejection_reports(
@@ -1103,6 +1867,10 @@ def send_feedback(
     sock: socket.socket, port: int, decoded, communication_ok: bool,
     mode: str, fault_latched: bool, lease_safe_hold: bool,
     rejection_state: dict | None = None,
+    trajectory_status: dict | None = None,
+    thermal_status: dict | None = None,
+    no_progress_status: dict | None = None,
+    last_valid_feedback_monotonic_ns: int | None = None,
 ) -> None:
     if decoded is None:
         position = velocity = 0.0
@@ -1114,6 +1882,151 @@ def send_feedback(
         mos = decoded.mos_temp
         coil = decoded.coil_temp
         state = decoded.state
+    if trajectory_status is None:
+        trajectory_status = {
+            "trajectory_plan_token_id": "",
+            "trajectory_sha256": "",
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0,
+        }
+    normalized_trajectory_status = {
+        "trajectory_plan_token_id": trajectory_status.get(
+            "trajectory_plan_token_id", ""
+        ),
+        "trajectory_sha256": trajectory_status.get("trajectory_sha256", ""),
+        "trajectory_state": trajectory_status.get(
+            "trajectory_state", "INACTIVE"
+        ),
+        "trajectory_sample_index": trajectory_status.get(
+            "trajectory_sample_index", 0
+        ),
+        "trajectory_interval_count": trajectory_status.get(
+            "trajectory_interval_count", 0
+        ),
+    }
+    if thermal_status is None:
+        thermal_status = {}
+    normalized_thermal_status = {
+        "thermal_state": str(thermal_status.get("thermal_state", "UNKNOWN")),
+        "thermal_derating_factor": float(
+            thermal_status.get("thermal_derating_factor", 1.0)
+        ),
+        "thermal_raw_temperature_c": float(
+            thermal_status.get("thermal_raw_temperature_c", max(mos, coil))
+        ),
+        "thermal_window_median_c": float(
+            thermal_status.get("thermal_window_median_c", max(mos, coil))
+        ),
+        "thermal_slope_c_per_min": thermal_status.get(
+            "thermal_slope_c_per_min"
+        ),
+        "thermal_fault_latched": bool(
+            thermal_status.get("thermal_fault_latched", False)
+        ),
+        "thermal_cooldown_ready": bool(
+            thermal_status.get("thermal_cooldown_ready", False)
+        ),
+        "thermal_release_observed": bool(
+            thermal_status.get("thermal_release_observed", False)
+        ),
+        "thermal_rearm_pending_next_cycle": bool(
+            thermal_status.get("thermal_rearm_pending_next_cycle", False)
+        ),
+        "thermal_cooldown_valid_brake_frames": int(
+            thermal_status.get("thermal_cooldown_valid_brake_frames", 0)
+        ),
+        "thermal_trip_activation_epoch": int(
+            thermal_status.get("thermal_trip_activation_epoch", 0)
+        ),
+        "thermal_minimum_rearm_epoch": int(
+            thermal_status.get("thermal_minimum_rearm_epoch", 0)
+        ),
+        "thermal_trip_reason": str(
+            thermal_status.get(
+                "thermal_trip_reason",
+                "RAW_TEMPERATURE_LIMIT"
+                if thermal_status.get("thermal_fault_latched", False)
+                else "",
+            )
+        ),
+        "thermal_config_sha256": str(
+            thermal_status.get(
+                "thermal_config_sha256", THERMAL_CONFIG_SHA256
+            )
+        ),
+    }
+    if no_progress_status is None:
+        no_progress_status = {}
+    normalized_no_progress_status = {
+        "no_progress_fault": bool(
+            no_progress_status.get("no_progress_fault", False)
+        ),
+        "load_limit_fault": bool(
+            no_progress_status.get("no_progress_fault", False)
+        ),
+        "load_limit_no_progress": bool(
+            no_progress_status.get("no_progress_fault", False)
+        ),
+        "no_progress_release_observed": bool(
+            no_progress_status.get("no_progress_release_observed", False)
+        ),
+        "no_progress_rearm_pending_next_cycle": bool(
+            no_progress_status.get(
+                "no_progress_rearm_pending_next_cycle", False
+            )
+        ),
+        "no_progress_watchdog_qualifying_frames": int(
+            no_progress_status.get(
+                "no_progress_watchdog_qualifying_frames", 0
+            )
+        ),
+        "no_progress_observation_valid": bool(
+            no_progress_status.get("no_progress_observation_valid", False)
+        ),
+        "no_progress_position_error_rad": float(
+            no_progress_status.get("no_progress_position_error_rad", 0.0)
+        ),
+        "no_progress_trip_position_error_rad": float(
+            no_progress_status.get(
+                "no_progress_trip_position_error_rad", 0.0
+            )
+        ),
+        "software_saturation_observed": False,
+        "load_limit_watchdog_authority": str(
+            no_progress_status.get(
+                "load_limit_watchdog_authority",
+                NO_PROGRESS_WATCHDOG_AUTHORITY,
+            )
+        ),
+        "no_progress_trip_activation_epoch": int(
+            no_progress_status.get("no_progress_trip_activation_epoch", 0)
+        ),
+        "no_progress_minimum_rearm_epoch": int(
+            no_progress_status.get("no_progress_minimum_rearm_epoch", 0)
+        ),
+        "position_safety_trip_reason": str(
+            no_progress_status.get(
+                "position_safety_trip_reason",
+                "POSITION_ARRIVAL_TIMEOUT"
+                if no_progress_status.get("no_progress_fault", False)
+                else "",
+            )
+        ),
+    }
+    interlock_latched = bool(
+        normalized_thermal_status["thermal_fault_latched"]
+        or normalized_no_progress_status["no_progress_fault"]
+    )
+    returned_controller_mode = (
+        "unknown"
+        if not communication_ok or state in FAULT_STATES
+        else "brake"
+        if mode == "brake" and state == 0
+        else mode
+        if mode in {"hold", "position"} and state == 1
+        else "unknown"
+    )
     payload = {
         "schema": "go-m8010-motor-feedback/1.0",
         "source_monotonic_ns": time.monotonic_ns(),
@@ -1121,13 +2034,30 @@ def send_feedback(
             "motor": "J6",
             "position_rad": position,
             "velocity_rad_s": velocity,
+            # POS_VEL mode exposes no authoritative torque command or torque
+            # feedback channel.  Explicit nulls keep the three physical
+            # torque semantics distinct instead of manufacturing estimates.
+            "tau_cmd_rotor_nm": None,
+            "tau_feedback_rotor_nm": None,
+            "tau_joint_estimated_nm": None,
+            "last_valid_feedback_monotonic_ns": (
+                last_valid_feedback_monotonic_ns
+            ),
             "temperature_c": max(mos, coil),
             "merror": 0 if communication_ok and state not in FAULT_STATES else state,
             "communication_ok": communication_ok and state not in FAULT_STATES,
+            "thermal_fault_latched": normalized_thermal_status[
+                "thermal_fault_latched"
+            ],
+            "load_limit_no_progress": normalized_no_progress_status[
+                "no_progress_fault"
+            ],
+            **normalized_trajectory_status,
         }],
         "controller_mode": mode,
-        "controller_mode_by_motor": {"J6": mode},
-        "domain_fault": fault_latched,
+        "tau_j2_logical_total_nm": None,
+        "controller_mode_by_motor": {"J6": returned_controller_mode},
+        "domain_fault": fault_latched or interlock_latched,
         "drive_state": state,
         "lease_safe_hold": lease_safe_hold,
         "rejected_commands": 0 if rejection_state is None else rejection_state["total"],
@@ -1149,6 +2079,12 @@ def send_feedback(
             }
         ),
     }
+    payload.update(normalized_trajectory_status)
+    payload.update(normalized_thermal_status)
+    payload["thermal_state_by_motor"] = {
+        "J6": normalized_thermal_status["thermal_state"]
+    }
+    payload.update(normalized_no_progress_status)
     sock.sendto(json.dumps(payload, separators=(",", ":")).encode(), ("127.0.0.1", port))
 
 
@@ -1171,13 +2107,20 @@ def disable_and_verify(transport: DmG6220PosVelTransport, logger: RawCanLogger) 
 
 
 def run(args: argparse.Namespace) -> int:
+    global ACTIVE_THERMAL_LIMITS
+    thermal_limits = load_thermal_limits(args.thermal_config)
+    ACTIVE_THERMAL_LIMITS = thermal_limits
     if not args.execute:
         print(
             "DRY_RUN=YES\nCAN_OPENED=NO\nDEFAULT_STATE=DISABLED\n"
             "CONTROL_LOOP_HZ=100\n"
             "COMMAND_TARGET_LIMIT_DEG=[-180,180]\n"
             "FEEDBACK_ENVELOPE_TOLERANCE_DEG=0.5\n"
-            "POSITION_ARRIVAL_TIMEOUT_SECONDS=90"
+            "POSITION_ARRIVAL_TIMEOUT_SECONDS=90\n"
+            f"THERMAL_DERATE_START_C={thermal_limits['derating_start_c']}\n"
+            f"THERMAL_STOP_C={thermal_limits['thermal_stop_c']}\n"
+            f"THERMAL_REARM_BELOW_C={thermal_limits['rearm_below_c']}\n"
+            f"THERMAL_COOLDOWN_SECONDS={thermal_limits['cooldown_seconds']}"
         )
         return 0
     if args.confirm != GATE:
@@ -1262,6 +2205,21 @@ def run(args: argparse.Namespace) -> int:
         last_accepted_hold_epoch = None
         command_rejection_state = make_command_rejection_state()
         command_source_replay_state = make_command_source_replay_state()
+        command_receive_events = make_command_receive_events()
+        thermal_interlock = make_thermal_interlock_state()
+        no_progress_watchdog = make_no_progress_watchdog_state()
+        temperature_samples = []
+        current_temperature_c = float(max(latest.mos_temp, latest.coil_temp))
+        temperature_median_c = current_temperature_c
+        temperature_slope_c_per_min = None
+        thermal_factor = thermal_derating_factor(
+            current_temperature_c,
+            thermal_limits["derating_start_c"],
+            thermal_limits["thermal_stop_c"],
+            THERMAL_MINIMUM_ACTIVE_FACTOR,
+        )
+        no_progress_observation_valid = False
+        no_progress_position_error_rad = 0.0
         highest_rejected_active_epoch = 0
         last_unsafe_active_signature = None
         last_unsafe_lease_resume_signature = None
@@ -1274,6 +2232,29 @@ def run(args: argparse.Namespace) -> int:
         cycles = 0
         while not STOP:
             cycle_started_at = time.monotonic()
+            thermal_rearmed_this_cycle = (
+                apply_pending_interlock_rearm_at_cycle_start(
+                    thermal_interlock
+                )
+            )
+            no_progress_rearmed_this_cycle = (
+                apply_pending_interlock_rearm_at_cycle_start(
+                    no_progress_watchdog
+                )
+            )
+            if thermal_rearmed_this_cycle:
+                print(
+                    "J6_THERMAL_REARM_APPLIED "
+                    f"minimum_epoch={thermal_interlock['minimum_rearm_epoch']}",
+                    flush=True,
+                )
+            if no_progress_rearmed_this_cycle:
+                print(
+                    "J6_LOAD_LIMIT_NO_PROGRESS_REARM_APPLIED "
+                    f"minimum_epoch={no_progress_watchdog['minimum_rearm_epoch']}",
+                    flush=True,
+                )
+            command_receive_events["domain_release_received"] = False
             if previous_cycle_started_at is not None:
                 cycle_interval = cycle_started_at - previous_cycle_started_at
                 active_deadline_miss_count = update_active_deadline_miss_count(
@@ -1317,6 +2298,7 @@ def run(args: argparse.Namespace) -> int:
                 last_seen_activation_epoch,
                 command_rejection_state,
                 command_source_replay_state,
+                command_receive_events,
             )
             now = time.monotonic()
             command_lease_fresh = command_lease_is_fresh(command, now)
@@ -1450,7 +2432,9 @@ def run(args: argparse.Namespace) -> int:
                     latest,
                     latest_at,
                     reference,
-                    fault_latched,
+                    fault_latched
+                    or thermal_interlock["fault_latched"]
+                    or no_progress_watchdog["fault_latched"],
                     enabled,
                     enabled_confirmed,
                     now,
@@ -1493,7 +2477,11 @@ def run(args: argparse.Namespace) -> int:
                 if lease_safe_hold_active
                 else effective_command_mode(command, minimum_activation_epoch, now)
             )
-            if fault_latched:
+            if (
+                fault_latched
+                or thermal_interlock["fault_latched"]
+                or no_progress_watchdog["fault_latched"]
+            ):
                 mode = "brake"
             rejected_active_command = bool(
                 not lease_safe_hold_active
@@ -1616,7 +2604,52 @@ def run(args: argparse.Namespace) -> int:
             # cycle.  Apply it after every rejected-target fallback so no HOLD
             # rewrite can emit one additional POS_VEL frame.
             mode = fault_dominant_mode(mode, fault_latched)
+            if (
+                thermal_interlock["fault_latched"]
+                or no_progress_watchdog["fault_latched"]
+            ):
+                mode = "brake"
+            if (
+                mode == "position"
+                and command_is_v13_quintic_position(command)
+                and current_temperature_c
+                >= thermal_limits["derating_start_c"]
+            ):
+                newly_latched = latch_thermal_interlock(
+                    thermal_interlock,
+                    "EXACT_TRAJECTORY_DERATING_ABORT",
+                    command["activation_epoch"],
+                    minimum_activation_epoch,
+                    highest_rejected_active_epoch,
+                )
+                minimum_activation_epoch = max(
+                    minimum_activation_epoch,
+                    thermal_interlock["minimum_rearm_epoch"],
+                )
+                mode = "brake"
+                if newly_latched:
+                    print(
+                        "J6_V13_THERMAL_DERATING_TRAJECTORY_ABORT "
+                        f"temperature_c={current_temperature_c} "
+                        f"activation_epoch={command['activation_epoch']} "
+                        "policy=REPREVIEW_REQUIRED",
+                        flush=True,
+                    )
             active = mode in {"hold", "position"}
+            if (
+                active
+                and mode == "position"
+                and command_is_v13_quintic_position(command)
+                and not enabled_confirmed
+                and time.monotonic_ns()
+                >= command["trajectory"]["execute_at_monotonic_ns"]
+            ):
+                # Never join a deterministic trajectory after its common start.
+                # A later cycle must not fast-forward from an unconfirmed enable
+                # handshake into the middle of the preflighted reference.
+                fault_latched = True
+                mode = "brake"
+                active = False
             if mode == "position":
                 requested_target = command["targets_rad"][5]
                 if position_command_starts_new_profile(
@@ -1629,6 +2662,7 @@ def run(args: argparse.Namespace) -> int:
                     position_arrival_overdue = False
                     last_position_target = requested_target
                     last_position_epoch = command["activation_epoch"]
+                    reset_no_progress_observation(no_progress_watchdog)
                     # DM POS_VEL uses an unsigned speed cap; never apply an old
                     # high cap immediately to a newly authorized direction.
                     dq_command = 0.0
@@ -1649,6 +2683,7 @@ def run(args: argparse.Namespace) -> int:
                         last_seen_activation_epoch,
                         command_rejection_state,
                         command_source_replay_state,
+                        command_receive_events,
                     )
                     if safe_pre_enable_mode(
                         command,
@@ -1680,6 +2715,7 @@ def run(args: argparse.Namespace) -> int:
                     last_seen_activation_epoch,
                     command_rejection_state,
                     command_source_replay_state,
+                    command_receive_events,
                 )
                 pre_enable_mode = safe_pre_enable_mode(
                     command,
@@ -1716,6 +2752,7 @@ def run(args: argparse.Namespace) -> int:
                         last_seen_activation_epoch,
                         command_rejection_state,
                         command_source_replay_state,
+                        command_receive_events,
                     )
                     pre_enable_mode = safe_pre_enable_mode(
                         command,
@@ -1753,34 +2790,76 @@ def run(args: argparse.Namespace) -> int:
                 enabled_at = None
                 next_tick = time.monotonic()
 
+            cycle_trajectory_status = trajectory_feedback_status(
+                command, time.monotonic_ns()
+            )
             if enabled and not enabled_confirmed:
                 transport.send_pos_vel_command(
                     reference - q_command, 0.0, "GUI_ENABLE_CONFIRM_HOLD"
                 )
             elif mode == "position" and command is not None and enabled:
-                requested_target = command["targets_rad"][5]
-                actual_logical = (
-                    q_command
-                    if latest is None
-                    else -(latest.position - reference)
-                )
-                restore_limit = min(
-                    RESTORE_VELOCITY_LIMIT,
-                    command["maximum_velocity_rad_s"],
-                )
-                dq_command = update_posvel_speed_limit(
-                    dq_command,
-                    actual_logical,
-                    requested_target,
-                    command["maximum_velocity_rad_s"],
-                    command["maximum_acceleration_rad_s2"],
-                    restore_limit,
-                    PERIOD,
-                )
-                q_command = requested_target
-                protocol_position = reference - requested_target
-                protocol_velocity = dq_command
-                transport.send_pos_vel_command(protocol_position, protocol_velocity, "GUI_POSITION_REFRESH")
+                if command_is_v13_quintic_position(command):
+                    q_ref, speed_limit, trajectory_state, sample_index = (
+                        v13_position_posvel_reference(
+                            command, time.monotonic_ns()
+                        )
+                    )
+                    q_command = q_ref
+                    # q_ref/speed_limit are the immutable preview samples.
+                    # The policy above aborts and latches DISABLED before this
+                    # branch whenever the thermal derating region is entered;
+                    # independently scaling speed here would break q/dq
+                    # equivalence with the signed PLAN_TOKEN.
+                    dq_command = speed_limit
+                    protocol_position = reference - q_ref
+                    protocol_velocity = speed_limit
+                    cycle_trajectory_status = trajectory_feedback_status(
+                        command,
+                        time.monotonic_ns(),
+                        state_override=trajectory_state,
+                        sample_index_override=sample_index,
+                    )
+                    transport.send_pos_vel_command(
+                        protocol_position,
+                        protocol_velocity,
+                        "GUI_POSITION_QUINTIC_REFRESH",
+                    )
+                else:
+                    requested_target = command["targets_rad"][5]
+                    actual_logical = (
+                        q_command
+                        if latest is None
+                        else -(latest.position - reference)
+                    )
+                    restore_limit = min(
+                        RESTORE_VELOCITY_LIMIT,
+                        command["maximum_velocity_rad_s"],
+                    )
+                    thermal_vmax, thermal_amax, thermal_restore_limit = (
+                        thermal_derated_posvel_limits(
+                            command["maximum_velocity_rad_s"],
+                            command["maximum_acceleration_rad_s2"],
+                            restore_limit,
+                            thermal_factor,
+                        )
+                    )
+                    dq_command = update_posvel_speed_limit(
+                        dq_command,
+                        actual_logical,
+                        requested_target,
+                        thermal_vmax,
+                        thermal_amax,
+                        thermal_restore_limit,
+                        PERIOD,
+                    )
+                    q_command = requested_target
+                    protocol_position = reference - requested_target
+                    protocol_velocity = dq_command
+                    transport.send_pos_vel_command(
+                        protocol_position,
+                        protocol_velocity,
+                        "GUI_POSITION_REFRESH",
+                    )
             elif mode == "hold" and enabled:
                 fixed_hold_target = (
                     lease_safe_hold_target
@@ -1789,7 +2868,9 @@ def run(args: argparse.Namespace) -> int:
                 )
                 if fixed_hold_target is None:
                     raise RuntimeError("J6 HOLD目标尚未建立")
-                hold_velocity_limit = fixed_hold_velocity_limit()
+                hold_velocity_limit = (
+                    fixed_hold_velocity_limit() * thermal_factor
+                )
                 transport.send_pos_vel_command(
                     reference - fixed_hold_target,
                     hold_velocity_limit,
@@ -1829,7 +2910,50 @@ def run(args: argparse.Namespace) -> int:
                 elif rapid_motion_degraded and not rapid_motion:
                     print("J6_EXTERNAL_MOTION_SETTLED", flush=True)
                     rapid_motion_degraded = False
-                if decoded.mos_temp >= 60 or decoded.coil_temp >= 60 or decoded.state in FAULT_STATES:
+                current_temperature_c = float(
+                    max(decoded.mos_temp, decoded.coil_temp)
+                )
+                temperature_median_c, temperature_slope_c_per_min = (
+                    temperature_window_statistics(
+                        temperature_samples,
+                        current_temperature_c,
+                        latest_at,
+                        thermal_limits["slope_window_seconds"],
+                    )
+                )
+                thermal_factor = thermal_derating_factor(
+                    current_temperature_c,
+                    thermal_limits["derating_start_c"],
+                    thermal_limits["thermal_stop_c"],
+                    THERMAL_MINIMUM_ACTIVE_FACTOR,
+                )
+                active_epoch = (
+                    command["activation_epoch"]
+                    if command_requests_j6_active(command)
+                    else 0
+                )
+                thermal_tripped_this_cycle = observe_raw_temperature_thermal_trip(
+                    thermal_interlock,
+                    current_temperature_c,
+                    thermal_limits["thermal_stop_c"],
+                    active_epoch,
+                    minimum_activation_epoch,
+                    highest_rejected_active_epoch,
+                )
+                if thermal_interlock["fault_latched"]:
+                    minimum_activation_epoch = max(
+                        minimum_activation_epoch,
+                        thermal_interlock["minimum_rearm_epoch"],
+                    )
+                if thermal_tripped_this_cycle:
+                    print(
+                        "J6_THERMAL_STOP_LATCHED "
+                        f"temperature_c={current_temperature_c} "
+                        f"activation_epoch={active_epoch} "
+                        "worker_continues_online=YES",
+                        flush=True,
+                    )
+                if current_temperature_c < 0.0 or decoded.state in FAULT_STATES:
                     fault_latched = True
                 if (enabled and decoded.state != 1 and enabled_at is not None and
                         time.monotonic() - enabled_at > 0.2):
@@ -1843,51 +2967,263 @@ def run(args: argparse.Namespace) -> int:
             fresh = latest is not None and latest_at is not None and time.monotonic() - latest_at <= FEEDBACK_MAX_AGE_S
             if enabled and not fresh:
                 fault_latched = True
-            if (
+            if thermal_interlock["fault_latched"]:
+                cooldown_qualified = bool(
+                    decoded_events
+                    and not fatal_event
+                    and latest is not None
+                    and latest.state == 0
+                    and fresh
+                    and current_temperature_c
+                    < thermal_limits["rearm_below_c"]
+                    and math.isfinite(latest.position)
+                    and math.isfinite(latest.velocity)
+                )
+                if decoded_events or not fresh:
+                    if observe_thermal_cooldown_frame(
+                        thermal_interlock,
+                        cooldown_qualified,
+                        time.monotonic(),
+                        thermal_limits["cooldown_seconds"],
+                        max(
+                            1,
+                            math.ceil(
+                                thermal_limits["cooldown_seconds"] / PERIOD
+                            ),
+                        ),
+                    ):
+                        print(
+                            "J6_THERMAL_COOLDOWN_READY "
+                            f"valid_brake_frames={thermal_interlock['cooldown_frames']}",
+                            flush=True,
+                        )
+            no_progress_observation_valid = bool(
+                decoded_events
+                and
                 enabled
                 and mode == "position"
-                and position_started_at is not None
                 and latest is not None
                 and last_position_target is not None
-            ):
-                position_error = abs(
+                and enabled_confirmed
+                and fresh
+                and not fault_latched
+                and not thermal_interlock["fault_latched"]
+                and not no_progress_watchdog["fault_latched"]
+                and (
+                    not command_is_v13_quintic_position(command)
+                    or time.monotonic_ns()
+                    >= command["trajectory"]["execute_at_monotonic_ns"]
+                )
+            )
+            no_progress_position_error_rad = 0.0
+            if no_progress_observation_valid:
+                no_progress_position_error_rad = abs(
                     (-(latest.position - reference)) - last_position_target
                 )
-                if position_error <= ARRIVAL_TOLERANCE:
-                    # A later external displacement must be restored to the
-                    # immutable target, not reclassified as an arrival timeout.
-                    if position_arrival_overdue:
-                        print("J6_POSITION_ARRIVAL_RECOVERED", flush=True)
-                    position_arrival_overdue = False
+                if no_progress_position_error_rad <= ARRIVAL_TOLERANCE:
                     position_started_at = None
-                elif (
-                    time.monotonic() - position_started_at >= TARGET_TIMEOUT_S
-                    and not position_arrival_overdue
+                if observe_no_progress_watchdog(
+                    no_progress_watchdog,
+                    True,
+                    no_progress_position_error_rad,
+                    time.monotonic(),
+                    command["activation_epoch"],
+                    minimum_activation_epoch,
+                    highest_rejected_active_epoch,
                 ):
+                    minimum_activation_epoch = max(
+                        minimum_activation_epoch,
+                        no_progress_watchdog["minimum_rearm_epoch"],
+                    )
                     print(
                         "J6_POSITION_ARRIVAL_OVERDUE "
-                        f"error_rad={position_error}",
+                        f"error_rad={no_progress_position_error_rad} "
+                        "action=LATCHED_SAFE_BRAKE",
                         flush=True,
                     )
-                    position_arrival_overdue = True
-            if fault_latched:
+                    print(
+                        "J6_LOAD_LIMIT_NO_PROGRESS "
+                        f"activation_epoch={command['activation_epoch']} "
+                        f"minimum_rearm_epoch={no_progress_watchdog['minimum_rearm_epoch']} "
+                        f"authority={NO_PROGRESS_WATCHDOG_AUTHORITY}",
+                        flush=True,
+                    )
+            elif decoded_events:
+                observe_no_progress_watchdog(
+                    no_progress_watchdog,
+                    False,
+                    0.0,
+                    time.monotonic(),
+                    0,
+                    minimum_activation_epoch,
+                    highest_rejected_active_epoch,
+                )
+            software_interlock_latched = bool(
+                thermal_interlock["fault_latched"]
+                or no_progress_watchdog["fault_latched"]
+            )
+            if fault_latched or software_interlock_latched:
                 lease_safe_hold_active = False
                 lease_safe_hold_target = None
-            if fault_latched and (enabled or (latest is not None and latest.state != 0)):
+                prior_external_hold_confirmed = False
+                mode = "brake"
+            if (
+                (fault_latched or software_interlock_latched)
+                and (enabled or (latest is not None and latest.state != 0))
+            ):
                 final_disabled = disable_and_verify(transport, logger)
                 if not final_disabled:
-                    raise RuntimeError("J6故障后未能确认DISABLED终态")
+                    raise RuntimeError("J6锁存制动后未能确认DISABLED终态")
                 enabled = False
                 enabled_confirmed = False
                 enabled_at = None
                 next_tick = time.monotonic()
+            explicit_release_packet_received = bool(
+                command_receive_events["domain_release_received"]
+            )
+            if observe_explicit_interlock_release(
+                thermal_interlock,
+                explicit_release_packet_received,
+                cooldown_required=True,
+            ):
+                print("J6_THERMAL_OPERATOR_RELEASE_OBSERVED", flush=True)
+            if observe_explicit_interlock_release(
+                no_progress_watchdog,
+                explicit_release_packet_received,
+                cooldown_required=False,
+            ):
+                print(
+                    "J6_LOAD_LIMIT_NO_PROGRESS_OPERATOR_RELEASE_OBSERVED",
+                    flush=True,
+                )
+            command_lease_fresh = command_lease_is_fresh(
+                command, time.monotonic()
+            )
+            valid_disabled_feedback = bool(
+                not fault_latched
+                and fresh
+                and latest is not None
+                and latest.state == 0
+                and math.isfinite(latest.position)
+                and math.isfinite(latest.velocity)
+            )
+            if request_interlock_rearm_for_next_cycle(
+                thermal_interlock,
+                command,
+                command_lease_fresh,
+                valid_disabled_feedback,
+                highest_rejected_active_epoch,
+                cooldown_required=True,
+            ):
+                print(
+                    "J6_THERMAL_REARM_PENDING_NEXT_CYCLE "
+                    f"activation_epoch={command['activation_epoch']}",
+                    flush=True,
+                )
+            if request_interlock_rearm_for_next_cycle(
+                no_progress_watchdog,
+                command,
+                command_lease_fresh,
+                valid_disabled_feedback,
+                highest_rejected_active_epoch,
+                cooldown_required=False,
+            ):
+                print(
+                    "J6_LOAD_LIMIT_NO_PROGRESS_REARM_PENDING_NEXT_CYCLE "
+                    f"activation_epoch={command['activation_epoch']}",
+                    flush=True,
+                )
+            if (
+                command_is_v13_quintic_position(command)
+                and (fault_latched or software_interlock_latched or mode != "position")
+            ):
+                cycle_trajectory_status = trajectory_feedback_status(
+                    command,
+                    time.monotonic_ns(),
+                    state_override="INACTIVE",
+                )
+            if thermal_interlock["fault_latched"]:
+                thermal_state = (
+                    "WAIT_OPERATOR_CONFIRM"
+                    if thermal_interlock["cooldown_ready"]
+                    else "COOLDOWN"
+                    if current_temperature_c
+                    < thermal_limits["rearm_below_c"]
+                    else "THERMAL_STOP"
+                )
+            elif current_temperature_c >= thermal_limits["derating_start_c"]:
+                thermal_state = "DERATING"
+            elif current_temperature_c >= thermal_limits["normal_below_c"]:
+                thermal_state = "WARNING"
+            else:
+                thermal_state = "NORMAL"
+            thermal_status = {
+                "thermal_state": thermal_state,
+                "thermal_derating_factor": (
+                    0.0
+                    if thermal_interlock["fault_latched"]
+                    else thermal_factor
+                ),
+                "thermal_raw_temperature_c": current_temperature_c,
+                "thermal_window_median_c": temperature_median_c,
+                "thermal_slope_c_per_min": temperature_slope_c_per_min,
+                "thermal_fault_latched": thermal_interlock["fault_latched"],
+                "thermal_cooldown_ready": thermal_interlock["cooldown_ready"],
+                "thermal_release_observed": thermal_interlock["release_observed"],
+                "thermal_rearm_pending_next_cycle": thermal_interlock[
+                    "rearm_pending_next_cycle"
+                ],
+                "thermal_cooldown_valid_brake_frames": thermal_interlock[
+                    "cooldown_frames"
+                ],
+                "thermal_trip_activation_epoch": thermal_interlock[
+                    "trip_activation_epoch"
+                ],
+                "thermal_minimum_rearm_epoch": thermal_interlock[
+                    "minimum_rearm_epoch"
+                ],
+                "thermal_trip_reason": thermal_interlock["trip_reason"],
+                "thermal_config_sha256": thermal_limits["config_sha256"],
+            }
+            no_progress_status = {
+                "no_progress_fault": no_progress_watchdog["fault_latched"],
+                "no_progress_release_observed": no_progress_watchdog[
+                    "release_observed"
+                ],
+                "no_progress_rearm_pending_next_cycle": no_progress_watchdog[
+                    "rearm_pending_next_cycle"
+                ],
+                "no_progress_watchdog_qualifying_frames": no_progress_watchdog[
+                    "qualifying_frames"
+                ],
+                "no_progress_observation_valid": no_progress_observation_valid,
+                "no_progress_position_error_rad": no_progress_position_error_rad,
+                "no_progress_trip_position_error_rad": no_progress_watchdog[
+                    "trip_position_error_rad"
+                ],
+                "load_limit_watchdog_authority": NO_PROGRESS_WATCHDOG_AUTHORITY,
+                "no_progress_trip_activation_epoch": no_progress_watchdog[
+                    "trip_activation_epoch"
+                ],
+                "no_progress_minimum_rearm_epoch": no_progress_watchdog[
+                    "minimum_rearm_epoch"
+                ],
+            }
             send_feedback(
                 feedback_socket, args.feedback_port, latest, fresh,
-                "brake" if fault_latched else
+                "brake" if fault_latched or software_interlock_latched else
                 "hold" if enabled and not enabled_confirmed else mode,
                 fault_latched,
                 lease_safe_hold_active,
                 command_rejection_state,
+                cycle_trajectory_status,
+                thermal_status,
+                no_progress_status,
+                (
+                    None
+                    if latest_at is None
+                    else int(latest_at * 1_000_000_000)
+                ),
             )
             # Use the lease decision made at the cycle boundary where this
             # external target was selected.  Re-reading the clock here can

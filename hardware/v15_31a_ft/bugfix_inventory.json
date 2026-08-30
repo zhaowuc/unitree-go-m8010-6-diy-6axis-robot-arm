@@ -1,0 +1,355 @@
+{
+  "schema_version": "V15.31A-FT-bugfix-inventory-v1",
+  "generated_at": "2026-08-31T02:20:35+08:00",
+  "scope": "software audit and offline verification only",
+  "items": [
+    {
+      "id": 1,
+      "title": "J1到位后fault问题",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS_HARDWARE_NOT_RUN",
+      "evidence_paths": ["tools/hardware/v15_30a_gui_go_controller.cpp"]
+    },
+    {
+      "id": 2,
+      "title": "J2高温退出问题",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS_HARDWARE_NOT_RUN",
+      "evidence_paths": [
+        "tools/hardware/v15_30a_gui_go_controller.cpp",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/thermal_manager.py"
+      ]
+    },
+    {
+      "id": 3,
+      "title": "J2 torque字段单位冲突",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS",
+      "evidence_paths": [
+        "hardware/v15_31a_ft/torque_semantics_audit.json",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/torque_semantics.py"
+      ]
+    },
+    {
+      "id": 4,
+      "title": "J2长期最大电流硬顶",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS_HARDWARE_NOT_RUN",
+      "evidence_paths": ["tools/hardware/v15_30a_gui_go_controller.cpp"]
+    },
+    {
+      "id": 5,
+      "title": "J3/J4/J5重载位置不足",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "SOFTWARE_PATH_PASS_HARDWARE_ACCEPTANCE_BLOCKED_POWER_OFF",
+      "evidence_paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/gravity_model.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/whole_arm_gravity_node.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/command_router.py",
+        "tools/hardware/v15_30a_gui_go_controller.cpp"
+      ]
+    },
+    {
+      "id": 6,
+      "title": "J6到位误差",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS_HARDWARE_NOT_RUN",
+      "evidence_paths": [
+        "tools/hardware/j6_dm_g6220/v15_30a_gui_j6_controller.py",
+        "tools/hardware/j6_dm_g6220/test_v15_30a_gui_profile.py"
+      ]
+    },
+    {
+      "id": 7,
+      "title": "command lease误触发",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS",
+      "evidence_paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/command_router.py",
+        "tools/hardware/v15_30a_gui_go_controller.cpp",
+        "tools/hardware/j6_dm_g6220/v15_30a_gui_j6_controller.py"
+      ]
+    },
+    {
+      "id": 8,
+      "title": "active_joint_mask错误",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS",
+      "evidence_paths": ["V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/command_router.py"]
+    },
+    {
+      "id": 9,
+      "title": "GUI目标和实际状态混用",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS",
+      "evidence_paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/main_window.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/workflow_contract.py"
+      ]
+    },
+    {
+      "id": 10,
+      "title": "MuJoCo计划与现实视图混用",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS",
+      "evidence_paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/main_window.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/mujoco_mirror_node.py"
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Qt主线程阻塞",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS_TRAJECTORY_BUILD_AND_SERIALIZATION_OFF_QT_THREAD_PLUS_DEDICATED_COALESCING_RENDERERS",
+      "evidence_paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/main_window.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/test/test_main_window_logic.py"
+      ]
+    },
+    {
+      "id": 12,
+      "title": "GUI关闭时制动路径",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS_HARDWARE_NOT_RUN",
+      "evidence_paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/main_window.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/test/test_state_node_shutdown.py"
+      ]
+    },
+    {
+      "id": 13,
+      "title": "worker SIGINT/SIGTERM终态BRAKE",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS_HARDWARE_NOT_RUN",
+      "evidence_paths": [
+        "tools/hardware/v15_30a_gui_go_controller.cpp",
+        "tools/hardware/j6_dm_g6220/v15_30a_gui_j6_controller.py"
+      ]
+    },
+    {
+      "id": 14,
+      "title": "session reference改变后旧目标仍有效",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS",
+      "evidence_paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/workflow_contract.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/command_router.py"
+      ]
+    },
+    {
+      "id": 15,
+      "title": "初始化姿态跨session错误复用",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS",
+      "evidence_paths": ["V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/main_window.py"]
+    },
+    {
+      "id": 16,
+      "title": "温度状态颜色与真实状态不一致",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS",
+      "evidence_paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/main_window.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/thermal_manager.py"
+      ]
+    },
+    {
+      "id": 17,
+      "title": "单个电机掉线导致全GUI崩溃",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS",
+      "evidence_paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/state_model.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/whole_arm_state_node.py"
+      ]
+    },
+    {
+      "id": 18,
+      "title": "任务执行中没有心跳",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS",
+      "evidence_paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/main_window.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/state_model.py"
+      ]
+    },
+    {
+      "id": 19,
+      "title": "实际未到位却显示完成",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS_HARDWARE_NOT_RUN",
+      "evidence_paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/main_window.py",
+        "tools/hardware/v15_30a_gui_go_controller.cpp",
+        "tools/hardware/j6_dm_g6220/v15_30a_gui_j6_controller.py"
+      ]
+    },
+    {
+      "id": 20,
+      "title": "evidence中的commit SHA无法解析",
+      "finding": "NOT_FOUND",
+      "disposition": "NOT_APPLICABLE",
+      "verification": "SOURCE_COMMIT_AND_COMMIT_1_RESOLVE_LOCALLY; COMMIT_2_CANNOT_EMBED_ITS_OWN_SHA_IN_ITS_TREE",
+      "evidence_paths": [".git"]
+    },
+    {
+      "id": 21,
+      "title": "GO瞬时到位可绕过90秒超时并授权HOLD",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "IMPLEMENTED_OFFLINE_REVIEW_POWERED_VALIDATION_NOT_RUN_POWER_OFF",
+      "evidence_paths": [
+        "tools/hardware/v15_30a_gui_go_controller.cpp",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/test/test_static_contract.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/test/test_state_model.py"
+      ]
+    },
+    {
+      "id": 22,
+      "title": "exact v1.3轨迹在热区独立降额破坏预演等价性",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "IMPLEMENTED_OFFLINE_REVIEW_POWERED_VALIDATION_NOT_RUN_POWER_OFF",
+      "evidence_paths": [
+        "tools/hardware/v15_30a_gui_go_controller.cpp",
+        "tools/hardware/j6_dm_g6220/v15_30a_gui_j6_controller.py",
+        "tools/hardware/j6_dm_g6220/test_v15_30a_gui_profile.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/test/test_static_contract.py"
+      ]
+    },
+    {
+      "id": 23,
+      "title": "GO热阈值authority分裂且逐电机热状态缺失",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "IMPLEMENTED_OFFLINE_REVIEW_POWERED_VALIDATION_NOT_RUN_POWER_OFF",
+      "evidence_paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/config/thermal_limits.yaml",
+        "tools/hardware/v15_30a_gui_go_controller.cpp",
+        "tools/hardware/j6_dm_g6220/v15_30a_gui_j6_controller.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/state_model.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/whole_arm_state_node.py"
+      ]
+    },
+    {
+      "id": 24,
+      "title": "即时BRAKE回包未原子提交导致模式观测可能失真",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "IMPLEMENTED_OFFLINE_REVIEW_POWERED_VALIDATION_NOT_RUN_POWER_OFF",
+      "evidence_paths": [
+        "tools/hardware/v15_30a_gui_go_controller.cpp",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/state_model.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/whole_arm_state_node.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/test/test_state_node_shutdown.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/test/test_static_contract.py"
+      ]
+    },
+    {
+      "id": 25,
+      "title": "exact v1.3轨迹被运行时load governor改写",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS_ANY_ALPHA_NOT_EQUAL_TO_ONE_LATCHES_BRAKE; UNITY_ALPHA_SENDS_ORIGINAL_Q_DQ; REPREVIEW_REQUIRED",
+      "evidence_paths": [
+        "tools/hardware/v15_30a_gui_go_controller.cpp",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/test/test_static_contract.py"
+      ]
+    },
+    {
+      "id": 26,
+      "title": "J6生产虚拟环境缺少PyYAML导致运行前失败",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS_STANDARD_LIBRARY_STRICT_THERMAL_CONFIG_PARSER",
+      "evidence_paths": [
+        "tools/hardware/j6_dm_g6220/v15_30a_gui_j6_controller.py",
+        "tools/hardware/j6_dm_g6220/test_v15_30a_gui_profile.py"
+      ]
+    },
+    {
+      "id": 27,
+      "title": "运行时力矩命令、反馈、关节估算与J2合计未分离",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS_STRICT_FOUR_FIELD_CONTRACT; POWERED_VALUES_NOT_RUN_POWER_OFF",
+      "evidence_paths": [
+        "tools/hardware/v15_30a_gui_go_controller.cpp",
+        "tools/hardware/j6_dm_g6220/v15_30a_gui_j6_controller.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/state_model.py",
+        "hardware/v15_31a_ft/torque_semantics_audit.json"
+      ]
+    },
+    {
+      "id": 28,
+      "title": "GUI最后反馈时间误用worker数据报接收时间",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS_LAST_VALID_PHYSICAL_FEEDBACK_MONOTONIC_TIMESTAMP",
+      "evidence_paths": [
+        "tools/hardware/v15_30a_gui_go_controller.cpp",
+        "tools/hardware/j6_dm_g6220/v15_30a_gui_j6_controller.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/state_model.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/main_window.py"
+      ]
+    },
+    {
+      "id": 29,
+      "title": "任务状态枚举过度泛化并会将正常POSITION误报未到位",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS_MEASURED_PRIORITY_AND_EXECUTION_DWELL_TIMEOUT_SPLIT",
+      "evidence_paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/main_window.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/test/test_main_window_logic.py",
+        "hardware/v15_31a_ft/task_state_validation.json"
+      ]
+    },
+    {
+      "id": 30,
+      "title": "整轨计划证明在重力订阅回调同步解析并阻塞100Hz状态更新",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS_CALLBACK_IDENTITY_BOUNDS_ONLY; LATEST_GENERATION_CANCELABLE_PARSE_AND_MUJOCO_EVALUATION_WORKER",
+      "evidence_paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/whole_arm_gravity_node.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/test/test_planned_path_feasibility.py"
+      ]
+    },
+    {
+      "id": 31,
+      "title": "整轨proof缺少热配置和逐电机时效绑定且HOLD错误依赖计划proof",
+      "finding": "FOUND",
+      "disposition": "FIXED",
+      "verification": "OFFLINE_PASS_POSITION_REQUIRES_EXACT_NESTED_PROOF; HOLD_USES_ONLY_CURRENT_POSE_AUTHORITY; ALL_SEVEN_LAST_VALID_FEEDBACK_GATED",
+      "evidence_paths": [
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/planned_path_feasibility.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/whole_arm_gravity_node.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/command_router.py",
+        "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/workflow_contract.py"
+      ]
+    }
+  ],
+  "powered_acceptance": "NOT_RUN",
+  "primary_blocker": "机械臂断电导致无法建立MODEL_SESSION_ANCHOR_V2及执行实机验收"
+}

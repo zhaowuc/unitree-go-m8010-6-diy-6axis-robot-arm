@@ -1,0 +1,68 @@
+{
+  "schema_version": "V15.31A-FT-gui-dual-twin-validation-v1",
+  "generated_at": "2026-08-31T02:20:35+08:00",
+  "validation_scope": "offline logic, static inspection and automated tests; no powered encoder stream",
+  "checks": {
+    "GUI_SINGLE_SLIDER_SET": {
+      "status": "PASS",
+      "evidence": "One J1-J6 target slider set edits q_plan_target only."
+    },
+    "PLANNED_MUJOCO_VIEW": {
+      "status": "PASS",
+      "evidence": "The planned view consumes exact integer-grid samples from the same immutable trajectory recipe dispatched to hardware."
+    },
+    "ACTUAL_DIGITAL_TWIN_VIEW": {
+      "status": "OFFLINE_PASS_LIVE_FEEDBACK_NOT_RUN_POWER_OFF",
+      "evidence": "The actual view consumes q_actual only and cannot be driven by target slider changes."
+    },
+    "INDEPENDENT_MJDATA": {
+      "status": "PASS",
+      "evidence": "Planned and actual preview instances each allocate their own MjModel/MjData; neither renderer shares control or collision MjData."
+    },
+    "VIRTUAL_PREVIEW_BEFORE_REAL": {
+      "status": "PASS",
+      "evidence": "Each exact segmented trajectory must receive non-authorizing plan-preview proofs before an execution token can be issued."
+    },
+    "REAL_SUBMISSION_REQUIRES_EXPLICIT_CLICK": {
+      "status": "PASS",
+      "evidence": "Only the explicit real-submit action can consume a valid PLAN_TOKEN and request execution."
+    },
+    "PLAN_TOKEN_INVALIDATION": {
+      "status": "PASS",
+      "evidence": "Target, actual-pose drift, session, limits, model, gravity configuration and thermal feasibility changes invalidate authorization."
+    },
+    "TEMPERATURE_TABLE": {
+      "status": "PASS",
+      "evidence": "Seven physical-motor rows preserve J2A/J2B separation and unit-qualified torque fields."
+    },
+    "TEMPERATURE_COLOR_STATES": {
+      "status": "PASS",
+      "evidence": "Offline, normal, warning, rising, derating, stop, cooling and confirmation states include both text and color."
+    },
+    "RESTORE_INITIAL_PREVIEW": {
+      "status": "PASS",
+      "evidence": "Restore initialization follows preview and authority validation before real submission."
+    },
+    "RESTORE_INITIAL_REAL_EXECUTION": {
+      "status": "NOT_RUN_POWER_OFF",
+      "evidence": "No real command was sent."
+    },
+    "QT_MAIN_THREAD_NONBLOCKING": {
+      "status": "PASS",
+      "evidence": "Exact trajectory generation and planned-request serialization run in a latest-generation single worker; Qt only validates and publishes the fresh serialized result. Each MuJoCo preview creates, renders and closes its OpenGL context on one dedicated background executor; requests coalesce to the latest pending frame while periodic UI updates remain timer driven."
+    },
+    "BOTH_RENDERERS_CLOSED": {
+      "status": "PASS",
+      "evidence": "Window shutdown explicitly closes both planned and actual renderer instances on their owning worker threads."
+    }
+  },
+  "evidence_paths": [
+    "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/main_window.py",
+    "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/workflow_contract.py",
+    "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/test/test_main_window_logic.py",
+    "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/test/test_workflow_contract.py",
+    "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/mujoco_mirror_node.py"
+  ],
+  "hardware_commands_sent": false,
+  "result": "PASS_OFFLINE_HARDWARE_ACCEPTANCE_NOT_RUN"
+}

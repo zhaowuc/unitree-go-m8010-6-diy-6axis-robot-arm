@@ -21,6 +21,9 @@ TRAJECTORY_SCHEMA = "go-m8010-quintic-trajectory/1.0"
 TRAJECTORY_RECIPE_SCHEMA = "go-m8010-segmented-quintic-recipe/1.0"
 TRAJECTORY_COMMAND_SCHEMA = "go-m8010-quintic-command/1.0"
 PLAN_TOKEN_SCHEMA = "go-m8010-plan-token/1.0"
+PLANNED_PATH_REQUEST_SCHEMA = (
+    "go-m8010-planned-path-feasibility-request/1.0"
+)
 MAXIMUM_TRAJECTORY_INTERVALS = 1_000_000
 
 JointVector = Tuple[float, float, float, float, float, float]
@@ -717,6 +720,114 @@ def trajectory_plan_manifest(recipe: TrajectoryRecipe) -> dict:
     }
 
 
+def planned_trajectory_feasibility_request(
+    recipe: TrajectoryRecipe,
+    *,
+    source_instance_id: str,
+    sequence: int,
+    source_monotonic_ns: int,
+    session_id: str,
+    state_instance_id: str,
+    model_sha256: str,
+    gravity_config_sha256: str,
+    thermal_config_sha256: str,
+) -> dict:
+    """Serialize an exact, independently reproducible whole-path proof request.
+
+    This request grants no command authority.  The gravity producer recreates
+    every quintic sample and both the segment and recipe semantic hashes before
+    it evaluates MuJoCo load.  Keeping this separate from command/1.3 lets the
+    proof exist before a successful preview is allowed to mint PLAN_TOKEN.
+    """
+
+    if not isinstance(recipe, TrajectoryRecipe):
+        raise ContractViolation("planned-path request requires a trajectory recipe")
+    if (
+        not isinstance(source_instance_id, str)
+        or len(source_instance_id) != 32
+        or any(
+            character not in "0123456789abcdef"
+            for character in source_instance_id
+        )
+    ):
+        raise ContractViolation("source_instance_id must be 32 lowercase hex digits")
+    if type(sequence) is not int or sequence <= 0:
+        raise ContractViolation("planned-path sequence must be positive")
+    if type(source_monotonic_ns) is not int or source_monotonic_ns <= 0:
+        raise ContractViolation("planned-path timestamp must be positive")
+    if not isinstance(session_id, str) or not session_id:
+        raise ContractViolation("planned-path session_id is required")
+    if not isinstance(state_instance_id, str) or not state_instance_id:
+        raise ContractViolation("planned-path state_instance_id is required")
+    model_hash = _validated_sha256(model_sha256, "model_sha256")
+    gravity_hash = _validated_sha256(
+        gravity_config_sha256, "gravity_config_sha256"
+    )
+    thermal_hash = _validated_sha256(
+        thermal_config_sha256, "thermal_config_sha256"
+    )
+    trajectory = {
+        "schema": TRAJECTORY_RECIPE_SCHEMA,
+        "trajectory_sha256": recipe.sha256,
+        "start_rad": list(recipe.start_rad),
+        "target_rad": list(recipe.target_rad),
+        "joint_limits_rad": [list(pair) for pair in recipe.joint_limits_rad],
+        "profile": {
+            "kind": recipe.profile.kind,
+            "duration_s": recipe.profile.duration_s,
+            "maximum_sample_period_s": recipe.profile.maximum_sample_period_s,
+            "actual_sample_period_s": recipe.profile.actual_sample_period_s,
+        },
+        "segments": [
+            {
+                "schema": TRAJECTORY_SCHEMA,
+                "trajectory_sha256": segment.sha256,
+                "start_rad": list(segment.start_rad),
+                "target_rad": list(segment.target_rad),
+                "joint_limits_rad": [
+                    list(pair) for pair in segment.joint_limits_rad
+                ],
+                "profile": {
+                    "kind": segment.profile.kind,
+                    "duration_s": segment.profile.duration_s,
+                    "maximum_sample_period_s": (
+                        segment.profile.maximum_sample_period_s
+                    ),
+                    "actual_sample_period_s": (
+                        segment.profile.actual_sample_period_s
+                    ),
+                    "interval_count": segment.profile.interval_count,
+                },
+            }
+            for segment in recipe.segments
+        ],
+    }
+    request = {
+        "schema": PLANNED_PATH_REQUEST_SCHEMA,
+        "source": "arm_control_gui",
+        "source_instance_id": source_instance_id,
+        "sequence": sequence,
+        "source_monotonic_ns": source_monotonic_ns,
+        "session_id": session_id,
+        "state_instance_id": state_instance_id,
+        "model_sha256": model_hash,
+        "gravity_config_sha256": gravity_hash,
+        "thermal_config_sha256": thermal_hash,
+        "trajectory_sha256": recipe.sha256,
+        "trajectory": trajectory,
+    }
+    identity_fields = (
+        "schema", "source", "source_instance_id", "sequence",
+        "source_monotonic_ns", "session_id", "state_instance_id",
+        "model_sha256", "gravity_config_sha256", "thermal_config_sha256",
+        "trajectory_sha256",
+    )
+    request["request_sha256"] = _canonical_sha256({
+        name: request[name] for name in identity_fields
+    })
+    return request
+
+
 def trajectory_sample_index_at(
     now_monotonic_ns: int,
     *,
@@ -752,6 +863,7 @@ class PreviewChecks:
     limits_pass: bool
     collision_pass: bool
     gravity_pass: bool
+    planned_load_thermal_pass: bool
     thermal_pass: bool
     feedback_fresh: bool
     communication_pass: bool
@@ -767,6 +879,7 @@ class PreviewChecks:
             "limits_pass": self.limits_pass,
             "collision_pass": self.collision_pass,
             "gravity_pass": self.gravity_pass,
+            "planned_load_thermal_pass": self.planned_load_thermal_pass,
             "thermal_pass": self.thermal_pass,
             "feedback_fresh": self.feedback_fresh,
             "communication_pass": self.communication_pass,
@@ -778,7 +891,7 @@ class PreviewChecks:
 
     @classmethod
     def successful(cls) -> "PreviewChecks":
-        return cls(True, True, True, True, True, True, True)
+        return cls(True, True, True, True, True, True, True, True)
 
 
 @dataclass(frozen=True, init=False)
@@ -1236,6 +1349,7 @@ __all__ = [
     "joint_vector_sha256",
     "quintic_duration_for_limits",
     "trajectory_command_descriptor",
+    "planned_trajectory_feasibility_request",
     "trajectory_plan_manifest",
     "trajectory_sample_index_at",
     "validated_joint_limits",

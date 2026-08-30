@@ -32,6 +32,20 @@ GRAVITY_STATUS_TOPIC = "/whole_arm/gravity_status"
 GRAVITY_CONFIG_SHA256 = (
     "307469b8384fd35547327ba1d5f80aa440e6b9663406ab7c9d9469bea263335d"
 )
+THERMAL_CONFIG_SHA256 = (
+    "1926264805858f62fffc9360ef0c9d4d7f8a7e232e171105450769d493ff5467"
+)
+PLANNED_FEASIBILITY_SCHEMA = (
+    "go-m8010-planned-load-thermal-feasibility/1.0"
+)
+PLANNED_LOAD_EVALUATION_BASIS = (
+    "MUJOCO_QFRC_BIAS_CONTINUOUS_PLUS_MJ_INVERSE_SHORT_PEAK_EVERY_SAMPLE"
+)
+PLANNED_THERMAL_EVALUATION_BASIS = (
+    "CURRENT_MEASURED_TEMPERATURE_TO_DERATING_THRESHOLD_PLUS_"
+    "ALL_SAMPLE_PREDICTED_LOAD_WITHIN_CONTINUOUS_RATING_"
+    "NO_HEAT_RISE_MODEL"
+)
 GRAVITY_STATUS_MAXIMUM_AGE_NS = 250_000_000
 GRAVITY_SCALE_LEVELS = (0.0, 0.25, 0.50, 0.75, 1.0)
 # Software command envelopes derived from the frozen model and existing
@@ -1061,6 +1075,149 @@ class PlanManifestGate:
             raise ValueError("轨迹首包执行时间超过上界")
 
 
+def _validated_planned_feasibility_proof(
+    value: object,
+    *,
+    source_instance_id: str,
+    sequence: int,
+    source_monotonic_ns: int,
+    session_id: str,
+    state_instance_id: str,
+) -> Optional[dict]:
+    """Validate POSITION-only proof without revoking current-pose HOLD authority."""
+
+    try:
+        if not isinstance(value, dict):
+            raise ValueError
+        gravity_joint = value.get(
+            "maximum_abs_gravity_joint_torque_nm_by_joint"
+        )
+        gravity_rotor = value.get(
+            "maximum_abs_gravity_rotor_torque_nm_by_motor"
+        )
+        predicted_rotor = value.get(
+            "maximum_abs_predicted_rotor_torque_nm_by_motor"
+        )
+        continuous_limits = value.get(
+            "continuous_rotor_torque_limit_nm_by_motor"
+        )
+        short_peak_limits = value.get(
+            "short_peak_rotor_torque_limit_nm_by_motor"
+        )
+        if (
+            not isinstance(gravity_joint, dict)
+            or set(gravity_joint) != {"J1", "J2", "J3", "J4", "J5", "J6"}
+            or not all(
+                type(item) in {int, float}
+                and math.isfinite(float(item))
+                and float(item) >= 0.0
+                for item in gravity_joint.values()
+            )
+            or not all(
+                isinstance(mapping, dict)
+                and set(mapping) == set(MOTOR_NAMES)
+                for mapping in (
+                    gravity_rotor, predicted_rotor,
+                    continuous_limits, short_peak_limits,
+                )
+            )
+            or not all(
+                type(gravity_rotor[name]) in {int, float}
+                and math.isfinite(float(gravity_rotor[name]))
+                and float(gravity_rotor[name]) >= 0.0
+                and type(predicted_rotor[name]) in {int, float}
+                and math.isfinite(float(predicted_rotor[name]))
+                and float(predicted_rotor[name]) >= 0.0
+                and type(continuous_limits[name]) in {int, float}
+                and math.isfinite(float(continuous_limits[name]))
+                and float(continuous_limits[name]) > 0.0
+                and type(short_peak_limits[name]) in {int, float}
+                and math.isfinite(float(short_peak_limits[name]))
+                and float(short_peak_limits[name]) > 0.0
+                for name in MOTOR_NAMES
+            )
+        ):
+            raise ValueError
+        continuous_margin = min(
+            float(continuous_limits[name]) - float(gravity_rotor[name])
+            for name in MOTOR_NAMES
+        )
+        short_peak_margin = min(
+            float(short_peak_limits[name]) - float(predicted_rotor[name])
+            for name in MOTOR_NAMES
+        )
+        minimum_margin = min(continuous_margin, short_peak_margin)
+        predicted_continuous_margin = min(
+            float(continuous_limits[name]) - float(predicted_rotor[name])
+            for name in MOTOR_NAMES
+        )
+        reported_continuous_margin = _strict_finite_number(
+            value.get("minimum_continuous_rotor_torque_margin_nm"),
+            "整轨连续转子力矩余量",
+        )
+        reported_short_peak_margin = _strict_finite_number(
+            value.get("minimum_short_peak_rotor_torque_margin_nm"),
+            "整轨短峰转子力矩余量",
+        )
+        reported_minimum_margin = _strict_finite_number(
+            value.get("minimum_rotor_torque_margin_nm"),
+            "整轨最小转子力矩余量",
+        )
+        reported_predicted_continuous_margin = _strict_finite_number(
+            value.get("minimum_predicted_continuous_rotor_torque_margin_nm"),
+            "整轨预测负载连续力矩余量",
+        )
+        reported_thermal_margin = _strict_finite_number(
+            value.get("minimum_thermal_margin_c"),
+            "整轨最小热余量",
+        )
+        sample_count = value.get("sample_count")
+        if (
+            value.get("schema") != PLANNED_FEASIBILITY_SCHEMA
+            or value.get("source") != "whole_arm_gravity_node"
+            or value.get("source_instance_id") != source_instance_id
+            or value.get("sequence") != sequence
+            or value.get("source_monotonic_ns") != source_monotonic_ns
+            or value.get("result") != "PASS"
+            or value.get("load_feasibility") != "PASS"
+            or value.get("thermal_feasibility") != "PASS"
+            or value.get("current_temperature_margin_result") != "PASS"
+            or not _valid_sha256(value.get("request_sha256"))
+            or not _valid_sha256(value.get("trajectory_sha256"))
+            or value.get("session_id") != session_id
+            or value.get("state_instance_id") != state_instance_id
+            or value.get("model_sha256") != PRODUCTION_MODEL_SHA256
+            or value.get("gravity_config_sha256") != GRAVITY_CONFIG_SHA256
+            or value.get("thermal_config_sha256") != THERMAL_CONFIG_SHA256
+            or value.get("continuous_rotor_limits_authoritative") is not True
+            or value.get("temperature_limits_authoritative") is not True
+            or type(sample_count) is not int
+            or sample_count <= 0
+            or value.get("evaluated_sample_count") != sample_count
+            or value.get("load_evaluation_basis")
+            != PLANNED_LOAD_EVALUATION_BASIS
+            or value.get("thermal_evaluation_basis")
+            != PLANNED_THERMAL_EVALUATION_BASIS
+            or abs(reported_continuous_margin - continuous_margin) > 1.0e-12
+            or abs(reported_short_peak_margin - short_peak_margin) > 1.0e-12
+            or abs(reported_minimum_margin - minimum_margin) > 1.0e-12
+            or abs(
+                reported_predicted_continuous_margin
+                - predicted_continuous_margin
+            ) > 1.0e-12
+            or continuous_margin <= 0.0
+            or short_peak_margin <= 0.0
+            or predicted_continuous_margin <= 0.0
+            or reported_thermal_margin <= 0.0
+            or value.get("blocker_code") is not None
+            or value.get("blocker") is not None
+        ):
+            raise ValueError
+        return deepcopy(value)
+    except (KeyError, TypeError, ValueError, OverflowError):
+        return None
+
+
 class GravityAuthorityGate:
     """Translate one fresh read-only gravity status into worker authority.
 
@@ -1133,6 +1290,14 @@ class GravityAuthorityGate:
                 or value.get("blocker") is not None
             ):
                 raise ValueError
+            planned_proof = _validated_planned_feasibility_proof(
+                value.get("planned_trajectory_feasibility"),
+                source_instance_id=source,
+                sequence=sequence,
+                source_monotonic_ns=source_ns,
+                session_id=session_id,
+                state_instance_id=state_instance_id,
+            )
             age_s = _strict_finite_number(
                 value.get("last_update_age_s"), "重力状态更新时间"
             )
@@ -1200,6 +1365,7 @@ class GravityAuthorityGate:
                     key=lambda level: abs(level - target),
                 ),
                 "feedforward_nm": list(feedforward),
+                "planned_trajectory_feasibility": deepcopy(planned_proof),
             }
             return True
         except (KeyError, TypeError, ValueError, OverflowError):
@@ -1249,6 +1415,15 @@ class GravityAuthorityGate:
             or proof.get("state_instance_id") != session_binding[2]
         ):
             raise ValueError("重力authority与碰撞证明session不匹配")
+        planned_proof = latest.get("planned_trajectory_feasibility")
+        manifest = command.get("plan_manifest")
+        if command.get("mode") == "position" and (
+            not isinstance(planned_proof, dict)
+            or not isinstance(manifest, dict)
+            or manifest.get("recipe_sha256")
+            != planned_proof.get("trajectory_sha256")
+        ):
+            raise ValueError("整轨负载/热证明与计划manifest不匹配")
         existing = self._session_bindings.get(binding_key)
         if existing is not None and existing != session_binding:
             raise ValueError("同一激活纪元的重力policy发生变化")
@@ -1259,7 +1434,9 @@ class GravityAuthorityGate:
         authority = {
             key: deepcopy(value)
             for key, value in latest.items()
-            if key != "received_monotonic_ns"
+            if key not in {
+                "received_monotonic_ns", "planned_trajectory_feasibility"
+            }
         }
         command["feedforward_nm"] = list(authority["feedforward_nm"])
         command["gravity_authority"] = authority

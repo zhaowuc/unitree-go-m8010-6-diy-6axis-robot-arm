@@ -1,11 +1,13 @@
 """无需 ROS2、Qt 或硬件即可验证 GUI 的反馈准入逻辑。"""
 
 import ast
+import concurrent.futures
 import hashlib
 import json
 import math
 import struct
 import tempfile
+import threading
 import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
@@ -20,7 +22,9 @@ from go_m8010_arm_gui.workflow_contract import (
     ContractViolation,
     TrajectoryPlan,
     TrajectoryRecipe,
+    WorkflowState,
     generate_segmented_quintic_recipe,
+    planned_trajectory_feasibility_request,
     trajectory_command_descriptor,
     trajectory_plan_manifest,
     trajectory_sample_index_at,
@@ -57,6 +61,9 @@ SESSION_MODEL_LIMITS_DEG = [
 MODEL_SHA256 = "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9"
 GRAVITY_CONFIG_SHA256 = (
     "307469b8384fd35547327ba1d5f80aa440e6b9663406ab7c9d9469bea263335d"
+)
+THERMAL_CONFIG_SHA256 = (
+    "1926264805858f62fffc9360ef0c9d4d7f8a7e232e171105450769d493ff5467"
 )
 COLLISION_CONTRACT_SHA256 = (
     "6d802909e44f238816f007ef33b57e1b57099c5522a473cd2dcc2705397af9c9"
@@ -98,6 +105,7 @@ def load_function(name, extra_namespace=None):
     module = ast.Module(body=[function], type_ignores=[])
     namespace = {
         "hashlib": hashlib,
+        "json": json,
         "math": math,
         "np": np,
         "Path": Path,
@@ -150,7 +158,11 @@ def load_function(name, extra_namespace=None):
         "TARGET_SELECTION_DEADBAND_RAD": math.radians(0.01),
         "PRODUCTION_MODEL_SHA256": MODEL_SHA256,
         "GRAVITY_CONFIG_SHA256": GRAVITY_CONFIG_SHA256,
+        "THERMAL_CONFIG_SHA256": THERMAL_CONFIG_SHA256,
         "GRAVITY_STATUS_SCHEMA": "go-m8010-gravity-status/1.1",
+        "PLANNED_FEASIBILITY_SCHEMA": (
+            "go-m8010-planned-load-thermal-feasibility/1.0"
+        ),
         "GRAVITY_STATUS_TIMEOUT_S": 0.5,
         "GRAVITY_SCALE_LEVELS": (0.0, 0.25, 0.5, 0.75, 1.0),
         "GRAVITY_ROTOR_FEEDFORWARD_LIMIT_NM": (
@@ -221,6 +233,264 @@ def load_class_method(class_name, name, extra_namespace=None):
         namespace.update(extra_namespace)
     exec(compile(ast.fix_missing_locations(module), str(SOURCE), "exec"), namespace)
     return namespace[name]
+
+
+def _preview_plan_worker_fixture():
+    limits = tuple(
+        ((-180.0 * math.pi / 180.0), (180.0 * math.pi / 180.0))
+        for _ in range(6)
+    )
+    actual = (0.0,) * 6
+    target = (0.02, 0.0, 0.0, 0.0, 0.0, 0.0)
+    workflow = WorkflowState.initialize(
+        actual,
+        limits,
+        MODEL_SHA256,
+        session_id="persistent:preview-session",
+        state_instance_id="b" * 32,
+        gravity_config_sha256=GRAVITY_CONFIG_SHA256,
+    ).change_plan_target(target)
+    snapshot = {
+        "generation": 7,
+        "workflow": workflow,
+        "actual_rad": actual,
+        "target_rad": target,
+        "limits_rad": limits,
+        "maximum_velocity_rad_s": math.radians(5.0),
+        "maximum_acceleration_rad_s2": math.radians(15.0),
+        "maximum_segment_delta_rad": math.radians(30.0),
+        "maximum_sample_period_s": 0.01,
+        "source_instance_id": "a" * 32,
+        "request_sequence": 3,
+        "session_id": "persistent:preview-session",
+        "state_instance_id": "b" * 32,
+        "base_candidate_revision": workflow.candidate_revision,
+    }
+    build = load_function(
+        "build_virtual_preview_plan",
+        {
+            "WorkflowState": WorkflowState,
+            "generate_segmented_quintic_recipe": (
+                generate_segmented_quintic_recipe
+            ),
+            "planned_trajectory_feasibility_request": (
+                planned_trajectory_feasibility_request
+            ),
+        },
+    )
+    started_ns = time.monotonic_ns()
+    result = build(snapshot)
+    finished_ns = time.monotonic_ns()
+    return snapshot, result, started_ns, finished_ns
+
+
+def test_virtual_preview_worker_builds_and_serializes_after_generation():
+    snapshot, result, started_ns, finished_ns = _preview_plan_worker_fixture()
+    payload = json.loads(result["serialized_request"])
+    assert isinstance(result["trajectory"], TrajectoryRecipe)
+    assert result["workflow"].q_plan_trajectory is result["trajectory"]
+    assert result["generation"] == snapshot["generation"]
+    assert started_ns <= result["request_source_monotonic_ns"] <= finished_ns
+    assert payload["source_monotonic_ns"] == result["request_source_monotonic_ns"]
+    assert payload["trajectory_sha256"] == result["trajectory"].sha256
+    assert payload["thermal_config_sha256"] == THERMAL_CONFIG_SHA256
+
+
+def test_virtual_preview_qt_callback_contains_no_trajectory_generation_or_json_dump():
+    source = SOURCE.read_text(encoding="utf-8")
+    start = source.index("    def _start_virtual_preview(self) -> None:")
+    end = source.index("    def _update_preview_animation", start)
+    callback = source[start:end]
+    assert "generate_segmented_quintic_recipe(" not in callback
+    assert "planned_trajectory_feasibility_request(" not in callback
+    assert "json.dumps(" not in callback
+    assert "self._preview_plan_executor.submit(" in callback
+    assert "build_virtual_preview_plan, snapshot" in callback
+
+    worker_start = source.index("def build_virtual_preview_plan(snapshot: dict)")
+    worker_end = source.index("HARDWARE_STATE_SOURCE_MAX_AGE_NS", worker_start)
+    worker = source[worker_start:worker_end]
+    assert "generate_segmented_quintic_recipe(" in worker
+    assert "planned_trajectory_feasibility_request(" in worker
+    assert "json.dumps(" in worker
+    assert worker.index("source_monotonic_ns = time.monotonic_ns()") > worker.index(
+        "generate_segmented_quintic_recipe("
+    )
+
+    assert "preview_plan_completed = Signal(object)" in source
+    assert "self.preview_plan_completed.emit(result)" in source
+    assert "self.node.publish_serialized_planned_path_request(serialized)" in source
+    assert '"planning": "正在解算轨迹"' in source
+    shutdown_start = source.index("    def _shutdown_preview_plan_executor")
+    shutdown_end = source.index("    def _clear_candidate_approval", shutdown_start)
+    shutdown = source[shutdown_start:shutdown_end]
+    assert "future.cancel()" in shutdown
+    assert "shutdown(wait=False, cancel_futures=True)" in shutdown
+    close_start = source.index("    def closeEvent(self, event: QCloseEvent) -> None:")
+    close_end = source.index("\n\n\ndef main", close_start)
+    close = source[close_start:close_end]
+    assert "self._shutdown_preview_plan_executor()" in close
+
+
+def test_preview_plan_worker_exception_is_reported_through_qt_signal_bridge():
+    done = load_main_window_method(
+        "_preview_plan_future_done", {"concurrent": concurrent}
+    )
+
+    class Emitter:
+        def __init__(self):
+            self.events = []
+
+        def emit(self, event):
+            self.events.append(event)
+
+    fake = SimpleNamespace(
+        _preview_plan_lock=threading.Lock(),
+        _preview_plan_closed=False,
+        preview_plan_failed=Emitter(),
+        preview_plan_completed=Emitter(),
+    )
+    future = concurrent.futures.Future()
+    future.set_exception(RuntimeError("planner exploded"))
+    done(fake, 9, future)
+    assert fake.preview_plan_completed.events == []
+    assert fake.preview_plan_failed.events == [
+        {"generation": 9, "detail": "planner exploded"}
+    ]
+
+
+def test_preview_plan_invalidation_cancels_the_single_latest_queued_future():
+    invalidate = load_main_window_method("_invalidate_preview_plan_build")
+
+    class Future:
+        def __init__(self):
+            self.cancel_count = 0
+
+        def cancel(self):
+            self.cancel_count += 1
+            return True
+
+    future = Future()
+    fake = SimpleNamespace(
+        _preview_plan_lock=threading.Lock(),
+        _preview_plan_generation=12,
+        _preview_plan_future=future,
+        _preview_plan_started_at=10.0,
+    )
+    assert invalidate(fake) == 13
+    assert fake._preview_plan_generation == 13
+    assert fake._preview_plan_future is None
+    assert fake._preview_plan_started_at is None
+    assert future.cancel_count == 1
+
+
+def test_preview_plan_apply_drops_stale_identity_feedback_and_config():
+    snapshot, worker_result, _started_ns, _finished_ns = (
+        _preview_plan_worker_fixture()
+    )
+    apply_result = load_main_window_method(
+        "_apply_preview_plan_result",
+        {
+            "WorkflowState": WorkflowState,
+            "RAD": math.pi / 180.0,
+            "COLLISION_EXECUTE_SEGMENT_MAX_DEG": 30.0,
+            "PLAN_ACTUAL_DRIFT_TOLERANCE_RAD": math.radians(0.25),
+            "PLANNED_REQUEST_PUBLISH_MAX_AGE_NS": 1_000_000_000,
+        },
+    )
+
+    class Node:
+        command_source_instance_id = "a" * 32
+
+        def __init__(self):
+            self.fresh = True
+            self.published = []
+
+        def control_streams_fresh(self, _now):
+            return self.fresh
+
+        def publish_serialized_planned_path_request(self, value):
+            self.published.append(value)
+
+    class Window:
+        def __init__(self):
+            self._preview_plan_lock = threading.Lock()
+            self._preview_plan_closed = False
+            self._preview_plan_generation = snapshot["generation"]
+            self._preview_plan_future = object()
+            self._preview_plan_started_at = time.monotonic()
+            self.config = {"控制": {
+                "最大速度_度每秒": 5.0,
+                "最大加速度_度每二次方秒": 15.0,
+            }}
+            self.edit_limits = [(-180.0, 180.0)] * 6
+            self.actual = list(snapshot["actual_rad"])
+            self.candidate_targets = list(snapshot["target_rad"])
+            self.workflow_contract = snapshot["workflow"]
+            self.session_id = snapshot["session_id"]
+            self.state_instance_id = snapshot["state_instance_id"]
+            self.connected = [True] * 6
+            self.node = Node()
+            self.failures = []
+            self.states = []
+            self.collision_requests = 0
+            self.preview_animation_started_at = None
+            self.preview_animation_complete = False
+            self.preview_collision_safe = False
+            self.preview_frame_index = 0
+            self.preview_pose = tuple(self.actual)
+            self.last_task_heartbeat = 0.0
+
+        def _apply_preview_plan_failure(self, event):
+            self.failures.append(event)
+
+        def _set_workflow_state(self, *args):
+            self.states.append(args)
+
+        def _request_collision_preview(self):
+            self.collision_requests += 1
+
+    stale_variants = []
+    generation = Window()
+    generation._preview_plan_generation += 1
+    stale_variants.append((generation, False))
+    session = Window()
+    session.session_id = "persistent:other"
+    stale_variants.append((session, True))
+    state = Window()
+    state.state_instance_id = "c" * 32
+    stale_variants.append((state, True))
+    target = Window()
+    target.candidate_targets[1] = 0.01
+    stale_variants.append((target, True))
+    actual = Window()
+    actual.actual[0] = math.radians(0.26)
+    stale_variants.append((actual, True))
+    feedback = Window()
+    feedback.node.fresh = False
+    stale_variants.append((feedback, True))
+    config = Window()
+    config.config["控制"]["最大速度_度每秒"] = 4.0
+    stale_variants.append((config, True))
+
+    for window, records_failure in stale_variants:
+        result = dict(worker_result)
+        result["request_source_monotonic_ns"] = time.monotonic_ns()
+        apply_result(window, result)
+        assert window.node.published == []
+        assert bool(window.failures) is records_failure
+        if records_failure:
+            assert window.failures[-1]["state"] == "stale"
+
+    current = Window()
+    current_result = dict(worker_result)
+    current_result["request_source_monotonic_ns"] = time.monotonic_ns()
+    apply_result(current, current_result)
+    assert current.node.published == [worker_result["serialized_request"]]
+    assert current.workflow_contract is worker_result["workflow"]
+    assert current._preview_plan_future is None
+    assert current.collision_requests == 1
+    assert current.states[-1][0] == "previewing"
 
 
 def test_initial_pose_read_only_parameter_is_a_strict_boolean():
@@ -312,6 +582,203 @@ def test_gravity_status_authority_is_complete_fresh_and_fail_closed():
             state_instance_id="b" * 32,
             now_monotonic_ns=checked_ns,
         )
+
+
+def test_planned_load_and_thermal_proof_is_exact_path_bound_and_fail_closed():
+    validate = load_function("planned_load_feasibility_authorizes")
+    checked_ns = 10_000_000_000
+    trajectory_sha256 = "d" * 64
+    status = _valid_gravity_status(checked_ns)
+    gravity_maxima = {name: 0.1 for name in (
+        "J1", "J2A", "J2B", "J3", "J4", "J5", "J6"
+    )}
+    predicted_maxima = {name: 0.2 for name in gravity_maxima}
+    continuous_limits = {name: 1.0 for name in gravity_maxima}
+    short_peak_limits = {name: 2.0 for name in gravity_maxima}
+    proof = {
+        "schema": "go-m8010-planned-load-thermal-feasibility/1.0",
+        "source": "whole_arm_gravity_node",
+        "source_instance_id": status["source_instance_id"],
+        "sequence": status["sequence"],
+        "source_monotonic_ns": status["source_monotonic_ns"],
+        "result": "PASS",
+        "load_feasibility": "PASS",
+        "thermal_feasibility": "PASS",
+        "current_temperature_margin_result": "PASS",
+        "request_sha256": "c" * 64,
+        "trajectory_sha256": trajectory_sha256,
+        "session_id": "session-a",
+        "state_instance_id": "b" * 32,
+        "model_sha256": MODEL_SHA256,
+        "gravity_config_sha256": GRAVITY_CONFIG_SHA256,
+        "thermal_config_sha256": THERMAL_CONFIG_SHA256,
+        "continuous_rotor_limits_authoritative": True,
+        "temperature_limits_authoritative": True,
+        "sample_count": 101,
+        "evaluated_sample_count": 101,
+        "load_evaluation_basis": (
+            "MUJOCO_QFRC_BIAS_CONTINUOUS_PLUS_MJ_INVERSE_SHORT_PEAK_EVERY_SAMPLE"
+        ),
+        "thermal_evaluation_basis": (
+            "CURRENT_MEASURED_TEMPERATURE_TO_DERATING_THRESHOLD_PLUS_"
+            "ALL_SAMPLE_PREDICTED_LOAD_WITHIN_CONTINUOUS_RATING_"
+            "NO_HEAT_RISE_MODEL"
+        ),
+        "maximum_abs_gravity_joint_torque_nm_by_joint": {
+            f"J{index}": 0.5 for index in range(1, 7)
+        },
+        "maximum_abs_gravity_rotor_torque_nm_by_motor": gravity_maxima,
+        "maximum_abs_predicted_rotor_torque_nm_by_motor": predicted_maxima,
+        "continuous_rotor_torque_limit_nm_by_motor": continuous_limits,
+        "short_peak_rotor_torque_limit_nm_by_motor": short_peak_limits,
+        "minimum_continuous_rotor_torque_margin_nm": 0.9,
+        "minimum_short_peak_rotor_torque_margin_nm": 1.8,
+        "minimum_predicted_continuous_rotor_torque_margin_nm": 0.8,
+        "minimum_rotor_torque_margin_nm": 0.9,
+        "minimum_thermal_margin_c": 1.0,
+    }
+    status["planned_trajectory_feasibility"] = proof
+    assert validate(
+        status,
+        trajectory_sha256=trajectory_sha256,
+        session_id="session-a",
+        state_instance_id="b" * 32,
+        now_monotonic_ns=checked_ns,
+    )
+
+    missing = dict(status)
+    missing.pop("planned_trajectory_feasibility")
+    assert not validate(
+        missing,
+        trajectory_sha256=trajectory_sha256,
+        session_id="session-a",
+        state_instance_id="b" * 32,
+        now_monotonic_ns=checked_ns,
+    )
+    for field, invalid in (
+        ("result", "NOT_EVALUATED"),
+        ("trajectory_sha256", "e" * 64),
+        ("session_id", "other-session"),
+        ("state_instance_id", "e" * 32),
+        ("model_sha256", "e" * 64),
+        ("gravity_config_sha256", "e" * 64),
+        ("sequence", status["sequence"] + 1),
+        ("source_monotonic_ns", status["source_monotonic_ns"] - 1),
+        ("continuous_rotor_limits_authoritative", False),
+        ("temperature_limits_authoritative", False),
+        ("minimum_rotor_torque_margin_nm", 0.0),
+        ("minimum_thermal_margin_c", 0.0),
+    ):
+        candidate = dict(status)
+        candidate["planned_trajectory_feasibility"] = dict(proof)
+        candidate["planned_trajectory_feasibility"][field] = invalid
+        assert not validate(
+            candidate,
+            trajectory_sha256=trajectory_sha256,
+            session_id="session-a",
+            state_instance_id="b" * 32,
+            now_monotonic_ns=checked_ns,
+        )
+    for field in (
+        "minimum_continuous_rotor_torque_margin_nm",
+        "minimum_short_peak_rotor_torque_margin_nm",
+        "minimum_predicted_continuous_rotor_torque_margin_nm",
+        "minimum_rotor_torque_margin_nm",
+        "minimum_thermal_margin_c",
+    ):
+        for invalid in (math.nan, math.inf, -math.inf):
+            candidate = dict(status)
+            candidate["planned_trajectory_feasibility"] = dict(proof)
+            candidate["planned_trajectory_feasibility"][field] = invalid
+            assert not validate(
+                candidate,
+                trajectory_sha256=trajectory_sha256,
+                session_id="session-a",
+                state_instance_id="b" * 32,
+                now_monotonic_ns=checked_ns,
+            )
+
+
+def test_plan_token_checklist_has_independent_planned_path_gate():
+    source = SOURCE.read_text(encoding="utf-8")
+    checks_start = source.index("    def _current_preview_checks(")
+    checks_end = source.index("    def _try_finalize_preview(", checks_start)
+    checks = source[checks_start:checks_end]
+    assert "planned_load_feasibility_authorizes(" in checks
+    assert "trajectory_sha256=trajectory.sha256" in checks
+    assert "planned_load_thermal_pass=planned_load_thermal_pass" in checks
+
+
+def test_preview_display_exposes_gravity_motor_limit_collision_and_thermal():
+    display = load_function("planned_path_preview_display")
+    trajectory_sha256 = "d" * 64
+    checked_ns = 10_000_000_000
+    status = _valid_gravity_status(checked_ns)
+    status["planned_trajectory_feasibility"] = {
+            "schema": "go-m8010-planned-load-thermal-feasibility/1.0",
+            "source": "whole_arm_gravity_node",
+            "source_instance_id": status["source_instance_id"],
+            "sequence": status["sequence"],
+            "source_monotonic_ns": status["source_monotonic_ns"],
+            "trajectory_sha256": trajectory_sha256,
+            "session_id": "session-a",
+            "state_instance_id": "b" * 32,
+            "maximum_abs_gravity_joint_torque_nm_by_joint": {
+                "J1": 1.0, "J2": 12.0, "J3": 3.0,
+                "J4": 4.0, "J5": 5.0, "J6": 0.5,
+            },
+            "maximum_abs_predicted_rotor_torque_nm_by_motor": {
+                "J1": 0.5, "J2A": 1.0, "J2B": 1.0, "J3": 0.8,
+                "J4": 0.6, "J5": 0.4, "J6": None,
+            },
+            "load_feasibility": "BLOCKED",
+            "thermal_feasibility": "PASS",
+            "blocker_code": "CONTINUOUS_TORQUE_CONFIG_AUTHORITY_FALSE",
+    }
+    gravity, motor, checks = display(
+        status,
+        trajectory_sha256=trajectory_sha256,
+        session_id="session-a",
+        state_instance_id="b" * 32,
+        limits_pass=True,
+        collision_result="CHECKING",
+        now_monotonic_ns=checked_ns,
+    )
+    assert gravity == "J2 12.000 N·m（qfrc_bias）"
+    assert motor.startswith("J2A 1.000 N·m（mj_inverse转子侧）")
+    assert "J6映射未授权" in motor
+    assert "限位 PASS" in checks
+    assert "碰撞 CHECKING" in checks
+    assert "负载 BLOCKED" in checks
+    assert "热负载 PASS" in checks
+    assert "CONTINUOUS_TORQUE_CONFIG_AUTHORITY_FALSE" in checks
+
+    waiting = display(
+        status,
+        trajectory_sha256="e" * 64,
+        session_id="session-a",
+        state_instance_id="b" * 32,
+        limits_pass=False,
+        collision_result="NOT_EVALUATED",
+        now_monotonic_ns=checked_ns,
+    )
+    assert "等待与当前会话和轨迹绑定" in waiting[0]
+    assert "限位 NOT_EVALUATED" in waiting[2]
+
+    stale = display(
+        status,
+        trajectory_sha256=trajectory_sha256,
+        session_id="session-a",
+        state_instance_id="b" * 32,
+        limits_pass=True,
+        collision_result="PASS",
+        now_monotonic_ns=(
+            status["source_monotonic_ns"]
+            + int(0.5 * 1.0e9) + 1
+        ),
+    )
+    assert "STALE" in stale[0]
+    assert "负载 STALE" in stale[2]
 
 
 def test_gravity_callback_accepts_only_current_status_schema():
@@ -1335,7 +1802,11 @@ def test_planned_twin_uses_exact_dispatched_integer_grid_sample():
 
 
 def test_j2_completion_requires_both_workers_to_echo_exact_terminal_segment():
-    complete = load_function("moving_trajectory_feedback_complete")
+    fraction = load_function("moving_trajectory_feedback_fraction")
+    complete = load_function(
+        "moving_trajectory_feedback_complete",
+        {"moving_trajectory_feedback_fraction": fraction},
+    )
     target = [0.0, 0.10, 0.0, 0.0, 0.0, 0.0]
     segment = generate_segmented_quintic_recipe(
         [0.0] * 6,
@@ -1365,11 +1836,270 @@ def test_j2_completion_requires_both_workers_to_echo_exact_terminal_segment():
             "trajectory_interval_count": segment.profile.interval_count,
         })
     assert complete(state, 1, descriptor)
-    state["per_motor"]["J2B"]["trajectory_state"] = "RUNNING"
+    for motor_name, index in (("J2A", 31), ("J2B", 29)):
+        state["per_motor"][motor_name]["trajectory_state"] = "RUNNING"
+        state["per_motor"][motor_name]["trajectory_sample_index"] = index
+    assert fraction(state, 1, descriptor) == pytest.approx(
+        29 / segment.profile.interval_count
+    )
     assert not complete(state, 1, descriptor)
     state["per_motor"]["J2B"]["trajectory_state"] = "COMPLETE"
+    state["per_motor"]["J2B"]["trajectory_sample_index"] = (
+        segment.profile.interval_count
+    )
     state["per_motor"]["J2B"]["trajectory_sha256"] = "b" * 64
+    assert fraction(state, 1, descriptor) is None
     assert not complete(state, 1, descriptor)
+
+
+def test_task_panel_uses_real_worker_progress_and_freezes_terminal_elapsed():
+    class TextSink:
+        def __init__(self, value=""):
+            self.value = value
+
+        def text(self):
+            return self.value
+
+        def setText(self, value):
+            self.value = value
+
+    class Progress:
+        def value(self):
+            return 100
+
+        def maximum(self):
+            return 100
+
+    fraction = load_function("moving_trajectory_feedback_fraction")
+    refresh = load_main_window_method(
+        "_refresh_task_status_panel",
+            {
+                "DEG": 180.0 / math.pi,
+                "MOTOR_NAMES": (
+                    "J1", "J2A", "J2B", "J3", "J4", "J5", "J6",
+                ),
+                "THERMAL_STATE_CN": {
+                "OFFLINE": "离线", "NORMAL": "正常",
+            },
+            "moving_trajectory_feedback_fraction": fraction,
+            "set_widget_text_if_changed": load_function(
+                "set_widget_text_if_changed"
+            ),
+            "planned_path_preview_display": load_function(
+                "planned_path_preview_display"
+            ),
+        },
+    )
+    recipe = generate_segmented_quintic_recipe(
+        [0.0] * 6,
+        [0.1, 0.0, 0.0, 0.0, 0.0, 0.0],
+        tuple((-math.pi, math.pi) for _ in range(6)),
+        maximum_velocity_rad_s=math.radians(5.0),
+        maximum_acceleration_rad_s2=math.radians(15.0),
+        maximum_segment_delta_rad=math.radians(30.0),
+    )
+    segment = recipe.segments[0]
+    descriptor = trajectory_command_descriptor(
+        segment,
+        plan_token_id="a" * 64,
+        execute_at_monotonic_ns=50_000_000_000,
+        segment_index=0,
+        segment_count=1,
+    )
+    state = hardware_state()
+    halfway = segment.profile.interval_count // 2
+    state["per_motor"]["J1"].update({
+        "trajectory_plan_token_id": "a" * 64,
+        "trajectory_sha256": segment.sha256,
+        "trajectory_state": "RUNNING",
+        "trajectory_sample_index": halfway,
+        "trajectory_interval_count": segment.profile.interval_count,
+        "thermal_state": "NORMAL",
+    })
+    keys = (
+        "task_id", "state", "phase", "progress", "started", "elapsed",
+        "remaining", "heartbeat", "encoder", "target", "actual",
+        "max_error", "max_temperature", "thermal", "failure",
+        "planned_gravity", "planned_motor", "planned_checks",
+    )
+    labels = {key: TextSink() for key in keys}
+    window = SimpleNamespace(
+        task_status_labels=labels,
+        collision_preview_state="safe",
+        hardware_mode="hold",
+        task_id="task-1",
+        task_started_at=100.0,
+        task_started_wall_utc="start",
+        task_execution_started_at=None,
+        task_completed_at=None,
+        task_segment_count=0,
+        task_completed_segments=0,
+        session_id="session-1",
+        state_instance_id="1" * 32,
+        pending_collision_execute_sequence=None,
+        queued_pose_target=None,
+        active_trajectory_segment_index=None,
+        active_trajectory_descriptor=None,
+        moving_joint_mask=[False] * 6,
+        workflow_progress=Progress(),
+        workflow_contract=SimpleNamespace(q_plan_trajectory=recipe),
+        preview_animation_complete=True,
+        preview_collision_safe=True,
+        preview_animation_started_at=100.0,
+        candidate_targets=[0.1] + [0.0] * 5,
+        actual=[0.0] * 6,
+        workflow_status=TextSink("工作流：预演通过"),
+        operator_notice_text="",
+        last_task_heartbeat=109.9,
+        node=SimpleNamespace(
+            latest_hardware=state,
+            latest_gravity_status=None,
+            last_joint_receipt=109.9,
+        ),
+    )
+
+    # A completed virtual preview is waiting for explicit submit, not arrival.
+    refresh(window, 110.0)
+    assert labels["state"].value == "预演通过"
+    assert labels["remaining"].value == "等待下发"
+
+    # Planned proof, communication, thermal, load and confirmed-BRAKE states
+    # use the exact operator taxonomy rather than a generic blocked label.
+    window.collision_preview_state = "previewing"
+    window.node.latest_gravity_status = {
+        "planned_trajectory_feasibility": {
+            "result": "BLOCKED",
+            "trajectory_sha256": recipe.sha256,
+            "session_id": "session-1",
+            "state_instance_id": "1" * 32,
+        }
+    }
+    refresh(window, 110.0)
+    assert labels["state"].value == "正在检查热负载"
+    window.node.latest_gravity_status = None
+    state["per_motor"]["J1"]["fresh"] = False
+    refresh(window, 110.0)
+    assert labels["state"].value == "通信故障"
+    state["per_motor"]["J1"]["fresh"] = True
+    state["per_motor"]["J1"]["thermal_state"] = "DERATING"
+    refresh(window, 110.0)
+    assert labels["state"].value == "热降额"
+    state["per_motor"]["J1"]["thermal_state"] = "THERMAL_STOP"
+    refresh(window, 110.0)
+    assert labels["state"].value == "热停机"
+    state["per_motor"]["J1"]["thermal_state"] = "NORMAL"
+    state["load_limit_no_progress_by_motor"] = {"J1": True}
+    refresh(window, 110.0)
+    assert labels["state"].value == "负载超限"
+    state["load_limit_no_progress_by_motor"] = {}
+    motor_names = ("J1", "J2A", "J2B", "J3", "J4", "J5", "J6")
+    state["controller_mode_by_motor"] = {name: "brake" for name in motor_names}
+    state["brake_observed_by_motor"] = {name: True for name in motor_names}
+    window.hardware_mode = "brake"
+    refresh(window, 110.0)
+    assert labels["state"].value == "已停止并制动"
+    state["controller_mode_by_motor"] = {name: "hold" for name in motor_names}
+    state["brake_observed_by_motor"] = {name: False for name in motor_names}
+
+    # Real progress is taken from the exact worker sample, not the 100% preview.
+    window.collision_preview_state = "execute_proof"
+    window.hardware_mode = "position"
+    window.task_execution_started_at = 101.0
+    window.task_segment_count = 1
+    window.active_trajectory_segment_index = 0
+    window.active_trajectory_descriptor = descriptor
+    window.moving_joint_mask = [True, False, False, False, False, False]
+    window.active_trajectory_first_publish_pending = True
+    refresh(window, 110.0)
+    assert labels["state"].value == "正在下发"
+    window.active_trajectory_first_publish_pending = False
+    refresh(window, 110.0)
+    expected_progress = round(100.0 * halfway / segment.profile.interval_count)
+    assert labels["state"].value == "现实机械臂执行中"
+    assert labels["progress"].value == f"{expected_progress}%"
+    assert labels["progress"].value != "100%"
+    state["per_motor"]["J1"]["trajectory_state"] = "COMPLETE"
+    state["per_motor"]["J1"]["trajectory_sample_index"] = (
+        segment.profile.interval_count
+    )
+    refresh(window, 110.0)
+    assert labels["state"].value == "正在到位稳定"
+    state["no_progress_status_by_motor"] = {
+        "J1": {
+            "fault_latched": True,
+            "trip_reason": "POSITION_ARRIVAL_TIMEOUT",
+        }
+    }
+    state["load_limit_no_progress_by_motor"] = {"J1": True}
+    refresh(window, 110.0)
+    assert labels["state"].value == "未到位"
+    state["no_progress_status_by_motor"] = {}
+    state["load_limit_no_progress_by_motor"] = {}
+
+    # Terminal completion wins over HOLD and elapsed remains frozen thereafter.
+    window.collision_preview_state = "complete"
+    window.hardware_mode = "hold"
+    window.task_completed_at = 112.0
+    window.task_completed_segments = 1
+    window.active_trajectory_segment_index = None
+    window.active_trajectory_descriptor = None
+    window.moving_joint_mask = [False] * 6
+    refresh(window, 999.0)
+    assert labels["state"].value == "已完成"
+    assert labels["progress"].value == "100%"
+    assert labels["elapsed"].value == "12.0s"
+    assert labels["remaining"].value == "0.0s"
+
+    window.collision_preview_state = "timeout"
+    window.task_completed_segments = 0
+    window.operator_notice_text = "3D复核超时"
+    refresh(window, 1_500.0)
+    assert labels["state"].value == "阶段超时"
+    assert labels["elapsed"].value == "12.0s"
+    assert labels["remaining"].value == "已终止"
+    assert labels["failure"].value == "3D复核超时"
+
+
+def test_motor_table_uses_exact_torque_field_and_last_valid_physical_feedback():
+    source = SOURCE.read_text(encoding="utf-8")
+    panel = source.split("    def _motor_status_panel", 1)[1].split(
+        "    def _button", 1
+    )[0]
+    refresh = source.split("    def _refresh_motor_status_panel", 1)[1].split(
+        "    def _refresh_joint_widgets", 1
+    )[0]
+    assert '"最后反馈时间\\nmonotonic s"' in panel
+    assert 'number("tau_joint_estimated_nm")' in refresh
+    assert 'number("estimated_joint_torque_nm")' not in refresh
+    assert "last_valid_feedback_monotonic_ns" in refresh
+    assert "feedback_receipt_monotonic_ns" not in refresh
+
+
+def test_task_lifecycle_records_submit_segment_completion_and_terminal_time():
+    source = SOURCE.read_text(encoding="utf-8")
+    preview_start = source.index("    def _start_virtual_preview(self) -> None:")
+    preview_end = source.index("    def _update_preview_animation(", preview_start)
+    preview = source[preview_start:preview_end]
+    assert "self.task_execution_started_at = None" in preview
+    assert "self.task_completed_at = None" in preview
+
+    execute_start = source.index("    def _execute_target(self) -> None:")
+    execute_end = source.index("    def _commit_checked_target(", execute_start)
+    execute = source[execute_start:execute_end]
+    assert "self.task_execution_started_at = time.monotonic()" in execute
+    assert "self.task_segment_count = self.trajectory_segment_count" in execute
+
+    refresh_start = source.index("    def _refresh_joint_widgets(self) -> None:")
+    refresh_end = source.index("    def _publish_command", refresh_start)
+    joint_refresh = source[refresh_start:refresh_end]
+    assert "completed_segment_index + 1" in joint_refresh
+    assert "self.task_completed_segments = max(" in joint_refresh
+
+    begin_start = source.index("    def _begin_next_queued_segment(self) -> None:")
+    begin_end = source.index("    def _continue_queued_sequence_if_ready", begin_start)
+    begin = source[begin_start:begin_end]
+    assert "self.task_completed_at = time.monotonic()" in begin
+    assert '"complete"' in begin
 
 
 def test_collision_recommendation_never_turns_support_tracking_error_into_edit():
@@ -1699,6 +2429,7 @@ def test_collision_timeout_clears_queue_and_late_safe_cannot_commit():
             self.active_sequence_joint = 0
             self.collision_preview_timer = FakeTimer()
             self.notices = []
+            self.workflow_states = []
 
         def _show_targets_on_virtual(self):
             pass
@@ -1709,11 +2440,15 @@ def test_collision_timeout_clears_queue_and_late_safe_cannot_commit():
         def _notify(self, message, level="warning"):
             self.notices.append((message, level))
 
+        def _set_workflow_state(self, *args):
+            self.workflow_states.append(args)
+
         def _commit_checked_target(self, *_args):
             raise AssertionError("a timed-out collision result must never commit")
 
     window = FakeWindow()
     expire(window, now)
+    assert window.workflow_states[-1][0] == "timeout"
     assert window.pending_collision_execute_sequence is None
     assert window.queued_pose_target is None
     assert window.queued_joint_indices == []
@@ -2083,6 +2818,9 @@ def test_multi_axis_virtual_pose_queues_only_one_physical_segment_at_a_time():
 
     window = FakeWindow()
     complete_virtual_pose = list(window.targets)
+    # AST loading and first-use trajectory construction can exceed the
+    # production 250 ms source-age gate on a busy test host.
+    window.node.latest_hardware["source_monotonic_ns"] = time.monotonic_ns()
     execute(window)
 
     assert window.queued_pose_target == complete_virtual_pose
@@ -2270,7 +3008,12 @@ def test_queued_segment_arrival_forces_exact_target_hold_and_waits_for_all_hold(
                 "effective_active_joint_mask"
             ),
             "moving_trajectory_feedback_complete": load_function(
-                "moving_trajectory_feedback_complete"
+                "moving_trajectory_feedback_complete",
+                {
+                    "moving_trajectory_feedback_fraction": load_function(
+                        "moving_trajectory_feedback_fraction"
+                    )
+                },
             ),
             "set_widget_value_if_changed": (
                 lambda widget, value: widget.setValue(value)

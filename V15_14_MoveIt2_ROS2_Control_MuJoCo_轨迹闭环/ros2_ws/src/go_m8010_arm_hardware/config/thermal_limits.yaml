@@ -1,0 +1,11 @@
+schema: go-m8010-thermal-limits/1.0
+normal_below_c: 45.0
+warning_below_c: 50.0
+derating_start_c: 55.0
+thermal_stop_c: 60.0
+rearm_below_c: 55.0
+cooldown_seconds: 30.0
+slope_window_seconds: 120.0
+threshold_authority: V15.31A_CONSERVATIVE_PROJECT_POLICY_NOT_VENDOR_CONTINUOUS_RATING
+continuous_rotor_torque_limit_nm: null
+short_peak_rotor_torque_limit_nm: null

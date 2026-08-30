@@ -1,0 +1,69 @@
+{
+  "schema_version": "V15.31A-FT-torque-semantics-v1",
+  "generated_at": "2026-08-31T02:20:35+08:00",
+  "authority": "PASS",
+  "authority_scope": "field semantics, conversions and encoding verified offline; not a continuous-load rating",
+  "go_motor_cmd_tau": {
+    "field_name": "tau_cmd_rotor_nm",
+    "physical_semantics": "single GO motor rotor-side torque command",
+    "unit": "N*m rotor-side",
+    "wire_encoding": "Q8",
+    "resolution_nm_per_count": 0.00390625,
+    "quantization_rule": "truncate toward zero",
+    "limit_application": "rotor-side command guard before serialization"
+  },
+  "go_motor_data_tau": {
+    "field_name": "tau_feedback_rotor_nm",
+    "physical_semantics": "single GO motor actual feedback torque at the rotor side",
+    "unit": "N*m rotor-side",
+    "repeated_gear_ratio_conversion": false
+  },
+  "conversion_authority": {
+    "gear_ratio": 6.329999923706055,
+    "joint_torque_to_rotor_torque": "tau_rotor_nm = sign * tau_joint_nm / gear_ratio",
+    "rotor_torque_to_joint_torque": "tau_joint_nm = sign * tau_rotor_nm * gear_ratio",
+    "j2_split": "each J2 motor receives one half of logical J2 joint torque before gear-ratio and sign conversion",
+    "j2a_sign": -1,
+    "j2b_sign": 1
+  },
+  "historical_value_resolution": {
+    "software_guard_0_6015625_nm": {
+      "semantics": "historical software rotor-feedback guard per motor",
+      "is_continuous_motor_rating": false
+    },
+    "observed_3_2_nm_and_peak_4_07_nm": {
+      "semantics": "actual single-motor rotor-side feedback values",
+      "is_output_side_or_j2_combined": false,
+      "is_continuous_motor_rating": false
+    },
+    "continuous_rating_authority": "UNKNOWN_NOT_ESTABLISHED",
+    "conclusion": "0.6015625, 3.2 and 4.07 do not represent the same category: the first is a software guard, while 3.2/4.07 are actual rotor-side feedback observations. None establishes an authoritative continuous rating."
+  },
+  "required_distinct_fields": [
+    "tau_cmd_rotor_nm",
+    "tau_feedback_rotor_nm",
+    "tau_joint_estimated_nm",
+    "tau_j2_logical_total_nm"
+  ],
+  "runtime_field_contract": {
+    "go_worker_actual_serialized_tff_and_feedback": "PASS_OFFLINE",
+    "j6_pos_vel_explicit_null_torque_channels": "PASS_OFFLINE",
+    "state_parser_requires_all_four_fields": "PASS_OFFLINE",
+    "feedback_to_joint_and_j2_total_consistency_checks": "PASS_OFFLINE",
+    "gui_consumes_tau_joint_estimated_nm": "PASS_OFFLINE",
+    "powered_value_validation": "NOT_RUN_POWER_OFF"
+  },
+  "offline_evidence_paths": [
+    "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/torque_semantics.py",
+    "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/test/test_torque_semantics.py",
+    "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/state_model.py",
+    "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/test/test_state_model.py",
+    "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/main_window.py",
+    "tools/hardware/v15_30a_gui_go_controller.cpp",
+    "tools/hardware/j6_dm_g6220/v15_30a_gui_j6_controller.py",
+    "tools/hardware/j6_dm_g6220/test_v15_30a_gui_profile.py"
+  ],
+  "hardware_tff_authorization": "BLOCKED_POWER_OFF_NO_MODEL_SESSION_ANCHOR_V2_AND_CONTINUOUS_ROTOR_LIMITS_NOT_AUTHORITATIVE",
+  "frozen_gravity_config_continuous_rotor_limits_authoritative": false,
+  "TORQUE_SEMANTICS_AUTHORITY": "PASS"
+}

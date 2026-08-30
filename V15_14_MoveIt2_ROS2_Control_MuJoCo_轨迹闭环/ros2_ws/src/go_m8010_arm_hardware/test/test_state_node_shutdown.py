@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 import signal
 import sys
@@ -13,6 +14,7 @@ SOURCE = (
     / "go_m8010_arm_hardware"
     / "whole_arm_state_node.py"
 )
+TEST_THERMAL_LIMITS = SimpleNamespace(thermal_stop_c=60.0)
 
 
 def load_with_ros_stubs(events, ros_state):
@@ -32,8 +34,30 @@ def load_with_ros_stubs(events, ros_state):
         "WorkerSupervisorStatusError", (ValueError,), {}
     )
     state_model.parse_feedback_payload = lambda _payload, _receipt: ()
+    state_model.parse_controller_feedback_metadata = lambda _payload, _samples: {}
     state_model.unavailable_worker_control_status = lambda _reason: {}
     state_model.validate_worker_supervisor_status = lambda value, _now, _age: value
+    thermal_manager = ModuleType(f"{package_name}.thermal_manager")
+
+    def thermal_state(
+        temperature_c, *, fault_latched, cooldown_ready, limits,
+    ):
+        if fault_latched:
+            state = "WAIT_OPERATOR_CONFIRM" if cooldown_ready else "THERMAL_STOP"
+        elif float(temperature_c) >= 60.0:
+            state = "THERMAL_STOP"
+        elif float(temperature_c) >= 55.0:
+            state = "DERATING"
+        elif float(temperature_c) >= 45.0:
+            state = "WARNING"
+        else:
+            state = "NORMAL"
+        return SimpleNamespace(value=state)
+
+    thermal_manager.thermal_state_from_controller_metadata = thermal_state
+    thermal_manager.THERMAL_CONFIG_SHA256 = "a" * 64
+    thermal_manager.ThermalLimits = object
+    thermal_manager.load_thermal_limits = lambda _path: TEST_THERMAL_LIMITS
 
     rclpy = ModuleType("rclpy")
 
@@ -75,6 +99,7 @@ def load_with_ros_stubs(events, ros_state):
     stubs = {
         package_name: package,
         f"{package_name}.state_model": state_model,
+        f"{package_name}.thermal_manager": thermal_manager,
         "rclpy": rclpy,
         "rclpy.node": node_module,
         "rclpy.executors": executors_module,
@@ -156,3 +181,299 @@ def test_destroy_exception_still_shuts_down_and_restores_handlers(monkeypatch):
     assert events.index("node.destroy") < events.index("rclpy.shutdown")
     assert installed_handlers[signal.SIGINT] is previous_handlers[signal.SIGINT]
     assert installed_handlers[signal.SIGTERM] is previous_handlers[signal.SIGTERM]
+
+
+def _normalized_metadata(source_ns=10, receipt_ns=11):
+    return {
+        "source_monotonic_ns": source_ns,
+        "receipt_monotonic_ns": receipt_ns,
+        "controller_mode": "brake",
+        "domain_fault": False,
+        "lease_safe_hold": False,
+        "thermal": {
+            "metadata_status": "UNKNOWN",
+            "fault_latched": None,
+            "cooldown_ready": None,
+            "release_observed": None,
+            "rearm_pending_next_cycle": None,
+            "cooldown_valid_brake_frames": None,
+            "trip_activation_epoch": None,
+            "minimum_rearm_epoch": None,
+            "domain_reported_state": None,
+            "reported_state_by_motor": None,
+            "reported_state": None,
+            "trip_reason": None,
+            "thermal_config_sha256": None,
+            "derating_factor": None,
+            "raw_temperature_c": None,
+            "window_median_c": None,
+            "slope_c_per_min": None,
+        },
+        "no_progress": {
+            "metadata_status": "UNKNOWN",
+            "fault_latched": None,
+            "release_observed": None,
+            "rearm_pending_next_cycle": None,
+            "qualifying_frames": None,
+            "observation_valid": None,
+            "position_error_rad": None,
+            "trip_position_error_rad": None,
+            "software_saturation_observed": None,
+            "watchdog_authority": None,
+            "continuous_rating_authoritative": False,
+            "trip_activation_epoch": None,
+            "minimum_rearm_epoch": None,
+        },
+        "gravity": {
+            "metadata_status": "UNKNOWN",
+            "authority_present": None,
+            "scale": None,
+            "scale_target": None,
+            "feedforward_nm": None,
+            "applied_rotor_nm": None,
+        },
+    }
+
+
+def _bare_state_node(module, *, model):
+    node = object.__new__(module.WholeArmStateNode)
+    node.model = model
+    node.j2_sync_fault = False
+    node.controller_feedback = {"J6": {"old": True}}
+    node.controller_modes = {"J6": "hold"}
+    node.controller_faults = {"J6": True}
+    node.controller_lease_safe_hold = {"J6": True}
+    node.controller_thermal = {"J6": {"old": True}}
+    node.invalid_payload_count = 0
+    node.record_invalid_payload = lambda _error: setattr(
+        node, "invalid_payload_count", node.invalid_payload_count + 1
+    )
+    return node
+
+
+def test_feedback_metadata_is_not_committed_when_model_rejects(monkeypatch):
+    module, _no_signal_handlers = load_with_ros_stubs([], {
+        "ok": False, "on_spin": lambda: None,
+    })
+    sample = SimpleNamespace(motor="J1")
+    metadata = _normalized_metadata()
+    monkeypatch.setattr(
+        module, "parse_feedback_payload", lambda _payload, _receipt: (sample,)
+    )
+    monkeypatch.setattr(
+        module,
+        "parse_controller_feedback_metadata",
+        lambda _payload, _samples: {"J1": metadata},
+    )
+
+    class RejectingModel:
+        @staticmethod
+        def update_batch(_samples):
+            raise ValueError("synthetic model rejection")
+
+    node = _bare_state_node(module, model=RejectingModel())
+    before = (
+        node.controller_feedback,
+        node.controller_modes,
+        node.controller_faults,
+        node.controller_lease_safe_hold,
+        node.controller_thermal,
+    )
+    node.accept_payload(json.dumps({
+        "schema": "go-m8010-motor-feedback/1.0",
+        "domain_fault": False,
+    }), 11)
+
+    assert node.invalid_payload_count == 1
+    assert before == (
+        node.controller_feedback,
+        node.controller_modes,
+        node.controller_faults,
+        node.controller_lease_safe_hold,
+        node.controller_thermal,
+    )
+    assert "J1" not in node.controller_feedback
+
+
+def test_feedback_metadata_swaps_with_accepted_model_sample(monkeypatch):
+    module, _no_signal_handlers = load_with_ros_stubs([], {
+        "ok": False, "on_spin": lambda: None,
+    })
+    sample = SimpleNamespace(motor="J1")
+    metadata = _normalized_metadata()
+    monkeypatch.setattr(
+        module, "parse_feedback_payload", lambda _payload, _receipt: (sample,)
+    )
+    monkeypatch.setattr(
+        module,
+        "parse_controller_feedback_metadata",
+        lambda _payload, _samples: {"J1": metadata},
+    )
+
+    class AcceptingModel:
+        accepted = False
+
+        def update_batch(self, _samples):
+            self.accepted = True
+
+    model = AcceptingModel()
+    node = _bare_state_node(module, model=model)
+    node.accept_payload(json.dumps({
+        "schema": "go-m8010-motor-feedback/1.0",
+        "domain_fault": False,
+    }), 11)
+
+    assert model.accepted is True
+    assert node.invalid_payload_count == 0
+    assert node.controller_feedback["J1"] == metadata
+    assert node.controller_modes["J1"] == "brake"
+    assert node.controller_faults["J1"] is False
+    assert node.controller_lease_safe_hold["J1"] is False
+
+
+def test_stale_or_unpaired_controller_metadata_is_explicitly_unknown():
+    module, _no_signal_handlers = load_with_ros_stubs([], {
+        "ok": False, "on_spin": lambda: None,
+    })
+    metadata = _normalized_metadata(source_ns=10, receipt_ns=11)
+    motor_state = {
+        "fresh": True,
+        "feedback_source_monotonic_ns": 12,
+        "feedback_receipt_monotonic_ns": 13,
+        "temperature_c": 25.0,
+        "communication_ok": True,
+        "merror": 0,
+    }
+    result = module.controller_metadata_for_hardware_state(
+        metadata, motor_state, TEST_THERMAL_LIMITS
+    )
+    assert result["metadata_status"] == "UNKNOWN"
+    assert result["domain_fault"] is None
+    assert result["thermal"]["state"] == "UNKNOWN"
+    assert result["no_progress"]["fault_latched"] is None
+    assert result["gravity"]["authority_present"] is None
+
+
+def test_current_controller_metadata_keeps_unknown_optional_groups_unknown():
+    module, _no_signal_handlers = load_with_ros_stubs([], {
+        "ok": False, "on_spin": lambda: None,
+    })
+    metadata = _normalized_metadata(source_ns=10, receipt_ns=11)
+    motor_state = {
+        "fresh": True,
+        "feedback_source_monotonic_ns": 10,
+        "feedback_receipt_monotonic_ns": 11,
+        "temperature_c": 25.0,
+        "communication_ok": True,
+        "merror": 0,
+    }
+    result = module.controller_metadata_for_hardware_state(
+        metadata, motor_state, TEST_THERMAL_LIMITS
+    )
+    assert result["metadata_status"] == "OBSERVED"
+    assert result["controller_mode"] == "brake"
+    assert result["brake_observed"] is True
+    assert result["thermal"]["state"] == "UNKNOWN"
+    assert result["no_progress"]["metadata_status"] == "UNKNOWN"
+    assert result["gravity"]["metadata_status"] == "UNKNOWN"
+
+
+def _observed_thermal_metadata(reported_state, *, mode="hold"):
+    metadata = _normalized_metadata(source_ns=10, receipt_ns=11)
+    metadata["controller_mode"] = mode
+    metadata["thermal"].update({
+        "metadata_status": "OBSERVED",
+        "fault_latched": False,
+        "cooldown_ready": False,
+        "release_observed": False,
+        "rearm_pending_next_cycle": False,
+        "cooldown_valid_brake_frames": 0,
+        "trip_activation_epoch": 0,
+        "minimum_rearm_epoch": 0,
+        "domain_reported_state": "DERATING",
+        "reported_state_by_motor": None,
+        "reported_state": reported_state,
+        "trip_reason": "",
+        "thermal_config_sha256": (
+            "1926264805858f62fffc9360ef0c9d4d7f8a7e232e171105450769d493ff5467"
+        ),
+        "derating_factor": 0.6,
+        "raw_temperature_c": 57.0,
+        "window_median_c": None,
+        "slope_c_per_min": None,
+    })
+    return metadata
+
+
+def _fresh_motor_state(temperature_c, *, communication_ok=True):
+    return {
+        "fresh": True,
+        "feedback_source_monotonic_ns": 10,
+        "feedback_receipt_monotonic_ns": 11,
+        "temperature_c": temperature_c,
+        "communication_ok": communication_ok,
+        "merror": 0,
+    }
+
+
+def test_cross_temperature_domain_uses_each_motor_reported_state():
+    module, _no_signal_handlers = load_with_ros_stubs([], {
+        "ok": False, "on_spin": lambda: None,
+    })
+    cases = (
+        (44.0, "NORMAL"),
+        (55.0, "DERATING"),
+        (57.0, "DERATING"),
+    )
+    for temperature_c, reported_state in cases:
+        result = module.controller_metadata_for_hardware_state(
+            _observed_thermal_metadata(reported_state),
+            _fresh_motor_state(temperature_c),
+            TEST_THERMAL_LIMITS,
+        )
+        assert result["thermal"]["domain_reported_state"] == "DERATING"
+        assert result["thermal"]["reported_state"] == reported_state
+        assert result["thermal"]["reported_state_consistent"] is True
+        assert result["thermal"]["state"] == reported_state
+
+
+def test_exact_55c_boundary_is_derating_not_unknown():
+    module, _no_signal_handlers = load_with_ros_stubs([], {
+        "ok": False, "on_spin": lambda: None,
+    })
+    result = module.controller_metadata_for_hardware_state(
+        _observed_thermal_metadata("DERATING"),
+        _fresh_motor_state(55.0),
+        TEST_THERMAL_LIMITS,
+    )
+    assert result["thermal"]["state"] == "DERATING"
+    assert result["thermal"]["reported_state_consistent"] is True
+
+
+def test_unverified_brake_never_becomes_brake_observed():
+    module, _no_signal_handlers = load_with_ros_stubs([], {
+        "ok": False, "on_spin": lambda: None,
+    })
+    unknown_mode = _observed_thermal_metadata("NORMAL", mode="unknown")
+    result = module.controller_metadata_for_hardware_state(
+        unknown_mode, _fresh_motor_state(25.0), TEST_THERMAL_LIMITS
+    )
+    assert result["controller_mode"] == "unknown"
+    assert result["brake_observed"] is False
+
+    verified_mode_no_communication = _observed_thermal_metadata(
+        "NORMAL", mode="brake"
+    )
+    result = module.controller_metadata_for_hardware_state(
+        verified_mode_no_communication,
+        _fresh_motor_state(25.0, communication_ok=False),
+        TEST_THERMAL_LIMITS,
+    )
+    assert result["brake_observed"] is False
+
+    result = module.controller_metadata_for_hardware_state(
+        verified_mode_no_communication,
+        _fresh_motor_state(25.0, communication_ok=True),
+        TEST_THERMAL_LIMITS,
+    )
+    assert result["brake_observed"] is True

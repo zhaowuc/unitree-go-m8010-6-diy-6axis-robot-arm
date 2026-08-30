@@ -1,0 +1,21 @@
+{
+  "schema_version": "MODEL_SESSION_ANCHOR_V2-evidence-v1",
+  "record_type": "EVIDENCE_PLACEHOLDER_NOT_RUNTIME_ANCHOR",
+  "generated_at": "2026-08-31T02:20:35+08:00",
+  "status": "BLOCKED_POWER_OFF",
+  "valid": false,
+  "usable_for_control": false,
+  "model_absolute_joint_rad": null,
+  "raw_encoder_reference": null,
+  "raw_to_ros_sign": null,
+  "gear_ratio": null,
+  "model_sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9",
+  "session_id": null,
+  "encoder_branch_information": null,
+  "operator_confirmation": null,
+  "motor_internal_zero_written": false,
+  "flash_or_eeprom_written": false,
+  "tff_enabled": false,
+  "reason": "No current seven-motor encoder snapshot or operator-aligned physical pose can be captured while the robot arm is powered off.",
+  "primary_blocker": "机械臂断电导致无法建立MODEL_SESSION_ANCHOR_V2及执行实机验收"
+}

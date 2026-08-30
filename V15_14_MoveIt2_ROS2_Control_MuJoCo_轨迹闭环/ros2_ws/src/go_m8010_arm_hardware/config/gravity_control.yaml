@@ -1,0 +1,11 @@
+schema: go-m8010-gravity-control/1.0
+enabled_for_hardware: false
+calculation_rate_hz: 100.0
+joint_state_maximum_age_ms: 250.0
+gravity_m_s2: [0.0, 0.0, -9.81]
+production_model_sha256: 5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9
+anchor_path: config/runtime/gravity_model_anchor_v2.json
+gravity_scale_initial: 0.0
+gravity_scale_levels: [0.25, 0.50, 0.75, 1.00]
+gravity_scale_ramp_seconds: 2.0
+continuous_rotor_limits_authoritative: false

@@ -23,6 +23,8 @@ TOOLS_BUILD="$ROS_WS/build/v15_30a_gui_tools"
 GO_BINARY="$TOOLS_BUILD/v15_30a_gui_go_controller"
 GO_BUILD_MANIFEST="$GO_BINARY.build.json"
 GO_CONTROLLER_SOURCE="$REPO_ROOT/tools/hardware/v15_30a_gui_go_controller.cpp"
+THERMAL_CONFIG="$ROS_WS/src/go_m8010_arm_hardware/config/thermal_limits.yaml"
+THERMAL_CONFIG_SHA256="1926264805858f62fffc9360ef0c9d4d7f8a7e232e171105450769d493ff5467"
 GO_SDK_INCLUDE="$SDK_ROOT/include"
 GO_SDK_LIBRARY="$SDK_ROOT/lib/libUnitreeMotorSDK_Linux64.so"
 GO_SDK_HEADERS=(
@@ -2217,7 +2219,9 @@ if [[ "${DOMAIN_READY[J1]}" -eq 1 ]]; then
     --expected-go-aux-session-reference-sha256 \
       "$GO_AUX_SESSION_REFERENCE_SHA256" \
     --expected-go-aux-power-session-id "$GO_AUX_POWER_SESSION_ID" \
-    --expected-worker-sha256 "$GO_AUX_EXPECTED_WORKER_SHA256"
+    --expected-worker-sha256 "$GO_AUX_EXPECTED_WORKER_SHA256" \
+    --thermal-config "$THERMAL_CONFIG" \
+    --expected-thermal-config-sha256 "$THERMAL_CONFIG_SHA256"
 fi
 if [[ "${DOMAIN_READY[J2]}" -eq 1 ]]; then
   recovery_hint_args=()
@@ -2232,7 +2236,9 @@ if [[ "${DOMAIN_READY[J2]}" -eq 1 ]]; then
     --expected-zero-sha256 "$PERSISTENT_ZERO_SHA256" \
     --expected-j2-session-reference-sha256 "$J2_SESSION_REFERENCE_SHA256" \
     --expected-j2-power-session-id "$J2_POWER_SESSION_ID" \
-    --expected-worker-sha256 "$J2_EXPECTED_WORKER_SHA256"
+    --expected-worker-sha256 "$J2_EXPECTED_WORKER_SHA256" \
+    --thermal-config "$THERMAL_CONFIG" \
+    --expected-thermal-config-sha256 "$THERMAL_CONFIG_SHA256"
 fi
 if [[ "${DOMAIN_READY[J345]}" -eq 1 ]]; then
   recovery_hint_args=()
@@ -2248,14 +2254,17 @@ if [[ "${DOMAIN_READY[J345]}" -eq 1 ]]; then
     --expected-go-aux-session-reference-sha256 \
       "$GO_AUX_SESSION_REFERENCE_SHA256" \
     --expected-go-aux-power-session-id "$GO_AUX_POWER_SESSION_ID" \
-    --expected-worker-sha256 "$GO_AUX_EXPECTED_WORKER_SHA256"
+    --expected-worker-sha256 "$GO_AUX_EXPECTED_WORKER_SHA256" \
+    --thermal-config "$THERMAL_CONFIG" \
+    --expected-thermal-config-sha256 "$THERMAL_CONFIG_SHA256"
 fi
 if [[ "${DOMAIN_READY[J6]}" -eq 1 ]]; then
   start_worker J6 "$RUN_DIR/j6_controller.log" 15311 env \
     LD_LIBRARY_PATH="$J6_LD_LIBRARY_PATH" \
     "$J6_PY" "$REPO_ROOT/tools/hardware/j6_dm_g6220/v15_30a_gui_j6_controller.py" \
     --execute --confirm V15_30A_GUI_J6_CONTROL_AUTHORIZED=YES \
-    --command-port 15311 --feedback-port 15300 --zero-file "$PERSISTENT_ZERO"
+    --command-port 15311 --feedback-port 15300 --zero-file "$PERSISTENT_ZERO" \
+    --thermal-config "$THERMAL_CONFIG"
 fi
 
 wait_workers_bounded

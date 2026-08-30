@@ -178,6 +178,8 @@ class BrakeFeedbackAnalysisTest(unittest.TestCase):
         args = SimpleNamespace(
             worker=Path("/tmp/worker"),
             feedback_port=15300,
+            thermal_config=Path("/tmp/thermal_limits.yaml"),
+            expected_thermal_config_sha256="a" * 64,
             zero_file=Path("/tmp/zero.json"),
             recovery_hint_file=Path("/tmp/hints.json"),
         )
@@ -185,6 +187,14 @@ class BrakeFeedbackAnalysisTest(unittest.TestCase):
         self.assertIn("--brake-only", command)
         self.assertNotIn("hold", command)
         self.assertNotIn("position", command)
+        self.assertEqual(
+            command[command.index("--thermal-config") + 1],
+            str(Path("/tmp/thermal_limits.yaml")),
+        )
+        self.assertEqual(
+            command[command.index("--expected-thermal-config-sha256") + 1],
+            "a" * 64,
+        )
 
     def test_terminal_proof_requires_exact_unique_zero_foc_evidence(self):
         proof = MODULE.parse_worker_terminal_proof(terminal_proof())

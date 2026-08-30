@@ -254,7 +254,7 @@ def gravity_status(
     scale=0.1, target=0.25,
 ):
     source_ns = now_ns - 10
-    return {
+    status = {
         "schema": GRAVITY_STATUS_SCHEMA,
         "source": "whole_arm_gravity_node",
         "source_instance_id": source_instance_id,
@@ -282,6 +282,57 @@ def gravity_status(
         "actuation_interface_present": True,
         "hardware_tff_enabled": target > 0.0,
     }
+    gravity_maxima = {name: 0.1 for name in MOTOR_NAMES}
+    predicted_maxima = {name: 0.2 for name in MOTOR_NAMES}
+    continuous_limits = {name: 1.0 for name in MOTOR_NAMES}
+    short_peak_limits = {name: 2.0 for name in MOTOR_NAMES}
+    status["planned_trajectory_feasibility"] = {
+        "schema": "go-m8010-planned-load-thermal-feasibility/1.0",
+        "source": "whole_arm_gravity_node",
+        "source_instance_id": source_instance_id,
+        "sequence": sequence,
+        "source_monotonic_ns": source_ns,
+        "result": "PASS",
+        "load_feasibility": "PASS",
+        "thermal_feasibility": "PASS",
+        "current_temperature_margin_result": "PASS",
+        "request_sha256": "4" * 64,
+        "trajectory_sha256": RECIPE_SHA256,
+        "session_id": "vertical-session",
+        "state_instance_id": STATE_SOURCE,
+        "model_sha256": PRODUCTION_MODEL_SHA256,
+        "gravity_config_sha256": GRAVITY_CONFIG_SHA256,
+        "thermal_config_sha256": (
+            "1926264805858f62fffc9360ef0c9d4d7f8a7e232e171105450769d493ff5467"
+        ),
+        "continuous_rotor_limits_authoritative": True,
+        "temperature_limits_authoritative": True,
+        "sample_count": 101,
+        "evaluated_sample_count": 101,
+        "load_evaluation_basis": (
+            "MUJOCO_QFRC_BIAS_CONTINUOUS_PLUS_MJ_INVERSE_SHORT_PEAK_EVERY_SAMPLE"
+        ),
+        "thermal_evaluation_basis": (
+            "CURRENT_MEASURED_TEMPERATURE_TO_DERATING_THRESHOLD_PLUS_"
+            "ALL_SAMPLE_PREDICTED_LOAD_WITHIN_CONTINUOUS_RATING_"
+            "NO_HEAT_RISE_MODEL"
+        ),
+        "maximum_abs_gravity_joint_torque_nm_by_joint": {
+            f"J{index}": 0.5 for index in range(1, 7)
+        },
+        "maximum_abs_gravity_rotor_torque_nm_by_motor": gravity_maxima,
+        "maximum_abs_predicted_rotor_torque_nm_by_motor": predicted_maxima,
+        "continuous_rotor_torque_limit_nm_by_motor": continuous_limits,
+        "short_peak_rotor_torque_limit_nm_by_motor": short_peak_limits,
+        "minimum_continuous_rotor_torque_margin_nm": 0.9,
+        "minimum_short_peak_rotor_torque_margin_nm": 1.8,
+        "minimum_predicted_continuous_rotor_torque_margin_nm": 0.8,
+        "minimum_rotor_torque_margin_nm": 0.9,
+        "minimum_thermal_margin_c": 5.0,
+        "blocker_code": None,
+        "blocker": None,
+    }
+    return status
 
 
 def validate_v13(document, *, now_ns=None):
@@ -309,6 +360,67 @@ def test_gravity_gate_observes_then_injects_exact_bounded_authority():
         "state_instance_id", "gravity_scale", "gravity_scale_target",
         "feedforward_nm",
     }
+
+
+def test_gravity_gate_requires_exact_recipe_proof_and_strictly_positive_margin():
+    now_ns = 10_000_000_000
+    gate = GravityAuthorityGate(maximum_age_ns=250_000_000)
+    status = gravity_status(now_ns=now_ns)
+    status["planned_trajectory_feasibility"]["trajectory_sha256"] = "e" * 64
+    assert gate.observe_status(status, now_ns=now_ns)
+    with pytest.raises(ValueError, match="manifest"):
+        gate.authorize(command_v13(now_ns=now_ns), now_ns=now_ns + 1)
+
+    zero = gravity_status(now_ns=now_ns + 10, sequence=2)
+    proof = zero["planned_trajectory_feasibility"]
+    proof["continuous_rotor_torque_limit_nm_by_motor"] = {
+        name: 0.1 for name in MOTOR_NAMES
+    }
+    proof["minimum_continuous_rotor_torque_margin_nm"] = 0.0
+    proof["minimum_rotor_torque_margin_nm"] = 0.0
+    assert gate.observe_status(zero, now_ns=now_ns + 10)
+    assert gate.available
+    with pytest.raises(ValueError, match="manifest"):
+        gate.authorize(
+            command_v13(now_ns=now_ns + 10), now_ns=now_ns + 11
+        )
+
+
+@pytest.mark.parametrize("invalid", [math.nan, math.inf, -math.inf])
+@pytest.mark.parametrize("field", [
+    "minimum_continuous_rotor_torque_margin_nm",
+    "minimum_short_peak_rotor_torque_margin_nm",
+    "minimum_predicted_continuous_rotor_torque_margin_nm",
+    "minimum_rotor_torque_margin_nm",
+    "minimum_thermal_margin_c",
+])
+def test_gravity_gate_rejects_nonfinite_planned_proof_scalars(field, invalid):
+    now_ns = 10_000_000_000
+    gate = GravityAuthorityGate(maximum_age_ns=250_000_000)
+    status = gravity_status(now_ns=now_ns)
+    status["planned_trajectory_feasibility"][field] = invalid
+    # A malformed POSITION proof must not revoke independent HOLD gravity.
+    assert gate.observe_status(status, now_ns=now_ns)
+    assert gate.available
+    hold = json.loads(command(mode="hold"))
+    gate.authorize(hold, now_ns=now_ns + 1)
+    assert hold["feedforward_nm"] == status["feedforward_nm"]
+    with pytest.raises(ValueError, match="manifest"):
+        gate.authorize(command_v13(now_ns=now_ns), now_ns=now_ns + 1)
+
+
+def test_invalid_or_missing_path_proof_does_not_revoke_hold_gravity_authority():
+    now_ns = 10_000_000_000
+    gate = GravityAuthorityGate(maximum_age_ns=250_000_000)
+    status = gravity_status(now_ns=now_ns)
+    status["planned_trajectory_feasibility"] = {
+        "result": "NOT_EVALUATED"
+    }
+    assert gate.observe_status(status, now_ns=now_ns)
+    hold = json.loads(command(mode="hold"))
+    gate.authorize(hold, now_ns=now_ns + 1)
+    assert hold["feedforward_nm"] == status["feedforward_nm"]
+    assert hold["gravity_authority"]["session_id"] == "vertical-session"
 
 
 def test_gravity_gate_rejects_stale_replay_and_incomplete_hardware_binding():

@@ -1,0 +1,62 @@
+{
+  "schema_version": "V15.31A-FT-gravity-mapping-validation-v1",
+  "generated_at": "2026-08-31T02:20:35+08:00",
+  "production_model": {
+    "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/mujoco_v15_14/go_m8010_arm_v15_14_kinematic.xml",
+    "expected_sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9",
+    "observed_sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9",
+    "hash_status": "PASS",
+    "modified": false
+  },
+  "gravity_config": {
+    "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/config/gravity_control.yaml",
+    "sha256": "307469b8384fd35547327ba1d5f80aa440e6b9663406ab7c9d9469bea263335d",
+    "continuous_rotor_limits_authoritative": false,
+    "enabled_for_hardware_default": false,
+    "frozen_fail_closed": true
+  },
+  "offline_software_validation": {
+    "status": "PASS",
+    "checks": [
+      "frozen model hash guard",
+      "finite and bounded gravity output",
+      "gravity continuity",
+      "actual-pose-only input",
+      "dedicated control MjData separation",
+      "J2 50/50 split and opposite motor signs",
+      "scale ramp and Tff slew",
+      "gravity-node status to Router short-lived session binding",
+      "Router rejection when continuous rotor limits are not authoritative",
+      "GO strict gravity authority parsing and second-stage Tff slew",
+      "latest-generation worker reconstructs and hashes the complete immutable recipe outside the 100 Hz subscription callback",
+      "every exact path sample evaluates qfrc_bias and mj_inverse with J2 split, continuous/peak limits, current temperature and thermal-config identity",
+      "fail-closed behavior without a valid anchor"
+    ],
+    "evidence_paths": [
+      "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/gravity_model.py",
+      "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/whole_arm_gravity_node.py",
+      "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/go_m8010_arm_hardware/planned_path_feasibility.py",
+      "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/test/test_gravity_model.py",
+      "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/test/test_planned_path_feasibility.py",
+      "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/command_router.py",
+      "tools/hardware/v15_30a_gui_go_controller.cpp"
+    ]
+  },
+  "hardware_feedforward_chain": {
+    "software_path": "whole_arm_gravity_node -> arm_gui_command_router -> GO worker",
+    "connection_status": "CONNECTED_AND_FAIL_CLOSED",
+    "gravity_node_direct_motor_publisher": false,
+    "router_requires_continuous_rotor_limits_authoritative": true,
+    "go_requires_fresh_gravity_authority": true,
+    "current_policy_result": "SOFTWARE_POLICY_REJECTS_BEFORE_REAL_POSITION",
+    "authorized_feedforward_nm_under_frozen_policy": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  },
+  "model_session_anchor_v2": "MISSING_POWER_OFF",
+  "actual_pose_mapping": "NOT_RUN",
+  "gravity_scale_ladder_25_50_75_100": "NOT_RUN",
+  "sign_consistency_on_hardware": "NOT_RUN",
+  "tff_transmitted": false,
+  "tff_block_reason": "POWERED_ANCHOR_DIRECTION_AND_CONTINUOUS_LOAD_AUTHORITY_NOT_AVAILABLE; FROZEN_CONFIG_FALSE",
+  "GRAVITY_MODEL_MAPPING": "BLOCKED_POWER_OFF",
+  "primary_blocker": "机械臂断电导致无法建立MODEL_SESSION_ANCHOR_V2及执行实机验收"
+}

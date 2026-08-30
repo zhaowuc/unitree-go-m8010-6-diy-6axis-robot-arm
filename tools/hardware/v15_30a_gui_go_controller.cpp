@@ -42,6 +42,8 @@
 
 namespace {
 using Clock = std::chrono::steady_clock;
+
+std::uint64_t monotonic_ns();
 constexpr char kGate[] = "V15_30A_GUI_GO_CONTROL_AUTHORIZED=YES";
 constexpr double kPi = 3.14159265358979323846;
 constexpr double kGear = 6.329999923706055;
@@ -100,6 +102,8 @@ constexpr std::array<double, 6> kAuxPredictedRotorWorkNm{{
     2.50, 0.0, 3.00, 2.50, 2.00, 0.0}};
 constexpr std::array<double, 6> kAuxPredictedRotorPdHardNm{{
     2.50, 0.0, 3.00, 2.50, 2.00, 0.0}};
+// Existing controller software working clamps.  They may indicate software
+// saturation to the watchdog, but are not continuous-torque ratings.
 constexpr double kJ2RotorTorqueFeedbackHardNm = 1.80;
 constexpr double kJ2RecoveryRotorTorqueFeedbackHardNm = 3.20;
 constexpr double kJ2PredictedRotorPdHardNm = 1.75;
@@ -128,6 +132,8 @@ constexpr double kJ2MovingKpLimit = 3.00;
 constexpr double kJ2MovingKdLimit = 0.30;
 constexpr double kJ2KpRampSeconds = 0.50;
 constexpr double kArrivalTolerance = 0.5 * kPi / 180.0;
+constexpr double kArrivalDwellSeconds = 0.5;
+constexpr int kArrivalDwellMinimumFrames = 50;
 constexpr double kBrakeStationaritySpan = 0.20 * kPi / 180.0;
 constexpr double kTargetTimeoutSeconds = 90.0;
 constexpr double kLeaseSeconds = 0.5;
@@ -136,15 +142,28 @@ constexpr double kFixedHoldRepeatTolerance = 1e-9;
 constexpr double kFixedHoldFeedbackFreshSeconds = 0.10;
 constexpr int kBrakeMode = 0;
 constexpr int kFocMode = 1;
-constexpr int kTemperatureWarning = 55;
-constexpr int kTemperatureLimit = 60;
+constexpr char kThermalConfigSha256[] =
+    "1926264805858f62fffc9360ef0c9d4d7f8a7e232e171105450769d493ff5467";
 constexpr int kThermalCooldownConsecutiveFrames = 500;
+// These watchdog thresholds observe the controller's existing software
+// governors/working clamps.  They are conservative project guards pending
+// replay/plant validation, never a motor continuous-torque rating.
+constexpr char kLoadLimitWatchdogAuthority[] =
+    "SOFTWARE_GUARD_NOT_CONTINUOUS_RATING";
+constexpr double kNoProgressMinimumPositionError = 2.0 * kPi / 180.0;
+constexpr double kNoProgressMinimumImprovement = 0.25 * kPi / 180.0;
+constexpr double kNoProgressWindowSeconds = 3.0;
+constexpr int kNoProgressMinimumQualifyingFrames = 100;
 constexpr std::size_t kCommandPacketBudget = 32U;
 constexpr std::size_t kMaximumTrackedCommandSources = 32U;
 constexpr std::uint64_t kMaximumCommandSourceAgeNs = 250000000ULL;
 constexpr std::uint64_t kCommandSourceTakeoverLockNs = 500000000ULL;
 constexpr std::uint64_t kMaximumCommandSequence =
     static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max());
+constexpr std::uint64_t kMaximumQuinticIntervalCount = 1000000ULL;
+constexpr std::uint64_t kMaximumQuinticSamplePeriodNs = 10000000ULL;
+constexpr double kQuinticPeakVelocityScale = 1.875;
+constexpr double kQuinticPeakAccelerationScale = 5.773502691896257645;
 constexpr double kCommandRejectSummarySeconds = 5.0;
 constexpr int kActiveDeadlineConsecutiveLimit = 3;
 constexpr std::array<double, 6> kKpLimits{{
@@ -153,7 +172,45 @@ constexpr std::array<double, 6> kKdLimits{{
     0.15, 0.30, 0.15, 0.15, 0.12, 0.0}};
 constexpr std::array<double, 6> kRecoveryFeedforwardLimits{{
     0.20, 1.75, 1.00, 0.40, 0.20, 0.0}};
+constexpr char kGravityAuthoritySchema[] =
+    "go-m8010-gravity-command-authority/1.0";
+constexpr char kProductionModelSha256[] =
+    "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9";
+constexpr char kGravityConfigSha256[] =
+    "307469b8384fd35547327ba1d5f80aa440e6b9663406ab7c9d9469bea263335d";
+constexpr std::uint64_t kMaximumGravityAuthorityAgeNs = 250000000ULL;
+// Frozen-model command envelopes, not continuous motor torque ratings.
+constexpr std::array<double, 6> kGravityFeedforwardLimits{{
+    0.20, 1.75, 1.10, 0.40, 0.20, 0.0}};
+constexpr double kGravityFeedforwardSlewNmPerSecond = 1.0;
 std::atomic<bool> g_stop{false};
+
+struct ThermalPolicy {
+  double normal_below_c = 0.0;
+  double warning_below_c = 0.0;
+  double derating_start_c = 0.0;
+  double thermal_stop_c = 0.0;
+  double rearm_below_c = 0.0;
+  double cooldown_seconds = 0.0;
+  double slope_window_seconds = 0.0;
+  bool configured = false;
+};
+
+ThermalPolicy g_thermal_policy;
+
+double thermal_derating_factor_for_raw_temperature(int temperature_c) {
+  if (!g_thermal_policy.configured)
+    throw std::runtime_error("THERMAL_POLICY_NOT_CONFIGURED");
+  if (temperature_c < 0 ||
+      temperature_c >= g_thermal_policy.thermal_stop_c)
+    return 0.0;
+  if (temperature_c <= g_thermal_policy.derating_start_c) return 1.0;
+  return std::clamp(
+      (g_thermal_policy.thermal_stop_c - temperature_c) /
+          (g_thermal_policy.thermal_stop_c -
+           g_thermal_policy.derating_start_c),
+      0.0, 1.0);
+}
 
 std::uint64_t monotonic_ns_at(Clock::time_point when) {
   const auto count = std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -454,6 +511,107 @@ SecureFileBytes read_secure_owned_file(
       descriptor.get(), maximum_size, true, unsafe_error, read_error);
 }
 
+SecureFileBytes read_secure_owned_policy_file(
+    const std::string& path, std::size_t maximum_size,
+    const char* open_error, const char* unsafe_error, const char* read_error) {
+  UniqueFd descriptor(::open(
+      path.c_str(), O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK));
+  if (!descriptor) throw std::runtime_error(open_error);
+  // Repository policy files are intentionally readable (normally 0644), but
+  // must still be a stable, single-link regular file owned by this worker's
+  // effective user.  The exact byte identity is pinned below before any
+  // serial device is inspected or opened.
+  return read_secure_regular_fd(
+      descriptor.get(), maximum_size, false, unsafe_error, read_error);
+}
+
+std::string trim_ascii(std::string value) {
+  const auto not_space = [](unsigned char character) {
+    return character != ' ' && character != '\t' &&
+        character != '\r' && character != '\n';
+  };
+  const auto first = std::find_if(value.begin(), value.end(), not_space);
+  const auto last = std::find_if(value.rbegin(), value.rend(), not_space).base();
+  if (first >= last) return {};
+  return std::string(first, last);
+}
+
+ThermalPolicy parse_thermal_policy_yaml(const std::string& data) {
+  std::map<std::string, std::string> scalars;
+  std::size_t offset = 0U;
+  while (offset <= data.size()) {
+    const std::size_t newline = data.find('\n', offset);
+    std::string line = data.substr(
+        offset, newline == std::string::npos
+                    ? std::string::npos : newline - offset);
+    const std::size_t comment = line.find('#');
+    if (comment != std::string::npos) line.erase(comment);
+    line = trim_ascii(std::move(line));
+    if (!line.empty()) {
+      const std::size_t colon = line.find(':');
+      if (colon == std::string::npos)
+        throw std::runtime_error("THERMAL_CONFIG_YAML_INVALID");
+      const std::string key = trim_ascii(line.substr(0U, colon));
+      const std::string value = trim_ascii(line.substr(colon + 1U));
+      if (key.empty() || value.empty() || !scalars.emplace(key, value).second)
+        throw std::runtime_error("THERMAL_CONFIG_YAML_INVALID");
+    }
+    if (newline == std::string::npos) break;
+    offset = newline + 1U;
+  }
+  const auto required_string = [&](const char* key) -> const std::string& {
+    const auto found = scalars.find(key);
+    if (found == scalars.end())
+      throw std::runtime_error("THERMAL_CONFIG_FIELD_MISSING");
+    return found->second;
+  };
+  if (required_string("schema") != "go-m8010-thermal-limits/1.0")
+    throw std::runtime_error("THERMAL_CONFIG_SCHEMA_MISMATCH");
+  const auto required_number = [&](const char* key) {
+    const std::string& encoded = required_string(key);
+    std::size_t consumed = 0U;
+    double value = 0.0;
+    try {
+      value = std::stod(encoded, &consumed);
+    } catch (const std::exception&) {
+      throw std::runtime_error("THERMAL_CONFIG_NUMBER_INVALID");
+    }
+    if (consumed != encoded.size() || !std::isfinite(value))
+      throw std::runtime_error("THERMAL_CONFIG_NUMBER_INVALID");
+    return value;
+  };
+  ThermalPolicy policy;
+  policy.normal_below_c = required_number("normal_below_c");
+  policy.warning_below_c = required_number("warning_below_c");
+  policy.derating_start_c = required_number("derating_start_c");
+  policy.thermal_stop_c = required_number("thermal_stop_c");
+  policy.rearm_below_c = required_number("rearm_below_c");
+  policy.cooldown_seconds = required_number("cooldown_seconds");
+  policy.slope_window_seconds = required_number("slope_window_seconds");
+  if (!(policy.normal_below_c < policy.warning_below_c &&
+        policy.warning_below_c < policy.derating_start_c &&
+        policy.derating_start_c < policy.thermal_stop_c &&
+        policy.normal_below_c < policy.rearm_below_c &&
+        policy.rearm_below_c < policy.thermal_stop_c &&
+        policy.cooldown_seconds > 0.0 &&
+        policy.slope_window_seconds > 0.0))
+    throw std::runtime_error("THERMAL_CONFIG_THRESHOLD_ORDER_INVALID");
+  policy.configured = true;
+  return policy;
+}
+
+ThermalPolicy self_test_thermal_policy() {
+  return parse_thermal_policy_yaml(
+      "schema: go-m8010-thermal-limits/1.0\n"
+      "normal_below_c: 45.0\n"
+      "warning_below_c: 50.0\n"
+      "derating_start_c: 55.0\n"
+      "thermal_stop_c: 60.0\n"
+      "rearm_below_c: 55.0\n"
+      "cooldown_seconds: 30.0\n"
+      "slope_window_seconds: 120.0\n");
+}
+
 nlohmann::json parse_json_bytes(const std::string& data,
                                 const char* invalid_error) {
   try {
@@ -579,6 +737,8 @@ struct Options {
   std::string expected_go_aux_session_reference_sha256;
   std::string expected_go_aux_power_session_id;
   std::string expected_worker_sha256;
+  std::string thermal_config_file;
+  std::string expected_thermal_config_sha256;
 };
 
 Options parse_options(int argc, char** argv) {
@@ -620,6 +780,10 @@ Options parse_options(int argc, char** argv) {
       options.expected_go_aux_power_session_id = next();
     else if (arg == "--expected-worker-sha256")
       options.expected_worker_sha256 = next();
+    else if (arg == "--thermal-config")
+      options.thermal_config_file = next();
+    else if (arg == "--expected-thermal-config-sha256")
+      options.expected_thermal_config_sha256 = next();
     else throw std::runtime_error("CLI_OPTION_NOT_ALLOWED");
   }
   const bool j2_bundle_fields_missing =
@@ -663,6 +827,9 @@ Options parse_options(int argc, char** argv) {
   if ((options.bus == "j1" || options.bus == "j345") &&
       !options.brake_only && go_aux_bundle_fields_missing)
     throw std::runtime_error("GO_AUX_SESSION_REFERENCE_GATE_MISSING");
+  if (options.thermal_config_file.empty() ||
+      options.expected_thermal_config_sha256.empty())
+    throw std::runtime_error("THERMAL_CONFIG_AUTHORITY_GATE_MISSING");
   if (options.feedback_port < 1024 || options.feedback_port > 65535)
     throw std::runtime_error("FEEDBACK_PORT_OUT_OF_RANGE");
   return options;
@@ -758,6 +925,11 @@ struct MotorRuntime {
   double last_q = 0.0;
   double last_dq = 0.0;
   double last_tau = 0.0;
+  // Last torque feed-forward value that was actually serialized on the GO
+  // rotor-side wire command.  This is deliberately separate from measured
+  // MotorData.tau and from the reducer-side joint estimate.
+  double last_tau_cmd_rotor_nm = 0.0;
+  std::uint64_t last_valid_feedback_monotonic_ns = 0U;
   int temperature = 0;
   int merror = -1;
   int returned_mode = -1;
@@ -938,10 +1110,493 @@ struct ThermalInterlockState {
   bool fault_latched = false;
   bool release_observed = false;
   bool cooldown_ready = false;
+  bool rearm_pending_next_cycle = false;
   int cooldown_frames = 0;
+  Clock::time_point cooldown_started_at{};
+  std::string trip_reason;
   std::uint64_t trip_activation_epoch = 0;
   std::uint64_t minimum_rearm_epoch = 0;
 };
+
+struct NoProgressWatchdogState {
+  bool fault_latched = false;
+  bool release_observed = false;
+  bool rearm_pending_next_cycle = false;
+  int qualifying_frames = 0;
+  Clock::time_point window_started_at{};
+  double window_baseline_error_rad = 0.0;
+  double trip_position_error_rad = 0.0;
+  std::string trip_reason;
+  std::uint64_t trip_activation_epoch = 0;
+  std::uint64_t minimum_rearm_epoch = 0;
+};
+
+std::uint64_t saturating_next_activation_epoch(std::uint64_t epoch) {
+  return epoch == std::numeric_limits<std::uint64_t>::max()
+      ? epoch : epoch + 1U;
+}
+
+void reset_thermal_cooldown_evidence(ThermalInterlockState& state) {
+  state.cooldown_ready = false;
+  state.cooldown_frames = 0;
+  state.cooldown_started_at = Clock::time_point{};
+}
+
+bool latch_thermal_interlock(
+    ThermalInterlockState& state, const char* trip_reason,
+    std::uint64_t active_epoch, std::uint64_t current_minimum_epoch,
+    std::uint64_t highest_rejected_active_epoch) {
+  if (trip_reason == nullptr || *trip_reason == '\0') return false;
+  const bool newly_latched = !state.fault_latched;
+  state.fault_latched = true;
+  state.release_observed = false;
+  state.rearm_pending_next_cycle = false;
+  reset_thermal_cooldown_evidence(state);
+  if (newly_latched) state.trip_reason = trip_reason;
+  state.trip_activation_epoch = std::max(
+      state.trip_activation_epoch, active_epoch);
+  state.minimum_rearm_epoch = std::max({
+      state.minimum_rearm_epoch,
+      current_minimum_epoch,
+      saturating_next_activation_epoch(active_epoch),
+      saturating_next_activation_epoch(highest_rejected_active_epoch)});
+  return newly_latched;
+}
+
+bool observe_raw_temperature_thermal_trip(
+    ThermalInterlockState& state, int raw_temperature_c,
+    std::uint64_t active_epoch, std::uint64_t current_minimum_epoch,
+    std::uint64_t highest_rejected_active_epoch) {
+  if (raw_temperature_c < g_thermal_policy.thermal_stop_c) return false;
+  return latch_thermal_interlock(
+      state, "RAW_TEMPERATURE_LIMIT", active_epoch, current_minimum_epoch,
+      highest_rejected_active_epoch);
+}
+
+bool observe_thermal_cooldown_frame(
+    ThermalInterlockState& state, bool all_domain_motors_valid_brake_below_55,
+    Clock::time_point observed_at) {
+  if (!state.fault_latched) {
+    reset_thermal_cooldown_evidence(state);
+    return false;
+  }
+  if (!all_domain_motors_valid_brake_below_55) {
+    reset_thermal_cooldown_evidence(state);
+    state.release_observed = false;
+    state.rearm_pending_next_cycle = false;
+    return false;
+  }
+  if (state.cooldown_frames == 0)
+    state.cooldown_started_at = observed_at;
+  if (state.cooldown_frames < std::numeric_limits<int>::max())
+    ++state.cooldown_frames;
+  const double elapsed_seconds = std::chrono::duration<double>(
+      observed_at - state.cooldown_started_at).count();
+  const bool was_ready = state.cooldown_ready;
+  state.cooldown_ready =
+      state.cooldown_frames >= kThermalCooldownConsecutiveFrames &&
+      elapsed_seconds >= g_thermal_policy.cooldown_seconds;
+  return state.cooldown_ready && !was_ready;
+}
+
+bool observe_explicit_thermal_release(
+    ThermalInterlockState& state, bool explicit_release_packet_received) {
+  if (!state.fault_latched || !state.cooldown_ready ||
+      !explicit_release_packet_received)
+    return false;
+  const bool newly_observed = !state.release_observed;
+  state.release_observed = true;
+  return newly_observed;
+}
+
+bool request_thermal_rearm_for_next_cycle(
+    ThermalInterlockState& state, bool command_lease_fresh,
+    bool active_owned_joint_requested, std::uint64_t activation_epoch,
+    std::uint64_t highest_rejected_active_epoch) {
+  const bool acceptable = state.fault_latched && state.cooldown_ready &&
+      state.release_observed && command_lease_fresh &&
+      active_owned_joint_requested &&
+      activation_epoch > state.trip_activation_epoch &&
+      activation_epoch >= state.minimum_rearm_epoch &&
+      activation_epoch > highest_rejected_active_epoch;
+  if (!acceptable) return false;
+  state.rearm_pending_next_cycle = true;
+  return true;
+}
+
+bool apply_pending_thermal_rearm_at_cycle_start(
+    ThermalInterlockState& state) {
+  if (!state.fault_latched || !state.rearm_pending_next_cycle) return false;
+  state.fault_latched = false;
+  state.release_observed = false;
+  state.rearm_pending_next_cycle = false;
+  state.trip_reason.clear();
+  reset_thermal_cooldown_evidence(state);
+  return true;
+}
+
+void reset_no_progress_observation(NoProgressWatchdogState& state) {
+  state.qualifying_frames = 0;
+  state.window_started_at = Clock::time_point{};
+  state.window_baseline_error_rad = 0.0;
+}
+
+bool latch_position_safety_watchdog(
+    NoProgressWatchdogState& state, double position_error_rad,
+    const char* trip_reason, std::uint64_t active_epoch,
+    std::uint64_t current_minimum_epoch,
+    std::uint64_t highest_rejected_active_epoch) {
+  if (state.fault_latched || !std::isfinite(position_error_rad) ||
+      position_error_rad < 0.0 || trip_reason == nullptr ||
+      *trip_reason == '\0')
+    return false;
+  state.fault_latched = true;
+  state.release_observed = false;
+  state.rearm_pending_next_cycle = false;
+  state.trip_position_error_rad = position_error_rad;
+  state.trip_reason = trip_reason;
+  state.trip_activation_epoch = std::max(
+      state.trip_activation_epoch, active_epoch);
+  state.minimum_rearm_epoch = std::max({
+      state.minimum_rearm_epoch,
+      current_minimum_epoch,
+      saturating_next_activation_epoch(active_epoch),
+      saturating_next_activation_epoch(highest_rejected_active_epoch)});
+  return true;
+}
+
+bool observe_no_progress_watchdog(
+    NoProgressWatchdogState& state, bool position_foc_observation_valid,
+    double position_error_rad, bool software_saturation_observed,
+    Clock::time_point observed_at, std::uint64_t active_epoch,
+    std::uint64_t current_minimum_epoch,
+    std::uint64_t highest_rejected_active_epoch) {
+  if (state.fault_latched) return false;
+  const bool qualifying = position_foc_observation_valid &&
+      software_saturation_observed && std::isfinite(position_error_rad) &&
+      position_error_rad >= kNoProgressMinimumPositionError;
+  if (!qualifying) {
+    reset_no_progress_observation(state);
+    return false;
+  }
+  if (state.qualifying_frames == 0 ||
+      observed_at < state.window_started_at) {
+    state.qualifying_frames = 1;
+    state.window_started_at = observed_at;
+    state.window_baseline_error_rad = position_error_rad;
+    return false;
+  }
+  if (state.window_baseline_error_rad - position_error_rad >=
+      kNoProgressMinimumImprovement) {
+    state.qualifying_frames = 1;
+    state.window_started_at = observed_at;
+    state.window_baseline_error_rad = position_error_rad;
+    return false;
+  }
+  if (state.qualifying_frames < std::numeric_limits<int>::max())
+    ++state.qualifying_frames;
+  const double elapsed_seconds = std::chrono::duration<double>(
+      observed_at - state.window_started_at).count();
+  if (state.qualifying_frames < kNoProgressMinimumQualifyingFrames ||
+      elapsed_seconds < kNoProgressWindowSeconds)
+    return false;
+
+  return latch_position_safety_watchdog(
+      state, position_error_rad, "LOAD_LIMIT_NO_PROGRESS", active_epoch,
+      current_minimum_epoch, highest_rejected_active_epoch);
+}
+
+bool observe_explicit_no_progress_release(
+    NoProgressWatchdogState& state,
+    bool explicit_release_packet_received) {
+  if (!state.fault_latched || !explicit_release_packet_received) return false;
+  const bool newly_observed = !state.release_observed;
+  state.release_observed = true;
+  return newly_observed;
+}
+
+bool request_no_progress_rearm_for_next_cycle(
+    NoProgressWatchdogState& state, bool command_lease_fresh,
+    bool active_owned_joint_requested,
+    bool all_domain_motors_valid_brake,
+    std::uint64_t activation_epoch,
+    std::uint64_t highest_rejected_active_epoch) {
+  const bool acceptable = state.fault_latched && state.release_observed &&
+      command_lease_fresh && active_owned_joint_requested &&
+      all_domain_motors_valid_brake &&
+      activation_epoch > state.trip_activation_epoch &&
+      activation_epoch >= state.minimum_rearm_epoch &&
+      activation_epoch > highest_rejected_active_epoch;
+  if (!acceptable) return false;
+  state.rearm_pending_next_cycle = true;
+  return true;
+}
+
+bool apply_pending_no_progress_rearm_at_cycle_start(
+    NoProgressWatchdogState& state) {
+  if (!state.fault_latched || !state.rearm_pending_next_cycle) return false;
+  state.fault_latched = false;
+  state.release_observed = false;
+  state.rearm_pending_next_cycle = false;
+  state.trip_position_error_rad = 0.0;
+  state.trip_reason.clear();
+  reset_no_progress_observation(state);
+  return true;
+}
+
+void no_progress_watchdog_self_test() {
+  const auto start = Clock::time_point{} + std::chrono::seconds(1);
+  const double blocked_error = 4.0 * kPi / 180.0;
+  NoProgressWatchdogState state;
+  if (observe_no_progress_watchdog(
+          state, true, blocked_error, false, start, 4U, 0U, 4U) ||
+      state.qualifying_frames != 0)
+    throw std::runtime_error("NO_PROGRESS_SATURATION_GATE_SELF_TEST_FAILED");
+  if (observe_no_progress_watchdog(
+          state, true, blocked_error, true, start, 4U, 0U, 4U))
+    throw std::runtime_error("NO_PROGRESS_FIRST_FRAME_SELF_TEST_FAILED");
+  for (int frame = 1; frame < kNoProgressMinimumQualifyingFrames; ++frame) {
+    if (observe_no_progress_watchdog(
+            state, true, blocked_error, true,
+            start + std::chrono::milliseconds(frame * 10),
+            4U, 0U, 4U))
+      throw std::runtime_error("NO_PROGRESS_SHORT_WINDOW_SELF_TEST_FAILED");
+  }
+  if (!observe_no_progress_watchdog(
+          state, true, blocked_error, true,
+          start + std::chrono::duration_cast<Clock::duration>(
+              std::chrono::duration<double>(kNoProgressWindowSeconds)),
+          4U, 0U, 4U) ||
+      !state.fault_latched || state.minimum_rearm_epoch != 5U)
+    throw std::runtime_error("NO_PROGRESS_TRIP_SELF_TEST_FAILED");
+  if (request_no_progress_rearm_for_next_cycle(
+          state, true, true, true, 5U, 5U))
+    throw std::runtime_error("NO_PROGRESS_RELEASE_REQUIRED_SELF_TEST_FAILED");
+  if (!observe_explicit_no_progress_release(state, true) ||
+      request_no_progress_rearm_for_next_cycle(
+          state, true, true, true, 4U, 4U) ||
+      request_no_progress_rearm_for_next_cycle(
+          state, true, true, false, 5U, 4U) ||
+      !request_no_progress_rearm_for_next_cycle(
+          state, true, true, true, 5U, 4U) ||
+      !state.fault_latched || !state.rearm_pending_next_cycle)
+    throw std::runtime_error("NO_PROGRESS_HIGHER_EPOCH_SELF_TEST_FAILED");
+  if (!apply_pending_no_progress_rearm_at_cycle_start(state) ||
+      state.fault_latched || state.rearm_pending_next_cycle)
+    throw std::runtime_error("NO_PROGRESS_NEXT_CYCLE_REARM_SELF_TEST_FAILED");
+
+  NoProgressWatchdogState improving;
+  (void)observe_no_progress_watchdog(
+      improving, true, blocked_error, true, start, 8U, 0U, 0U);
+  const double improved_error = blocked_error -
+      kNoProgressMinimumImprovement - 0.01 * kPi / 180.0;
+  (void)observe_no_progress_watchdog(
+      improving, true, improved_error, true,
+      start + std::chrono::seconds(1), 8U, 0U, 0U);
+  if (improving.qualifying_frames != 1 ||
+      improving.window_started_at != start + std::chrono::seconds(1))
+    throw std::runtime_error("NO_PROGRESS_IMPROVEMENT_RESET_SELF_TEST_FAILED");
+  (void)observe_no_progress_watchdog(
+      improving, true, improved_error, false,
+      start + std::chrono::seconds(2), 8U, 0U, 0U);
+  if (improving.qualifying_frames != 0)
+    throw std::runtime_error("NO_PROGRESS_GAP_RESET_SELF_TEST_FAILED");
+
+  NoProgressWatchdogState arrival_timeout;
+  if (!latch_position_safety_watchdog(
+          arrival_timeout, blocked_error, "POSITION_ARRIVAL_TIMEOUT", 12U,
+          9U, 12U) ||
+      !arrival_timeout.fault_latched ||
+      arrival_timeout.trip_reason != "POSITION_ARRIVAL_TIMEOUT" ||
+      arrival_timeout.trip_position_error_rad != blocked_error ||
+      arrival_timeout.trip_activation_epoch != 12U ||
+      arrival_timeout.minimum_rearm_epoch != 13U ||
+      latch_position_safety_watchdog(
+          arrival_timeout, blocked_error, "POSITION_ARRIVAL_TIMEOUT", 13U,
+          13U, 13U))
+    throw std::runtime_error("POSITION_ARRIVAL_TIMEOUT_LATCH_SELF_TEST_FAILED");
+
+  NoProgressWatchdogState exact_governor_abort;
+  if (!latch_position_safety_watchdog(
+          exact_governor_abort, blocked_error,
+          "EXACT_TRAJECTORY_LOAD_GOVERNOR_ABORT", 14U, 0U, 14U) ||
+      exact_governor_abort.trip_reason !=
+          "EXACT_TRAJECTORY_LOAD_GOVERNOR_ABORT" ||
+      exact_governor_abort.minimum_rearm_epoch != 15U)
+    throw std::runtime_error(
+        "EXACT_TRAJECTORY_LOAD_GOVERNOR_ABORT_SELF_TEST_FAILED");
+
+  NoProgressWatchdogState exhausted;
+  exhausted.fault_latched = true;
+  exhausted.release_observed = true;
+  exhausted.trip_activation_epoch =
+      std::numeric_limits<std::uint64_t>::max();
+  exhausted.minimum_rearm_epoch = exhausted.trip_activation_epoch;
+  if (request_no_progress_rearm_for_next_cycle(
+          exhausted, true, true, true,
+          exhausted.trip_activation_epoch,
+          exhausted.trip_activation_epoch))
+    throw std::runtime_error("NO_PROGRESS_EPOCH_EXHAUSTION_SELF_TEST_FAILED");
+}
+
+void thermal_interlock_self_test() {
+  const auto start = Clock::time_point{} + std::chrono::seconds(1);
+  ThermalInterlockState state;
+  if (observe_raw_temperature_thermal_trip(state, 59, 7U, 0U, 0U) ||
+      state.fault_latched)
+    throw std::runtime_error("THERMAL_59_TRIP_SELF_TEST_FAILED");
+  if (!observe_raw_temperature_thermal_trip(state, 60, 7U, 0U, 7U) ||
+      !state.fault_latched || state.trip_activation_epoch != 7U ||
+      state.minimum_rearm_epoch != 8U)
+    throw std::runtime_error("THERMAL_RAW_60_TRIP_SELF_TEST_FAILED");
+  if (observe_raw_temperature_thermal_trip(state, 59, 7U, 0U, 7U) ||
+      !state.fault_latched)
+    throw std::runtime_error("THERMAL_59_AUTO_RECOVERY_SELF_TEST_FAILED");
+  if (observe_explicit_thermal_release(state, true))
+    throw std::runtime_error("THERMAL_EARLY_RELEASE_SELF_TEST_FAILED");
+  for (int frame = 0; frame < kThermalCooldownConsecutiveFrames; ++frame) {
+    (void)observe_thermal_cooldown_frame(
+        state, true, start + std::chrono::milliseconds(frame * 10));
+  }
+  if (state.cooldown_ready ||
+      state.cooldown_frames != kThermalCooldownConsecutiveFrames)
+    throw std::runtime_error("THERMAL_FIVE_SECOND_COOLDOWN_SELF_TEST_FAILED");
+  if (!observe_thermal_cooldown_frame(
+          state, true,
+          start + std::chrono::duration_cast<Clock::duration>(
+              std::chrono::duration<double>(
+                  g_thermal_policy.cooldown_seconds))) ||
+      !state.cooldown_ready)
+    throw std::runtime_error("THERMAL_30_SECOND_COOLDOWN_SELF_TEST_FAILED");
+  if (request_thermal_rearm_for_next_cycle(state, true, true, 8U, 8U) ||
+      state.rearm_pending_next_cycle)
+    throw std::runtime_error("THERMAL_RELEASE_REQUIRED_SELF_TEST_FAILED");
+  if (!observe_explicit_thermal_release(state, true) ||
+      request_thermal_rearm_for_next_cycle(state, true, true, 7U, 7U) ||
+      !request_thermal_rearm_for_next_cycle(state, true, true, 8U, 7U) ||
+      !state.fault_latched || !state.rearm_pending_next_cycle)
+    throw std::runtime_error("THERMAL_HIGHER_EPOCH_SELF_TEST_FAILED");
+  if (!apply_pending_thermal_rearm_at_cycle_start(state) ||
+      state.fault_latched || state.rearm_pending_next_cycle)
+    throw std::runtime_error("THERMAL_NEXT_CYCLE_REARM_SELF_TEST_FAILED");
+
+  if (!observe_raw_temperature_thermal_trip(state, 61, 9U, 0U, 9U))
+    throw std::runtime_error("THERMAL_RETRIP_SELF_TEST_FAILED");
+  (void)observe_thermal_cooldown_frame(state, true, start);
+  (void)observe_thermal_cooldown_frame(
+      state, false, start + std::chrono::milliseconds(10));
+  if (state.cooldown_frames != 0 || state.cooldown_ready ||
+      state.cooldown_started_at != Clock::time_point{})
+    throw std::runtime_error("THERMAL_COOLDOWN_RESET_SELF_TEST_FAILED");
+
+  ThermalInterlockState exhausted;
+  const auto maximum_epoch = std::numeric_limits<std::uint64_t>::max();
+  (void)observe_raw_temperature_thermal_trip(
+      exhausted, 60, maximum_epoch, 0U, maximum_epoch);
+  exhausted.cooldown_ready = true;
+  exhausted.release_observed = true;
+  if (exhausted.minimum_rearm_epoch != maximum_epoch ||
+      request_thermal_rearm_for_next_cycle(
+          exhausted, true, true, maximum_epoch, maximum_epoch))
+    throw std::runtime_error("THERMAL_EPOCH_EXHAUSTION_SELF_TEST_FAILED");
+
+  ThermalInterlockState exact_trajectory_abort;
+  if (!latch_thermal_interlock(
+          exact_trajectory_abort, "EXACT_TRAJECTORY_DERATING_ABORT",
+          12U, 0U, 12U) || !exact_trajectory_abort.fault_latched ||
+      exact_trajectory_abort.trip_reason !=
+          "EXACT_TRAJECTORY_DERATING_ABORT" ||
+      exact_trajectory_abort.minimum_rearm_epoch != 13U)
+    throw std::runtime_error(
+        "THERMAL_EXACT_TRAJECTORY_ABORT_SELF_TEST_FAILED");
+}
+
+void thermal_derating_self_test() {
+  if (thermal_derating_factor_for_raw_temperature(54) != 1.0 ||
+      thermal_derating_factor_for_raw_temperature(55) != 1.0 ||
+      std::abs(thermal_derating_factor_for_raw_temperature(56) - 0.8) >
+          1e-12 ||
+      std::abs(thermal_derating_factor_for_raw_temperature(58) - 0.4) >
+          1e-12 ||
+      std::abs(thermal_derating_factor_for_raw_temperature(59) - 0.2) >
+          1e-12 ||
+      thermal_derating_factor_for_raw_temperature(60) != 0.0 ||
+      thermal_derating_factor_for_raw_temperature(-1) != 0.0)
+    throw std::runtime_error("THERMAL_DERATING_SELF_TEST_FAILED");
+}
+
+bool observe_position_arrival_dwell(
+    bool endpoint_phase, bool healthy_within_tolerance,
+    Clock::time_point observed_at, int& qualifying_frames,
+    Clock::time_point& window_started_at, bool& arrived) {
+  if (!endpoint_phase || !healthy_within_tolerance) {
+    qualifying_frames = 0;
+    window_started_at = Clock::time_point{};
+    arrived = false;
+    return false;
+  }
+  if (qualifying_frames == 0) window_started_at = observed_at;
+  if (qualifying_frames < std::numeric_limits<int>::max())
+    ++qualifying_frames;
+  const double dwell_seconds = std::chrono::duration<double>(
+      observed_at - window_started_at).count();
+  arrived = qualifying_frames >= kArrivalDwellMinimumFrames &&
+      dwell_seconds >= kArrivalDwellSeconds;
+  return arrived;
+}
+
+void position_arrival_dwell_self_test() {
+  int frames = 0;
+  Clock::time_point started{};
+  bool arrived = false;
+  const auto origin = Clock::now();
+  for (int index = 0; index < 50; ++index) {
+    if (observe_position_arrival_dwell(
+            true, true, origin + std::chrono::milliseconds(index * 10),
+            frames, started, arrived))
+      throw std::runtime_error("POSITION_ARRIVAL_EARLY_DWELL_SELF_TEST_FAILED");
+  }
+  if (!observe_position_arrival_dwell(
+          true, true, origin + std::chrono::milliseconds(500),
+          frames, started, arrived) || !arrived)
+    throw std::runtime_error("POSITION_ARRIVAL_DWELL_SELF_TEST_FAILED");
+  if (observe_position_arrival_dwell(
+          true, false, origin + std::chrono::milliseconds(510),
+          frames, started, arrived) || arrived || frames != 0)
+    throw std::runtime_error("POSITION_ARRIVAL_DRIFT_RESET_SELF_TEST_FAILED");
+  if (observe_position_arrival_dwell(
+          false, true, origin + std::chrono::milliseconds(520),
+          frames, started, arrived) || arrived || frames != 0)
+    throw std::runtime_error("POSITION_ARRIVAL_ENDPOINT_GATE_SELF_TEST_FAILED");
+}
+
+bool all_domain_motors_thermal_cooldown_qualified(
+    const std::vector<MotorRuntime>& motors) {
+  return !motors.empty() &&
+      std::all_of(motors.begin(), motors.end(), [](const MotorRuntime& motor) {
+        return motor.last_frame_valid && motor.valid && !motor.fault_latched &&
+            motor.merror == 0 && motor.returned_mode == kBrakeMode &&
+            motor.temperature >= 0 &&
+            motor.temperature < g_thermal_policy.rearm_below_c;
+      });
+}
+
+bool all_domain_motors_valid_brake_for_rearm(
+    const std::vector<MotorRuntime>& motors) {
+  return !motors.empty() &&
+      std::all_of(motors.begin(), motors.end(), [](const MotorRuntime& motor) {
+        return motor.last_frame_valid && motor.valid && !motor.fault_latched &&
+            motor.merror == 0 && motor.returned_mode == kBrakeMode &&
+            motor.temperature >= 0 &&
+            motor.temperature < g_thermal_policy.thermal_stop_c;
+      });
+}
+
+void publish_thermal_latch_to_motors(
+    std::vector<MotorRuntime>& motors, bool fault_latched) {
+  for (auto& motor : motors)
+    motor.thermal_fault_latched = fault_latched;
+}
 
 struct BoundedHoldIntegralState {
   double accumulator_nm = 0.0;
@@ -2249,7 +2904,7 @@ Feedback transact(SerialPort& serial, MotorCmd& command, int expected_id,
       std::isfinite(result.data.dq) && std::isfinite(result.data.tau);
   result.actuation_safe = result.continuity_valid &&
       result.data.merror == 0 && result.data.temp >= 0 &&
-      result.data.temp < kTemperatureLimit;
+      result.data.temp < g_thermal_policy.thermal_stop_c;
   return result;
 }
 
@@ -2420,6 +3075,7 @@ J2StartupBrakePrimeEvidence prime_j2_serial_before_feedback(
 
     std::array<Feedback, 2> feedback;
     for (std::size_t index = 0; index < feedback.size(); ++index) {
+      motors[index].last_tau_cmd_rotor_nm = 0.0;
       MotorCmd brake = make_command(
           motors[index].id, kBrakeMode, 0.0, 0.0, 0.0, 0.0);
       feedback[index] = transact(
@@ -2441,6 +3097,7 @@ J2StartupBrakePrimeEvidence prime_j2_serial_before_feedback(
       motor.last_q = sample.q;
       motor.last_dq = sample.dq;
       motor.last_tau = sample.tau;
+      motor.last_valid_feedback_monotonic_ns = monotonic_ns();
       motor.temperature = sample.temp;
       motor.merror = sample.merror;
       motor.returned_mode = sample.mode;
@@ -2538,7 +3195,48 @@ bool apply_velocity_guards(const std::string& bus, MotorRuntime& motor,
   return tripped;
 }
 
+struct QuinticTrajectoryDescriptor {
+  bool present = false;
+  std::string plan_token_id;
+  std::string trajectory_sha256;
+  std::array<double, 6> start_rad{};
+  std::array<double, 6> target_rad{};
+  std::uint64_t duration_ns = 0;
+  std::uint64_t interval_count = 0;
+  std::uint64_t execute_at_monotonic_ns = 0;
+  std::int64_t segment_index = 0;
+  std::int64_t segment_count = 0;
+};
+
+bool same_quintic_trajectory_descriptor(
+    const QuinticTrajectoryDescriptor& first,
+    const QuinticTrajectoryDescriptor& second) {
+  return first.present == second.present &&
+      first.plan_token_id == second.plan_token_id &&
+      first.trajectory_sha256 == second.trajectory_sha256 &&
+      first.start_rad == second.start_rad &&
+      first.target_rad == second.target_rad &&
+      first.duration_ns == second.duration_ns &&
+      first.interval_count == second.interval_count &&
+      first.execute_at_monotonic_ns == second.execute_at_monotonic_ns &&
+      first.segment_index == second.segment_index &&
+      first.segment_count == second.segment_count;
+}
+
+struct GravityCommandAuthority {
+  bool present = false;
+  std::string source_instance_id;
+  std::uint64_t sequence = 0;
+  std::uint64_t source_monotonic_ns = 0;
+  std::string session_id;
+  std::string state_instance_id;
+  double gravity_scale = 0.0;
+  double gravity_scale_target = 0.0;
+  std::array<double, 6> feedforward_nm{};
+};
+
 struct GuiCommand {
+  std::string schema = "go-m8010-gui-command/1.0";
   std::string mode = "brake";
   std::string source_instance_id;
   std::uint64_t source_monotonic_ns = 0;
@@ -2550,26 +3248,301 @@ struct GuiCommand {
   std::array<double, 6> kp{{0.5, 1.0, 0.6, 0.5, 0.5, 0.0}};
   std::array<double, 6> kd{{0.05, 0.10, 0.05, 0.05, 0.05, 0.0}};
   std::array<double, 6> feedforward_nm{};
+  GravityCommandAuthority gravity_authority;
   bool recovery = false;
   double vmax = 5.0 * kPi / 180.0;
   double amax = 20.0 * kPi / 180.0;
+  QuinticTrajectoryDescriptor quintic;
   Clock::time_point received_at{};
   bool received = false;
 };
 
-void parse_command(const std::string& text, GuiCommand& command) {
+std::uint64_t strict_positive_uint64(
+    const nlohmann::json& value, const char* error) {
+  if (!value.is_number_unsigned()) throw std::runtime_error(error);
+  const std::uint64_t parsed = value.get<std::uint64_t>();
+  if (parsed == 0U) throw std::runtime_error(error);
+  return parsed;
+}
+
+std::int64_t strict_nonnegative_int64(
+    const nlohmann::json& value, const char* error) {
+  if (value.is_number_unsigned()) {
+    const std::uint64_t parsed = value.get<std::uint64_t>();
+    if (parsed > static_cast<std::uint64_t>(
+                     std::numeric_limits<std::int64_t>::max()))
+      throw std::runtime_error(error);
+    return static_cast<std::int64_t>(parsed);
+  }
+  if (!value.is_number_integer()) throw std::runtime_error(error);
+  const std::int64_t parsed = value.get<std::int64_t>();
+  if (parsed < 0) throw std::runtime_error(error);
+  return parsed;
+}
+
+std::array<double, 6> strict_finite_six_vector(
+    const nlohmann::json& value, const char* size_error,
+    const char* type_error) {
+  if (!value.is_array() || value.size() != 6U)
+    throw std::runtime_error(size_error);
+  std::array<double, 6> result{};
+  for (std::size_t index = 0; index < result.size(); ++index) {
+    if (!value.at(index).is_number()) throw std::runtime_error(type_error);
+    result[index] = value.at(index).get<double>();
+    if (!std::isfinite(result[index])) throw std::runtime_error(type_error);
+  }
+  return result;
+}
+
+bool approved_gravity_scale_target(double value) {
+  constexpr std::array<double, 5> kLevels{{0.0, 0.25, 0.50, 0.75, 1.0}};
+  return std::isfinite(value) &&
+      std::any_of(kLevels.begin(), kLevels.end(), [&](double level) {
+        return std::abs(value - level) <= 1e-12;
+      });
+}
+
+GravityCommandAuthority parse_gravity_command_authority(
+    const nlohmann::json& value, const GuiCommand& candidate,
+    Clock::time_point received_at) {
+  GravityCommandAuthority result;
+  const bool nonzero_feedforward = std::any_of(
+      candidate.feedforward_nm.begin(), candidate.feedforward_nm.end(),
+      [](double item) { return std::abs(item) > 1e-12; });
+  if (!value.contains("gravity_authority")) {
+    if (nonzero_feedforward)
+      throw std::runtime_error("COMMAND_GRAVITY_AUTHORITY_MISSING");
+    return result;
+  }
+  if (candidate.mode != "hold" && candidate.mode != "position")
+    throw std::runtime_error("COMMAND_GRAVITY_AUTHORITY_MODE_INVALID");
+  const auto& authority = value.at("gravity_authority");
+  constexpr std::array<const char*, 11> kFields{{
+      "schema", "source_instance_id", "sequence", "source_monotonic_ns",
+      "model_sha256", "gravity_config_sha256", "session_id",
+      "state_instance_id", "gravity_scale", "gravity_scale_target",
+      "feedforward_nm"}};
+  if (!authority.is_object() || authority.size() != kFields.size())
+    throw std::runtime_error("COMMAND_GRAVITY_AUTHORITY_FIELDS_INVALID");
+  for (const char* field : kFields)
+    if (!authority.contains(field))
+      throw std::runtime_error("COMMAND_GRAVITY_AUTHORITY_FIELDS_INVALID");
+  if (!authority.at("schema").is_string() ||
+      authority.at("schema").get<std::string>() != kGravityAuthoritySchema ||
+      !authority.at("model_sha256").is_string() ||
+      authority.at("model_sha256").get<std::string>() !=
+          kProductionModelSha256 ||
+      !authority.at("gravity_config_sha256").is_string() ||
+      authority.at("gravity_config_sha256").get<std::string>() !=
+          kGravityConfigSha256)
+    throw std::runtime_error("COMMAND_GRAVITY_AUTHORITY_HASH_INVALID");
+  if (!authority.at("source_instance_id").is_string())
+    throw std::runtime_error("COMMAND_GRAVITY_SOURCE_INVALID");
+  result.source_instance_id =
+      authority.at("source_instance_id").get<std::string>();
+  if (!valid_source_instance_id(result.source_instance_id))
+    throw std::runtime_error("COMMAND_GRAVITY_SOURCE_INVALID");
+  result.sequence = strict_positive_uint64(
+      authority.at("sequence"), "COMMAND_GRAVITY_SEQUENCE_INVALID");
+  if (result.sequence > kMaximumCommandSequence)
+    throw std::runtime_error("COMMAND_GRAVITY_SEQUENCE_INVALID");
+  result.source_monotonic_ns = strict_positive_uint64(
+      authority.at("source_monotonic_ns"),
+      "COMMAND_GRAVITY_TIMESTAMP_INVALID");
+  const std::uint64_t received_ns = monotonic_ns_at(received_at);
+  if (result.source_monotonic_ns > received_ns ||
+      received_ns - result.source_monotonic_ns >
+          kMaximumGravityAuthorityAgeNs)
+    throw std::runtime_error("COMMAND_GRAVITY_TIMESTAMP_STALE");
+  if (!authority.at("session_id").is_string() ||
+      !authority.at("state_instance_id").is_string())
+    throw std::runtime_error("COMMAND_GRAVITY_SESSION_INVALID");
+  result.session_id = authority.at("session_id").get<std::string>();
+  result.state_instance_id =
+      authority.at("state_instance_id").get<std::string>();
+  if (result.session_id.empty() || result.session_id.size() > 512U ||
+      result.state_instance_id.empty() ||
+      result.state_instance_id.size() > 512U)
+    throw std::runtime_error("COMMAND_GRAVITY_SESSION_INVALID");
+  if (!authority.at("gravity_scale").is_number() ||
+      !authority.at("gravity_scale_target").is_number())
+    throw std::runtime_error("COMMAND_GRAVITY_SCALE_INVALID");
+  result.gravity_scale = authority.at("gravity_scale").get<double>();
+  result.gravity_scale_target =
+      authority.at("gravity_scale_target").get<double>();
+  if (!std::isfinite(result.gravity_scale) ||
+      result.gravity_scale < 0.0 || result.gravity_scale > 1.0 ||
+      !approved_gravity_scale_target(result.gravity_scale_target))
+    throw std::runtime_error("COMMAND_GRAVITY_SCALE_INVALID");
+  result.feedforward_nm = strict_finite_six_vector(
+      authority.at("feedforward_nm"),
+      "COMMAND_GRAVITY_FEEDFORWARD_SIZE_INVALID",
+      "COMMAND_GRAVITY_FEEDFORWARD_VALUE_INVALID");
+  for (std::size_t joint = 0; joint < result.feedforward_nm.size(); ++joint) {
+    if (result.feedforward_nm[joint] != candidate.feedforward_nm[joint] ||
+        std::abs(result.feedforward_nm[joint]) >
+            kGravityFeedforwardLimits[joint] + 1e-12)
+      throw std::runtime_error("COMMAND_GRAVITY_FEEDFORWARD_LIMIT");
+  }
+  if (std::abs(result.feedforward_nm[5]) > 1e-12)
+    throw std::runtime_error("COMMAND_GRAVITY_J6_MUST_BE_ZERO");
+  result.present = true;
+  return result;
+}
+
+QuinticTrajectoryDescriptor parse_quintic_trajectory_descriptor(
+    const nlohmann::json& command, const GuiCommand& candidate) {
+  const auto& plan_token_id = command.at("plan_token_id");
+  if (!plan_token_id.is_string() ||
+      !valid_sha256(plan_token_id.get<std::string>()))
+    throw std::runtime_error("COMMAND_PLAN_TOKEN_ID_INVALID");
+  const auto& trajectory = command.at("trajectory");
+  constexpr std::array<const char*, 10> kRequiredFields{{
+      "schema", "trajectory_sha256", "profile", "start_rad",
+      "target_rad", "duration_ns", "interval_count",
+      "execute_at_monotonic_ns", "segment_index", "segment_count"}};
+  if (!trajectory.is_object() || trajectory.size() != kRequiredFields.size())
+    throw std::runtime_error("COMMAND_QUINTIC_FIELDS_INVALID");
+  for (const char* field : kRequiredFields)
+    if (!trajectory.contains(field))
+      throw std::runtime_error("COMMAND_QUINTIC_FIELDS_INVALID");
+  if (!trajectory.at("schema").is_string() ||
+      trajectory.at("schema").get<std::string>() !=
+          "go-m8010-quintic-command/1.0")
+    throw std::runtime_error("COMMAND_QUINTIC_SCHEMA_MISMATCH");
+  if (!trajectory.at("profile").is_string() ||
+      trajectory.at("profile").get<std::string>() !=
+          "quintic-rest-to-rest-v1")
+    throw std::runtime_error("COMMAND_QUINTIC_PROFILE_MISMATCH");
+
+  QuinticTrajectoryDescriptor result;
+  result.present = true;
+  result.plan_token_id = plan_token_id.get<std::string>();
+  const auto& trajectory_sha256 = trajectory.at("trajectory_sha256");
+  if (!trajectory_sha256.is_string() ||
+      !valid_sha256(trajectory_sha256.get<std::string>()))
+    throw std::runtime_error("COMMAND_TRAJECTORY_SHA256_INVALID");
+  result.trajectory_sha256 = trajectory_sha256.get<std::string>();
+  result.start_rad = strict_finite_six_vector(
+      trajectory.at("start_rad"), "COMMAND_QUINTIC_START_SIZE_INVALID",
+      "COMMAND_QUINTIC_START_VALUE_INVALID");
+  result.target_rad = strict_finite_six_vector(
+      trajectory.at("target_rad"), "COMMAND_QUINTIC_TARGET_SIZE_INVALID",
+      "COMMAND_QUINTIC_TARGET_VALUE_INVALID");
+  result.duration_ns = strict_positive_uint64(
+      trajectory.at("duration_ns"), "COMMAND_QUINTIC_DURATION_INVALID");
+  result.interval_count = strict_positive_uint64(
+      trajectory.at("interval_count"),
+      "COMMAND_QUINTIC_INTERVAL_COUNT_INVALID");
+  if (result.interval_count > kMaximumQuinticIntervalCount)
+    throw std::runtime_error("COMMAND_QUINTIC_INTERVAL_COUNT_INVALID");
+  // The descriptor is the shared execution clock.  Require an exact integer
+  // nanosecond grid so every worker advances through the same sample indices;
+  // a quotient rounded down from a non-integral grid would otherwise leave a
+  // potentially large, endpoint-only final step.
+  if (result.duration_ns % result.interval_count != 0U)
+    throw std::runtime_error("COMMAND_QUINTIC_SAMPLE_GRID_INVALID");
+  const std::uint64_t sample_period_ns =
+      result.duration_ns / result.interval_count;
+  if (sample_period_ns == 0U ||
+      sample_period_ns > kMaximumQuinticSamplePeriodNs)
+    throw std::runtime_error("COMMAND_QUINTIC_SAMPLE_GRID_INVALID");
+  result.execute_at_monotonic_ns = strict_positive_uint64(
+      trajectory.at("execute_at_monotonic_ns"),
+      "COMMAND_QUINTIC_EXECUTE_AT_INVALID");
+  result.segment_index = strict_nonnegative_int64(
+      trajectory.at("segment_index"),
+      "COMMAND_QUINTIC_SEGMENT_INDEX_INVALID");
+  result.segment_count = strict_nonnegative_int64(
+      trajectory.at("segment_count"),
+      "COMMAND_QUINTIC_SEGMENT_COUNT_INVALID");
+  if (result.segment_count <= 0 ||
+      result.segment_index >= result.segment_count)
+    throw std::runtime_error("COMMAND_QUINTIC_SEGMENT_RANGE_INVALID");
+  if (result.target_rad != candidate.targets)
+    throw std::runtime_error("COMMAND_QUINTIC_TARGETS_MISMATCH");
+
+  std::size_t moving_joint = candidate.moving_joint_mask.size();
+  for (std::size_t joint = 0; joint < candidate.moving_joint_mask.size();
+       ++joint) {
+    if (candidate.moving_joint_mask[joint]) {
+      if (moving_joint != candidate.moving_joint_mask.size())
+        throw std::runtime_error("COMMAND_QUINTIC_MOVING_JOINT_COUNT_INVALID");
+      moving_joint = joint;
+    } else if (result.start_rad[joint] != result.target_rad[joint]) {
+      throw std::runtime_error("COMMAND_QUINTIC_NONMOVING_AXIS_CHANGED");
+    }
+  }
+  if (moving_joint == candidate.moving_joint_mask.size())
+    throw std::runtime_error("COMMAND_QUINTIC_MOVING_JOINT_COUNT_INVALID");
+  const double duration_seconds =
+      static_cast<double>(result.duration_ns) * 1e-9;
+  const double displacement = std::abs(
+      result.target_rad[moving_joint] - result.start_rad[moving_joint]);
+  if (displacement == 0.0)
+    throw std::runtime_error("COMMAND_QUINTIC_MOVING_DISPLACEMENT_ZERO");
+  // A non-zero move needs at least one interior grid point.  This makes the
+  // exact endpoint pin a final bounded grid step rather than the trajectory's
+  // sole discontinuous start-to-target update.
+  if (result.interval_count < 2U)
+    throw std::runtime_error("COMMAND_QUINTIC_ENDPOINT_STEP_INVALID");
+  const double peak_velocity =
+      kQuinticPeakVelocityScale * displacement / duration_seconds;
+  const double peak_acceleration = kQuinticPeakAccelerationScale *
+      displacement / (duration_seconds * duration_seconds);
+  const double acceleration_limit = moving_joint == 1U
+      ? std::min(candidate.amax, kJ2MaximumAcceleration) : candidate.amax;
+  if (!std::isfinite(peak_velocity) ||
+      peak_velocity > candidate.vmax + 1e-12)
+    throw std::runtime_error("COMMAND_QUINTIC_PEAK_VELOCITY_LIMIT");
+  if (!std::isfinite(peak_acceleration) ||
+      peak_acceleration > acceleration_limit + 1e-12)
+    throw std::runtime_error("COMMAND_QUINTIC_PEAK_ACCELERATION_LIMIT");
+  // Quintic smoothstep is symmetric: 1-S(1-u) == S(u).  Evaluate the
+  // endpoint remainder at u=1/N directly to avoid catastrophic cancellation
+  // when N is near its one-million interval bound.
+  const double endpoint_fraction = 1.0 /
+      static_cast<double>(result.interval_count);
+  const double endpoint_fraction_squared =
+      endpoint_fraction * endpoint_fraction;
+  const double endpoint_fraction_cubed =
+      endpoint_fraction_squared * endpoint_fraction;
+  const double endpoint_blend = endpoint_fraction_cubed *
+      (10.0 + endpoint_fraction *
+          (-15.0 + 6.0 * endpoint_fraction));
+  const double endpoint_step = displacement * endpoint_blend;
+  const double maximum_grid_step = candidate.vmax *
+      static_cast<double>(sample_period_ns) * 1e-9;
+  if (!std::isfinite(endpoint_step) || endpoint_step <= 0.0 ||
+      endpoint_step > maximum_grid_step + 1e-12)
+    throw std::runtime_error("COMMAND_QUINTIC_ENDPOINT_STEP_INVALID");
+  return result;
+}
+
+void parse_command(
+    const std::string& text, GuiCommand& command,
+    Clock::time_point received_at) {
   const auto value = nlohmann::json::parse(text);
   const std::string schema = value.at("schema").get<std::string>();
   if (schema != "go-m8010-gui-command/1.0" &&
       schema != "go-m8010-gui-command/1.1" &&
-      schema != "go-m8010-gui-command/1.2")
+      schema != "go-m8010-gui-command/1.2" &&
+      schema != "go-m8010-gui-command/1.3")
     throw std::runtime_error("COMMAND_SCHEMA_MISMATCH");
   const std::string mode = value.at("mode").get<std::string>();
   if (mode != "brake" && mode != "drag" && mode != "hold" && mode != "position")
     throw std::runtime_error("COMMAND_MODE_INVALID");
-  if (schema != "go-m8010-gui-command/1.2" && mode != "brake")
+  if (schema != "go-m8010-gui-command/1.2" &&
+      schema != "go-m8010-gui-command/1.3" && mode != "brake")
     throw std::runtime_error("COMMAND_LEGACY_ACTIVE_REJECTED");
+  if (schema == "go-m8010-gui-command/1.3" &&
+      mode != "position" && mode != "brake")
+    throw std::runtime_error("COMMAND_V13_MODE_INVALID");
   GuiCommand candidate = command;
+  candidate.schema = schema;
+  candidate.mode = mode;
+  candidate.quintic = QuinticTrajectoryDescriptor{};
+  candidate.gravity_authority = GravityCommandAuthority{};
   const auto targets = value.at("targets_rad").get<std::vector<double>>();
   const auto kp = value.at("kp").get<std::vector<double>>();
   const auto kd = value.at("kd").get<std::vector<double>>();
@@ -2580,6 +3553,9 @@ void parse_command(const std::string& text, GuiCommand& command) {
       schema == "go-m8010-gui-command/1.0"
           ? nlohmann::json::array({false, false, false, false, false, false})
           : value.at("active_joint_mask");
+  if (schema == "go-m8010-gui-command/1.3" && mode == "position" &&
+      !value.contains("moving_joint_mask"))
+    throw std::runtime_error("COMMAND_QUINTIC_MOVING_MASK_MISSING");
   const nlohmann::json moving_joint_mask = value.contains("moving_joint_mask")
       ? value.at("moving_joint_mask")
       : mode == "position" ? active_joint_mask
@@ -2617,6 +3593,11 @@ void parse_command(const std::string& text, GuiCommand& command) {
     if (candidate.moving_joint_mask[i] && mode != "position")
       throw std::runtime_error("COMMAND_MOVING_MASK_MODE_INVALID");
   }
+  candidate.gravity_authority = parse_gravity_command_authority(
+      value, candidate, received_at);
+  if (schema == "go-m8010-gui-command/1.3" && mode == "position" &&
+      !candidate.gravity_authority.present)
+    throw std::runtime_error("COMMAND_GRAVITY_AUTHORITY_MISSING");
   if (recovery && (schema != "go-m8010-gui-command/1.2" ||
                    (mode != "hold" && mode != "position")))
     throw std::runtime_error("COMMAND_RECOVERY_MODE_INVALID");
@@ -2634,6 +3615,8 @@ void parse_command(const std::string& text, GuiCommand& command) {
     throw std::runtime_error("COMMAND_PROFILE_INVALID");
   candidate.vmax = std::min(requested_vmax, 5.0 * kPi / 180.0);
   candidate.amax = std::min(requested_amax, 20.0 * kPi / 180.0);
+  if (schema == "go-m8010-gui-command/1.3" && mode == "position")
+    candidate.quintic = parse_quintic_trajectory_descriptor(value, candidate);
   if (mode == "brake" &&
       std::any_of(candidate.active_joint_mask.begin(), candidate.active_joint_mask.end(),
                   [](bool active) { return active; }))
@@ -2654,7 +3637,6 @@ void parse_command(const std::string& text, GuiCommand& command) {
                   [](bool active) { return active; }) &&
       candidate.activation_epoch == 0)
     throw std::runtime_error("COMMAND_ACTIVE_EPOCH_ZERO");
-  const auto received_at = Clock::now();
   if (mode == "brake") {
     // Emergency BRAKE remains compatible with v1.0/v1.1 and deliberately
     // ignores even malformed source metadata. Never inherit the preceding
@@ -2692,10 +3674,17 @@ void parse_command(const std::string& text, GuiCommand& command) {
         candidate.source_sequence > kMaximumCommandSequence)
       throw std::runtime_error("COMMAND_SOURCE_SEQUENCE_INVALID");
   }
-  candidate.mode = mode;
   candidate.received_at = received_at;
   candidate.received = true;
   command = std::move(candidate);
+}
+
+void parse_command(const std::string& text, GuiCommand& command) {
+  // Capture receipt only after the caller has finished producing text.  A
+  // default third argument would have unspecified ordering versus expressions
+  // such as fresh_source_self_test_payload(...), and could appear a few
+  // microseconds earlier than the embedded source timestamp.
+  parse_command(text, command, Clock::now());
 }
 
 std::uint64_t minimum_epoch_after_lease(
@@ -2718,6 +3707,16 @@ struct CommandSafetyState {
   std::array<bool, 6> position_target_valid{};
   std::array<std::uint64_t, 6> position_target_epoch{};
   std::array<double, 6> position_target{};
+  bool position_authority_schema_valid = false;
+  std::uint64_t position_authority_schema_epoch = 0;
+  std::string position_authority_schema;
+  QuinticTrajectoryDescriptor quintic_descriptor;
+  bool gravity_policy_valid = false;
+  std::uint64_t gravity_policy_epoch = 0;
+  std::string gravity_source_instance_id;
+  std::string gravity_session_id;
+  std::string gravity_state_instance_id;
+  double gravity_scale_target = 0.0;
 };
 
 struct CommandRejectAggregate {
@@ -2948,6 +3947,74 @@ bool command_releases_owned_domain(
       !command_selects_owned_joint(command, motors);
 }
 
+bool healthy_logical_position_for_joint(
+    const std::vector<MotorRuntime>& motors, int joint_index,
+    double& logical_position);
+
+void validate_first_quintic_start_against_feedback(
+    const GuiCommand& command, const std::vector<MotorRuntime>& motors);
+
+void validate_and_observe_gravity_policy(
+    const GuiCommand& command, const std::vector<MotorRuntime>& motors,
+    CommandSafetyState& safety) {
+  const bool active_owned = is_position_holding_mode(command.mode) &&
+      command_selects_owned_joint(command, motors);
+  if (!active_owned || !command.gravity_authority.present) return;
+  const auto& authority = command.gravity_authority;
+  if (safety.gravity_policy_valid &&
+      safety.gravity_policy_epoch == command.activation_epoch) {
+    if (safety.gravity_source_instance_id != authority.source_instance_id ||
+        safety.gravity_session_id != authority.session_id ||
+        safety.gravity_state_instance_id != authority.state_instance_id ||
+        std::abs(safety.gravity_scale_target -
+                 authority.gravity_scale_target) > 1e-12)
+      throw std::runtime_error(
+          "COMMAND_GRAVITY_POLICY_CHANGED_SAME_EPOCH");
+    return;
+  }
+  safety.gravity_policy_valid = true;
+  safety.gravity_policy_epoch = command.activation_epoch;
+  safety.gravity_source_instance_id = authority.source_instance_id;
+  safety.gravity_session_id = authority.session_id;
+  safety.gravity_state_instance_id = authority.state_instance_id;
+  safety.gravity_scale_target = authority.gravity_scale_target;
+}
+
+void validate_and_observe_position_authority(
+    const GuiCommand& command, const std::vector<MotorRuntime>& motors,
+    CommandSafetyState& safety) {
+  if (command.mode != "position" ||
+      !command_selects_owned_joint(command, motors))
+    return;
+  CommandSafetyState candidate = safety;
+  if (candidate.position_authority_schema_valid &&
+      candidate.position_authority_schema_epoch == command.activation_epoch) {
+    if (candidate.position_authority_schema != command.schema)
+      throw std::runtime_error(
+          "COMMAND_POSITION_SCHEMA_CHANGED_SAME_EPOCH");
+    if (command.schema == "go-m8010-gui-command/1.3" &&
+        !same_quintic_trajectory_descriptor(
+            candidate.quintic_descriptor, command.quintic))
+      throw std::runtime_error(
+          "COMMAND_QUINTIC_DESCRIPTOR_CHANGED_SAME_EPOCH");
+    return;
+  }
+  if (command.schema == "go-m8010-gui-command/1.3") {
+    if (!command.quintic.present)
+      throw std::runtime_error("COMMAND_QUINTIC_DESCRIPTOR_MISSING");
+    const std::uint64_t received_ns = monotonic_ns_at(command.received_at);
+    if (received_ns == 0U ||
+        received_ns >= command.quintic.execute_at_monotonic_ns)
+      throw std::runtime_error("COMMAND_QUINTIC_FIRST_PACKET_TOO_LATE");
+    validate_first_quintic_start_against_feedback(command, motors);
+  }
+  candidate.position_authority_schema_valid = true;
+  candidate.position_authority_schema_epoch = command.activation_epoch;
+  candidate.position_authority_schema = command.schema;
+  candidate.quintic_descriptor = command.quintic;
+  safety = std::move(candidate);
+}
+
 void validate_command_for_owned_domain(
     const GuiCommand& command, const std::vector<MotorRuntime>& motors) {
   if (command.mode == "brake" || command.mode == "drag") return;
@@ -2964,14 +4031,20 @@ void validate_command_for_owned_domain(
     if (!within_model_command_envelope(
             joint_index, command.targets[joint]))
       throw std::runtime_error("COMMAND_TARGET_MODEL_ENVELOPE");
+    if (command.quintic.present &&
+        !within_model_command_envelope(
+            joint_index, command.quintic.start_rad[joint]))
+      throw std::runtime_error("COMMAND_QUINTIC_START_MODEL_ENVELOPE");
     if (command.kp[joint] < 0.0 ||
         command.kp[joint] > kKpLimits[joint] + 1e-12 ||
         command.kd[joint] < 0.0 ||
         command.kd[joint] > kKdLimits[joint] + 1e-12)
       throw std::runtime_error("COMMAND_GAIN_ENVELOPE");
+    const double feedforward_limit = command.gravity_authority.present
+        ? kGravityFeedforwardLimits[joint]
+        : command.recovery ? kRecoveryFeedforwardLimits[joint] : 0.0;
     if (std::abs(command.feedforward_nm[joint]) >
-        (command.recovery ? kRecoveryFeedforwardLimits[joint] : 0.0) +
-            1e-12)
+        feedforward_limit + 1e-12)
       throw std::runtime_error("COMMAND_FEEDFORWARD_ENVELOPE");
   }
 }
@@ -2980,13 +4053,14 @@ bool all_motor_feedback_healthy(const std::vector<MotorRuntime>& motors) {
   return std::all_of(motors.begin(), motors.end(), [](const MotorRuntime& motor) {
     return motor.reference_ready && motor.valid && !motor.fault_latched &&
         motor.merror == 0 && motor.temperature >= 0 &&
-        motor.temperature < kTemperatureLimit;
+        motor.temperature < g_thermal_policy.thermal_stop_c;
   });
 }
 
 bool motor_feedback_requires_domain_brake(const MotorRuntime& motor) {
   return !motor.valid || motor.fault_latched || motor.merror != 0 ||
-      motor.temperature < 0 || motor.temperature >= kTemperatureLimit;
+      motor.temperature < 0 ||
+      motor.temperature >= g_thermal_policy.thermal_stop_c;
 }
 
 bool owned_domain_feedback_requires_brake(
@@ -3014,12 +4088,14 @@ bool same_external_hold_authority(
     const GuiCommand& first, const GuiCommand& second) {
   return first.source_instance_id == second.source_instance_id &&
       first.activation_epoch == second.activation_epoch &&
+      first.schema == second.schema &&
       first.mode == second.mode && first.targets == second.targets &&
       first.active_joint_mask == second.active_joint_mask &&
       first.moving_joint_mask == second.moving_joint_mask &&
       first.kp == second.kp && first.kd == second.kd &&
       first.feedforward_nm == second.feedforward_nm &&
-      first.recovery == second.recovery;
+      first.recovery == second.recovery &&
+      same_quintic_trajectory_descriptor(first.quintic, second.quintic);
 }
 
 bool capture_lease_safe_hold_command(
@@ -3121,7 +4197,7 @@ bool healthy_logical_position_for_joint(
     if (motor.joint_index != joint_index) continue;
     if (!motor.reference_ready || !motor.valid || motor.fault_latched ||
         motor.merror != 0 || motor.temperature < 0 ||
-        motor.temperature >= kTemperatureLimit ||
+        motor.temperature >= g_thermal_policy.thermal_stop_c ||
         motor.previous_feedback_at == Clock::time_point{} ||
         std::chrono::duration<double>(
             now - motor.previous_feedback_at).count() >
@@ -3142,6 +4218,57 @@ bool healthy_logical_position_for_joint(
       positions.begin(), positions.end(), 0.0) /
       static_cast<double>(positions.size());
   return std::isfinite(logical_position);
+}
+
+void validate_first_quintic_start_against_feedback(
+    const GuiCommand& command, const std::vector<MotorRuntime>& motors) {
+  std::set<int> validated_joints;
+  for (const auto& motor : motors) {
+    const int joint_index = motor.joint_index;
+    const auto joint = static_cast<std::size_t>(joint_index);
+    if (!command.active_joint_mask[joint] ||
+        !command.moving_joint_mask[joint] ||
+        !validated_joints.insert(joint_index).second)
+      continue;
+    double actual_position_rad = 0.0;
+    if (!healthy_logical_position_for_joint(
+            motors, joint_index, actual_position_rad))
+      throw std::runtime_error(
+          "COMMAND_QUINTIC_START_FEEDBACK_UNHEALTHY");
+    // Reuse the existing fixed-HOLD capture window and its 100 ms feedback
+    // freshness predicate.  This is a defence-in-depth start binding, not a
+    // new motor/load rating and not a replacement for collision authorization.
+    if (std::abs(
+            command.quintic.start_rad[joint] - actual_position_rad) >
+        kFixedHoldCaptureWindow + 1e-12)
+      throw std::runtime_error("COMMAND_QUINTIC_START_FEEDBACK_MISMATCH");
+  }
+}
+
+bool maximum_moving_owned_position_error(
+    const GuiCommand& command, const std::vector<MotorRuntime>& motors,
+    const std::array<bool, 6>& saturated_joint_mask,
+    double& maximum_error_rad) {
+  bool observed = false;
+  maximum_error_rad = 0.0;
+  std::set<int> observed_joints;
+  for (const auto& motor : motors) {
+    if (!observed_joints.insert(motor.joint_index).second) continue;
+    const auto joint = static_cast<std::size_t>(motor.joint_index);
+    if (!command.active_joint_mask[joint] ||
+        !command.moving_joint_mask[joint] ||
+        !saturated_joint_mask[joint])
+      continue;
+    double actual_position_rad = 0.0;
+    if (!healthy_logical_position_for_joint(
+            motors, motor.joint_index, actual_position_rad))
+      return false;
+    maximum_error_rad = std::max(
+        maximum_error_rad,
+        std::abs(command.targets[joint] - actual_position_rad));
+    observed = true;
+  }
+  return observed && std::isfinite(maximum_error_rad);
 }
 
 void validate_and_observe_fixed_hold_targets(
@@ -3272,6 +4399,20 @@ void observe_interarrival_lease(
       safety.minimum_activation_epoch, lease_fresh, active_requested,
       current.activation_epoch);
 }
+
+struct QuinticSampleClock {
+  std::uint64_t sample_index = 0;
+  const char* state = "PREPARED";
+  bool endpoint = false;
+};
+
+QuinticSampleClock quintic_sample_clock(
+    const QuinticTrajectoryDescriptor& trajectory,
+    std::uint64_t now_monotonic_ns);
+void apply_quintic_reference(
+    int joint, const GuiCommand& command, const QuinticSampleClock& sample,
+    std::array<double, 6>& q_command,
+    std::array<double, 6>& dq_command);
 
 std::string fresh_source_self_test_payload(const std::string& text) {
   auto value = nlohmann::json::parse(text);
@@ -3645,7 +4786,8 @@ void command_mask_self_test() {
   for (const char* legacy_schema : {
            "go-m8010-gui-command/1.0",
            "go-m8010-gui-command/1.1",
-           "go-m8010-gui-command/1.2"}) {
+           "go-m8010-gui-command/1.2",
+           "go-m8010-gui-command/1.3"}) {
     auto emergency_brake = nlohmann::json::parse(command_payload);
     emergency_brake["schema"] = legacy_schema;
     emergency_brake["mode"] = "brake";
@@ -3661,7 +4803,7 @@ void command_mask_self_test() {
     if (parsed_brake.mode != "brake" ||
         !parsed_brake.source_instance_id.empty() ||
         parsed_brake.source_monotonic_ns != 0U ||
-        parsed_brake.source_sequence != 0U)
+        parsed_brake.source_sequence != 0U || parsed_brake.quintic.present)
       throw std::runtime_error(
           "COMMAND_LEGACY_BRAKE_SOURCE_COMPAT_SELF_TEST_FAILED");
   }
@@ -3720,6 +4862,271 @@ void command_mask_self_test() {
       kMaximumTrackedCommandSources)
     throw std::runtime_error("COMMAND_SOURCE_BOUND_SELF_TEST_FAILED");
   auto j345_motors = make_motors("j345");
+
+  const Clock::time_point quintic_received_at = Clock::now();
+  const std::uint64_t quintic_received_ns =
+      monotonic_ns_at(quintic_received_at);
+  nlohmann::json quintic_document = {
+      {"schema", "go-m8010-gui-command/1.3"},
+      {"sequence", 11U},
+      {"mode", "position"},
+      {"targets_rad", {0.0, 0.0, 0.0, 0.01, 0.0, 0.0}},
+      {"active_joint_mask", {false, false, false, true, false, false}},
+      {"moving_joint_mask", {false, false, false, true, false, false}},
+      {"activation_epoch", 9U},
+      {"maximum_velocity_rad_s", 0.08},
+      {"maximum_acceleration_rad_s2", 0.30},
+      {"kp", {0.5, 1.0, 0.6, 0.5, 0.5, 0.0}},
+      {"kd", {0.05, 0.10, 0.05, 0.05, 0.05, 0.0}},
+      {"feedforward_nm", {0.0, 0.0, 0.0, 0.0, 0.0, 0.0}},
+      {"source_instance_id", "0123456789abcdef0123456789abcdef"},
+      {"source_monotonic_ns", quintic_received_ns},
+      {"gravity_authority", {
+          {"schema", kGravityAuthoritySchema},
+          {"source_instance_id", "fedcba9876543210fedcba9876543210"},
+          {"sequence", 1U},
+          {"source_monotonic_ns", quintic_received_ns},
+          {"model_sha256", kProductionModelSha256},
+          {"gravity_config_sha256", kGravityConfigSha256},
+          {"session_id", "self-test-session"},
+          {"state_instance_id", "self-test-state"},
+          {"gravity_scale", 0.0},
+          {"gravity_scale_target", 0.0},
+          {"feedforward_nm", {0.0, 0.0, 0.0, 0.0, 0.0, 0.0}}}},
+      {"plan_token_id", std::string(64U, 'a')},
+      {"trajectory", {
+          {"schema", "go-m8010-quintic-command/1.0"},
+          {"trajectory_sha256", std::string(64U, 'b')},
+          {"profile", "quintic-rest-to-rest-v1"},
+          {"start_rad", {0.0, 0.0, 0.0, 0.0, 0.0, 0.0}},
+          {"target_rad", {0.0, 0.0, 0.0, 0.01, 0.0, 0.0}},
+          {"duration_ns", 2000000000ULL},
+          {"interval_count", 200U},
+          {"execute_at_monotonic_ns", quintic_received_ns + 1000000000ULL},
+          {"segment_index", 0},
+          {"segment_count", 1}}}};
+  GuiCommand quintic_command;
+  parse_command(
+      quintic_document.dump(), quintic_command, quintic_received_at);
+  if (quintic_command.schema != "go-m8010-gui-command/1.3" ||
+      !quintic_command.quintic.present || command.quintic.present ||
+      quintic_command.quintic.plan_token_id != std::string(64U, 'a') ||
+      quintic_command.quintic.trajectory_sha256 != std::string(64U, 'b'))
+    throw std::runtime_error("COMMAND_QUINTIC_PARSE_SELF_TEST_FAILED");
+  GuiCommand invalid_quintic_start = quintic_command;
+  invalid_quintic_start.quintic.start_rad[3] =
+      kModelCommandLower[3] - 0.01;
+  bool invalid_quintic_start_rejected = false;
+  try {
+    validate_command_for_owned_domain(
+        invalid_quintic_start, j345_motors);
+  } catch (const std::runtime_error&) {
+    invalid_quintic_start_rejected = true;
+  }
+  if (!invalid_quintic_start_rejected)
+    throw std::runtime_error(
+        "COMMAND_QUINTIC_START_ENVELOPE_SELF_TEST_FAILED");
+
+  const auto quintic_parse_is_rejected = [&](nlohmann::json candidate) {
+    try {
+      GuiCommand parsed;
+      parse_command(candidate.dump(), parsed, quintic_received_at);
+    } catch (const std::exception&) {
+      return true;
+    }
+    return false;
+  };
+  auto malformed_quintic = quintic_document;
+  malformed_quintic["trajectory"]["unexpected"] = true;
+  if (!quintic_parse_is_rejected(malformed_quintic))
+    throw std::runtime_error("COMMAND_QUINTIC_STRICT_FIELDS_SELF_TEST_FAILED");
+  malformed_quintic = quintic_document;
+  malformed_quintic.erase("moving_joint_mask");
+  if (!quintic_parse_is_rejected(malformed_quintic))
+    throw std::runtime_error(
+        "COMMAND_QUINTIC_MOVING_MASK_SELF_TEST_FAILED");
+  malformed_quintic = quintic_document;
+  malformed_quintic["trajectory"]["target_rad"][3] = 0.02;
+  if (!quintic_parse_is_rejected(malformed_quintic))
+    throw std::runtime_error("COMMAND_QUINTIC_TARGET_MATCH_SELF_TEST_FAILED");
+  malformed_quintic = quintic_document;
+  malformed_quintic["active_joint_mask"][2] = true;
+  malformed_quintic["moving_joint_mask"][2] = true;
+  malformed_quintic["targets_rad"][2] = 0.005;
+  malformed_quintic["trajectory"]["target_rad"][2] = 0.005;
+  if (!quintic_parse_is_rejected(malformed_quintic))
+    throw std::runtime_error("COMMAND_QUINTIC_ONE_MOVING_SELF_TEST_FAILED");
+  malformed_quintic = quintic_document;
+  malformed_quintic["trajectory"]["start_rad"][2] = 0.001;
+  if (!quintic_parse_is_rejected(malformed_quintic))
+    throw std::runtime_error("COMMAND_QUINTIC_FIXED_AXIS_SELF_TEST_FAILED");
+  malformed_quintic = quintic_document;
+  malformed_quintic["trajectory"]["interval_count"] = 1000001U;
+  if (!quintic_parse_is_rejected(malformed_quintic))
+    throw std::runtime_error("COMMAND_QUINTIC_INTERVAL_SELF_TEST_FAILED");
+  malformed_quintic = quintic_document;
+  malformed_quintic["trajectory"]["duration_ns"] = 2000000001ULL;
+  if (!quintic_parse_is_rejected(malformed_quintic))
+    throw std::runtime_error(
+        "COMMAND_QUINTIC_INTEGER_GRID_SELF_TEST_FAILED");
+  malformed_quintic = quintic_document;
+  malformed_quintic["trajectory"]["interval_count"] = 100U;
+  if (!quintic_parse_is_rejected(malformed_quintic))
+    throw std::runtime_error(
+        "COMMAND_QUINTIC_TEN_MS_GRID_SELF_TEST_FAILED");
+  malformed_quintic = quintic_document;
+  malformed_quintic["targets_rad"][3] = 0.0000001;
+  malformed_quintic["trajectory"]["target_rad"][3] = 0.0000001;
+  malformed_quintic["trajectory"]["duration_ns"] = 10000000ULL;
+  malformed_quintic["trajectory"]["interval_count"] = 1U;
+  if (!quintic_parse_is_rejected(malformed_quintic))
+    throw std::runtime_error(
+        "COMMAND_QUINTIC_ENDPOINT_STEP_SELF_TEST_FAILED");
+  malformed_quintic = quintic_document;
+  malformed_quintic["targets_rad"][3] = 0.0;
+  malformed_quintic["trajectory"]["target_rad"][3] = 0.0;
+  if (!quintic_parse_is_rejected(malformed_quintic))
+    throw std::runtime_error(
+        "COMMAND_QUINTIC_ZERO_DISPLACEMENT_SELF_TEST_FAILED");
+  malformed_quintic = quintic_document;
+  malformed_quintic["trajectory"]["duration_ns"] = 1000000U;
+  if (!quintic_parse_is_rejected(malformed_quintic))
+    throw std::runtime_error("COMMAND_QUINTIC_PEAK_LIMIT_SELF_TEST_FAILED");
+  malformed_quintic = quintic_document;
+  malformed_quintic["trajectory"]["segment_count"] = 0;
+  if (!quintic_parse_is_rejected(malformed_quintic))
+    throw std::runtime_error("COMMAND_QUINTIC_SEGMENT_SELF_TEST_FAILED");
+
+  auto quintic_feedback_motors = j345_motors;
+  for (auto& motor : quintic_feedback_motors) {
+    motor.reference = 0.0;
+    motor.unwrapped = 0.0;
+    motor.reference_ready = true;
+    motor.valid = true;
+    motor.last_frame_valid = true;
+    motor.fault_latched = false;
+    motor.merror = 0;
+    motor.temperature = 25;
+    motor.returned_mode = kFocMode;
+    motor.previous_feedback_at = Clock::now();
+  }
+  auto mismatched_quintic_feedback = quintic_feedback_motors;
+  for (auto& motor : mismatched_quintic_feedback) {
+    if (motor.joint_index == 3)
+      motor.unwrapped = motor.sign * kGear *
+          (kFixedHoldCaptureWindow + 0.001);
+  }
+  bool mismatched_quintic_start_rejected = false;
+  try {
+    CommandSafetyState mismatch_safety;
+    validate_and_observe_position_authority(
+        quintic_command, mismatched_quintic_feedback, mismatch_safety);
+  } catch (const std::runtime_error& error) {
+    mismatched_quintic_start_rejected =
+        std::string(error.what()) ==
+            "COMMAND_QUINTIC_START_FEEDBACK_MISMATCH";
+  }
+  if (!mismatched_quintic_start_rejected)
+    throw std::runtime_error(
+        "COMMAND_QUINTIC_START_MISMATCH_SELF_TEST_FAILED");
+  auto unhealthy_quintic_feedback = quintic_feedback_motors;
+  for (auto& motor : unhealthy_quintic_feedback) {
+    if (motor.joint_index == 3)
+      motor.previous_feedback_at = Clock::time_point{};
+  }
+  bool unhealthy_quintic_start_rejected = false;
+  try {
+    CommandSafetyState unhealthy_safety;
+    validate_and_observe_position_authority(
+        quintic_command, unhealthy_quintic_feedback, unhealthy_safety);
+  } catch (const std::runtime_error& error) {
+    unhealthy_quintic_start_rejected =
+        std::string(error.what()) ==
+            "COMMAND_QUINTIC_START_FEEDBACK_UNHEALTHY";
+  }
+  if (!unhealthy_quintic_start_rejected)
+    throw std::runtime_error(
+        "COMMAND_QUINTIC_START_HEALTH_SELF_TEST_FAILED");
+
+  CommandSafetyState quintic_safety;
+  validate_and_observe_position_authority(
+      quintic_command, quintic_feedback_motors, quintic_safety);
+  GuiCommand late_heartbeat = quintic_command;
+  late_heartbeat.received_at = quintic_received_at +
+      std::chrono::milliseconds(1500);
+  validate_and_observe_position_authority(
+      late_heartbeat, quintic_feedback_motors, quintic_safety);
+  GuiCommand changed_descriptor = late_heartbeat;
+  ++changed_descriptor.quintic.duration_ns;
+  bool changed_descriptor_rejected = false;
+  try {
+    validate_and_observe_position_authority(
+        changed_descriptor, quintic_feedback_motors, quintic_safety);
+  } catch (const std::runtime_error&) {
+    changed_descriptor_rejected = true;
+  }
+  if (!changed_descriptor_rejected)
+    throw std::runtime_error(
+        "COMMAND_QUINTIC_IMMUTABLE_SELF_TEST_FAILED");
+  GuiCommand late_first_packet = quintic_command;
+  late_first_packet.received_at = quintic_received_at +
+      std::chrono::seconds(1);
+  bool late_first_packet_rejected = false;
+  try {
+    CommandSafetyState empty_safety;
+    validate_and_observe_position_authority(
+        late_first_packet, quintic_feedback_motors, empty_safety);
+  } catch (const std::runtime_error&) {
+    late_first_packet_rejected = true;
+  }
+  if (!late_first_packet_rejected)
+    throw std::runtime_error(
+        "COMMAND_QUINTIC_LATE_FIRST_PACKET_SELF_TEST_FAILED");
+  GuiCommand quintic_higher_epoch = quintic_command;
+  quintic_higher_epoch.activation_epoch = 10U;
+  quintic_higher_epoch.received_at = quintic_received_at +
+      std::chrono::seconds(2);
+  quintic_higher_epoch.quintic.execute_at_monotonic_ns =
+      quintic_received_ns + 3000000000ULL;
+  validate_and_observe_position_authority(
+      quintic_higher_epoch, quintic_feedback_motors, quintic_safety);
+
+  QuinticTrajectoryDescriptor sample_trajectory = quintic_command.quintic;
+  sample_trajectory.execute_at_monotonic_ns = 1000000000ULL;
+  sample_trajectory.duration_ns = 1000000000ULL;
+  sample_trajectory.interval_count = 10U;
+  GuiCommand sample_command = quintic_command;
+  sample_command.quintic = sample_trajectory;
+  std::array<double, 6> sample_q{};
+  std::array<double, 6> sample_dq{};
+  const QuinticSampleClock scheduled_sample =
+      quintic_sample_clock(sample_trajectory, 999999999ULL);
+  apply_quintic_reference(
+      3, sample_command, scheduled_sample, sample_q, sample_dq);
+  if (scheduled_sample.sample_index != 0U ||
+      std::string(scheduled_sample.state) != "PREPARED" ||
+      sample_q[3] != sample_trajectory.start_rad[3] || sample_dq[3] != 0.0)
+    throw std::runtime_error(
+        "COMMAND_QUINTIC_PREPARED_SAMPLE_SELF_TEST_FAILED");
+  const QuinticSampleClock middle_sample =
+      quintic_sample_clock(sample_trajectory, 1550000000ULL);
+  apply_quintic_reference(
+      3, sample_command, middle_sample, sample_q, sample_dq);
+  if (middle_sample.sample_index != 5U ||
+      std::string(middle_sample.state) != "RUNNING" ||
+      std::abs(sample_q[3] - 0.005) > 1e-12 || sample_dq[3] <= 0.0)
+    throw std::runtime_error(
+        "COMMAND_QUINTIC_INTEGER_SAMPLE_SELF_TEST_FAILED");
+  const QuinticSampleClock endpoint_sample =
+      quintic_sample_clock(sample_trajectory, 2000000000ULL);
+  apply_quintic_reference(
+      3, sample_command, endpoint_sample, sample_q, sample_dq);
+  if (endpoint_sample.sample_index != sample_trajectory.interval_count ||
+      std::string(endpoint_sample.state) != "COMPLETE" ||
+      sample_q[3] != sample_trajectory.target_rad[3] || sample_dq[3] != 0.0)
+    throw std::runtime_error(
+        "COMMAND_QUINTIC_EXACT_ENDPOINT_SELF_TEST_FAILED");
+
   validate_command_for_owned_domain(command, j345_motors);
   GuiCommand mixed_position;
   parse_command(fresh_source_self_test_payload(
@@ -4234,7 +5641,7 @@ void command_mask_self_test() {
         "maximum_acceleration_rad_s2":0.03,
         "kp":[0.5,1.0,0.6,0.5,0.5,0.0],
         "kd":[0.05,0.10,0.05,0.05,0.05,0.0],
-        "feedforward_nm":[0.0,0.84,0.52,-0.06,-0.10,0.0],
+        "feedforward_nm":[0.0,0.0,0.0,0.0,0.0,0.0],
         "recovery":true})"), recovery_command);
   } catch (const std::runtime_error& error) {
     recovery_command_rejected =
@@ -4604,6 +6011,10 @@ CommandReceiveResult receive_latest(
       CommandSafetyState candidate_safety = safety;
       try {
         validate_command_for_owned_domain(candidate, motors);
+        validate_and_observe_gravity_policy(
+            candidate, motors, candidate_safety);
+        validate_and_observe_position_authority(
+            candidate, motors, candidate_safety);
         validate_and_observe_fixed_hold_targets(
             candidate, motors, candidate_safety,
             &position_arrived_once, &position_endpoint_reached,
@@ -4661,24 +6072,136 @@ void update_profile(int joint, const GuiCommand& command,
   }
 }
 
+QuinticSampleClock quintic_sample_clock(
+    const QuinticTrajectoryDescriptor& trajectory,
+    std::uint64_t now_monotonic_ns) {
+  if (!trajectory.present || trajectory.duration_ns == 0U ||
+      trajectory.interval_count == 0U)
+    throw std::runtime_error("COMMAND_QUINTIC_RUNTIME_DESCRIPTOR_INVALID");
+  if (now_monotonic_ns < trajectory.execute_at_monotonic_ns)
+    return {};
+  const std::uint64_t elapsed_ns =
+      now_monotonic_ns - trajectory.execute_at_monotonic_ns;
+  if (elapsed_ns >= trajectory.duration_ns)
+    return {trajectory.interval_count, "COMPLETE", true};
+  // This is the protocol's integer clock, not a floating-time
+  // reconstruction.  The 128-bit numerator prevents overflow while preserving
+  // exactly floor((now-execute_at)*N/duration_ns).
+  const unsigned __int128 numerator =
+      static_cast<unsigned __int128>(elapsed_ns) *
+      static_cast<unsigned __int128>(trajectory.interval_count);
+  const auto sample_index = static_cast<std::uint64_t>(
+      numerator / static_cast<unsigned __int128>(trajectory.duration_ns));
+  return {sample_index, "RUNNING", false};
+}
+
+void apply_quintic_reference(
+    int joint, const GuiCommand& command, const QuinticSampleClock& sample,
+    std::array<double, 6>& q_command,
+    std::array<double, 6>& dq_command) {
+  if (!command.quintic.present)
+    throw std::runtime_error("COMMAND_QUINTIC_RUNTIME_DESCRIPTOR_MISSING");
+  const auto index = static_cast<std::size_t>(joint);
+  if (sample.endpoint ||
+      sample.sample_index >= command.quintic.interval_count) {
+    // Never leave the endpoint to polynomial rounding.
+    q_command[index] = command.quintic.target_rad[index];
+    dq_command[index] = 0.0;
+    return;
+  }
+  const double normalized = static_cast<double>(sample.sample_index) /
+      static_cast<double>(command.quintic.interval_count);
+  const double normalized_squared = normalized * normalized;
+  const double normalized_cubed = normalized_squared * normalized;
+  const double blend = normalized_cubed *
+      (10.0 + normalized * (-15.0 + 6.0 * normalized));
+  const double blend_derivative =
+      30.0 * normalized_squared *
+      (1.0 - normalized) * (1.0 - normalized);
+  const double displacement = command.quintic.target_rad[index] -
+      command.quintic.start_rad[index];
+  const double duration_seconds =
+      static_cast<double>(command.quintic.duration_ns) * 1e-9;
+  q_command[index] = command.quintic.start_rad[index] +
+      displacement * blend;
+  dq_command[index] = displacement * blend_derivative / duration_seconds;
+}
+
 std::uint64_t monotonic_ns() {
   return static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
       Clock::now().time_since_epoch()).count());
 }
 
+std::string thermal_state_for_raw_temperature(
+    int raw_temperature_c, const ThermalInterlockState& thermal_interlock) {
+  if (raw_temperature_c < 0) return "OFFLINE";
+  if (thermal_interlock.fault_latched) {
+    if (thermal_interlock.cooldown_ready &&
+        raw_temperature_c < g_thermal_policy.rearm_below_c)
+      return "WAIT_OPERATOR_CONFIRM";
+    if (raw_temperature_c < g_thermal_policy.rearm_below_c)
+      return "COOLDOWN";
+    return "THERMAL_STOP";
+  }
+  if (raw_temperature_c >= g_thermal_policy.thermal_stop_c)
+    return "THERMAL_STOP";
+  if (raw_temperature_c >= g_thermal_policy.derating_start_c)
+    return "DERATING";
+  if (raw_temperature_c >= g_thermal_policy.normal_below_c)
+    return "WARNING";
+  return "NORMAL";
+}
+
 std::string feedback_payload(const std::vector<MotorRuntime>& motors,
                              std::uint64_t stamp, const std::string& mode,
                              bool j2_sync_fault, bool domain_fault,
-                             bool lease_safe_hold) {
+                             bool lease_safe_hold,
+                             const GuiCommand& control_command,
+                             const std::array<double, 6>&
+                                 applied_gravity_feedforward_nm,
+                             const std::string& trajectory_state,
+                             std::uint64_t trajectory_sample_index,
+                             const ThermalInterlockState& thermal_interlock,
+                             const NoProgressWatchdogState& no_progress_watchdog,
+                             bool no_progress_observation_valid,
+                             double no_progress_position_error_rad,
+                             bool software_saturation_observed,
+                             double thermal_derating_factor) {
   nlohmann::json samples = nlohmann::json::array();
   nlohmann::json controller_mode_by_motor = nlohmann::json::object();
+  nlohmann::json thermal_state_by_motor = nlohmann::json::object();
+  nlohmann::json tau_j2_logical_total_nm = nullptr;
+  int maximum_raw_temperature_c = std::numeric_limits<int>::min();
   for (const auto& motor : motors) {
+    maximum_raw_temperature_c = std::max(
+        maximum_raw_temperature_c, motor.temperature);
     samples.push_back({
         {"motor", motor.name}, {"position_rad", motor.last_q},
-        {"velocity_rad_s", motor.last_dq}, {"temperature_c", motor.temperature},
+        {"velocity_rad_s", motor.last_dq},
+        {"tau_cmd_rotor_nm", motor.last_tau_cmd_rotor_nm},
+        {"tau_feedback_rotor_nm", motor.last_tau},
+        {"tau_joint_estimated_nm", motor.sign * motor.last_tau * kGear},
+        {"last_valid_feedback_monotonic_ns",
+         motor.last_valid_feedback_monotonic_ns == 0U
+             ? nlohmann::json(nullptr)
+             : nlohmann::json(motor.last_valid_feedback_monotonic_ns)},
+        {"gravity_feedforward_rotor_nm",
+         motor.sign * applied_gravity_feedforward_nm[
+             static_cast<std::size_t>(motor.joint_index)]},
+        {"temperature_c", motor.temperature},
         {"merror", motor.merror},
         {"communication_ok",
          motor.last_frame_valid && motor.valid && !motor.fault_latched},
+        {"thermal_fault_latched", motor.thermal_fault_latched},
+        {"load_limit_no_progress", no_progress_watchdog.fault_latched},
+        {"trajectory_plan_token_id", control_command.quintic.present
+             ? control_command.quintic.plan_token_id : ""},
+        {"trajectory_sha256", control_command.quintic.present
+             ? control_command.quintic.trajectory_sha256 : ""},
+        {"trajectory_state", trajectory_state},
+        {"trajectory_sample_index", trajectory_sample_index},
+        {"trajectory_interval_count", control_command.quintic.present
+             ? control_command.quintic.interval_count : 0U},
         {"unwrapped_raw_position_rad", motor.unwrapped},
         {"software_zero_reference_raw_rad", motor.reference},
         {"recovery_hint_configured", motor.recovery_hint_configured},
@@ -4694,16 +6217,112 @@ std::string feedback_payload(const std::vector<MotorRuntime>& motors,
         {"power_session_logical_position_rad",
          motor.session_logical_position}});
     controller_mode_by_motor[motor.name] =
-        mode != "brake" && motor.returned_mode == kFocMode ? mode : "brake";
+        !motor.last_frame_valid || !motor.valid || motor.fault_latched
+            ? "unknown"
+            : motor.returned_mode == kBrakeMode
+                  ? "brake"
+                  : mode != "brake" && motor.returned_mode == kFocMode
+                        ? mode : "unknown";
+    thermal_state_by_motor[motor.name] =
+        thermal_state_for_raw_temperature(
+            motor.temperature, thermal_interlock);
   }
+  if (motors.size() == 2U && motors[0].name == "J2A" &&
+      motors[1].name == "J2B") {
+    tau_j2_logical_total_nm =
+        motors[0].sign * motors[0].last_tau * kGear +
+        motors[1].sign * motors[1].last_tau * kGear;
+  }
+  const std::string thermal_state = thermal_state_for_raw_temperature(
+      maximum_raw_temperature_c, thermal_interlock);
   return nlohmann::json({
       {"schema", "go-m8010-motor-feedback/1.0"},
       {"source_monotonic_ns", stamp}, {"samples", samples},
+      {"tau_j2_logical_total_nm", tau_j2_logical_total_nm},
       {"controller_mode", mode},
       {"controller_mode_by_motor", controller_mode_by_motor},
       {"j2_sync_fault", j2_sync_fault},
       {"domain_fault", domain_fault},
-      {"lease_safe_hold", lease_safe_hold}}).dump();
+      {"lease_safe_hold", lease_safe_hold},
+      {"gravity_authority_present",
+       control_command.gravity_authority.present},
+      {"gravity_policy_identity_status",
+       control_command.gravity_authority.present ? "ECHOED" : "NO_AUTHORITY"},
+      {"gravity_source_instance_id",
+       control_command.gravity_authority.present
+           ? control_command.gravity_authority.source_instance_id
+           : std::string()},
+      {"gravity_session_id",
+       control_command.gravity_authority.present
+           ? control_command.gravity_authority.session_id : std::string()},
+      {"gravity_state_instance_id",
+       control_command.gravity_authority.present
+           ? control_command.gravity_authority.state_instance_id
+           : std::string()},
+      {"gravity_model_sha256",
+       control_command.gravity_authority.present
+           ? std::string(kProductionModelSha256) : std::string()},
+      {"gravity_config_sha256",
+       control_command.gravity_authority.present
+           ? std::string(kGravityConfigSha256) : std::string()},
+      {"gravity_continuous_rotor_limits_authoritative",
+       control_command.gravity_authority.present},
+      {"gravity_scale",
+       control_command.gravity_authority.present
+           ? control_command.gravity_authority.gravity_scale : 0.0},
+      {"gravity_scale_target",
+       control_command.gravity_authority.present
+           ? control_command.gravity_authority.gravity_scale_target : 0.0},
+      {"feedforward_nm", applied_gravity_feedforward_nm},
+      {"trajectory_plan_token_id", control_command.quintic.present
+           ? control_command.quintic.plan_token_id : ""},
+      {"trajectory_sha256", control_command.quintic.present
+           ? control_command.quintic.trajectory_sha256 : ""},
+      {"trajectory_state", trajectory_state},
+      {"trajectory_sample_index", trajectory_sample_index},
+      {"trajectory_interval_count", control_command.quintic.present
+           ? control_command.quintic.interval_count : 0U},
+      {"thermal_fault", thermal_interlock.fault_latched},
+      {"thermal_fault_latched", thermal_interlock.fault_latched},
+      {"thermal_cooldown_ready", thermal_interlock.cooldown_ready},
+      {"thermal_release_observed", thermal_interlock.release_observed},
+      {"thermal_rearm_pending",
+       thermal_interlock.rearm_pending_next_cycle},
+      {"thermal_rearm_pending_next_cycle",
+       thermal_interlock.rearm_pending_next_cycle},
+      {"thermal_cooldown_valid_brake_frames",
+       thermal_interlock.cooldown_frames},
+      {"thermal_trip_activation_epoch",
+       thermal_interlock.trip_activation_epoch},
+      {"thermal_minimum_rearm_epoch",
+       thermal_interlock.minimum_rearm_epoch},
+      {"thermal_state", thermal_state},
+      {"thermal_state_by_motor", thermal_state_by_motor},
+      {"thermal_trip_reason", thermal_interlock.trip_reason},
+      {"thermal_config_sha256", kThermalConfigSha256},
+      {"thermal_derating_factor", thermal_derating_factor},
+      {"thermal_raw_temperature_c", maximum_raw_temperature_c},
+      {"no_progress_fault", no_progress_watchdog.fault_latched},
+      {"load_limit_fault", no_progress_watchdog.fault_latched},
+      {"load_limit_no_progress", no_progress_watchdog.fault_latched},
+      {"no_progress_release_observed",
+       no_progress_watchdog.release_observed},
+      {"no_progress_rearm_pending_next_cycle",
+       no_progress_watchdog.rearm_pending_next_cycle},
+      {"no_progress_watchdog_qualifying_frames",
+       no_progress_watchdog.qualifying_frames},
+      {"no_progress_observation_valid", no_progress_observation_valid},
+      {"no_progress_position_error_rad",
+       no_progress_observation_valid ? no_progress_position_error_rad : 0.0},
+      {"no_progress_trip_position_error_rad",
+       no_progress_watchdog.trip_position_error_rad},
+      {"position_safety_trip_reason", no_progress_watchdog.trip_reason},
+      {"software_saturation_observed", software_saturation_observed},
+      {"load_limit_watchdog_authority", kLoadLimitWatchdogAuthority},
+      {"no_progress_trip_activation_epoch",
+       no_progress_watchdog.trip_activation_epoch},
+      {"no_progress_minimum_rearm_epoch",
+       no_progress_watchdog.minimum_rearm_epoch}}).dump();
 }
 
 bool send_terminal_brake(SerialPort& serial, std::vector<MotorRuntime>& motors,
@@ -4715,6 +6334,7 @@ bool send_terminal_brake(SerialPort& serial, std::vector<MotorRuntime>& motors,
       std::vector<double> frame_positions(motors.size(), 0.0);
       for (std::size_t index = 0; index < motors.size(); ++index) {
         auto& motor = motors[index];
+        motor.last_tau_cmd_rotor_nm = 0.0;
         MotorCmd brake = make_command(motor.id, kBrakeMode, 0.0, 0.0, 0.0, 0.0);
         const Feedback feedback = transact(
             serial, brake, motor.id, kBrakeMode, audit);
@@ -4723,6 +6343,7 @@ bool send_terminal_brake(SerialPort& serial, std::vector<MotorRuntime>& motors,
           motor.last_q = feedback.data.q;
           motor.last_dq = feedback.data.dq;
           motor.last_tau = feedback.data.tau;
+          motor.last_valid_feedback_monotonic_ns = monotonic_ns();
           motor.temperature = feedback.data.temp;
           motor.merror = feedback.data.merror;
           motor.returned_mode = feedback.data.mode;
@@ -4813,8 +6434,13 @@ class TerminalBrakeGuard {
 };
 
 int run(const Options& options) {
+  g_thermal_policy = self_test_thermal_policy();
   sha256_self_test();
   j2_startup_prime_policy_self_test();
+  thermal_interlock_self_test();
+  thermal_derating_self_test();
+  position_arrival_dwell_self_test();
+  no_progress_watchdog_self_test();
   if (options.audit_j2_session_bundle) {
     command_mask_self_test();
     const std::string host_boot_id = current_host_boot_id();
@@ -4898,15 +6524,46 @@ int run(const Options& options) {
                   "J2_STARTUP_RECHECK=BRAKE_50_FRAMES_BEFORE_COMMAND_BIND\n"
                   "J2_POWER_CONTINUITY_LOSS_POLICY=TERMINAL_BRAKE_AND_RECAPTURE\n"
                  "LEASE_EXPIRY_POLICY=HEALTH_GATED_FIXED_POSITION_SAFE_HOLD\n"
-                 "LEASE_SAFE_HOLD_RESUME=HIGHER_ACTIVATION_EPOCH_REQUIRED\n"
-                 "LEASE_SAFE_HOLD_STATUS_FIELD=lease_safe_hold\n"
-                 "HOLD_TARGET_POLICY=FIXED_GUI_TARGET_MECHANICAL_ENVELOPE\n"
+                  "LEASE_SAFE_HOLD_RESUME=HIGHER_ACTIVATION_EPOCH_REQUIRED\n"
+                  "LEASE_SAFE_HOLD_STATUS_FIELD=lease_safe_hold\n"
+                  "THERMAL_STOP_RAW_C="
+              << g_thermal_policy.thermal_stop_c << "\n"
+              << "THERMAL_COOLDOWN_RAW_BELOW_C="
+              << g_thermal_policy.rearm_below_c << "\n"
+              << "THERMAL_COOLDOWN_MIN_SECONDS="
+              << g_thermal_policy.cooldown_seconds << "\n"
+              <<
+                  "THERMAL_COOLDOWN_MIN_VALID_BRAKE_FRAMES=500\n"
+                  "THERMAL_REARM_POLICY=EXPLICIT_RELEASE_HIGHER_EPOCH_NEXT_CYCLE\n"
+                  "THERMAL_COMMUNICATION_POLICY=ORTHOGONAL_KEEP_POLLING\n"
+                  "LOAD_LIMIT_WATCHDOG_AUTHORITY="
+                  "SOFTWARE_GUARD_NOT_CONTINUOUS_RATING\n"
+                  "LOAD_LIMIT_NO_PROGRESS_ERROR_DEG=2\n"
+                  "LOAD_LIMIT_NO_PROGRESS_IMPROVEMENT_DEG=0.25\n"
+                  "LOAD_LIMIT_NO_PROGRESS_WINDOW_SECONDS=3\n"
+                  "LOAD_LIMIT_NO_PROGRESS_MIN_VALID_FRAMES=100\n"
+                  "LOAD_LIMIT_REARM_POLICY=EXPLICIT_RELEASE_HIGHER_EPOCH_NEXT_CYCLE\n"
+                  "HOLD_TARGET_POLICY=FIXED_GUI_TARGET_MECHANICAL_ENVELOPE\n"
                  "FIXED_HOLD_CAPTURE_WINDOW_DEG=2\n"
                  "FIXED_HOLD_FEEDBACK_FRESH_MS=100\n"
                  "FIXED_HOLD_SAME_EPOCH_TARGET=IMMUTABLE\n"
-                 "POSITION_MOVING_MASK=OPTIONAL_ACTIVE_SUBSET\n"
-                 "MOVING_POSITION_VELOCITY_POLICY=TRANSITION_LOG_ONLY_NO_AUTHORITY_WITHDRAWAL\n"
-                 "POSITION_ARRIVAL_TIMEOUT_POLICY=TRANSITION_LOG_ONLY_CONTINUE_HOLDING\n"
+                  "POSITION_MOVING_MASK=V12_OPTIONAL_V13_REQUIRED_ACTIVE_SUBSET\n"
+                  "V13_QUINTIC_PROFILE=quintic-rest-to-rest-v1\n"
+                  "V13_QUINTIC_CLOCK=INTEGER_SAMPLE_INDEX_NO_REPLAN\n"
+                  "V13_QUINTIC_GRID=EXACT_INTEGER_NS_1_TO_10_MS\n"
+                  "V13_QUINTIC_FIRST_PACKET=STRICTLY_BEFORE_EXECUTE_AT\n"
+                  "V13_QUINTIC_FIRST_START_MATCH="
+                  "FRESH_FEEDBACK_FIXED_HOLD_CAPTURE_WINDOW\n"
+                  "MOVING_POSITION_VELOCITY_POLICY=TRANSITION_LOG_ONLY_NO_AUTHORITY_WITHDRAWAL\n"
+                  "POSITION_ARRIVAL_TIMEOUT_POLICY="
+                  "LATCHED_DOMAIN_BRAKE_EXPLICIT_RELEASE_HIGHER_EPOCH_NEXT_CYCLE\n"
+                  "POSITION_ARRIVAL_DWELL=ENDPOINT_500MS_AND_50_VALID_FRAMES\n"
+                  "THERMAL_CONFIG_SHA256="
+                  "1926264805858f62fffc9360ef0c9d4d7f8a7e232e171105450769d493ff5467\n"
+                  "THERMAL_DERATING_POLICY=LEGACY_PROFILE_LINEAR_VMAX_AMAX_KP_KD\n"
+                  "V13_THERMAL_DERATING_POLICY="
+                  "ABORT_LATCHED_BRAKE_REPREVIEW_REQUIRED\n"
+                  "THERMAL_STOP_POLICY=RAW_GE_CONFIG_STOP_C_LATCHED_DOMAIN_BRAKE\n"
                  "COMMAND_PACKET_BUDGET_PER_CYCLE=32\n"
                  "COMMAND_REJECT_SUMMARY_SECONDS=5\n"
                  "ACTIVE_DEADLINE_CONSECUTIVE_LIMIT=3\n"
@@ -4917,6 +6574,15 @@ int run(const Options& options) {
   }
   if (::prctl(PR_SET_PDEATHSIG, SIGTERM) != 0 || ::getppid() == 1)
     throw std::runtime_error("PARENT_DEATH_GUARD_FAILED");
+  if (options.expected_thermal_config_sha256 != kThermalConfigSha256)
+    throw std::runtime_error("THERMAL_CONFIG_EXPECTED_SHA256_MISMATCH");
+  const SecureFileBytes thermal_config = read_secure_owned_policy_file(
+      options.thermal_config_file, 64U * 1024U,
+      "THERMAL_CONFIG_OPEN_FAILED", "THERMAL_CONFIG_FILE_UNSAFE",
+      "THERMAL_CONFIG_READ_FAILED");
+  if (thermal_config.sha256 != kThermalConfigSha256)
+    throw std::runtime_error("THERMAL_CONFIG_SHA256_MISMATCH");
+  g_thermal_policy = parse_thermal_policy_yaml(thermal_config.data);
   const BusDefinition definition = bus_definition(options.bus);
   if (::access(definition.port, R_OK | W_OK) != 0)
     throw std::runtime_error("STABLE_PORT_NOT_ACCESSIBLE");
@@ -5004,6 +6670,8 @@ int run(const Options& options) {
   std::array<bool, 6> previous_moving_joint_mask{};
   CommandSafetyState command_safety;
   CommandReceiveState command_receive_state;
+  ThermalInterlockState thermal_interlock;
+  NoProgressWatchdogState no_progress_watchdog;
   bool lease_safe_hold_active = false;
   bool prior_external_hold_confirmed = false;
   GuiCommand confirmed_external_hold_command;
@@ -5020,6 +6688,8 @@ int run(const Options& options) {
   std::array<bool, 6> position_endpoint_reached{};
   std::array<bool, 6> position_arrived_once{};
   std::array<bool, 6> position_arrival_overdue{};
+  std::array<int, 6> position_arrival_qualifying_frames{};
+  std::array<Clock::time_point, 6> position_arrival_window_started_at{};
   std::array<std::uint64_t, 6> position_tracking_epoch{};
   std::array<double, 6> last_position_targets{};
   std::array<Clock::time_point, 6> position_started_at{};
@@ -5029,6 +6699,8 @@ int run(const Options& options) {
   bool previous_j2_pair_ready = false;
   std::array<BoundedHoldIntegralState, 6> hold_integral_states{};
   std::array<double, 6> hold_integral_wire_nm{};
+  std::array<double, 6> applied_gravity_feedforward_nm{};
+  double previous_thermal_derating_factor = 1.0;
   double j2_integral_wire_nm = 0.0;
   double j2_previous_common_position = 0.0;
   bool j2_previous_common_ready = false;
@@ -5047,6 +6719,32 @@ int run(const Options& options) {
   ActiveCommandBlockedLogState active_command_blocked_log;
   while (!g_stop.load()) {
     const auto loop_started = Clock::now();
+    const bool thermal_rearmed_this_cycle =
+        apply_pending_thermal_rearm_at_cycle_start(thermal_interlock);
+    const bool no_progress_rearmed_this_cycle =
+        apply_pending_no_progress_rearm_at_cycle_start(no_progress_watchdog);
+    publish_thermal_latch_to_motors(
+        motors, thermal_interlock.fault_latched);
+    if (thermal_rearmed_this_cycle) {
+      std::cerr << "THERMAL_REARM_APPLIED"
+                << " bus=" << options.bus
+                << " activation_epoch=" << command.activation_epoch
+                << " minimum_epoch="
+                << thermal_interlock.minimum_rearm_epoch
+                << std::endl;
+    }
+    if (no_progress_rearmed_this_cycle) {
+      std::cerr << "LOAD_LIMIT_NO_PROGRESS_REARM_APPLIED"
+                << " bus=" << options.bus
+                << " activation_epoch=" << command.activation_epoch
+                << " minimum_epoch="
+                << no_progress_watchdog.minimum_rearm_epoch
+                << std::endl;
+    }
+    const bool thermal_fault_latched_at_cycle_start =
+        thermal_interlock.fault_latched;
+    const bool no_progress_fault_latched_at_cycle_start =
+        no_progress_watchdog.fault_latched;
     auto latch_domain_fault = [&](const char* reason) {
       if (!domain_fault) domain_fault_reason = reason;
       domain_fault = true;
@@ -5124,6 +6822,46 @@ int run(const Options& options) {
     command_safety.minimum_activation_epoch = minimum_epoch_after_lease(
         command_safety.minimum_activation_epoch, command_lease_fresh,
         command_requests_active_owned_joint, command.activation_epoch);
+    if (thermal_interlock.fault_latched) {
+      thermal_interlock.minimum_rearm_epoch = std::max(
+          {thermal_interlock.minimum_rearm_epoch,
+           command_safety.minimum_activation_epoch,
+           saturating_next_activation_epoch(
+               command_safety.highest_rejected_active_epoch)});
+      command_safety.minimum_activation_epoch = std::max(
+          command_safety.minimum_activation_epoch,
+          thermal_interlock.minimum_rearm_epoch);
+    }
+    if (no_progress_watchdog.fault_latched) {
+      no_progress_watchdog.minimum_rearm_epoch = std::max(
+          {no_progress_watchdog.minimum_rearm_epoch,
+           command_safety.minimum_activation_epoch,
+           saturating_next_activation_epoch(
+               command_safety.highest_rejected_active_epoch)});
+      command_safety.minimum_activation_epoch = std::max(
+          command_safety.minimum_activation_epoch,
+          no_progress_watchdog.minimum_rearm_epoch);
+    }
+    if (thermal_fault_latched_at_cycle_start &&
+        observe_explicit_thermal_release(
+            thermal_interlock, explicit_release_packet_received)) {
+      std::cerr << "THERMAL_RELEASE_OBSERVED"
+                << " bus=" << options.bus
+                << " command_epoch=" << command.activation_epoch
+                << " minimum_epoch="
+                << thermal_interlock.minimum_rearm_epoch
+                << std::endl;
+    }
+    if (no_progress_fault_latched_at_cycle_start &&
+        observe_explicit_no_progress_release(
+            no_progress_watchdog, explicit_release_packet_received)) {
+      std::cerr << "LOAD_LIMIT_NO_PROGRESS_RELEASE_OBSERVED"
+                << " bus=" << options.bus
+                << " command_epoch=" << command.activation_epoch
+                << " minimum_epoch="
+                << no_progress_watchdog.minimum_rearm_epoch
+                << std::endl;
+    }
     const bool lease_expiry_detected =
         lease_expired_before_receive || !command_lease_fresh;
     const GuiCommand& lease_expiry_source = lease_expired_before_receive
@@ -5142,7 +6880,9 @@ int run(const Options& options) {
         !same_external_hold_authority(
             confirmed_external_hold_command, command))
       prior_external_hold_confirmed = false;
-    if (fresh_command_explicitly_releases || domain_fault || j2_sync_fault)
+    if (fresh_command_explicitly_releases || domain_fault || j2_sync_fault ||
+        thermal_interlock.fault_latched ||
+        no_progress_watchdog.fault_latched)
       prior_external_hold_confirmed = false;
     bool lease_safe_hold_entered_this_cycle = false;
     if (lease_safe_hold_active && fresh_command_explicitly_releases) {
@@ -5177,11 +6917,17 @@ int run(const Options& options) {
     if (!lease_safe_hold_active && lease_expiry_detected &&
         prior_external_hold_confirmed && !g_stop.load() &&
         !fresh_command_explicitly_releases &&
-        !fresh_command_supersedes_expired_epoch) {
+        !fresh_command_supersedes_expired_epoch &&
+        !thermal_interlock.fault_latched &&
+        !no_progress_watchdog.fault_latched) {
       GuiCommand captured;
       if (capture_lease_safe_hold_command(
               options.bus, confirmed_external_hold_command, motors, domain_fault,
               j2_sync_fault, captured, &position_arrived_once)) {
+        captured.feedforward_nm = applied_gravity_feedforward_nm;
+        if (captured.gravity_authority.present)
+          captured.gravity_authority.feedforward_nm =
+              applied_gravity_feedforward_nm;
         lease_safe_hold_command = std::move(captured);
         lease_safe_hold_source_epoch =
             confirmed_external_hold_command.activation_epoch;
@@ -5216,6 +6962,29 @@ int run(const Options& options) {
     }
     const GuiCommand& control_command = lease_safe_hold_active
         ? lease_safe_hold_command : command;
+    double thermal_derating_factor = 1.0;
+    for (const auto& motor : motors) {
+      thermal_derating_factor = std::min(
+          thermal_derating_factor,
+          thermal_derating_factor_for_raw_temperature(motor.temperature));
+    }
+    GuiCommand thermally_derated_command = control_command;
+    thermally_derated_command.vmax *= thermal_derating_factor;
+    thermally_derated_command.amax *= thermal_derating_factor;
+    for (const auto& motor : motors) {
+      const auto joint = static_cast<std::size_t>(motor.joint_index);
+      thermally_derated_command.kp[joint] *= thermal_derating_factor;
+      thermally_derated_command.kd[joint] *= thermal_derating_factor;
+    }
+    if (std::abs(
+            thermal_derating_factor - previous_thermal_derating_factor) >
+        1e-12) {
+      std::cerr << "THERMAL_DERATING_UPDATE"
+                << " bus=" << options.bus
+                << " factor=" << thermal_derating_factor
+                << std::endl;
+      previous_thermal_derating_factor = thermal_derating_factor;
+    }
     const bool control_authority_available =
         !g_stop.load() && (lease_safe_hold_active || command_lease_fresh);
     std::string effective_mode = control_command.mode;
@@ -5225,6 +6994,8 @@ int run(const Options& options) {
     if (explicit_release_packet_received)
       effective_mode = "brake";
     if (domain_fault) effective_mode = "brake";
+    if (thermal_interlock.fault_latched) effective_mode = "brake";
+    if (no_progress_watchdog.fault_latched) effective_mode = "brake";
     if (active_power_session && !j2_startup_verified)
       effective_mode = "brake";
     // This GO controller has no gravity-compensated teach mode.  An explicit
@@ -5245,6 +7016,36 @@ int run(const Options& options) {
           });
       if (!owned_joint_selected) effective_mode = "brake";
     }
+    const bool exact_trajectory_thermal_derating_region =
+        effective_mode == "position" && control_command.quintic.present &&
+        std::any_of(
+            motors.begin(), motors.end(), [](const MotorRuntime& motor) {
+              return motor.temperature >=
+                  g_thermal_policy.derating_start_c;
+            });
+    if (exact_trajectory_thermal_derating_region) {
+      const bool newly_latched = latch_thermal_interlock(
+          thermal_interlock, "EXACT_TRAJECTORY_DERATING_ABORT",
+          control_command.activation_epoch,
+          command_safety.minimum_activation_epoch,
+          command_safety.highest_rejected_active_epoch);
+      command_safety.minimum_activation_epoch = std::max(
+          command_safety.minimum_activation_epoch,
+          thermal_interlock.minimum_rearm_epoch);
+      publish_thermal_latch_to_motors(motors, true);
+      effective_mode = "brake";
+      prior_external_hold_confirmed = false;
+      if (newly_latched) {
+        std::cerr << "V13_THERMAL_DERATING_TRAJECTORY_ABORT"
+                  << " bus=" << options.bus
+                  << " activation_epoch="
+                  << control_command.activation_epoch
+                  << " minimum_epoch="
+                  << thermal_interlock.minimum_rearm_epoch
+                  << " policy=REPREVIEW_REQUIRED"
+                  << std::endl;
+      }
+    }
     if (effective_mode == "position") {
       std::set<int> owned_joints;
       for (const auto& motor : motors) owned_joints.insert(motor.joint_index);
@@ -5257,6 +7058,8 @@ int run(const Options& options) {
           position_endpoint_reached[index] = false;
           position_arrived_once[index] = false;
           position_arrival_overdue[index] = false;
+          position_arrival_qualifying_frames[index] = 0;
+          position_arrival_window_started_at[index] = Clock::time_point{};
           continue;
         }
         if (!position_tracking[index] ||
@@ -5268,6 +7071,8 @@ int run(const Options& options) {
           position_endpoint_reached[index] = false;
           position_arrived_once[index] = false;
           position_arrival_overdue[index] = false;
+          position_arrival_qualifying_frames[index] = 0;
+          position_arrival_window_started_at[index] = Clock::time_point{};
         }
         last_position_targets[index] = control_command.targets[index];
         position_tracking_epoch[index] = control_command.activation_epoch;
@@ -5279,6 +7084,8 @@ int run(const Options& options) {
       position_endpoint_reached.fill(false);
       position_arrived_once.fill(false);
       position_arrival_overdue.fill(false);
+      position_arrival_qualifying_frames.fill(0);
+      position_arrival_window_started_at.fill(Clock::time_point{});
     }
     bool j2_pair_ready = options.bus != "j2" ||
         (motors.size() == 2U &&
@@ -5287,6 +7094,13 @@ int run(const Options& options) {
          }));
     const bool position_control_requested =
         effective_mode == "hold" || effective_mode == "position";
+    QuinticSampleClock trajectory_sample;
+    bool trajectory_sample_valid = false;
+    if (effective_mode == "position" && control_command.quintic.present) {
+      trajectory_sample = quintic_sample_clock(
+          control_command.quintic, monotonic_ns());
+      trajectory_sample_valid = true;
+    }
     const bool active_transition = position_control_requested &&
         !lease_safe_hold_entered_this_cycle &&
         (effective_mode != previous_mode ||
@@ -5297,7 +7111,8 @@ int run(const Options& options) {
                  control_command.moving_joint_mask[index] !=
                      previous_moving_joint_mask[index]);
            }));
-    if (effective_mode == "position" &&
+    if (!control_command.quintic.present &&
+        effective_mode == "position" &&
         control_command.moving_joint_mask[1] && options.bus == "j2" &&
         j2_pair_ready &&
         (active_transition || !previous_j2_pair_ready)) {
@@ -5305,7 +7120,8 @@ int run(const Options& options) {
       const double q_b = +1.0 * (motors[1].unwrapped - motors[1].reference) / kGear;
       q_command[1] = 0.5 * (q_a + q_b);
       dq_command[1] = 0.0;
-    } else if (effective_mode == "position" && options.bus != "j2") {
+    } else if (!control_command.quintic.present &&
+               effective_mode == "position" && options.bus != "j2") {
       for (const auto& motor : motors) {
         const std::size_t index = static_cast<std::size_t>(motor.joint_index);
         const bool motor_transition =
@@ -5335,15 +7151,24 @@ int run(const Options& options) {
     }
     std::set<int> planned;
     if (effective_mode == "position" && j2_pair_ready) {
-      for (const auto& motor : motors)
+      for (const auto& motor : motors) {
         if (motor.reference_ready && !motor.fault_latched &&
             control_command.active_joint_mask[
                 static_cast<std::size_t>(motor.joint_index)] &&
             control_command.moving_joint_mask[
                 static_cast<std::size_t>(motor.joint_index)] &&
-            planned.insert(motor.joint_index).second)
-          update_profile(
-              motor.joint_index, control_command, q_command, dq_command);
+            planned.insert(motor.joint_index).second) {
+          if (control_command.quintic.present) {
+            apply_quintic_reference(
+                motor.joint_index, control_command, trajectory_sample,
+                q_command, dq_command);
+          } else {
+            update_profile(
+                motor.joint_index, thermally_derated_command,
+                q_command, dq_command);
+          }
+        }
+      }
     } else {
       dq_command.fill(0.0);
     }
@@ -5355,6 +7180,12 @@ int run(const Options& options) {
     std::array<bool, 6> profile_endpoint_phase{};
     for (const int joint : planned) {
       const auto index = static_cast<std::size_t>(joint);
+      // Exact v1.3 q/dq samples are an immutable preview contract.  They are
+      // never time-scaled independently at runtime: entering the thermal
+      // derating region has already latched BRAKE above and requires a fresh
+      // preview/token.  Legacy profiles retain conservative live derating.
+      if (!control_command.quintic.present)
+        dq_command[index] *= thermal_derating_factor;
       profile_endpoint_phase[index] = position_profile_at_authorized_endpoint(
           control_command, index, q_command[index], dq_command[index]);
     }
@@ -5363,8 +7194,29 @@ int run(const Options& options) {
     double j2_wire_q_command = q_command[1];
     double j2_wire_dq_command = dq_command[1];
 
+    if (!is_position_holding_mode(effective_mode)) {
+      applied_gravity_feedforward_nm.fill(0.0);
+    } else {
+      const double maximum_step =
+          kGravityFeedforwardSlewNmPerSecond * kPeriod;
+      for (const auto& motor : motors) {
+        const auto joint = static_cast<std::size_t>(motor.joint_index);
+        const double target =
+            control_command.gravity_authority.present &&
+                control_command.active_joint_mask[joint]
+            ? control_command.feedforward_nm[joint] : 0.0;
+        applied_gravity_feedforward_nm[joint] += std::clamp(
+            target - applied_gravity_feedforward_nm[joint],
+            -maximum_step, maximum_step);
+      }
+    }
+
     hold_integral_wire_nm.fill(0.0);
     j2_integral_wire_nm = 0.0;
+    if (thermal_derating_factor < 1.0 - 1e-12) {
+      for (auto& state : hold_integral_states)
+        reset_bounded_hold_integral(state);
+    }
     double j2_effective_kp = j2_gain_kp;
     double j2_effective_kd = j2_gain_kd;
     const bool j2_hold_protection = options.bus == "j2" &&
@@ -5379,7 +7231,7 @@ int run(const Options& options) {
           !j2_sync_fault;
       if (j2_active) {
         const auto target_gains = j2_gain_targets(
-            control_command, effective_mode, motors[0],
+            thermally_derated_command, effective_mode, motors[0],
             profile_endpoint_phase[1] || position_endpoint_reached[1] ||
                 position_arrived_once[1]);
         const double target_kp = target_gains.first;
@@ -5417,6 +7269,7 @@ int run(const Options& options) {
         j2_integral_wire_nm = update_bounded_hold_integral(
             hold_integral_states[1], true,
             !lease_safe_hold_active && !control_command.recovery &&
+                thermal_derating_factor >= 1.0 - 1e-12 &&
                 j2_integral_learning_phase &&
                 std::all_of(
                     motors.begin(), motors.end(),
@@ -5437,7 +7290,7 @@ int run(const Options& options) {
         J2GovernedReference governed = govern_j2_reference(
             motors, q_measured, dq_measured, q_command[1], dq_command[1],
             j2_effective_kp, j2_effective_kd,
-            control_command.feedforward_nm[1] + j2_integral_wire_nm,
+            applied_gravity_feedforward_nm[1] + j2_integral_wire_nm,
             predicted_work_limit, predicted_pd_limit);
         bool internal_fallback = false;
         if (!governed.feasible) {
@@ -5449,13 +7302,20 @@ int run(const Options& options) {
           governed = govern_j2_reference(
               motors, q_measured, dq_measured, q_command[1], dq_command[1],
               j2_effective_kp, j2_effective_kd,
-              control_command.feedforward_nm[1] + j2_integral_wire_nm,
+              applied_gravity_feedforward_nm[1] + j2_integral_wire_nm,
               predicted_work_limit, predicted_pd_limit);
           internal_fallback = true;
         }
         if (governed.feasible) {
-          j2_wire_q_command = governed.q;
-          j2_wire_dq_command = governed.dq;
+          const bool exact_recipe = effective_mode == "position" &&
+              control_command.quintic.present;
+          // alpha==1 authorizes the original signed planner sample. Avoid
+          // rebuilding it as measured + (target - measured), which can differ
+          // from the hashed target by one floating-point rounding step.
+          j2_wire_q_command = exact_recipe && governed.alpha == 1.0
+              ? q_command[1] : governed.q;
+          j2_wire_dq_command = exact_recipe && governed.alpha == 1.0
+              ? dq_command[1] : governed.dq;
         } else {
           // Valid, synchronized feedback should make the measured common
           // state feasible. Keep FOC and the measured state if an internal
@@ -5469,8 +7329,11 @@ int run(const Options& options) {
           j2_wire_dq_command = dq_measured;
           internal_fallback = true;
         }
+        // An exact v1.3 recipe is immutable. Even a sub-nanoradian governor
+        // interpolation changes the signed q/dq sample covered by the
+        // preview hash, so there is deliberately no epsilon here.
         const bool limited = internal_fallback ||
-            !governed.feasible || governed.alpha < 1.0 - 1e-9;
+            !governed.feasible || governed.alpha != 1.0;
         if (limited && !j2_governor_limited) {
           std::cerr << "J2_GOVERNOR_LIMITED"
                     << " alpha=" << governed.alpha
@@ -5499,13 +7362,41 @@ int run(const Options& options) {
       }
     }
 
+    std::array<bool, 6> software_saturation_joint_mask{};
+    if (effective_mode == "position") {
+      if (options.bus == "j2") {
+        software_saturation_joint_mask[1] =
+            control_command.active_joint_mask[1] &&
+            control_command.moving_joint_mask[1] && j2_governor_limited;
+      } else {
+        for (const auto& motor : motors) {
+          const auto joint = static_cast<std::size_t>(motor.joint_index);
+          software_saturation_joint_mask[joint] =
+              control_command.active_joint_mask[joint] &&
+              control_command.moving_joint_mask[joint] &&
+              aux_governor_limited[joint];
+        }
+      }
+    }
+    bool software_saturation_observed_this_cycle = std::any_of(
+        software_saturation_joint_mask.begin(),
+        software_saturation_joint_mask.end(),
+        [](bool saturated) { return saturated; });
+    bool no_progress_observation_valid = false;
+    double no_progress_position_error_rad = 0.0;
     bool any_foc_sent = false;
     bool lease_safe_hold_abort_pending = false;
     std::string lease_safe_hold_abort_reason;
     bool motor_domain_brake_this_cycle =
+        thermal_interlock.fault_latched ||
+        no_progress_watchdog.fault_latched ||
         owned_domain_feedback_requires_brake(motors);
-    std::string motor_domain_brake_reason =
-        motor_domain_brake_this_cycle ? "PREVIOUS_MOTOR_FEEDBACK_UNHEALTHY" : "";
+    std::string motor_domain_brake_reason = thermal_interlock.fault_latched
+        ? "THERMAL_INTERLOCK_LATCHED"
+        : no_progress_watchdog.fault_latched
+              ? no_progress_watchdog.trip_reason
+        : motor_domain_brake_this_cycle
+              ? "PREVIOUS_MOTOR_FEEDBACK_UNHEALTHY" : "";
     if (options.bus != "j2") {
       for (const auto& motor : motors) {
         const std::size_t joint =
@@ -5529,7 +7420,9 @@ int run(const Options& options) {
         hold_integral_wire_nm[joint] = update_bounded_hold_integral(
             hold_integral_states[joint], integral_active,
             integral_active && !lease_safe_hold_active &&
-                !control_command.recovery && integral_learning_phase &&
+                !control_command.recovery &&
+                thermal_derating_factor >= 1.0 - 1e-12 &&
+                integral_learning_phase &&
                 motor.consecutive_invalid == 0,
             q_command[joint] - measured_q, measured_dq,
             kHoldIntegralRotorHardNm[joint],
@@ -5538,21 +7431,27 @@ int run(const Options& options) {
             kAuxIntegralDeadband, kAuxIntegralDwellFrames);
         if (integral_active) {
           const double effective_kp = std::min(
-              control_command.kp[joint], motor.kp_limit);
+              thermally_derated_command.kp[joint], motor.kp_limit);
           const double effective_kd = std::min(
-              control_command.kd[joint], motor.kd_limit);
+              thermally_derated_command.kd[joint], motor.kd_limit);
           const SingleMotorGovernedReference governed =
               govern_single_motor_reference(
                   motor, measured_q, measured_dq,
                   q_command[joint], dq_command[joint],
                   effective_kp, effective_kd,
-                  control_command.feedforward_nm[joint] +
+                  applied_gravity_feedforward_nm[joint] +
                       hold_integral_wire_nm[joint],
                   kAuxPredictedRotorWorkNm[joint],
                   kAuxPredictedRotorPdHardNm[joint]);
           if (governed.feasible) {
-            aux_wire_q_command[joint] = governed.q;
-            aux_wire_dq_command[joint] = governed.dq;
+            const bool exact_recipe = effective_mode == "position" &&
+                control_command.quintic.present;
+            aux_wire_q_command[joint] =
+                exact_recipe && governed.alpha == 1.0
+                ? q_command[joint] : governed.q;
+            aux_wire_dq_command[joint] =
+                exact_recipe && governed.alpha == 1.0
+                ? dq_command[joint] : governed.dq;
           } else {
             // Arithmetic fallback is still FOC: preserve the immutable raw
             // planner endpoint and learned bias, but make only this wire
@@ -5560,8 +7459,10 @@ int run(const Options& options) {
             aux_wire_q_command[joint] = measured_q;
             aux_wire_dq_command[joint] = measured_dq;
           }
+          // Preserve the exact previewed q/dq sample at the policy boundary:
+          // every non-unity interpolation aborts and requires a new preview.
           const bool limited =
-              !governed.feasible || governed.alpha < 1.0 - 1e-9;
+              !governed.feasible || governed.alpha != 1.0;
           if (limited && !aux_governor_limited[joint]) {
             std::cerr << "AUX_GOVERNOR_LIMITED"
                       << " joint=J" << joint + 1U
@@ -5580,6 +7481,54 @@ int run(const Options& options) {
         }
       }
     }
+    if (options.bus != "j2") {
+      for (const auto& motor : motors) {
+        const auto joint = static_cast<std::size_t>(motor.joint_index);
+        software_saturation_joint_mask[joint] =
+            control_command.active_joint_mask[joint] &&
+            control_command.moving_joint_mask[joint] &&
+            aux_governor_limited[joint];
+      }
+      software_saturation_observed_this_cycle = std::any_of(
+          software_saturation_joint_mask.begin(),
+          software_saturation_joint_mask.end(),
+          [](bool saturated) { return saturated; });
+    }
+    bool exact_load_governor_abort_latched = false;
+    if (effective_mode == "position" && control_command.quintic.present &&
+        software_saturation_observed_this_cycle) {
+      double exact_governor_position_error_rad = 0.0;
+      (void)maximum_moving_owned_position_error(
+          control_command, motors, software_saturation_joint_mask,
+          exact_governor_position_error_rad);
+      reset_no_progress_observation(no_progress_watchdog);
+      no_progress_position_error_rad = exact_governor_position_error_rad;
+      exact_load_governor_abort_latched = latch_position_safety_watchdog(
+          no_progress_watchdog, exact_governor_position_error_rad,
+          "EXACT_TRAJECTORY_LOAD_GOVERNOR_ABORT",
+          control_command.activation_epoch,
+          command_safety.minimum_activation_epoch,
+          command_safety.highest_rejected_active_epoch);
+      if (exact_load_governor_abort_latched) {
+        command_safety.minimum_activation_epoch = std::max(
+            command_safety.minimum_activation_epoch,
+            no_progress_watchdog.minimum_rearm_epoch);
+        motor_domain_brake_this_cycle = true;
+        motor_domain_brake_reason = no_progress_watchdog.trip_reason;
+        effective_mode = "brake";
+        prior_external_hold_confirmed = false;
+        std::cerr << "V13_LOAD_GOVERNOR_TRAJECTORY_ABORT"
+                  << " bus=" << options.bus
+                  << " activation_epoch="
+                  << control_command.activation_epoch
+                  << " position_error_rad="
+                  << exact_governor_position_error_rad
+                  << " minimum_epoch="
+                  << no_progress_watchdog.minimum_rearm_epoch
+                  << " policy=REPREVIEW_REQUIRED"
+                  << std::endl;
+      }
+    }
     std::size_t motor_runtime_index = 0;
     for (auto& motor : motors) {
       int send_mode = kBrakeMode;
@@ -5587,7 +7536,9 @@ int run(const Options& options) {
       const bool active_allowed = !options.brake_only &&
           (!active_power_session || j2_startup_verified) &&
           motor.reference_ready && motor.valid &&
-          !motor.fault_latched && !motor_domain_brake_this_cycle &&
+          !motor.fault_latched && !thermal_interlock.fault_latched &&
+          !no_progress_watchdog.fault_latched &&
+          !motor_domain_brake_this_cycle &&
           !(options.bus == "j2" && j2_sync_fault) && !domain_fault && j2_pair_ready &&
           !g_stop.load() && !lease_safe_hold_abort_pending &&
           control_authority_available &&
@@ -5605,19 +7556,20 @@ int run(const Options& options) {
         dq = motor.sign * kGear * wire_dq;
         kp = options.bus == "j2" ? j2_effective_kp
                                   : std::min(
-                                        control_command.kp[joint],
+                                        thermally_derated_command.kp[joint],
                                         motor.kp_limit);
         kd = options.bus == "j2" ? j2_effective_kd
                                   : std::min(
-                                        control_command.kd[joint],
+                                        thermally_derated_command.kd[joint],
                                         motor.kd_limit);
       }
       const std::size_t joint = static_cast<std::size_t>(motor.joint_index);
       const double tau = send_mode == kFocMode
-          ? motor.sign * (control_command.feedforward_nm[joint] +
+          ? motor.sign * (applied_gravity_feedforward_nm[joint] +
               hold_integral_wire_nm[joint])
           : 0.0;
       send_mode = enforce_brake_only_wire_mode(options.brake_only, send_mode);
+      motor.last_tau_cmd_rotor_nm = send_mode == kFocMode ? tau : 0.0;
       MotorCmd packet = make_command(motor.id, send_mode, q, dq, kp, kd, tau);
       any_foc_sent = any_foc_sent || send_mode == kFocMode;
       const Feedback feedback = transact(
@@ -5680,11 +7632,61 @@ int run(const Options& options) {
         // non-thermal latch; temperature has its own live BRAKE interlock.
         if (feedback.data.merror != 0 || feedback.data.temp < 0)
           motor.fault_latched = true;
+        const bool newly_latched = observe_raw_temperature_thermal_trip(
+            thermal_interlock, feedback.data.temp,
+            control_command.activation_epoch,
+            command_safety.minimum_activation_epoch,
+            command_safety.highest_rejected_active_epoch);
+        if (feedback.data.temp >= g_thermal_policy.thermal_stop_c) {
+          command_safety.minimum_activation_epoch = std::max(
+              command_safety.minimum_activation_epoch,
+              thermal_interlock.minimum_rearm_epoch);
+          publish_thermal_latch_to_motors(motors, true);
+          motor_domain_brake_this_cycle = true;
+          motor_domain_brake_reason = "MOTOR_RAW_TEMPERATURE_THERMAL_LATCH";
+          effective_mode = "brake";
+          prior_external_hold_confirmed = false;
+          position_tracking.fill(false);
+          position_tracking_epoch.fill(0U);
+          position_endpoint_reached.fill(false);
+          position_arrived_once.fill(false);
+          position_arrival_overdue.fill(false);
+          position_arrival_qualifying_frames.fill(0);
+          position_arrival_window_started_at.fill(Clock::time_point{});
+          dq_command.fill(0.0);
+          for (auto& state : hold_integral_states)
+            reset_bounded_hold_integral(state);
+          hold_integral_wire_nm.fill(0.0);
+          j2_integral_wire_nm = 0.0;
+          j2_gain_kp = 0.0;
+          j2_gain_kd = 0.0;
+          j2_gain_ready = false;
+          j2_governor_limited = false;
+          aux_governor_limited.fill(false);
+          if (options.bus == "j2") j2_pair_ready = false;
+          if (lease_safe_hold_active) {
+            if (!lease_safe_hold_abort_pending)
+              lease_safe_hold_abort_reason = "THERMAL_INTERLOCK";
+            lease_safe_hold_abort_pending = true;
+          }
+          if (newly_latched) {
+            std::cerr << "THERMAL_TRIP"
+                      << " bus=" << options.bus
+                      << " motor=" << motor.name
+                      << " raw_temperature_c=" << feedback.data.temp
+                      << " trip_epoch="
+                      << thermal_interlock.trip_activation_epoch
+                      << " minimum_epoch="
+                      << thermal_interlock.minimum_rearm_epoch
+                      << std::endl;
+          }
+        }
       }
       if (feedback.continuity_valid) {
         motor.last_q = feedback.data.q;
         motor.last_dq = feedback.data.dq;
         motor.last_tau = feedback.data.tau;
+        motor.last_valid_feedback_monotonic_ns = monotonic_ns();
         motor.unwrapped = motor.unwrap.update(motor.last_q);
         if (active_power_session && !j2_startup_verified) {
           if (send_mode != kBrakeMode)
@@ -5789,7 +7791,7 @@ int run(const Options& options) {
             ? "MOTOR_COMMUNICATION_OR_RETURNED_MODE"
             : motor.merror != 0 ? "MOTOR_DRIVE_ERROR"
             : (motor.temperature < 0 ||
-               motor.temperature >= kTemperatureLimit)
+               motor.temperature >= g_thermal_policy.thermal_stop_c)
                   ? "MOTOR_TEMPERATURE" : "MOTOR_FAULT_LATCH";
         if (!motor_domain_brake_this_cycle)
           motor_domain_brake_reason = fault_reason;
@@ -5802,6 +7804,20 @@ int run(const Options& options) {
       }
       if (options.bus == "j2" && motor.fault_latched) j2_pair_ready = false;
       ++motor_runtime_index;
+    }
+
+    const bool thermal_cooldown_frame_qualified =
+        all_domain_motors_thermal_cooldown_qualified(motors);
+    if (observe_thermal_cooldown_frame(
+            thermal_interlock, thermal_cooldown_frame_qualified,
+            Clock::now())) {
+      std::cerr << "THERMAL_COOLDOWN_READY"
+                << " bus=" << options.bus
+                << " valid_brake_frames="
+                << thermal_interlock.cooldown_frames
+                << " minimum_seconds="
+                << g_thermal_policy.cooldown_seconds
+                << std::endl;
     }
 
     if (active_power_session && j2_power_continuity_lost)
@@ -5866,6 +7882,50 @@ int run(const Options& options) {
             })) {
       latch_domain_fault("OWNED_MOTOR_INVALID_OR_LATCHED");
     }
+    auto transact_and_commit_brake = [&](MotorRuntime& motor) {
+      motor.last_tau_cmd_rotor_nm = 0.0;
+      MotorCmd brake = make_command(
+          motor.id, kBrakeMode, 0.0, 0.0, 0.0, 0.0);
+      const Feedback brake_feedback = transact(
+          serial, brake, motor.id, kBrakeMode, tx_audit);
+      const bool sustained_invalid = observe_feedback_frame_validity(
+          motor, brake_feedback.continuity_valid,
+          invalid_feedback_limit_for_bus(options.bus));
+      if (active_power_session && sustained_invalid)
+        j2_power_continuity_lost = true;
+      if (brake_feedback.identity_ok) {
+        motor.temperature = brake_feedback.data.temp;
+        motor.merror = brake_feedback.data.merror;
+        motor.returned_mode = brake_feedback.data.mode;
+        if (brake_feedback.data.merror != 0 ||
+            brake_feedback.data.temp < 0)
+          motor.fault_latched = true;
+        if (observe_raw_temperature_thermal_trip(
+                thermal_interlock, brake_feedback.data.temp,
+                control_command.activation_epoch,
+                command_safety.minimum_activation_epoch,
+                command_safety.highest_rejected_active_epoch)) {
+          command_safety.minimum_activation_epoch = std::max(
+              command_safety.minimum_activation_epoch,
+              thermal_interlock.minimum_rearm_epoch);
+          std::cerr << "THERMAL_TRIP_ON_BRAKE_FEEDBACK"
+                    << " bus=" << options.bus
+                    << " motor=" << motor.name
+                    << " raw_temperature_c="
+                    << brake_feedback.data.temp
+                    << std::endl;
+        }
+      }
+      if (brake_feedback.continuity_valid) {
+        motor.last_q = brake_feedback.data.q;
+        motor.last_dq = brake_feedback.data.dq;
+        motor.last_tau = brake_feedback.data.tau;
+        motor.last_valid_feedback_monotonic_ns = monotonic_ns();
+        motor.unwrapped = motor.unwrap.update(motor.last_q);
+      }
+      publish_thermal_latch_to_motors(
+          motors, thermal_interlock.fault_latched);
+    };
     if (motor_domain_brake_this_cycle) {
       if (any_foc_sent)
         record_domain_brake_event(
@@ -5873,11 +7933,7 @@ int run(const Options& options) {
             domain_brake_log, Clock::now());
       effective_mode = "brake";
       if (options.bus == "j2") j2_pair_ready = false;
-      for (auto& motor : motors) {
-        MotorCmd brake = make_command(
-            motor.id, kBrakeMode, 0.0, 0.0, 0.0, 0.0);
-        (void)transact(serial, brake, motor.id, kBrakeMode, tx_audit);
-      }
+      for (auto& motor : motors) transact_and_commit_brake(motor);
     }
     if (options.bus == "j2" && motors.size() == 2U &&
         motors[0].reference_ready && motors[1].reference_ready &&
@@ -5916,10 +7972,7 @@ int run(const Options& options) {
                   << std::endl;
       }
       if (j2_sync_fault) {
-        for (auto& motor : motors) {
-          MotorCmd brake = make_command(motor.id, kBrakeMode, 0.0, 0.0, 0.0, 0.0);
-          (void)transact(serial, brake, motor.id, kBrakeMode, tx_audit);
-        }
+        for (auto& motor : motors) transact_and_commit_brake(motor);
       }
       const double q_common = 0.5 * (q_a + q_b);
       if (j2_previous_common_ready) {
@@ -5938,21 +7991,30 @@ int run(const Options& options) {
       const bool torque_feedback_saturated = any_foc_sent &&
           (std::abs(motors[0].last_tau) >= feedback_torque_limit ||
            std::abs(motors[1].last_tau) >= feedback_torque_limit);
-      // A finite torque feedback at the configured working clamp means the
-      // joint is carrying load; it is not a sensor/drive failure.  Keep the
-      // already-governed FOC position loop active and report the saturation
-      // transition without latching BRAKE.  Non-finite feedback, merror,
-      // temperature, communication and true J2 sync faults still fail closed.
+      // This is a configured software working-clamp observation, explicitly
+      // not continuous-torque authority.  A single saturated sample is not a
+      // drive failure; sustained saturation plus large position error and no
+      // progress is consumed by the domain watchdog below.
+      if (effective_mode == "position" &&
+          control_command.active_joint_mask[1] &&
+          control_command.moving_joint_mask[1]) {
+        software_saturation_joint_mask[1] =
+            software_saturation_joint_mask[1] || torque_feedback_saturated;
+        software_saturation_observed_this_cycle =
+            software_saturation_observed_this_cycle ||
+            torque_feedback_saturated;
+      }
       if (torque_feedback_saturated &&
           !j2_torque_feedback_saturated_reported) {
-        std::cerr << "J2_TORQUE_FEEDBACK_SATURATED_KEEPING_FOC"
-                  << " tau_a_nm=" << motors[0].last_tau
-                  << " tau_b_nm=" << motors[1].last_tau
-                  << " limit_nm=" << feedback_torque_limit
+        std::cerr << "J2_TORQUE_FEEDBACK_SOFTWARE_SATURATION_OBSERVED"
+                  << " tau_a_rotor_nm=" << motors[0].last_tau
+                  << " tau_b_rotor_nm=" << motors[1].last_tau
+                  << " software_limit_rotor_nm=" << feedback_torque_limit
+                  << " authority=" << kLoadLimitWatchdogAuthority
                   << std::endl;
       } else if (!torque_feedback_saturated &&
                  j2_torque_feedback_saturated_reported) {
-        std::cerr << "J2_TORQUE_FEEDBACK_SATURATION_RECOVERED"
+        std::cerr << "J2_TORQUE_FEEDBACK_SOFTWARE_SATURATION_RECOVERED"
                   << std::endl;
       }
       j2_torque_feedback_saturated_reported = torque_feedback_saturated;
@@ -5995,33 +8057,53 @@ int run(const Options& options) {
       for (const auto& motor : motors) owned_joints.insert(motor.joint_index);
       for (const int joint : owned_joints) {
         const std::size_t index = static_cast<std::size_t>(joint);
+        const auto arrival_now = Clock::now();
         if (!position_tracking[index] ||
             !control_command.active_joint_mask[index]) {
           position_endpoint_reached[index] = false;
           position_arrived_once[index] = false;
           position_arrival_overdue[index] = false;
+          position_arrival_qualifying_frames[index] = 0;
+          position_arrival_window_started_at[index] = Clock::time_point{};
           continue;
         }
-        if (!position_arrived_once[index]) {
-          double actual = 0.0;
-          if (healthy_logical_position_for_joint(motors, joint, actual) &&
-              std::abs(actual - control_command.targets[index]) <=
-                  kArrivalTolerance) {
-            if (position_arrival_overdue[index])
-              std::cerr << "POSITION_ARRIVAL_RECOVERED"
-                        << " bus=" << options.bus
-                        << " joint=" << joint
-                        << std::endl;
-            position_arrived_once[index] = true;
-            position_arrival_overdue[index] = false;
-          }
-        }
         const bool endpoint = profile_endpoint_phase[index];
-        if (endpoint && !position_endpoint_reached[index])
-          position_started_at[index] = Clock::now();
+        if (endpoint && !position_endpoint_reached[index]) {
+          position_started_at[index] = arrival_now;
+          position_arrived_once[index] = false;
+          position_arrival_qualifying_frames[index] = 0;
+          position_arrival_window_started_at[index] = Clock::time_point{};
+        }
         position_endpoint_reached[index] = endpoint;
+        double actual = 0.0;
+        const bool within_arrival_window =
+            healthy_logical_position_for_joint(motors, joint, actual) &&
+            std::abs(actual - control_command.targets[index]) <=
+                kArrivalTolerance;
+        const bool was_arrived = position_arrived_once[index];
+        const bool stable_arrival = observe_position_arrival_dwell(
+            endpoint, within_arrival_window, arrival_now,
+            position_arrival_qualifying_frames[index],
+            position_arrival_window_started_at[index],
+            position_arrived_once[index]);
+        if (was_arrived && !stable_arrival)
+          std::cerr << "POSITION_ARRIVAL_STABILITY_LOST"
+                    << " bus=" << options.bus
+                    << " joint=" << joint
+                    << std::endl;
+        if (stable_arrival && !was_arrived) {
+          if (position_arrival_overdue[index])
+            std::cerr << "POSITION_ARRIVAL_RECOVERED"
+                      << " bus=" << options.bus
+                      << " joint=" << joint
+                      << std::endl;
+          position_arrived_once[index] = true;
+          position_arrival_overdue[index] = false;
+        }
       }
     }
+    bool position_arrival_timeout_detected = false;
+    double position_arrival_timeout_error_rad = 0.0;
     if (effective_mode == "position" && options.bus == "j2" &&
         position_tracking[1] &&
         !position_arrived_once[1] &&
@@ -6031,13 +8113,16 @@ int run(const Options& options) {
           motors[0].reference_ready && motors[1].reference_ready) {
         const double q_a = -1.0 * (motors[0].unwrapped - motors[0].reference) / kGear;
         const double q_b = +1.0 * (motors[1].unwrapped - motors[1].reference) / kGear;
-        if (std::abs(0.5 * (q_a + q_b) -
-                     control_command.targets[1]) > kArrivalTolerance &&
-            !position_arrival_overdue[1]) {
+        const double arrival_error = std::abs(
+            0.5 * (q_a + q_b) - control_command.targets[1]);
+        if (!position_arrival_overdue[1]) {
           std::cerr << "POSITION_ARRIVAL_OVERDUE"
                     << " bus=j2 joint=1"
+                    << " position_error_rad=" << arrival_error
                     << std::endl;
           position_arrival_overdue[1] = true;
+          position_arrival_timeout_detected = true;
+          position_arrival_timeout_error_rad = arrival_error;
         }
     } else if (effective_mode == "position" && options.bus != "j2") {
       for (auto& motor : motors) {
@@ -6049,26 +8134,119 @@ int run(const Options& options) {
             !motor.reference_ready || motor.fault_latched)
           continue;
         const double logical = motor.sign * (motor.unwrapped - motor.reference) / kGear;
-        if (std::abs(logical -
-                     control_command.targets[index]) > kArrivalTolerance &&
-            !position_arrival_overdue[index]) {
+        const double arrival_error = std::abs(
+            logical - control_command.targets[index]);
+        if (!position_arrival_overdue[index]) {
           std::cerr << "POSITION_ARRIVAL_OVERDUE"
                     << " bus=" << options.bus
                     << " joint=" << motor.joint_index
                     << " motor=" << motor.name
+                    << " position_error_rad=" << arrival_error
                     << std::endl;
           position_arrival_overdue[index] = true;
+          position_arrival_timeout_detected = true;
+          position_arrival_timeout_error_rad = std::max(
+              position_arrival_timeout_error_rad, arrival_error);
         }
       }
     }
+    bool position_arrival_timeout_latched = false;
+    if (position_arrival_timeout_detected) {
+      reset_no_progress_observation(no_progress_watchdog);
+      no_progress_position_error_rad = position_arrival_timeout_error_rad;
+      position_arrival_timeout_latched = latch_position_safety_watchdog(
+          no_progress_watchdog, position_arrival_timeout_error_rad,
+          "POSITION_ARRIVAL_TIMEOUT", control_command.activation_epoch,
+          command_safety.minimum_activation_epoch,
+          command_safety.highest_rejected_active_epoch);
+    }
+    no_progress_observation_valid = effective_mode == "position" &&
+        any_foc_sent && !domain_fault && !j2_sync_fault &&
+        !thermal_interlock.fault_latched &&
+        !no_progress_watchdog.fault_latched &&
+        (!control_command.quintic.present ||
+         (trajectory_sample_valid &&
+          std::string(trajectory_sample.state) != "PREPARED")) &&
+        selected_owned_motors_confirmed_foc(control_command, motors) &&
+        maximum_moving_owned_position_error(
+            control_command, motors, software_saturation_joint_mask,
+            no_progress_position_error_rad);
+    const bool no_progress_tripped_this_cycle =
+        exact_load_governor_abort_latched ||
+        position_arrival_timeout_latched || observe_no_progress_watchdog(
+            no_progress_watchdog, no_progress_observation_valid,
+            no_progress_position_error_rad,
+            software_saturation_observed_this_cycle, Clock::now(),
+            control_command.activation_epoch,
+            command_safety.minimum_activation_epoch,
+            command_safety.highest_rejected_active_epoch);
+    if (no_progress_tripped_this_cycle) {
+      command_safety.minimum_activation_epoch = std::max(
+          command_safety.minimum_activation_epoch,
+          no_progress_watchdog.minimum_rearm_epoch);
+      motor_domain_brake_this_cycle = true;
+      motor_domain_brake_reason = no_progress_watchdog.trip_reason;
+      record_domain_brake_event(
+          options.bus, motor_domain_brake_reason,
+          domain_brake_log, Clock::now());
+      effective_mode = "brake";
+      prior_external_hold_confirmed = false;
+      position_tracking.fill(false);
+      position_tracking_epoch.fill(0U);
+      position_endpoint_reached.fill(false);
+      position_arrived_once.fill(false);
+      position_arrival_overdue.fill(false);
+      position_arrival_qualifying_frames.fill(0);
+      position_arrival_window_started_at.fill(Clock::time_point{});
+      dq_command.fill(0.0);
+      for (auto& state : hold_integral_states)
+        reset_bounded_hold_integral(state);
+      hold_integral_wire_nm.fill(0.0);
+      j2_integral_wire_nm = 0.0;
+      j2_gain_kp = 0.0;
+      j2_gain_kd = 0.0;
+      j2_gain_ready = false;
+      j2_governor_limited = false;
+      aux_governor_limited.fill(false);
+      if (options.bus == "j2") j2_pair_ready = false;
+      if (lease_safe_hold_active) {
+        if (!lease_safe_hold_abort_pending)
+          lease_safe_hold_abort_reason = no_progress_watchdog.trip_reason;
+        lease_safe_hold_abort_pending = true;
+      }
+      std::cerr << "POSITION_SAFETY_LATCH"
+                << " bus=" << options.bus
+                << " reason=" << no_progress_watchdog.trip_reason
+                << " position_error_rad="
+                << no_progress_position_error_rad
+                << " baseline_error_rad="
+                << no_progress_watchdog.window_baseline_error_rad
+                << " qualifying_frames="
+                << no_progress_watchdog.qualifying_frames
+                << " window_seconds=" << kNoProgressWindowSeconds
+                << " activation_epoch="
+                << no_progress_watchdog.trip_activation_epoch
+                << " minimum_epoch="
+                << no_progress_watchdog.minimum_rearm_epoch
+                << " authority=" << kLoadLimitWatchdogAuthority
+                << std::endl;
+      for (auto& motor : motors) transact_and_commit_brake(motor);
+    }
+
     bool lease_safe_hold_aborted_this_cycle = false;
     if (lease_safe_hold_active &&
         (lease_safe_hold_abort_pending || domain_fault ||
+         thermal_interlock.fault_latched ||
+         no_progress_watchdog.fault_latched ||
          (options.bus == "j2" && j2_sync_fault) || g_stop.load() ||
          !all_motor_feedback_healthy(motors))) {
       if (lease_safe_hold_abort_reason.empty()) {
         lease_safe_hold_abort_reason = domain_fault
             ? "DOMAIN_FAULT"
+            : thermal_interlock.fault_latched
+                  ? "THERMAL_INTERLOCK"
+            : no_progress_watchdog.fault_latched
+                  ? no_progress_watchdog.trip_reason
             : (options.bus == "j2" && j2_sync_fault)
                   ? "J2_SYNC_FAULT"
                   : g_stop.load() ? "STOP_REQUESTED" : "FEEDBACK_UNHEALTHY";
@@ -6092,11 +8270,7 @@ int run(const Options& options) {
       lease_safe_hold_active = false;
       lease_safe_hold_aborted_this_cycle = true;
       effective_mode = "brake";
-      for (auto& motor : motors) {
-        MotorCmd brake = make_command(
-            motor.id, kBrakeMode, 0.0, 0.0, 0.0, 0.0);
-        (void)transact(serial, brake, motor.id, kBrakeMode, tx_audit);
-      }
+      for (auto& motor : motors) transact_and_commit_brake(motor);
     }
 
     const bool active_command_blocked =
@@ -6165,10 +8339,40 @@ int run(const Options& options) {
         std::cerr << std::endl;
         domain_fault_reported = true;
       }
-      for (auto& motor : motors) {
-        MotorCmd brake = make_command(motor.id, kBrakeMode, 0.0, 0.0, 0.0, 0.0);
-        (void)transact(serial, brake, motor.id, kBrakeMode, tx_audit);
-      }
+      for (auto& motor : motors) transact_and_commit_brake(motor);
+    }
+
+    if (request_thermal_rearm_for_next_cycle(
+            thermal_interlock, command_lease_fresh,
+            command_requests_active_owned_joint && !domain_fault &&
+                !(options.bus == "j2" && j2_sync_fault) && !g_stop.load(),
+            command.activation_epoch,
+            command_safety.highest_rejected_active_epoch)) {
+      // The latch deliberately remains set for this complete decision cycle.
+      // apply_pending_thermal_rearm_at_cycle_start() is the only clearing edge.
+      std::cerr << "THERMAL_REARM_PENDING_NEXT_CYCLE"
+                << " bus=" << options.bus
+                << " activation_epoch=" << command.activation_epoch
+                << " minimum_epoch="
+                << thermal_interlock.minimum_rearm_epoch
+                << std::endl;
+    }
+    if (request_no_progress_rearm_for_next_cycle(
+            no_progress_watchdog, command_lease_fresh,
+            command_requests_active_owned_joint && !domain_fault &&
+                !(options.bus == "j2" && j2_sync_fault) &&
+                !thermal_interlock.fault_latched && !g_stop.load(),
+            all_domain_motors_valid_brake_for_rearm(motors),
+            command.activation_epoch,
+            command_safety.highest_rejected_active_epoch)) {
+      // The release/higher-epoch decision cycle stays in domain BRAKE.  Only
+      // the next loop's apply_pending_no_progress_rearm_at_cycle_start clears.
+      std::cerr << "LOAD_LIMIT_NO_PROGRESS_REARM_PENDING_NEXT_CYCLE"
+                << " bus=" << options.bus
+                << " activation_epoch=" << command.activation_epoch
+                << " minimum_epoch="
+                << no_progress_watchdog.minimum_rearm_epoch
+                << std::endl;
     }
 
     const std::uint64_t stamp = monotonic_ns();
@@ -6183,9 +8387,27 @@ int run(const Options& options) {
         (lease_safe_hold_aborted_this_cycle || domain_fault || j2_sync_fault ||
          (active_requested && !any_foc_sent))
             ? "brake" : effective_mode;
+    std::string reported_trajectory_state = "INACTIVE";
+    std::uint64_t reported_trajectory_sample_index = 0U;
+    if (control_command.quintic.present) {
+      const QuinticSampleClock feedback_sample = trajectory_sample_valid
+          ? trajectory_sample
+          : quintic_sample_clock(control_command.quintic, stamp);
+      if (reported_mode == "position" && trajectory_sample_valid) {
+        reported_trajectory_sample_index = feedback_sample.sample_index;
+        reported_trajectory_state = feedback_sample.state;
+      }
+    }
     const std::string payload = feedback_payload(
         motors, stamp, reported_mode, j2_sync_fault, domain_fault,
-        lease_safe_hold_active && reported_mode == "hold");
+        lease_safe_hold_active && reported_mode == "hold", control_command,
+        applied_gravity_feedforward_nm,
+        reported_trajectory_state, reported_trajectory_sample_index,
+        thermal_interlock,
+        no_progress_watchdog, no_progress_observation_valid,
+        no_progress_position_error_rad,
+        software_saturation_observed_this_cycle,
+        thermal_derating_factor);
     (void)::sendto(feedback_socket, payload.data(), payload.size(), 0,
                    reinterpret_cast<const sockaddr*>(&feedback_address),
                    sizeof(feedback_address));
@@ -6199,6 +8421,8 @@ int run(const Options& options) {
         !lease_safe_hold_active && !lease_safe_hold_aborted_this_cycle &&
         command_lease_fresh && is_position_holding_mode(effective_mode) &&
         any_foc_sent && !domain_fault && !j2_sync_fault &&
+        !thermal_interlock.fault_latched &&
+        !no_progress_watchdog.fault_latched &&
         all_motor_feedback_healthy(motors) &&
         selected_owned_motors_confirmed_foc(command, motors);
     if (external_hold_confirmed_this_cycle) {
@@ -6206,6 +8430,8 @@ int run(const Options& options) {
       prior_external_hold_confirmed = true;
     } else if (lease_safe_hold_active || lease_safe_hold_aborted_this_cycle ||
                domain_fault || j2_sync_fault ||
+               thermal_interlock.fault_latched ||
+               no_progress_watchdog.fault_latched ||
                fresh_command_explicitly_releases) {
       prior_external_hold_confirmed = false;
     }

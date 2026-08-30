@@ -152,6 +152,8 @@ class GoAuxBrakeRawCaptureTests(unittest.TestCase):
         return [
             "--worker", "/tmp/worker",
             "--expected-worker-sha256", "a" * 64,
+            "--thermal-config", "/tmp/thermal_limits.yaml",
+            "--expected-thermal-config-sha256", "b" * 64,
             "--output", "/tmp/out.json",
             "--confirm", MODULE.CONFIRM_GATE,
             "--physical-confirmation", MODULE.PHYSICAL_GATE,
@@ -186,6 +188,8 @@ class GoAuxBrakeRawCaptureTests(unittest.TestCase):
             args = argparse.Namespace(
                 worker=worker,
                 expected_worker_sha256=hashlib.sha256(worker.read_bytes()).hexdigest(),
+                thermal_config=Path("/tmp/thermal_limits.yaml"),
+                expected_thermal_config_sha256="b" * 64,
                 feedback_port=15300,
                 target_packets=500,
                 maximum_runtime_s=8.0,
@@ -454,6 +458,8 @@ class GoAuxBrakeRawCaptureTests(unittest.TestCase):
                     bus="j345",
                     target_packets=500,
                     maximum_runtime_s=8.0,
+                    thermal_config=Path("/tmp/thermal_limits.yaml"),
+                    expected_thermal_config_sha256="b" * 64,
                 )
         diagnostic = caught.exception.diagnostic
         self.assertIn("feedback collection failed", str(caught.exception))
@@ -491,6 +497,8 @@ class GoAuxBrakeRawCaptureTests(unittest.TestCase):
                     bus="j345",
                     target_packets=500,
                     maximum_runtime_s=8.0,
+                    thermal_config=Path("/tmp/thermal_limits.yaml"),
+                    expected_thermal_config_sha256="b" * 64,
                 )
         diagnostic = caught.exception.diagnostic
         self.assertIn("local feedback gap", str(caught.exception))

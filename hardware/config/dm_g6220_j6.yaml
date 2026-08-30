@@ -51,6 +51,25 @@ control:
   preferred_mode: "POS_VEL"
   preferred_mode_authority: "V15_21E"
 
+thermal_management:
+  policy_revision: "V15.31A"
+  shared_limits_file: "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware/config/thermal_limits.yaml"
+  enforceable_output: "POS_VEL speed, acceleration and endpoint-restore caps"
+  derating: "linear from configured 55C start to a 0.10 active floor below configured 60C stop"
+  stop_behavior: "latched DISABLED; worker and feedback remain online"
+  cooldown: "valid DISABLED feedback below configured rearm temperature for at least 30 seconds"
+  operator_rearm: "explicit J6 domain release followed by a fresh higher activation_epoch; applied on next cycle"
+  automatic_rearm: false
+
+no_progress_management:
+  policy_revision: "V15.31A"
+  authority: "J6_TARGET_TIMEOUT_POSITION_ERROR_V1"
+  timeout_seconds: 90.0
+  minimum_error_improvement_deg: 0.05
+  behavior: "cancel active POSITION, latch DISABLED, keep worker online"
+  operator_rearm: "explicit J6 domain release followed by a fresh higher activation_epoch; applied on next cycle"
+  automatic_rearm: false
+
 calibration:
   protocol_to_ros_sign: -1
   sign_authority:

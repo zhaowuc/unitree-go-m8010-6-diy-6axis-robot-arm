@@ -25,6 +25,7 @@ setup(
         "console_scripts": [
             "whole_arm_state_node = go_m8010_arm_hardware.whole_arm_state_node:main",
             "whole_arm_mujoco_mirror = go_m8010_arm_hardware.mujoco_mirror_node:main",
+            "whole_arm_gravity_node = go_m8010_arm_hardware.whole_arm_gravity_node:main",
             "mock_motor_feedback = go_m8010_arm_hardware.mock_feedback_node:main",
         ]
     },
