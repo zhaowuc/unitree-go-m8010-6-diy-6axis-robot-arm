@@ -20,6 +20,9 @@ from .torque_semantics import GO_GEAR_RATIO
 
 REQUEST_SCHEMA = "go-m8010-planned-path-feasibility-request/1.0"
 PROOF_SCHEMA = "go-m8010-planned-load-thermal-feasibility/1.0"
+EMPIRICAL_PROOF_SCHEMA = (
+    "go-m8010-empirical-planned-load-thermal-feasibility/1.0"
+)
 TRAJECTORY_SCHEMA = "go-m8010-quintic-trajectory/1.0"
 RECIPE_SCHEMA = "go-m8010-segmented-quintic-recipe/1.0"
 QUINTIC_PROFILE = "quintic-rest-to-rest-v1"
@@ -775,6 +778,10 @@ def build_planned_path_proof(
     minimum_thermal_margin_c: Optional[float],
     temperature_blocker: str = "",
     evaluation_blocker: str = "",
+    empirical_validation_authoritative: bool = False,
+    empirical_rotor_limits_nm: Optional[Mapping[str, float]] = None,
+    empirical_envelope_id: Optional[str] = None,
+    empirical_envelope_sha256: Optional[str] = None,
 ) -> dict:
     """Combine immutable load envelope with fresh measured temperature authority."""
 
@@ -801,7 +808,30 @@ def build_planned_path_proof(
     load_result = "BLOCKED"
     load_blocker = evaluation_blocker
     if envelope is not None:
-        if not continuous_config_authoritative:
+        if empirical_validation_authoritative:
+            go_motors = ("J1", "J2A", "J2B", "J3", "J4", "J5")
+            if (
+                empirical_rotor_limits_nm is None
+                or set(empirical_rotor_limits_nm) != set(MOTOR_NAMES)
+                or gravity_maxima is None
+                or any(gravity_maxima[name] is None for name in go_motors)
+                or not isinstance(empirical_envelope_id, str)
+                or not isinstance(empirical_envelope_sha256, str)
+            ):
+                load_blocker = "EMPIRICAL_GRAVITY_AUTHORITY_INCOMPLETE"
+            else:
+                empirical_margins = {
+                    name: float(empirical_rotor_limits_nm[name])
+                    - float(gravity_maxima[name])
+                    for name in go_motors
+                }
+                minimum_load_margin = min(empirical_margins.values())
+                load_result = "PASS" if minimum_load_margin >= 0.0 else "FAIL"
+                load_blocker = (
+                    "" if load_result == "PASS"
+                    else "EMPIRICAL_MODEL_GRAVITY_HARD_LIMIT_EXCEEDED"
+                )
+        elif not continuous_config_authoritative:
             load_blocker = "CONTINUOUS_TORQUE_CONFIG_AUTHORITY_FALSE"
         elif not continuous_hardware_authoritative:
             load_blocker = "CONTINUOUS_TORQUE_HARDWARE_AUTHORITY_FALSE"
@@ -860,6 +890,9 @@ def build_planned_path_proof(
         temperature_margin_result = "PASS"
         if load_result != "PASS":
             thermal_blocker = "PLANNED_THERMAL_REQUIRES_LOAD_FEASIBILITY_PASS"
+        elif empirical_validation_authoritative:
+            thermal_result = "PASS"
+            thermal_blocker = ""
         elif minimum_predicted_continuous_margin is None:
             thermal_blocker = "PREDICTED_CONTINUOUS_THERMAL_MARGIN_UNAVAILABLE"
         elif minimum_predicted_continuous_margin <= 0.0:
@@ -885,7 +918,10 @@ def build_planned_path_proof(
         result = load_result = thermal_result = "NOT_EVALUATED"
         blocker_code = evaluation_blocker or "PLANNED_PATH_REQUEST_MISSING"
     return {
-        "schema": PROOF_SCHEMA,
+        "schema": (
+            EMPIRICAL_PROOF_SCHEMA
+            if empirical_validation_authoritative else PROOF_SCHEMA
+        ),
         "source": "whole_arm_gravity_node",
         "source_instance_id": source_instance_id,
         "sequence": sequence,
@@ -910,6 +946,21 @@ def build_planned_path_proof(
         "continuous_rotor_limits_authoritative": bool(
             continuous_config_authoritative and continuous_hardware_authoritative
         ),
+        "authority_class": (
+            "EMPIRICAL_VALIDATION_ENVELOPE"
+            if empirical_validation_authoritative
+            else "OFFICIAL_CONTINUOUS_RATING"
+        ),
+        "rating_classification": (
+            "NOT_OFFICIAL_CONTINUOUS_RATING"
+            if empirical_validation_authoritative
+            else "OFFICIAL_CONTINUOUS_RATING"
+        ),
+        "empirical_validation_authoritative": bool(
+            empirical_validation_authoritative
+        ),
+        "empirical_envelope_id": empirical_envelope_id,
+        "empirical_envelope_sha256": empirical_envelope_sha256,
         "temperature_limits_authoritative": temperature_limits_authoritative,
         "sample_count": (
             None if bound_request is None else bound_request.sample_count
@@ -921,9 +972,15 @@ def build_planned_path_proof(
             "MUJOCO_QFRC_BIAS_CONTINUOUS_PLUS_MJ_INVERSE_SHORT_PEAK_EVERY_SAMPLE"
         ),
         "thermal_evaluation_basis": (
-            "CURRENT_MEASURED_TEMPERATURE_TO_DERATING_THRESHOLD_PLUS_"
-            "ALL_SAMPLE_PREDICTED_LOAD_WITHIN_CONTINUOUS_RATING_"
-            "NO_HEAT_RISE_MODEL"
+            (
+                "CURRENT_MEASURED_TEMPERATURE_BELOW_EMPIRICAL_ENTRY_"
+                "MODEL_GRAVITY_WITHIN_SOFTWARE_HARD_LIMIT_"
+                "NO_CONTINUOUS_RATING_CLAIM"
+            ) if empirical_validation_authoritative else (
+                "CURRENT_MEASURED_TEMPERATURE_TO_DERATING_THRESHOLD_PLUS_"
+                "ALL_SAMPLE_PREDICTED_LOAD_WITHIN_CONTINUOUS_RATING_"
+                "NO_HEAT_RISE_MODEL"
+            )
         ),
         "maximum_abs_gravity_joint_torque_nm_by_joint": gravity_joint_maxima,
         "maximum_abs_gravity_rotor_torque_nm_by_motor": gravity_maxima,
@@ -931,6 +988,14 @@ def build_planned_path_proof(
         "continuous_rotor_torque_limit_nm_by_motor": (
             None if continuous_rotor_limits_nm is None
             else dict(continuous_rotor_limits_nm)
+        ),
+        "empirical_gravity_rotor_limit_nm_by_motor": (
+            None if empirical_rotor_limits_nm is None
+            else dict(empirical_rotor_limits_nm)
+        ),
+        "minimum_empirical_gravity_rotor_margin_nm": (
+            minimum_load_margin if empirical_validation_authoritative
+            else None
         ),
         "short_peak_rotor_torque_limit_nm_by_motor": (
             None if short_peak_rotor_limits_nm is None
@@ -950,6 +1015,7 @@ def build_planned_path_proof(
 
 __all__ = [
     "GRAVITY_CONFIG_SHA256",
+    "EMPIRICAL_PROOF_SCHEMA",
     "JOINT_NAMES",
     "MOTOR_NAMES",
     "PRODUCTION_MODEL_SHA256",

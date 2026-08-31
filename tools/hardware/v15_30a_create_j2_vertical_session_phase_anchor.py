@@ -1082,6 +1082,20 @@ def run(
     host_boot_id: str | None = None,
     issued_boottime_ns: int | None = None,
 ) -> dict[str, Any]:
+    defer_launch_permit = bool(
+        getattr(args, "defer_launch_permit", False)
+    )
+    publish_deferred_launch_permit = bool(
+        getattr(args, "publish_deferred_launch_permit", False)
+    )
+    if defer_launch_permit and publish_deferred_launch_permit:
+        raise AnchorValidationError(
+            "defer and publish-deferred launch-permit modes are mutually exclusive"
+        )
+    if (defer_launch_permit or publish_deferred_launch_permit) and not args.apply:
+        raise AnchorValidationError(
+            "deferred launch-permit modes require --apply"
+        )
     zero_path, sidecar_path, hint_path, initial_pose_path, capture_path = (
         _resolve_distinct_inputs(
             [
@@ -1194,7 +1208,18 @@ def run(
     if args.apply:
         if args.confirm != APPLY_GATE:
             raise AnchorValidationError(f"apply requires --confirm {APPLY_GATE}")
-        preflight_new_outputs(immutable_output_paths)
+        if publish_deferred_launch_permit:
+            if (
+                not output_path.is_file()
+                or output_path.is_symlink()
+                or output_path.read_bytes() != anchor_data
+            ):
+                raise AnchorValidationError(
+                    "deferred launch-permit publication requires the exact immutable anchor"
+                )
+            preflight_new_outputs(list(permit_paths.values()))
+        else:
+            preflight_new_outputs(immutable_output_paths)
         before_publish = {
             "zero": sha256_file(zero_path),
             "sidecar": sha256_file(sidecar_path),
@@ -1211,8 +1236,14 @@ def run(
             permit_paths["spent"].parent,
         }:
             ensure_private_directory(directory)
-        preflight_new_outputs(immutable_output_paths)
-        atomic_write_new(output_path, anchor_data)
+        if publish_deferred_launch_permit:
+            if output_path.read_bytes() != anchor_data:
+                raise AnchorValidationError(
+                    "immutable anchor changed before deferred launch-permit publication"
+                )
+        else:
+            preflight_new_outputs(immutable_output_paths)
+            atomic_write_new(output_path, anchor_data)
         after_anchor_publish = {
             "zero": sha256_file(zero_path),
             "sidecar": sha256_file(sidecar_path),
@@ -1222,8 +1253,9 @@ def run(
         }
         if after_anchor_publish != fingerprints:
             raise AnchorValidationError("protected input changed during anchor publication")
-        preflight_new_outputs(list(permit_paths.values()))
-        atomic_write_new(permit_paths["pending"], permit_data)
+        if not defer_launch_permit:
+            preflight_new_outputs(list(permit_paths.values()))
+            atomic_write_new(permit_paths["pending"], permit_data)
         after_permit_publish = {
             "zero": sha256_file(zero_path),
             "sidecar": sha256_file(sidecar_path),
@@ -1246,6 +1278,9 @@ def run(
         "permit_path": str(permit_paths["pending"]),
         "permit_id": permit_id,
         "permit_sha256": sha256_bytes(permit_data),
+        "anchor_published": bool(args.apply) and not publish_deferred_launch_permit,
+        "launch_permit_published": bool(args.apply) and not defer_launch_permit,
+        "deferred_launch_permit": defer_launch_permit,
         "parent_persistent_zero_sha256": fingerprints["zero"],
         "protected_inputs_unchanged": True,
         "hardware_accessed": False,
@@ -1273,6 +1308,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--anchor-directory", type=Path, required=True)
     parser.add_argument("--launch-permit-directory", type=Path, required=True)
     parser.add_argument("--apply", action="store_true")
+    deferred_group = parser.add_mutually_exclusive_group()
+    deferred_group.add_argument("--defer-launch-permit", action="store_true")
+    deferred_group.add_argument(
+        "--publish-deferred-launch-permit", action="store_true"
+    )
     parser.add_argument("--confirm", default="")
     return parser.parse_args(argv)
 

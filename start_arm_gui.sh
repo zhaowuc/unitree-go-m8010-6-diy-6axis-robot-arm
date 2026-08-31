@@ -25,6 +25,7 @@ GO_BUILD_MANIFEST="$GO_BINARY.build.json"
 GO_CONTROLLER_SOURCE="$REPO_ROOT/tools/hardware/v15_30a_gui_go_controller.cpp"
 THERMAL_CONFIG="$ROS_WS/src/go_m8010_arm_hardware/config/thermal_limits.yaml"
 THERMAL_CONFIG_SHA256="1926264805858f62fffc9360ef0c9d4d7f8a7e232e171105450769d493ff5467"
+GRAVITY_CONFIG="$ROS_WS/src/go_m8010_arm_hardware/config/gravity_control.yaml"
 GO_SDK_INCLUDE="$SDK_ROOT/include"
 GO_SDK_LIBRARY="$SDK_ROOT/lib/libUnitreeMotorSDK_Linux64.so"
 GO_SDK_HEADERS=(
@@ -36,7 +37,7 @@ GO_SDK_HEADERS=(
   "$GO_SDK_INCLUDE/IOPort/IOPort.h"
 )
 RUN_TOKEN="$(date -u +%Y%m%dT%H%M%SZ)"
-RUN_DIR="$REPO_ROOT/logs/arm_gui/$RUN_TOKEN"
+RUN_DIR="${ARM_GUI_RUN_DIRECTORY:-$REPO_ROOT/logs/arm_gui/$RUN_TOKEN}"
 STATE_DIR="$REPO_ROOT/.runtime/v15_30a_gui"
 INITIAL_POSE="$STATE_DIR/initial_pose.json"
 PERSISTENT_ZERO="$STATE_DIR/persistent_software_zero.json"
@@ -48,6 +49,22 @@ GO_AUX_SESSION_REFERENCE="${GO_AUX_SESSION_REFERENCE_FILE:-}"
 GO_AUX_J1_LAUNCH_PERMIT="${GO_AUX_J1_LAUNCH_PERMIT_FILE:-}"
 GO_AUX_J345_LAUNCH_PERMIT="${GO_AUX_J345_LAUNCH_PERMIT_FILE:-}"
 GO_AUX_POWER_SESSION_ID="${GO_AUX_POWER_SESSION_ID:-}"
+GRAVITY_ANCHOR="${GRAVITY_ANCHOR_PATH:-}"
+EMPIRICAL_ENVELOPE="${EMPIRICAL_VALIDATION_ENVELOPE_PATH:-}"
+EMPIRICAL_ENVELOPE_SHA256="${EMPIRICAL_VALIDATION_ENVELOPE_SHA256:-}"
+GRAVITY_ENABLED_FOR_HARDWARE="${GRAVITY_ENABLED_FOR_HARDWARE:-false}"
+GRAVITY_SCALE_TARGET="${GRAVITY_SCALE_TARGET:-0.0}"
+EXPECTED_GRAVITY_AUTHORITY_CLASS=""
+EXPECTED_EMPIRICAL_ENVELOPE_ID=""
+EXPECTED_EMPIRICAL_ENVELOPE_SHA256=""
+EXPECTED_GRAVITY_ANCHOR_SHA256=""
+EXPECTED_GRAVITY_SESSION_ID=""
+EXPECTED_GRAVITY_STATE_INSTANCE_ID=""
+J6_FEEDBACK_SESSION_ID=""
+J6_FEEDBACK_STATE_INSTANCE_ID=""
+J6_FEEDBACK_HANDOFF="${J6_FEEDBACK_HANDOFF_FILE:-}"
+REUSE_RUNNING_ARM_GUI_CORE="${REUSE_RUNNING_ARM_GUI_CORE:-false}"
+EXTERNAL_ARM_GUI_CORE_PID="${EXTERNAL_ARM_GUI_CORE_PID:-}"
 GO_AUX_SESSION_REFERENCE_SHA256=""
 GO_AUX_EXPECTED_WORKER_SHA256=""
 GO_AUX_VALIDATOR="$REPO_ROOT/tools/hardware/v15_30a_validate_go_aux_session_bundle.py"
@@ -65,6 +82,9 @@ fi
 # is display-only and must never be written into the motor/software-zero files.
 MUJOCO_SOFTWARE_ZERO_DEG="0,90,-14.40,13.49,47.94,0"
 STOP_TOOL="$REPO_ROOT/tools/hardware/v15_30a_gui_stop.py"
+WORKER_SUPERVISOR_TOOL="$REPO_ROOT/tools/hardware/v15_30a_worker_supervisor_status.py"
+WORKER_SUPERVISOR_STATUS="$RUN_DIR/worker_supervisor_status.json"
+WORKER_SUPERVISOR_LOG="$RUN_DIR/worker_supervisor_status.log"
 
 export PYTHONNOUSERSITE=1
 
@@ -74,12 +94,39 @@ WORKER_NAMES=()
 WORKER_LOGS=()
 WORKER_PORTS=()
 WORKER_BOUND=()
+declare -A WORKER_PID_BY_DOMAIN=()
+WORKER_SUPERVISOR_PID=""
 CLEANED=0
 HARDWARE_SESSION_STARTED=0
 
 fail() {
   printf '启动已阻止：%s\n' "$*" >&2
   exit 2
+}
+
+managed_pid_is_live() {
+  local pid=$1
+  local state
+  kill -0 "$pid" 2>/dev/null || return 1
+  state="$(ps -o stat= -p "$pid" 2>/dev/null | awk 'NR==1 {print $1}')"
+  [[ -n "$state" && "$state" != Z* ]]
+}
+
+stop_worker_supervisor_status() {
+  [[ -n "$WORKER_SUPERVISOR_PID" ]] || return 0
+  if managed_pid_is_live "$WORKER_SUPERVISOR_PID"; then
+    kill -TERM "$WORKER_SUPERVISOR_PID" 2>/dev/null || true
+    local deadline=$((SECONDS + 2))
+    while managed_pid_is_live "$WORKER_SUPERVISOR_PID" && \
+          (( SECONDS < deadline )); do
+      sleep 0.05
+    done
+  fi
+  if managed_pid_is_live "$WORKER_SUPERVISOR_PID"; then
+    printf '警告：worker supervisor 心跳未响应 SIGTERM，状态将依靠超时失效。\n' >&2
+    kill -KILL "$WORKER_SUPERVISOR_PID" 2>/dev/null || true
+  fi
+  wait "$WORKER_SUPERVISOR_PID" 2>/dev/null || true
 }
 
 cleanup() {
@@ -103,6 +150,10 @@ cleanup() {
   else
     printf '\n启动前检查未通过；尚未启动任何硬件 worker，不发送 UDP 制动报文。\n'
   fi
+  # Publish one explicit all-domain supervisor_stopping interlock before any
+  # managed process is asked to exit.  A failed final write still goes stale
+  # within the state node's one-second freshness window.
+  stop_worker_supervisor_status
   if [[ -n "$ROS_PID" ]] && kill -0 "$ROS_PID" 2>/dev/null; then
     kill -INT "$ROS_PID" 2>/dev/null
   fi
@@ -175,11 +226,32 @@ if [[ "$PREBUILD_ONLY" -eq 1 && "$J2_SIGNED_LAUNCH_ATTEMPT" -eq 1 ]]; then
   fail "--prebuild-only 禁止携带任何 J2/GO-AUX launch permit"
 fi
 if [[ "$PREBUILD_ONLY" -eq 0 ]]; then
+  [[ "$RUN_DIR" == /* ]] || fail "ARM_GUI_RUN_DIRECTORY 必须是绝对路径"
   [[ -n "$J2_SESSION_REFERENCE" && -n "$J2_SESSION_LAUNCH_PERMIT" &&
      -n "$J2_POWER_SESSION_ID" && -n "$GO_AUX_SESSION_REFERENCE" &&
      -n "$GO_AUX_J1_LAUNCH_PERMIT" && -n "$GO_AUX_J345_LAUNCH_PERMIT" &&
-     -n "$GO_AUX_POWER_SESSION_ID" ]] || \
-    fail "正常启动必须显式提供完整 J2 与 GO-AUX anchor/三个一次性 permit/会话 ID；仅构建请使用 --prebuild-only"
+     -n "$GO_AUX_POWER_SESSION_ID" && -n "$J6_FEEDBACK_HANDOFF" ]] || \
+    fail "正常启动必须显式提供完整 J2/GO-AUX anchor、三个一次性 permit、会话 ID 与 J6 单次反馈接管文件；仅构建请使用 --prebuild-only"
+  [[ "$REUSE_RUNNING_ARM_GUI_CORE" == "true" ||
+     "$REUSE_RUNNING_ARM_GUI_CORE" == "false" ]] || \
+    fail "REUSE_RUNNING_ARM_GUI_CORE 必须为 true/false"
+  if [[ "$REUSE_RUNNING_ARM_GUI_CORE" == "true" ]]; then
+    [[ "$EXTERNAL_ARM_GUI_CORE_PID" =~ ^[1-9][0-9]*$ ]] || \
+      fail "复用核心时必须提供 EXTERNAL_ARM_GUI_CORE_PID"
+    managed_pid_is_live "$EXTERNAL_ARM_GUI_CORE_PID" || \
+      fail "要复用的 arm GUI 核心进程当前不存活"
+    [[ -d "$RUN_DIR" && ! -L "$RUN_DIR" ]] || \
+      fail "复用核心时必须提供该核心正在使用的既有 ARM_GUI_RUN_DIRECTORY"
+  elif [[ -n "$EXTERNAL_ARM_GUI_CORE_PID" ]]; then
+    fail "未启用核心复用时不得提供 EXTERNAL_ARM_GUI_CORE_PID"
+  fi
+  [[ -f "$J6_FEEDBACK_HANDOFF" && ! -L "$J6_FEEDBACK_HANDOFF" ]] || \
+    fail "J6 单次反馈接管文件不是常规文件"
+  [[ "$(stat -c '%a' "$J6_FEEDBACK_HANDOFF")" == "600" ]] || \
+    fail "J6 单次反馈接管文件不是 owner-only 0600"
+  [[ ! -e "$J6_FEEDBACK_HANDOFF.claimed" &&
+     ! -L "$J6_FEEDBACK_HANDOFF.claimed" ]] || \
+    fail "J6 单次反馈接管文件已被使用"
 fi
 
 mkdir -p "$STATE_DIR" "$TOOLS_BUILD"
@@ -249,6 +321,139 @@ fi
 [[ -f "$MODEL" ]] || fail "冻结 MuJoCo 生产模型不存在"
 actual_model_sha="$(sha256sum "$MODEL" | awk '{print $1}')"
 [[ "$actual_model_sha" == "$MODEL_SHA256" ]] || fail "冻结 MuJoCo 生产模型哈希不匹配"
+[[ -f "$GRAVITY_CONFIG" ]] || fail "冻结重力配置不存在"
+GRAVITY_CONTINUOUS_AUTHORITY="$({
+  awk -F: '
+    /^[[:space:]]*continuous_rotor_limits_authoritative[[:space:]]*:/ {
+      value=$2
+      gsub(/[[:space:]]/, "", value)
+      print value
+    }
+  ' "$GRAVITY_CONFIG"
+} | sed -n '1p')"
+[[ "$GRAVITY_CONTINUOUS_AUTHORITY" == "true" ||
+   "$GRAVITY_CONTINUOUS_AUTHORITY" == "false" ]] || \
+  fail "冻结重力配置的 continuous authority 布尔值无效"
+[[ "$GRAVITY_ENABLED_FOR_HARDWARE" == "true" ||
+   "$GRAVITY_ENABLED_FOR_HARDWARE" == "false" ]] || \
+  fail "GRAVITY_ENABLED_FOR_HARDWARE 必须为 true/false"
+case "$GRAVITY_SCALE_TARGET" in
+  0|0.0|0.00|0.25|0.5|0.50|0.75|1|1.0|1.00) ;;
+  *) fail "GRAVITY_SCALE_TARGET 必须为 0/0.25/0.50/0.75/1.00" ;;
+esac
+if [[ "$GRAVITY_ENABLED_FOR_HARDWARE" == "true" ||
+      "$GRAVITY_SCALE_TARGET" != "0" &&
+      "$GRAVITY_SCALE_TARGET" != "0.0" &&
+      "$GRAVITY_SCALE_TARGET" != "0.00" ]]; then
+  [[ -n "$GRAVITY_ANCHOR" ]] || \
+    fail "主动重力/HOLD 必须提供 anchor"
+  if [[ "$GRAVITY_CONTINUOUS_AUTHORITY" != "true" ]]; then
+    [[ -n "$EMPIRICAL_ENVELOPE" &&
+       -n "$EMPIRICAL_ENVELOPE_SHA256" ]] || \
+      fail "无官方连续额定authority时，主动重力/HOLD必须提供 empirical envelope 及其 SHA256"
+  fi
+fi
+if [[ -n "$GRAVITY_ANCHOR" ]]; then
+  [[ -f "$GRAVITY_ANCHOR" && ! -L "$GRAVITY_ANCHOR" ]] || \
+    fail "重力运行的 anchor 不是常规文件"
+fi
+if [[ -n "$EMPIRICAL_ENVELOPE" ||
+      -n "$EMPIRICAL_ENVELOPE_SHA256" ]]; then
+  [[ -f "$EMPIRICAL_ENVELOPE" && ! -L "$EMPIRICAL_ENVELOPE" ]] || \
+    fail "empirical envelope 不是常规文件"
+  [[ "$EMPIRICAL_ENVELOPE_SHA256" =~ ^[0-9a-f]{64}$ ]] || \
+    fail "empirical envelope SHA256 格式无效"
+  actual_empirical_envelope_sha256="$(
+    sha256sum "$EMPIRICAL_ENVELOPE" | awk '{print $1}'
+  )"
+  [[ "$actual_empirical_envelope_sha256" == "$EMPIRICAL_ENVELOPE_SHA256" ]] || \
+    fail "empirical envelope SHA256 不匹配"
+fi
+
+# Freeze the exact authority identity once, before active workers are started.
+# Workers stay alive/disabled through the whole acceptance session and reject
+# every UDP authority that does not match these CLI pins.
+if [[ -z "$GRAVITY_ANCHOR" ]]; then
+  EXPECTED_GRAVITY_AUTHORITY_CLASS="NONE"
+else
+  GRAVITY_BINDING_OUTPUT="$(
+  python3 - \
+    "$GRAVITY_CONTINUOUS_AUTHORITY" \
+    "$GRAVITY_ANCHOR" \
+    "$EMPIRICAL_ENVELOPE" \
+    "$EMPIRICAL_ENVELOPE_SHA256" <<'PY'
+import hashlib
+import json
+import re
+import sys
+from pathlib import Path
+
+continuous, anchor_text, envelope_text, expected_envelope_sha = sys.argv[1:]
+if not anchor_text:
+    # No active gravity authority is configured for this launch.
+    print("NONE\n\n\n\n\n")
+    raise SystemExit(0)
+
+def load(path_text):
+    data = Path(path_text).read_bytes()
+    value = json.loads(data.decode("utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError("document root is not an object")
+    return value, hashlib.sha256(data).hexdigest()
+
+anchor, anchor_sha = load(anchor_text)
+session = anchor.get("session_id")
+state = anchor.get("state_instance_id")
+if not isinstance(session, str) or re.fullmatch(
+    r"persistent:[0-9a-f]{16}:j2session:[0-9a-f]{16}:"
+    r"goauxsession:[0-9a-f]{16}", session
+) is None:
+    raise ValueError("anchor session_id is invalid")
+if not isinstance(state, str) or re.fullmatch(r"[0-9a-f]{32}", state) is None:
+    raise ValueError("anchor state_instance_id is invalid")
+
+if continuous == "true":
+    authority_class = "OFFICIAL_CONTINUOUS_RATING"
+    envelope_id = ""
+    envelope_sha = ""
+else:
+    authority_class = "EMPIRICAL_VALIDATION_ENVELOPE"
+    envelope, envelope_sha = load(envelope_text)
+    if envelope_sha != expected_envelope_sha:
+        raise ValueError("envelope SHA-256 changed during binding")
+    binding = envelope.get("binding")
+    if not isinstance(binding, dict):
+        raise ValueError("envelope binding is missing")
+    if (
+        binding.get("session_id") != session
+        or binding.get("state_instance_id") != state
+        or binding.get("anchor_sha256") != anchor_sha
+    ):
+        raise ValueError("envelope/anchor/session binding mismatch")
+    envelope_id = envelope.get("envelope_id")
+    if not isinstance(envelope_id, str) or re.fullmatch(
+        r"v15-31b-empirical-[0-9a-f]{20}", envelope_id
+    ) is None:
+        raise ValueError("envelope_id is invalid")
+
+print(authority_class)
+print(envelope_id)
+print(envelope_sha)
+print(anchor_sha)
+print(session)
+print(state)
+PY
+)" || fail "无法冻结重力authority worker启动绑定"
+  mapfile -t GRAVITY_BINDING_FIELDS <<<"$GRAVITY_BINDING_OUTPUT"
+  [[ "${#GRAVITY_BINDING_FIELDS[@]}" -eq 6 ]] || \
+    fail "重力authority worker启动绑定字段数无效"
+  EXPECTED_GRAVITY_AUTHORITY_CLASS="${GRAVITY_BINDING_FIELDS[0]}"
+  EXPECTED_EMPIRICAL_ENVELOPE_ID="${GRAVITY_BINDING_FIELDS[1]}"
+  EXPECTED_EMPIRICAL_ENVELOPE_SHA256="${GRAVITY_BINDING_FIELDS[2]}"
+  EXPECTED_GRAVITY_ANCHOR_SHA256="${GRAVITY_BINDING_FIELDS[3]}"
+  EXPECTED_GRAVITY_SESSION_ID="${GRAVITY_BINDING_FIELDS[4]}"
+  EXPECTED_GRAVITY_STATE_INSTANCE_ID="${GRAVITY_BINDING_FIELDS[5]}"
+fi
 
 declare -A DOMAIN_READY=([J1]=1 [J2]=1 [J345]=1 [J6]=1)
 declare -A DOMAIN_REASON=([J1]="" [J2]="" [J345]="" [J6]="")
@@ -1946,6 +2151,38 @@ if [[ "$PREBUILD_ONLY" -eq 0 ]]; then
     [[ "${DOMAIN_READY[$required_domain]}" -eq 1 ]] || \
       fail "完整签名启动拒绝故障域降级：$required_domain：${DOMAIN_REASON[$required_domain]}"
   done
+
+  for reference_sha256 in \
+    "$PERSISTENT_ZERO_SHA256" \
+    "$J2_SESSION_REFERENCE_SHA256" \
+    "$GO_AUX_SESSION_REFERENCE_SHA256"; do
+    [[ "$reference_sha256" =~ ^[0-9a-f]{64}$ ]] || \
+      fail "J6 feedback identity 需要完整有效的 zero/J2/GO-AUX SHA256"
+  done
+  reference_session_id="persistent:${PERSISTENT_ZERO_SHA256:0:16}"
+  reference_session_id+=":j2session:${J2_SESSION_REFERENCE_SHA256:0:16}"
+  reference_session_id+=":goauxsession:${GO_AUX_SESSION_REFERENCE_SHA256:0:16}"
+  if [[ -n "$GRAVITY_ANCHOR" ]]; then
+    [[ "$EXPECTED_GRAVITY_SESSION_ID" == "$reference_session_id" ]] || \
+      fail "active gravity anchor session 与当前 zero/J2/GO-AUX 引用不一致"
+    J6_FEEDBACK_SESSION_ID="$EXPECTED_GRAVITY_SESSION_ID"
+    J6_FEEDBACK_STATE_INSTANCE_ID="$EXPECTED_GRAVITY_STATE_INSTANCE_ID"
+  else
+    # NONE is still an empty gravity-authority binding.  This independent
+    # feedback identity only binds raw J6 samples to the state-node instance.
+    [[ -z "$EXPECTED_GRAVITY_SESSION_ID" && \
+       -z "$EXPECTED_GRAVITY_STATE_INSTANCE_ID" ]] || \
+      fail "NONE gravity authority 不得携带 session/state pins"
+    J6_FEEDBACK_SESSION_ID="$reference_session_id"
+    J6_FEEDBACK_STATE_INSTANCE_ID="$(
+      python3 -c 'import secrets; print(secrets.token_hex(16))'
+    )"
+  fi
+  [[ "$J6_FEEDBACK_SESSION_ID" =~ \
+     ^persistent:[0-9a-f]{16}:j2session:[0-9a-f]{16}:goauxsession:[0-9a-f]{16}$ ]] || \
+    fail "冻结的 J6 feedback session_id 无效"
+  [[ "$J6_FEEDBACK_STATE_INSTANCE_ID" =~ ^[0-9a-f]{32}$ ]] || \
+    fail "冻结的 J6 feedback state_instance_id 无效"
 fi
 
 if [[ "$J2_SIGNED_LAUNCH_ATTEMPT" -eq 1 && ! -x "$GUI_PY" ]]; then
@@ -2092,29 +2329,45 @@ export MUJOCO_GL=glfw
 export PYTHONUNBUFFERED=1
 export PYTHONDONTWRITEBYTECODE=1
 
-printf '正在启动全中文界面与 MuJoCo 可视镜像…\n'
-(
-  exec {INSTANCE_LOCK_FD}>&-
-  exec {LEGACY_FEEDBACK_LOCK_FD}>&-
-  exec ros2 launch go_m8010_arm_gui arm_gui.launch.py \
-    model_path:="$MODEL" \
-    session_pose_deg:="$MUJOCO_SOFTWARE_ZERO_DEG" \
-    pose_matched:=true \
-    config_path:="$GUI_SOURCE/config/arm_gui.yaml" \
-    joint_limits_path:="$GUI_SOURCE/config/gui_joint_limits.yaml" \
-    initial_pose_path:="$INITIAL_POSE" \
-    initial_pose_read_only:=true \
-    persistent_zero_path:="$PERSISTENT_ZERO" \
-    recovery_hint_path:="$RECOVERY_BRANCH_HINTS" \
-    j2_session_reference_path:="$J2_SESSION_REFERENCE" \
-    go_aux_session_reference_path:="$GO_AUX_SESSION_REFERENCE" \
-    runtime_log_directory:="$RUN_DIR"
-) &
-ROS_PID=$!
+if [[ "$REUSE_RUNNING_ARM_GUI_CORE" == "true" ]]; then
+  printf '正在复用贯穿只读捕获与主动验收的同一 arm GUI/state 核心…\n'
+  ROS_PID=""
+else
+  printf '正在启动全中文界面与 MuJoCo 可视镜像…\n'
+  (
+    exec {INSTANCE_LOCK_FD}>&-
+    exec {LEGACY_FEEDBACK_LOCK_FD}>&-
+    exec ros2 launch go_m8010_arm_gui arm_gui.launch.py \
+      model_path:="$MODEL" \
+      session_pose_deg:="$MUJOCO_SOFTWARE_ZERO_DEG" \
+      pose_matched:=true \
+      config_path:="$GUI_SOURCE/config/arm_gui.yaml" \
+      joint_limits_path:="$GUI_SOURCE/config/gui_joint_limits.yaml" \
+      initial_pose_path:="$INITIAL_POSE" \
+      initial_pose_read_only:=true \
+      persistent_zero_path:="$PERSISTENT_ZERO" \
+      recovery_hint_path:="$RECOVERY_BRANCH_HINTS" \
+      j2_session_reference_path:="$J2_SESSION_REFERENCE" \
+      go_aux_session_reference_path:="$GO_AUX_SESSION_REFERENCE" \
+      state_instance_id:="$J6_FEEDBACK_STATE_INSTANCE_ID" \
+      gravity_anchor_path:="$GRAVITY_ANCHOR" \
+      empirical_envelope_path:="$EMPIRICAL_ENVELOPE" \
+      expected_empirical_envelope_sha256:="$EMPIRICAL_ENVELOPE_SHA256" \
+      gravity_enabled_for_hardware:="$GRAVITY_ENABLED_FOR_HARDWARE" \
+      gravity_scale_target:="$GRAVITY_SCALE_TARGET" \
+      runtime_log_directory:="$RUN_DIR"
+  ) &
+  ROS_PID=$!
+fi
 
 state_ready=0
 for _ in $(seq 1 100); do
-  if ! kill -0 "$ROS_PID" 2>/dev/null; then fail "ROS2 启动进程提前退出"; fi
+  if [[ "$REUSE_RUNNING_ARM_GUI_CORE" == "true" ]]; then
+    managed_pid_is_live "$EXTERNAL_ARM_GUI_CORE_PID" || \
+      fail "复用的 arm GUI 核心进程提前退出"
+  elif ! kill -0 "$ROS_PID" 2>/dev/null; then
+    fail "ROS2 启动进程提前退出"
+  fi
   if udp_port_in_use 15300; then state_ready=1; break; fi
   sleep 0.1
 done
@@ -2130,11 +2383,13 @@ start_worker() {
     exec {LEGACY_FEEDBACK_LOCK_FD}>&-
     exec "$@"
   ) >"$log_path" 2>&1 &
-  WORKER_PIDS+=("$!")
+  local worker_pid=$!
+  WORKER_PIDS+=("$worker_pid")
   WORKER_NAMES+=("$name")
   WORKER_LOGS+=("$log_path")
   WORKER_PORTS+=("$command_port")
   WORKER_BOUND+=(0)
+  WORKER_PID_BY_DOMAIN["$name"]="$worker_pid"
 }
 
 print_worker_diagnostic() {
@@ -2144,11 +2399,7 @@ print_worker_diagnostic() {
 }
 
 worker_is_live() {
-  local pid=$1
-  local state
-  kill -0 "$pid" 2>/dev/null || return 1
-  state="$(ps -o stat= -p "$pid" 2>/dev/null | awk 'NR==1 {print $1}')"
-  [[ -n "$state" && "$state" != Z* ]]
+  managed_pid_is_live "$1"
 }
 
 stop_unbound_worker() {
@@ -2202,6 +2453,56 @@ wait_workers_bounded() {
   done
 }
 
+start_worker_supervisor_status() {
+  local domain index bound
+  for domain in J1 J2 J345 J6; do
+    [[ -n "${WORKER_PID_BY_DOMAIN[$domain]:-}" ]] || \
+      fail "worker supervisor 缺少 $domain PID"
+    bound=0
+    for index in "${!WORKER_NAMES[@]}"; do
+      if [[ "${WORKER_NAMES[$index]}" == "$domain" && \
+            "${WORKER_BOUND[$index]}" -eq 1 ]]; then
+        bound=1
+        break
+      fi
+    done
+    [[ "$bound" -eq 1 ]] || \
+      fail "worker supervisor 拒绝发布未绑定 UDP 的 $domain"
+  done
+  [[ ! -e "$WORKER_SUPERVISOR_STATUS" && \
+     ! -L "$WORKER_SUPERVISOR_STATUS" ]] || \
+    fail "worker supervisor 状态路径在启动前已存在"
+  (
+    exec {INSTANCE_LOCK_FD}>&-
+    exec {LEGACY_FEEDBACK_LOCK_FD}>&-
+    exec python3 "$WORKER_SUPERVISOR_TOOL" \
+      --output "$WORKER_SUPERVISOR_STATUS" \
+      --supervisor-pid "$$" \
+      --interval-ms 200 \
+      --worker "J1=${WORKER_PID_BY_DOMAIN[J1]}" \
+      --worker "J2=${WORKER_PID_BY_DOMAIN[J2]}" \
+      --worker "J345=${WORKER_PID_BY_DOMAIN[J345]}" \
+      --worker "J6=${WORKER_PID_BY_DOMAIN[J6]}"
+  ) >"$WORKER_SUPERVISOR_LOG" 2>&1 &
+  WORKER_SUPERVISOR_PID=$!
+
+  local deadline=$((SECONDS + 3))
+  while [[ ! -s "$WORKER_SUPERVISOR_STATUS" ]] && \
+        (( SECONDS < deadline )); do
+    if ! kill -0 "$WORKER_SUPERVISOR_PID" 2>/dev/null; then
+      wait "$WORKER_SUPERVISOR_PID" 2>/dev/null || true
+      tail -n 20 "$WORKER_SUPERVISOR_LOG" >&2 2>/dev/null || true
+      fail "worker supervisor 心跳生产器启动失败"
+    fi
+    sleep 0.05
+  done
+  [[ -f "$WORKER_SUPERVISOR_STATUS" && \
+     ! -L "$WORKER_SUPERVISOR_STATUS" ]] || \
+    fail "worker supervisor 未在 3 秒内发布首帧"
+  [[ "$(stat -c '%a' "$WORKER_SUPERVISOR_STATUS")" == "600" ]] || \
+    fail "worker supervisor 状态文件不是 owner-only 0600"
+}
+
 # From this point onward cleanup owns the physical-worker shutdown path. Before
 # this point any failure is preflight-only and must not transmit stop/BRAKE UDP.
 HARDWARE_SESSION_STARTED=1
@@ -2220,6 +2521,12 @@ if [[ "${DOMAIN_READY[J1]}" -eq 1 ]]; then
       "$GO_AUX_SESSION_REFERENCE_SHA256" \
     --expected-go-aux-power-session-id "$GO_AUX_POWER_SESSION_ID" \
     --expected-worker-sha256 "$GO_AUX_EXPECTED_WORKER_SHA256" \
+    --expected-gravity-authority-class "$EXPECTED_GRAVITY_AUTHORITY_CLASS" \
+    --expected-empirical-envelope-id "$EXPECTED_EMPIRICAL_ENVELOPE_ID" \
+    --expected-empirical-envelope-sha256 "$EXPECTED_EMPIRICAL_ENVELOPE_SHA256" \
+    --expected-gravity-anchor-sha256 "$EXPECTED_GRAVITY_ANCHOR_SHA256" \
+    --expected-gravity-session-id "$EXPECTED_GRAVITY_SESSION_ID" \
+    --expected-gravity-state-instance-id "$EXPECTED_GRAVITY_STATE_INSTANCE_ID" \
     --thermal-config "$THERMAL_CONFIG" \
     --expected-thermal-config-sha256 "$THERMAL_CONFIG_SHA256"
 fi
@@ -2237,6 +2544,12 @@ if [[ "${DOMAIN_READY[J2]}" -eq 1 ]]; then
     --expected-j2-session-reference-sha256 "$J2_SESSION_REFERENCE_SHA256" \
     --expected-j2-power-session-id "$J2_POWER_SESSION_ID" \
     --expected-worker-sha256 "$J2_EXPECTED_WORKER_SHA256" \
+    --expected-gravity-authority-class "$EXPECTED_GRAVITY_AUTHORITY_CLASS" \
+    --expected-empirical-envelope-id "$EXPECTED_EMPIRICAL_ENVELOPE_ID" \
+    --expected-empirical-envelope-sha256 "$EXPECTED_EMPIRICAL_ENVELOPE_SHA256" \
+    --expected-gravity-anchor-sha256 "$EXPECTED_GRAVITY_ANCHOR_SHA256" \
+    --expected-gravity-session-id "$EXPECTED_GRAVITY_SESSION_ID" \
+    --expected-gravity-state-instance-id "$EXPECTED_GRAVITY_STATE_INSTANCE_ID" \
     --thermal-config "$THERMAL_CONFIG" \
     --expected-thermal-config-sha256 "$THERMAL_CONFIG_SHA256"
 fi
@@ -2255,6 +2568,12 @@ if [[ "${DOMAIN_READY[J345]}" -eq 1 ]]; then
       "$GO_AUX_SESSION_REFERENCE_SHA256" \
     --expected-go-aux-power-session-id "$GO_AUX_POWER_SESSION_ID" \
     --expected-worker-sha256 "$GO_AUX_EXPECTED_WORKER_SHA256" \
+    --expected-gravity-authority-class "$EXPECTED_GRAVITY_AUTHORITY_CLASS" \
+    --expected-empirical-envelope-id "$EXPECTED_EMPIRICAL_ENVELOPE_ID" \
+    --expected-empirical-envelope-sha256 "$EXPECTED_EMPIRICAL_ENVELOPE_SHA256" \
+    --expected-gravity-anchor-sha256 "$EXPECTED_GRAVITY_ANCHOR_SHA256" \
+    --expected-gravity-session-id "$EXPECTED_GRAVITY_SESSION_ID" \
+    --expected-gravity-state-instance-id "$EXPECTED_GRAVITY_STATE_INSTANCE_ID" \
     --thermal-config "$THERMAL_CONFIG" \
     --expected-thermal-config-sha256 "$THERMAL_CONFIG_SHA256"
 fi
@@ -2264,10 +2583,20 @@ if [[ "${DOMAIN_READY[J6]}" -eq 1 ]]; then
     "$J6_PY" "$REPO_ROOT/tools/hardware/j6_dm_g6220/v15_30a_gui_j6_controller.py" \
     --execute --confirm V15_30A_GUI_J6_CONTROL_AUTHORIZED=YES \
     --command-port 15311 --feedback-port 15300 --zero-file "$PERSISTENT_ZERO" \
+    --expected-gravity-authority-class "$EXPECTED_GRAVITY_AUTHORITY_CLASS" \
+    --expected-empirical-envelope-id "$EXPECTED_EMPIRICAL_ENVELOPE_ID" \
+    --expected-empirical-envelope-sha256 "$EXPECTED_EMPIRICAL_ENVELOPE_SHA256" \
+    --expected-gravity-anchor-sha256 "$EXPECTED_GRAVITY_ANCHOR_SHA256" \
+    --expected-gravity-session-id "$EXPECTED_GRAVITY_SESSION_ID" \
+    --expected-gravity-state-instance-id "$EXPECTED_GRAVITY_STATE_INSTANCE_ID" \
+    --feedback-session-id "$J6_FEEDBACK_SESSION_ID" \
+    --feedback-state-instance-id "$J6_FEEDBACK_STATE_INSTANCE_ID" \
+    --feedback-handoff-file "$J6_FEEDBACK_HANDOFF" \
     --thermal-config "$THERMAL_CONFIG"
 fi
 
 wait_workers_bounded
+start_worker_supervisor_status
 for index in "${!WORKER_PIDS[@]}"; do
   [[ "${WORKER_BOUND[$index]}" -eq 1 ]] || \
     fail "完整签名启动要求全部 worker 成功绑定；${WORKER_NAMES[$index]} 未就绪"
@@ -2277,6 +2606,7 @@ printf '正在检查七路反馈与签名参考哈希；必须连续 5 帧全部
 EXPECTED_PERSISTENT_ZERO_SHA256="$PERSISTENT_ZERO_SHA256" \
 EXPECTED_J2_SESSION_REFERENCE_SHA256="$J2_SESSION_REFERENCE_SHA256" \
 EXPECTED_GO_AUX_SESSION_REFERENCE_SHA256="$GO_AUX_SESSION_REFERENCE_SHA256" \
+EXPECTED_WORKER_SUPERVISOR_PID="$$" \
 "$GUI_PY" - <<'PY'
 import json
 import os
@@ -2288,6 +2618,10 @@ from rclpy.node import Node
 from std_msgs.msg import String
 
 EXPECTED = {"J1", "J2A", "J2B", "J3", "J4", "J5", "J6"}
+EXPECTED_CONTROL_DOMAINS = {"J1", "J2", "J345", "J6"}
+EXPECTED_WORKER_SUPERVISOR_PID = int(
+    os.environ["EXPECTED_WORKER_SUPERVISOR_PID"]
+)
 EXPECTED_REFERENCE_HASHES = {
     "persistent_zero_sha256": os.environ["EXPECTED_PERSISTENT_ZERO_SHA256"],
     "j2_session_reference_sha256": os.environ[
@@ -2316,6 +2650,9 @@ def on_state(message: String) -> None:
         motors = value.get("per_motor", {})
         modes = value.get("controller_mode_by_motor", {})
         faults = value.get("controller_fault_by_motor", {})
+        control_available = value.get("control_available_by_domain", {})
+        control_reasons = value.get("control_reason_by_domain", {})
+        supervisor_instance = value.get("worker_supervisor_instance_id")
         checks = [
             (value.get("reference") in {
                 "SESSION_REFERENCE_V1", "PERSISTENT_SOFTWARE_ZERO_V1"
@@ -2338,6 +2675,21 @@ def on_state(message: String) -> None:
              "启动握手期间未全部保持 BRAKE"),
             (all(faults.get(name) is False for name in EXPECTED),
              "控制器故障域已锁定"),
+            (isinstance(control_available, dict) and
+             set(control_available) == EXPECTED_CONTROL_DOMAINS and
+             all(control_available.get(domain) is True
+                 for domain in EXPECTED_CONTROL_DOMAINS),
+             "worker supervisor 未确认全部四域控制接收器"),
+            (isinstance(control_reasons, dict) and
+             set(control_reasons) == EXPECTED_CONTROL_DOMAINS and
+             all(control_reasons.get(domain) == "ready"
+                 for domain in EXPECTED_CONTROL_DOMAINS),
+             "worker supervisor 四域原因不是 ready"),
+            (isinstance(supervisor_instance, str) and
+             bool(supervisor_instance) and
+             value.get("worker_supervisor_pid") ==
+             EXPECTED_WORKER_SUPERVISOR_PID,
+             "worker supervisor identity/PID 与启动器不一致"),
         ]
         failed = next((reason for passed, reason in checks if not passed), None)
         if failed is None:
@@ -2406,6 +2758,11 @@ for index in "${!WORKER_PIDS[@]}"; do
     fail "完整签名启动复查期间 ${WORKER_NAMES[$index]} worker 已退出或丢失 UDP 所有权"
   fi
 done
+if ! worker_is_live "$WORKER_SUPERVISOR_PID"; then
+  wait "$WORKER_SUPERVISOR_PID" 2>/dev/null || true
+  tail -n 20 "$WORKER_SUPERVISOR_LOG" >&2 2>/dev/null || true
+  fail "完整签名启动复查期间 worker supervisor 心跳生产器已退出"
+fi
 
 printf '启动完成：默认为停止／制动，无任何自动运动。\n'
 printf '本次运行日志：%s\n' "$RUN_DIR"
@@ -2415,6 +2772,11 @@ for index in "${!WORKER_PIDS[@]}"; do
   if [[ "${WORKER_BOUND[$index]}" -eq 1 ]]; then reported+=(0); else reported+=(1); fi
 done
 while kill -0 "$ROS_PID" 2>/dev/null; do
+  if ! worker_is_live "$WORKER_SUPERVISOR_PID"; then
+    wait "$WORKER_SUPERVISOR_PID" 2>/dev/null || true
+    tail -n 20 "$WORKER_SUPERVISOR_LOG" >&2 2>/dev/null || true
+    fail "worker supervisor 心跳生产器已退出，立即进入制动清理"
+  fi
   for index in "${!WORKER_PIDS[@]}"; do
     if [[ "${reported[$index]}" -eq 0 ]] && \
         { ! worker_is_live "${WORKER_PIDS[$index]}" || \

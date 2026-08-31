@@ -12,6 +12,7 @@ from go_m8010_arm_hardware.gravity_model import (
     GravityFeedforwardController,
     GravityModelAnchorV2,
     StaticGravityEvaluator,
+    dynamics_only_xml,
     GravityScaleRamp,
     RotorTorqueSlewLimiter,
     gravity_joint_to_rotor_commands,
@@ -164,7 +165,7 @@ def test_static_evaluator_owns_data_and_reads_qfrc_bias(tmp_path, monkeypatch):
 
     class FakeMjModel:
         @staticmethod
-        def from_xml_path(_path):
+        def from_xml_string(_xml):
             return FakeModel()
 
     class FakeData:
@@ -204,6 +205,26 @@ def test_static_evaluator_owns_data_and_reads_qfrc_bias(tmp_path, monkeypatch):
     ) == pytest.approx((1.3, 2.3, 3.3, 4.3, 5.3, 6.3))
 
 
+def test_dynamics_only_xml_preserves_inertial_chain_without_mesh_payload(tmp_path):
+    source = tmp_path / "model.xml"
+    source.write_text(
+        """<mujoco><size njmax="4000" nconmax="2000"/>
+        <visual/><asset><mesh name="large" file="large.stl"/></asset>
+        <contact><pair geom1="a" geom2="b"/></contact>
+        <worldbody><geom name="ground" type="plane" size="1 1 1"/>
+        <body name="link"><joint name="J1"/><inertial mass="1"
+        pos="0 0 0" diaginertia="1 1 1"/><geom name="a"
+        type="mesh" mesh="large"/><camera name="view"/></body></worldbody>
+        </mujoco>""",
+        encoding="utf-8",
+    )
+    derived = dynamics_only_xml(source)
+    assert "<joint name=\"J1\"" in derived
+    assert "<inertial" in derived
+    for forbidden in ("<asset", "<mesh", "<geom", "<contact", "<visual", "<size"):
+        assert forbidden not in derived
+
+
 def test_gravity_scale_ramp_is_bounded_and_can_fail_closed_immediately():
     ramp = GravityScaleRamp(ramp_seconds=2.0)
     ramp.set_target(1.0)
@@ -222,6 +243,24 @@ def test_gravity_scale_ramp_rejects_time_reversal():
     ramp.step(2.0)
     with pytest.raises(ValueError, match="backwards"):
         ramp.step(1.0)
+
+
+def test_empirical_fixed_stage_ramp_takes_two_seconds_per_25_percent():
+    ramp = GravityScaleRamp(
+        ramp_seconds=2.0,
+        fixed_transition_duration=True,
+    )
+    now = 10.0
+    assert ramp.step(now) == 0.0
+    for target in (0.25, 0.50, 0.75, 1.0):
+        start = ramp.current_scale
+        ramp.set_target(target)
+        assert ramp.step(now) == pytest.approx(start)
+        for tick in range(1, 200):
+            value = ramp.step(now + tick * 0.01)
+            assert start <= value < target
+        now += 2.0
+        assert ramp.step(now) == pytest.approx(target)
 
 
 def test_rotor_torque_slew_is_per_motor_and_named_in_rotor_nm():
@@ -248,10 +287,19 @@ def test_named_joint_state_is_order_independent_and_strict():
         ["J6", "J4", "J2", "J1", "J5", "J3"],
         [6, 4, 2, 1, 5, 3],
     ) == (1.0, 2.0, 3.0, 4.0, 5.0, 6.0)
+    assert normalize_named_joint_positions(
+        ["joint6", "joint4", "joint2", "joint1", "joint5", "joint3"],
+        [6, 4, 2, 1, 5, 3],
+    ) == (1.0, 2.0, 3.0, 4.0, 5.0, 6.0)
     with pytest.raises(ValueError, match="J1..J6"):
         normalize_named_joint_positions(["J1"], [1.0])
     with pytest.raises(ValueError, match="duplicate"):
         normalize_named_joint_positions(
             ["J1", "J1", "J2", "J3", "J4", "J5", "J6"],
+            [0.0] * 7,
+        )
+    with pytest.raises(ValueError, match="duplicate"):
+        normalize_named_joint_positions(
+            ["J1", "joint1", "J2", "J3", "J4", "J5", "J6"],
             [0.0] * 7,
         )

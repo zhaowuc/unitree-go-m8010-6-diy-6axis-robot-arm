@@ -35,6 +35,14 @@ from .gravity_model import (
     normalize_named_joint_positions,
     sha256_file,
 )
+from .empirical_validation_envelope import (
+    AUTHORITY_CLASS as EMPIRICAL_AUTHORITY_CLASS,
+    EmpiricalStageGate,
+    EmpiricalValidationEnvelope,
+    RATING_CLASSIFICATION as EMPIRICAL_RATING_CLASSIFICATION,
+    SOFTWARE_GRAVITY_ROTOR_LIMIT_NM,
+    select_runtime_torque_authority,
+)
 from .planned_path_feasibility import (
     THERMAL_CONFIG_SHA256,
     PlannedPathError,
@@ -62,6 +70,9 @@ class WholeArmGravityNode(Node):
         self.declare_parameter("gravity_config_path", "")
         self.declare_parameter("thermal_config_path", "")
         self.declare_parameter("anchor_path", "")
+        self.declare_parameter("empirical_envelope_path", "")
+        self.declare_parameter("expected_empirical_envelope_sha256", "")
+        self.declare_parameter("empirical_claim_directory", "")
         self.declare_parameter("calculation_rate_hz", 100.0)
         self.declare_parameter("joint_state_maximum_age_ms", 250.0)
         self.declare_parameter("enabled_for_hardware", False)
@@ -78,6 +89,25 @@ class WholeArmGravityNode(Node):
         ).resolve()
         anchor_text = str(self.get_parameter("anchor_path").value).strip()
         self.anchor_path = Path(anchor_text).resolve() if anchor_text else None
+        empirical_envelope_text = str(
+            self.get_parameter("empirical_envelope_path").value
+        ).strip()
+        self.empirical_envelope_path = (
+            Path(empirical_envelope_text).resolve()
+            if empirical_envelope_text else None
+        )
+        self.expected_empirical_envelope_sha256 = str(
+            self.get_parameter("expected_empirical_envelope_sha256").value
+        ).strip()
+        claim_directory_text = str(
+            self.get_parameter("empirical_claim_directory").value
+        ).strip()
+        self.empirical_claim_directory = (
+            Path(claim_directory_text).resolve()
+            if claim_directory_text
+            else Path.home() / ".local" / "state" /
+            "go_m8010_arm_gui" / "empirical_claims"
+        )
         self.rate_hz = float(self.get_parameter("calculation_rate_hz").value)
         self.maximum_age_s = (
             float(self.get_parameter("joint_state_maximum_age_ms").value) / 1000.0
@@ -86,6 +116,7 @@ class WholeArmGravityNode(Node):
         ramp_seconds = float(
             self.get_parameter("gravity_scale_ramp_seconds").value
         )
+        self.gravity_scale_ramp_seconds = ramp_seconds
         maximum_slew = float(
             self.get_parameter("maximum_rotor_torque_slew_nm_per_s").value
         )
@@ -114,6 +145,12 @@ class WholeArmGravityNode(Node):
             self._on_planned_path_request,
             10,
         )
+        self.create_subscription(
+            String,
+            "/whole_arm/empirical_stage_confirmation",
+            self._on_empirical_stage_confirmation,
+            10,
+        )
 
         self.q_actual: Optional[tuple[float, ...]] = None
         self.hardware_q_actual: Optional[tuple[float, ...]] = None
@@ -132,6 +169,7 @@ class WholeArmGravityNode(Node):
         self.gravity_source_instance_id = secrets.token_hex(16)
         self.gravity_status_sequence = 0
         self.anchor: Optional[GravityModelAnchorV2] = None
+        self.anchor_sha256 = "UNAVAILABLE"
         self.evaluator: Optional[StaticGravityEvaluator] = None
         self.initialization_blocker = ""
         self.model_sha256 = "UNREADABLE"
@@ -142,6 +180,10 @@ class WholeArmGravityNode(Node):
         self.thermal_derating_start_c: Optional[float] = None
         self.thermal_config_sha256 = "UNREADABLE"
         self.j6_joint_to_rotor_scale: Optional[float] = None
+        self.empirical_stage_gate: Optional[EmpiricalStageGate] = None
+        self.empirical_initialization_blocker = (
+            "EMPIRICAL_ENVELOPE_NOT_CONFIGURED"
+        )
         self._planned_lock = threading.Lock()
         self._planned_generation = 0
         self._planned_request: Optional[PlannedPathRequest] = None
@@ -232,6 +274,7 @@ class WholeArmGravityNode(Node):
             if self.anchor_path is None or not self.anchor_path.is_file():
                 raise GravityAnchorError("MODEL_SESSION_ANCHOR_V2不存在")
             self.anchor = GravityModelAnchorV2.from_path(self.anchor_path)
+            self.anchor_sha256 = sha256_file(self.anchor_path)
             self.evaluator = StaticGravityEvaluator(self.model_path)
         except Exception as exc:  # Keep diagnostics online while authority is blocked.
             self.anchor = None
@@ -239,6 +282,65 @@ class WholeArmGravityNode(Node):
             self.initialization_blocker = str(exc)
             self.get_logger().error(
                 "重力解算保持失效关闭（不发布电机命令）：" + self.initialization_blocker
+            )
+        if self.anchor is not None and self.evaluator is not None:
+            self._initialize_empirical_envelope()
+
+    def _initialize_empirical_envelope(self) -> None:
+        if (
+            self.empirical_envelope_path is None
+            and not self.expected_empirical_envelope_sha256
+        ):
+            return
+        if (
+            self.empirical_envelope_path is None
+            or not self.expected_empirical_envelope_sha256
+        ):
+            self.empirical_initialization_blocker = (
+                "EMPIRICAL_ENVELOPE_PATH_AND_SHA256_REQUIRED_TOGETHER"
+            )
+            return
+        try:
+            envelope = EmpiricalValidationEnvelope.from_path(
+                self.empirical_envelope_path,
+                self.expected_empirical_envelope_sha256,
+            )
+            if abs(
+                self.gravity_scale_ramp_seconds - envelope.ramp_seconds
+            ) > 1.0e-12:
+                raise ValueError(
+                    "EMPIRICAL_RUNTIME_RAMP_SECONDS_MISMATCH"
+                )
+            # Normal/official authority retains the V15.31A full-scale slew
+            # semantics.  Only an accepted empirical envelope selects the
+            # contract's fixed 2 s duration for *each* 25% transition.
+            self.feedforward_controller.configure_fixed_stage_transition_ramp(
+                envelope.ramp_seconds
+            )
+            envelope.claim_single_use(self.empirical_claim_directory)
+            self.empirical_stage_gate = EmpiricalStageGate(envelope)
+            self.empirical_initialization_blocker = ""
+        except Exception as exc:
+            self.empirical_stage_gate = None
+            self.empirical_initialization_blocker = str(exc)
+            self.get_logger().error(
+                "Empirical validation authority remains fail-closed: "
+                + self.empirical_initialization_blocker
+            )
+
+    def _on_empirical_stage_confirmation(self, message: String) -> None:
+        gate = self.empirical_stage_gate
+        if gate is None:
+            return
+        try:
+            value = json.loads(message.data)
+        except (json.JSONDecodeError, TypeError):
+            return
+        if not gate.observe_confirmation(
+            value, now_monotonic_ns=time.monotonic_ns()
+        ):
+            self.get_logger().warning(
+                "Rejected invalid/replayed empirical stage confirmation"
             )
 
     def _on_joint_state(self, message: JointState) -> None:
@@ -527,14 +629,64 @@ class WholeArmGravityNode(Node):
             self.get_parameter("enabled_for_hardware").value
         )
         try:
-            gravity_scale_target = (
+            requested_gravity_scale_target = (
                 self.feedforward_controller.validate_scale_target(
                     float(self.get_parameter("gravity_scale_target").value)
                 )
             )
         except (TypeError, ValueError) as exc:
-            gravity_scale_target = 0.0
+            requested_gravity_scale_target = 0.0
             blocker = blocker or str(exc)
+        empirical_authority_ready = False
+        empirical_status = {
+            "authority_class": EMPIRICAL_AUTHORITY_CLASS,
+            "rating_classification": EMPIRICAL_RATING_CLASSIFICATION,
+            "envelope_id": None,
+            "envelope_sha256": None,
+            "anchor_sha256": self.anchor_sha256,
+            "expires_at_utc": None,
+            "stage_index": None,
+            "stage_level": None,
+            "stage_complete": False,
+            "phase": "UNAVAILABLE",
+            "position_validation_authorized": False,
+            "maximum_position_segment_seconds": None,
+            "maximum_cumulative_position_trajectory_seconds": None,
+            "maximum_abs_position_segment_deg": None,
+            "invalidated": False,
+            "blocker": self.empirical_initialization_blocker or None,
+            "continuous_operation_authorized": False,
+            "official_continuous_rating_claimed": False,
+        }
+        if not blocker and self.empirical_stage_gate is not None:
+            empirical_authority_ready = self.empirical_stage_gate.step(
+                requested_scale=requested_gravity_scale_target,
+                applied_scale=self.current_gravity_scale,
+                hardware_state=self.latest_hardware_state,
+                session_id=self.session_id or "",
+                state_instance_id=self.state_instance_id or "",
+                anchor_sha256=self.anchor_sha256,
+                hardware_enable_requested=self.hardware_enable_requested,
+                now_monotonic_ns=now_ns,
+            )
+            empirical_status = self.empirical_stage_gate.status()
+        selected_torque_authority = select_runtime_torque_authority(
+            official_continuous_authoritative=(
+                self.continuous_rotor_limits_authoritative
+            ),
+            empirical_authoritative=empirical_authority_ready,
+            empirical_envelope_configured=(
+                self.empirical_stage_gate is not None
+            ),
+        )
+        selected_authority_ready = selected_torque_authority in {
+            "OFFICIAL_CONTINUOUS_RATING",
+            EMPIRICAL_AUTHORITY_CLASS,
+        }
+        gravity_scale_target = (
+            requested_gravity_scale_target
+            if selected_authority_ready else 0.0
+        )
         if not blocker:
             try:
                 assert self.anchor is not None
@@ -553,7 +705,7 @@ class WholeArmGravityNode(Node):
                     gravity,
                     enabled=(
                         self.hardware_enable_requested
-                        and self.continuous_rotor_limits_authoritative
+                        and selected_authority_ready
                     ),
                     target_scale=gravity_scale_target,
                     now_s=now_s,
@@ -581,7 +733,7 @@ class WholeArmGravityNode(Node):
         hardware_authority_ready = bool(
             not blocker
             and self.hardware_enable_requested
-            and self.continuous_rotor_limits_authoritative
+            and selected_authority_ready
         )
         self.gravity_status_sequence += 1
         q_actual_sha256 = (
@@ -665,6 +817,19 @@ class WholeArmGravityNode(Node):
             minimum_thermal_margin_c=minimum_thermal_margin_c,
             temperature_blocker=temperature_blocker,
             evaluation_blocker=planned_evaluation_blocker,
+            empirical_validation_authoritative=bool(
+                empirical_authority_ready
+                and empirical_status.get(
+                    "position_validation_authorized"
+                ) is True
+            ),
+            empirical_rotor_limits_nm=(
+                SOFTWARE_GRAVITY_ROTOR_LIMIT_NM
+            ),
+            empirical_envelope_id=empirical_status.get("envelope_id"),
+            empirical_envelope_sha256=empirical_status.get(
+                "envelope_sha256"
+            ),
         )
         status = {
             "schema": "go-m8010-gravity-status/1.1",
@@ -691,6 +856,7 @@ class WholeArmGravityNode(Node):
             "feedforward_nm": list(self.last_feedforward_nm),
             "gravity_scale": self.current_gravity_scale,
             "gravity_scale_target": gravity_scale_target,
+            "gravity_scale_requested": requested_gravity_scale_target,
             "finite_bounded": bool(
                 not blocker
                 and self.last_gravity_joint_nm is not None
@@ -704,22 +870,24 @@ class WholeArmGravityNode(Node):
             "pose_feasibility": (
                 "PASS" if hardware_authority_ready
                 else "BLOCKED" if blocker
-                else "BLOCKED_CONTINUOUS_LOAD_AUTHORITY"
-                if not self.continuous_rotor_limits_authoritative
-                else "BLOCKED_HARDWARE_ENABLE"
+                else "BLOCKED_EMPIRICAL_VALIDATION_AUTHORITY"
             ),
             "blocker": (
                 blocker
                 or (
-                    "连续转子力矩authority尚未建立"
-                    if not self.continuous_rotor_limits_authoritative
-                    else None if self.hardware_enable_requested
-                    else "重力硬件authority未显式启用"
+                    None if hardware_authority_ready
+                    else empirical_status.get("blocker")
+                    or "EMPIRICAL_VALIDATION_AUTHORITY_NOT_READY"
                 )
             ),
             "continuous_rotor_limits_authoritative": (
                 self.continuous_rotor_limits_authoritative
             ),
+            "empirical_validation_authoritative": (
+                empirical_authority_ready
+            ),
+            "torque_authority_class": selected_torque_authority,
+            "empirical_validation": empirical_status,
             "hardware_enable_requested": self.hardware_enable_requested,
             # The node remains read-only; this flag means that its bounded
             # authority is consumable by the Router/GO path, not that this

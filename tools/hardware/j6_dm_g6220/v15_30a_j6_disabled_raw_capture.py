@@ -15,9 +15,13 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import json
 import math
 import os
+import re
+import secrets
+import socket
 import statistics
 import time
 import uuid
@@ -50,6 +54,7 @@ from j6_raw_can_diagnostic import (
 
 
 CAPTURE_SCHEMA = "go-m8010-j6-disabled-raw-capture-statistics/1.0"
+FEEDBACK_HANDOFF_SCHEMA = "go-m8010-j6-feedback-handoff/1.0"
 CONFIRM_GATE = "V15_30A_J6_DISABLED_RAW_CAPTURE=YES"
 PHYSICAL_GATE = (
     "J6_24V_ON=YES;SUPPORT_RELIABLE=YES;"
@@ -71,6 +76,167 @@ RUNTIME_HARDWARE_ACCESSED = False
 
 class CaptureError(RuntimeError):
     """The refresh-only capture or its immutable evidence was rejected."""
+
+
+@dataclass(frozen=True)
+class FeedbackUdpBinding:
+    port: int
+    session_id: str
+    state_instance_id: str
+
+
+def validate_feedback_udp_binding(
+    port: Any,
+    session_id: Any,
+    state_instance_id: Any,
+) -> FeedbackUdpBinding | None:
+    """Validate an all-or-nothing loopback feedback identity."""
+
+    if port is None:
+        if (
+            (session_id is not None and session_id != "")
+            or (state_instance_id is not None and state_instance_id != "")
+        ):
+            raise CaptureError(
+                "feedback identity requires --feedback-port"
+            )
+        return None
+    if type(port) is not int or not 1 <= port <= 65535:
+        raise CaptureError("feedback port must be an integer in [1, 65535]")
+    if (
+        not isinstance(session_id, str)
+        or re.fullmatch(
+            r"persistent:[0-9a-f]{16}:j2session:[0-9a-f]{16}:"
+            r"goauxsession:[0-9a-f]{16}",
+            session_id,
+        )
+        is None
+    ):
+        raise CaptureError("feedback session id is invalid")
+    if (
+        not isinstance(state_instance_id, str)
+        or len(state_instance_id) != 32
+        or any(
+            character not in "0123456789abcdef"
+            for character in state_instance_id
+        )
+    ):
+        raise CaptureError(
+            "feedback state instance id must be 32 lowercase hexadecimal characters"
+        )
+    return FeedbackUdpBinding(port, session_id, state_instance_id)
+
+
+def validate_feedback_source_instance_id(value: Any) -> str:
+    if (
+        not isinstance(value, str)
+        or len(value) != 32
+        or any(character not in "0123456789abcdef" for character in value)
+    ):
+        raise CaptureError(
+            "feedback source instance id must be 32 lowercase hexadecimal characters"
+        )
+    return value
+
+
+def create_feedback_socket() -> socket.socket:
+    return socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+
+class DisabledFeedbackPublisher:
+    """Mirror validated DISABLED samples to the local state aggregator."""
+
+    def __init__(
+        self,
+        binding: FeedbackUdpBinding,
+        udp_socket: Any,
+        source_instance_id: str,
+        monotonic_ns: Callable[[], int],
+    ) -> None:
+        validate_feedback_source_instance_id(source_instance_id)
+        self.binding = binding
+        self.socket = udp_socket
+        self.source_instance_id = source_instance_id
+        self.monotonic_ns = monotonic_ns
+        self.sequence = 0
+        self.last_source_monotonic_ns = 0
+        self.published_count = 0
+        self.closed = False
+
+    def publish(self, event: Any, feedback: Any) -> None:
+        """Publish only one already-observed, continuously DISABLED frame."""
+
+        validate_feedback_samples(
+            [(event, feedback)],
+            minimum_count=1,
+            label="J6 loopback telemetry",
+        )
+        source_ns = self.monotonic_ns()
+        if type(source_ns) is not int or source_ns <= self.last_source_monotonic_ns:
+            raise CaptureError(
+                "feedback source monotonic clock did not strictly advance"
+            )
+        feedback_event_ns = int(
+            finite(
+                getattr(event, "event_monotonic_s", None),
+                "J6 loopback feedback timestamp",
+            )
+            * 1.0e9
+        )
+        if not 0 < feedback_event_ns <= source_ns:
+            raise CaptureError(
+                "J6 loopback feedback timestamp is ahead of publication"
+            )
+        self.sequence += 1
+        if self.sequence > (1 << 63) - 1:
+            raise CaptureError("feedback sequence exhausted")
+        payload = {
+            "schema": "go-m8010-motor-feedback/1.0",
+            "source_instance_id": self.source_instance_id,
+            "sequence": self.sequence,
+            "session_id": self.binding.session_id,
+            "state_instance_id": self.binding.state_instance_id,
+            "source_monotonic_ns": source_ns,
+            "samples": [{
+                "motor": "J6",
+                "position_rad": finite(
+                    feedback.position, "J6 loopback position"
+                ),
+                "velocity_rad_s": finite(
+                    feedback.velocity, "J6 loopback velocity"
+                ),
+                "temperature_c": max(
+                    finite(feedback.mos_temp, "J6 loopback MOS temperature"),
+                    finite(feedback.coil_temp, "J6 loopback coil temperature"),
+                ),
+                "merror": 0,
+                "communication_ok": True,
+                "tau_cmd_rotor_nm": None,
+                "tau_feedback_rotor_nm": None,
+                "tau_joint_estimated_nm": None,
+                "last_valid_feedback_monotonic_ns": feedback_event_ns,
+                "trajectory_plan_token_id": "",
+                "trajectory_sha256": "",
+                "trajectory_state": "INACTIVE",
+                "trajectory_sample_index": 0,
+                "trajectory_interval_count": 0,
+            }],
+            "controller_mode": "brake",
+            "controller_mode_by_motor": {"J6": "brake"},
+            "domain_fault": False,
+            "lease_safe_hold": False,
+            "drive_state": 0,
+            "tau_j2_logical_total_nm": None,
+        }
+        encoded = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        self.socket.sendto(encoded, ("127.0.0.1", self.binding.port))
+        self.last_source_monotonic_ns = source_ns
+        self.published_count += 1
+
+    def close(self) -> None:
+        if not self.closed:
+            self.socket.close()
+            self.closed = True
 
 
 def utc_now() -> datetime:
@@ -319,6 +485,7 @@ def capture_disabled_refresh_samples(
     logger: RefreshOnlyLogger,
     count: int,
     label: str,
+    sample_callback: Callable[[Any, Any], None] | None = None,
 ) -> tuple[list[tuple[Any, Any]], int]:
     """Pace refreshes at 100 Hz and fail before the next TX if state is active."""
 
@@ -350,6 +517,8 @@ def capture_disabled_refresh_samples(
                     minimum_count=1,
                     label=f"{label} frame {index}",
                 )
+                if sample_callback is not None:
+                    sample_callback(*selected)
                 values.append(selected)
                 break
             if time.monotonic() >= deadline:
@@ -401,9 +570,11 @@ def descriptive_position_statistics(values: list[float]) -> dict[str, float]:
     return result
 
 
-def raw_position_statistics(values: list[float]) -> dict[str, float]:
-    if len(values) < SAMPLE_COUNT:
-        raise CaptureError(f"J6 has fewer than {SAMPLE_COUNT} raw samples")
+def raw_position_statistics(
+    values: list[float], minimum_count: int = SAMPLE_COUNT
+) -> dict[str, float]:
+    if len(values) < minimum_count:
+        raise CaptureError(f"J6 has fewer than {minimum_count} raw samples")
     result = descriptive_position_statistics(values)
     if any(abs(value) > PMAX_PROTOCOL_RAD for value in values):
         raise CaptureError("J6 raw position exceeds the protocol envelope")
@@ -491,15 +662,20 @@ def validate_feedback_samples(
 class RuntimeDependencies:
     logger_factory: Callable[[], Any] = FailSafeRawCanLogger
     identity_reader: Callable[[], dict[str, Any]] = exact_usb_identity
-    sample_capturer: Callable[
-        [Any, int, str], tuple[list[tuple[Any, Any]], int]
-    ] = capture_disabled_refresh_samples
+    sample_capturer: Callable[..., tuple[list[tuple[Any, Any]], int]] = (
+        capture_disabled_refresh_samples
+    )
     monotonic: Callable[[], float] = time.monotonic
     now_utc: Callable[[], datetime] = utc_now
     host_boot_id_reader: Callable[[], str] = read_host_boot_id
     boottime_ns_reader: Callable[[], int] = read_recorded_boottime_ns
     token_factory: Callable[[], str] = lambda: uuid.uuid4().hex
     lock_factory: Callable[[], ContextManager[Any]] = acquire_device_lock
+    feedback_socket_factory: Callable[[], Any] = create_feedback_socket
+    feedback_source_instance_id_factory: Callable[[], str] = (
+        lambda: secrets.token_hex(16)
+    )
+    monotonic_ns: Callable[[], int] = time.monotonic_ns
 
 
 DEFAULT_DEPENDENCIES = RuntimeDependencies()
@@ -568,6 +744,66 @@ def base_document(
     }
 
 
+def feedback_handoff_document(
+    raw_output: Path,
+    raw_sha256: str,
+    document: dict[str, Any],
+    binding: FeedbackUdpBinding,
+    publisher: DisabledFeedbackPublisher,
+) -> dict[str, Any]:
+    """Bind the one-shot producer continuation to exact PASS evidence."""
+
+    expected_published = int(document["packet_count"]) + int(
+        document["terminal"]["required_final_disabled_frames"]
+    )
+    if (
+        document.get("status") != "PASS"
+        or document.get("physical_power_off_required") is not False
+        or document["terminal"].get("confirmed") is not True
+        or document["terminal"].get("channel_closed") is not True
+        or publisher.closed is not True
+        or publisher.published_count != expected_published
+        or publisher.sequence != expected_published
+        or publisher.last_source_monotonic_ns <= 0
+        or len(raw_sha256) != 64
+        or any(
+            character not in "0123456789abcdef"
+            for character in raw_sha256
+        )
+    ):
+        raise CaptureError("J6 feedback handoff requires exact closed PASS evidence")
+    return {
+        "schema": FEEDBACK_HANDOFF_SCHEMA,
+        "handoff_id": (
+            f"j6-feedback-{publisher.source_instance_id}-"
+            f"{publisher.sequence}"
+        ),
+        "session_id": binding.session_id,
+        "state_instance_id": binding.state_instance_id,
+        "source_instance_id": publisher.source_instance_id,
+        "last_sequence": publisher.sequence,
+        "last_source_monotonic_ns": publisher.last_source_monotonic_ns,
+        "raw_capture": {
+            "path": str(raw_output),
+            "sha256": raw_sha256,
+        },
+        "terminal": {
+            "drive_state": 0,
+            "controller_mode": "brake",
+            "confirmed": True,
+            "channel_closed": True,
+        },
+        "forwarding": {
+            "destination": f"127.0.0.1:{binding.port}",
+            "published_count": publisher.published_count,
+            "socket_closed": publisher.closed,
+        },
+        "active_control_authorized": False,
+        "can_tx_policy": "DISABLED_CLASSIC_CAN_REFRESH_ONLY",
+        "single_use_claim_required": True,
+    }
+
+
 def validate_gates(confirm: str, physical_confirmation: str) -> None:
     if confirm != CONFIRM_GATE:
         raise CaptureError(f"require --confirm {CONFIRM_GATE}")
@@ -582,11 +818,46 @@ def prepare_output(path: Path) -> Path:
     return output
 
 
+def prepare_feedback_handoff_output(
+    path: Any, raw_output: Path, forwarding_enabled: bool,
+) -> Path | None:
+    if not forwarding_enabled:
+        if path is not None and path != "":
+            raise CaptureError(
+                "feedback handoff output requires --feedback-port"
+            )
+        return None
+    if path is None or path == "":
+        raise CaptureError(
+            "forwarded J6 feedback requires --feedback-handoff-output"
+        )
+    result = prepare_output(Path(path))
+    if result == raw_output:
+        raise CaptureError("feedback handoff output must differ from raw output")
+    return result
+
+
 def _recover_feedback(logger: RefreshOnlyLogger, start_index: int) -> list[tuple[Any, Any]]:
     try:
         return normal_feedback(logger, logger.snapshot()[start_index:])
     except Exception:
         return []
+
+
+def capture_with_optional_feedback(
+    deps: RuntimeDependencies,
+    logger: RefreshOnlyLogger,
+    count: int,
+    label: str,
+    publisher: DisabledFeedbackPublisher | None,
+) -> tuple[list[tuple[Any, Any]], int]:
+    """Preserve the legacy three-argument path when forwarding is disabled."""
+
+    if publisher is None:
+        return deps.sample_capturer(logger, count, label)
+    return deps.sample_capturer(
+        logger, count, label, publisher.publish
+    )
 
 
 def run(
@@ -598,10 +869,45 @@ def run(
     pose_binding_id = validate_pose_binding_id(
         getattr(args, "pose_binding_id", None)
     )
+    sample_count = int(getattr(args, "sample_count", SAMPLE_COUNT))
+    minimum_source_coverage_s = float(
+        getattr(args, "minimum_source_coverage_s", MINIMUM_SOURCE_COVERAGE_S)
+    )
+    if not 500 <= sample_count <= 6000:
+        raise CaptureError("J6 sample count must be in [500, 6000]")
+    if not 4.0 <= minimum_source_coverage_s <= 60.0:
+        raise CaptureError("J6 minimum source coverage must be in [4, 60] seconds")
+    feedback_binding = validate_feedback_udp_binding(
+        getattr(args, "feedback_port", None),
+        getattr(args, "feedback_session_id", None),
+        getattr(args, "feedback_state_instance_id", None),
+    )
     validate_gates(args.confirm, args.physical_confirmation)
     output = prepare_output(args.output)
+    feedback_handoff_output = prepare_feedback_handoff_output(
+        getattr(args, "feedback_handoff_output", None),
+        output,
+        feedback_binding is not None,
+    )
     identity = new_capture_identity(deps)
     document = base_document(identity, pose_binding_id)
+    feedback_source_instance_id = (
+        None
+        if feedback_binding is None
+        else validate_feedback_source_instance_id(
+            deps.feedback_source_instance_id_factory()
+        )
+    )
+    feedback_publisher = (
+        None
+        if feedback_binding is None
+        else DisabledFeedbackPublisher(
+            feedback_binding,
+            deps.feedback_socket_factory(),
+            feedback_source_instance_id,
+            deps.monotonic_ns,
+        )
+    )
     document["physical_confirmation"] = {
         "confirmation_gate": PHYSICAL_GATE,
         "j6_24v_on": True,
@@ -640,15 +946,21 @@ def run(
             try:
                 main_start_index = len(guarded.snapshot())
                 capture_started_at = deps.monotonic()
-                main_values, _ = deps.sample_capturer(
-                    guarded, SAMPLE_COUNT, "J6_DISABLED_ZERO_CAPTURE"
+                main_values, _ = capture_with_optional_feedback(
+                    deps,
+                    guarded,
+                    sample_count,
+                    "J6_DISABLED_ZERO_CAPTURE",
+                    feedback_publisher,
                 )
                 capture_finished_at = deps.monotonic()
                 final_start_index = len(guarded.snapshot())
-                final_values, _ = deps.sample_capturer(
+                final_values, _ = capture_with_optional_feedback(
+                    deps,
                     guarded,
                     FINAL_DISABLED_FRAME_COUNT,
                     "J6_FINAL_DISABLED",
+                    feedback_publisher,
                 )
             except BaseException as exc:
                 failure = exc
@@ -676,6 +988,32 @@ def run(
                     f"CHANNEL_CLOSE:{type(close_exc).__name__}:{close_exc}"
                 )
 
+    if feedback_publisher is not None:
+        try:
+            feedback_publisher.close()
+        except BaseException as exc:
+            if failure is None:
+                failure = exc
+            document["failures"].append(
+                f"FEEDBACK_SOCKET_CLOSE:{type(exc).__name__}:{exc}"
+            )
+        document["readonly_feedback_udp"] = {
+            "schema": "go-m8010-readonly-feedback-forwarding/1.0",
+            "destination": f"127.0.0.1:{feedback_binding.port}",
+            "session_id": feedback_binding.session_id,
+            "state_instance_id": feedback_binding.state_instance_id,
+            "source_instance_id": feedback_publisher.source_instance_id,
+            "published_count": feedback_publisher.published_count,
+            "last_sequence": feedback_publisher.sequence,
+            "last_source_monotonic_ns": (
+                feedback_publisher.last_source_monotonic_ns
+            ),
+            "socket_closed": feedback_publisher.closed,
+            "active_control_authorized": False,
+            "can_tx_policy": "DISABLED_CLASSIC_CAN_REFRESH_ONLY",
+            "handoff_output": str(feedback_handoff_output),
+        }
+
     document["usb_identity"] = usb_identity
     document["terminal"]["channel_closed"] = bool(
         guarded is not None and guarded.closed
@@ -692,7 +1030,7 @@ def run(
     try:
         main = validate_feedback_samples(
             main_values,
-            minimum_count=SAMPLE_COUNT,
+            minimum_count=sample_count,
             label="main capture",
         )
         final = validate_feedback_samples(
@@ -706,15 +1044,17 @@ def run(
             if capture_started_at is None or capture_finished_at is None
             else capture_finished_at - capture_started_at
         )
-        if source_coverage_s < MINIMUM_SOURCE_COVERAGE_S:
+        if source_coverage_s < minimum_source_coverage_s:
             raise CaptureError(
                 f"J6 feedback source coverage {source_coverage_s:.6f}s is too short"
             )
-        if wall_coverage_s < MINIMUM_SOURCE_COVERAGE_S:
+        if wall_coverage_s < minimum_source_coverage_s:
             raise CaptureError(
                 f"J6 capture wall duration {wall_coverage_s:.6f}s is too short"
             )
-        raw_stats = raw_position_statistics(main["positions"])
+        raw_stats = raw_position_statistics(
+            main["positions"], minimum_count=sample_count
+        )
         if any(
             int(attempted_audit[field]) != 0
             for field in (
@@ -731,7 +1071,7 @@ def run(
             )
         ):
             raise CaptureError("J6 attempted command audit is not refresh-only")
-        expected_refreshes = SAMPLE_COUNT + FINAL_DISABLED_FRAME_COUNT
+        expected_refreshes = sample_count + FINAL_DISABLED_FRAME_COUNT
         if int(attempted_audit["refresh_request_count"]) != expected_refreshes:
             raise CaptureError("J6 attempted refresh count is incomplete")
         if observed_audit != attempted_audit:
@@ -753,16 +1093,16 @@ def run(
 
         document.update({
             "status": "PASS",
-            "packet_count": SAMPLE_COUNT,
+            "packet_count": sample_count,
             "source_coverage_s": source_coverage_s,
             "motors": {
                 "J6": {
-                    "sample_count": SAMPLE_COUNT,
+                    "sample_count": sample_count,
                     "raw_position_rad": raw_stats,
                     "velocity_rad_s": {
                         "minimum": min(main["velocities"]),
                         "maximum": max(main["velocities"]),
-                        "mean": math.fsum(main["velocities"]) / SAMPLE_COUNT,
+                        "mean": math.fsum(main["velocities"]) / sample_count,
                     },
                     "mos_temperature_c": {
                         "minimum": min(main["mos_temperatures"]),
@@ -809,12 +1149,12 @@ def run(
         if failure is None:
             failure = exc
         document["status"] = "FAIL"
-        document["packet_count"] = min(len(main_values), SAMPLE_COUNT)
+        document["packet_count"] = min(len(main_values), sample_count)
         if main_values:
             try:
                 event_times = [
                     finite(event.event_monotonic_s, "failure evidence timestamp")
-                    for event, _ in main_values[:SAMPLE_COUNT]
+                    for event, _ in main_values[:sample_count]
                 ]
                 if len(event_times) >= 2:
                     document["source_coverage_s"] = max(
@@ -823,10 +1163,10 @@ def run(
             except Exception:
                 pass
         document["motors"]["J6"]["sample_count"] = min(
-            len(main_values), SAMPLE_COUNT
+            len(main_values), sample_count
         )
         finite_positions = []
-        for _, feedback in main_values[:SAMPLE_COUNT]:
+        for _, feedback in main_values[:sample_count]:
             value = getattr(feedback, "position", None)
             if type(value) in {int, float} and math.isfinite(float(value)):
                 finite_positions.append(float(value))
@@ -883,6 +1223,18 @@ def run(
 
     document["completed_at_utc"] = utc_text(deps.now_utc())
     publish_json_no_overwrite(output, document)
+    if feedback_handoff_output is not None and document["status"] == "PASS":
+        assert feedback_binding is not None
+        assert feedback_publisher is not None
+        raw_sha256 = hashlib.sha256(output.read_bytes()).hexdigest()
+        handoff = feedback_handoff_document(
+            output,
+            raw_sha256,
+            document,
+            feedback_binding,
+            feedback_publisher,
+        )
+        publish_json_no_overwrite(feedback_handoff_output, handoff)
     print(json.dumps(document, ensure_ascii=False, indent=2), flush=True)
     return 0 if document["status"] == "PASS" else 2
 
@@ -898,7 +1250,47 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--confirm", required=True)
     parser.add_argument("--physical-confirmation", required=True)
-    return parser.parse_args(argv)
+    parser.add_argument(
+        "--sample-count",
+        type=int,
+        default=SAMPLE_COUNT,
+        help="DISABLED refresh samples; V15.31B uses 1100 for >=10 s",
+    )
+    parser.add_argument(
+        "--minimum-source-coverage-s",
+        type=float,
+        default=MINIMUM_SOURCE_COVERAGE_S,
+    )
+    parser.add_argument(
+        "--feedback-port",
+        type=int,
+        help="optional localhost whole-arm state UDP port",
+    )
+    parser.add_argument("--feedback-session-id", default="")
+    parser.add_argument("--feedback-state-instance-id", default="")
+    parser.add_argument("--feedback-handoff-output", type=Path)
+    args = parser.parse_args(argv)
+    if not 500 <= args.sample_count <= 6000:
+        parser.error("sample count must be in [500, 6000]")
+    if not 4.0 <= args.minimum_source_coverage_s <= 60.0:
+        parser.error("minimum source coverage must be in [4, 60] seconds")
+    try:
+        validate_feedback_udp_binding(
+            args.feedback_port,
+            args.feedback_session_id,
+            args.feedback_state_instance_id,
+        )
+    except CaptureError as exc:
+        parser.error(str(exc))
+    try:
+        prepare_feedback_handoff_output(
+            args.feedback_handoff_output,
+            Path(os.path.abspath(args.output)),
+            args.feedback_port is not None,
+        )
+    except CaptureError as exc:
+        parser.error(str(exc))
+    return args
 
 
 def main() -> int:

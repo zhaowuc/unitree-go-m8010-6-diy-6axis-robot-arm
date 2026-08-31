@@ -11,6 +11,7 @@ import hashlib
 import importlib
 import json
 import math
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -34,6 +35,10 @@ GRAVITY_CONFIG_SHA256 = (
 GRAVITY_ANCHOR_SCHEMA = "go-m8010-gravity-model-anchor-v2/2.0"
 MOTOR_NAMES = ("J1", "J2A", "J2B", "J3", "J4", "J5", "J6")
 JOINT_NAMES = ("J1", "J2", "J3", "J4", "J5", "J6")
+JOINT_STATE_NAME_ALIASES = {
+    **{name: name for name in JOINT_NAMES},
+    **{f"joint{index}": name for index, name in enumerate(JOINT_NAMES, start=1)},
+}
 GRAVITY_SCALE_LEVELS = (0.0, 0.25, 0.50, 0.75, 1.00)
 FROZEN_MOTOR_SIGNS = {
     "J1": +1,
@@ -56,6 +61,35 @@ def sha256_file(path: Path) -> str:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def dynamics_only_xml(model_path: Path) -> str:
+    """Derive an in-memory dynamics model without mesh/collision payloads.
+
+    The frozen source XML remains the hash authority and is never modified.
+    Every moving link in that model has an explicit ``inertial`` element, so
+    zero-mass visual/collision geoms do not contribute to gravity or inverse
+    dynamics. Removing them avoids loading the 1008-mesh, multi-gigabyte
+    rendering/collision model into every control-side MuJoCo process.
+    """
+
+    try:
+        root = ET.fromstring(Path(model_path).read_bytes())
+    except (OSError, ET.ParseError) as exc:
+        raise ValueError("frozen production MuJoCo XML cannot be parsed") from exc
+    if root.tag != "mujoco":
+        raise ValueError("frozen production model root must be mujoco")
+    for tag in ("asset", "visual", "contact", "size"):
+        child = root.find(tag)
+        if child is not None:
+            root.remove(child)
+    for parent in root.iter():
+        for child in list(parent):
+            if child.tag in {"geom", "camera", "light"}:
+                parent.remove(child)
+    if any(root.iter("geom")) or root.find("asset") is not None:
+        raise ValueError("dynamics-only MuJoCo derivation retained mesh geometry")
+    return ET.tostring(root, encoding="unicode")
 
 
 def _finite_vector(value: object, length: int, name: str) -> tuple[float, ...]:
@@ -82,13 +116,14 @@ def normalize_named_joint_positions(
         raise ValueError("joint state name/position lengths differ")
     observed = {}
     for name, value in zip(names, positions):
-        if name in observed:
-            raise ValueError(f"duplicate joint state name: {name}")
-        if name in JOINT_NAMES:
+        canonical_name = JOINT_STATE_NAME_ALIASES.get(name)
+        if canonical_name is not None:
+            if canonical_name in observed:
+                raise ValueError(f"duplicate joint state name: {canonical_name}")
             converted = float(value)
             if not math.isfinite(converted):
                 raise ValueError(f"non-finite joint state: {name}")
-            observed[name] = converted
+            observed[canonical_name] = converted
     if set(observed) != set(JOINT_NAMES):
         raise ValueError("joint state does not contain J1..J6 exactly")
     return tuple(observed[name] for name in JOINT_NAMES)
@@ -297,7 +332,9 @@ class StaticGravityEvaluator:
             importlib.import_module("mujoco")
             if mujoco_module is None else mujoco_module
         )
-        self.model = self._mujoco.MjModel.from_xml_path(str(self.model_path))
+        self.model = self._mujoco.MjModel.from_xml_string(
+            dynamics_only_xml(self.model_path)
+        )
         if self.model.nq != 6 or self.model.nv != 6:
             raise ValueError("production MuJoCo model must expose six coordinates")
         self.data = self._mujoco.MjData(self.model)
@@ -351,7 +388,13 @@ class GravityScaleRamp:
     could bypass the slew bound after a clock/source reset.
     """
 
-    def __init__(self, ramp_seconds: float, initial_scale: float = 0.0) -> None:
+    def __init__(
+        self,
+        ramp_seconds: float,
+        initial_scale: float = 0.0,
+        *,
+        fixed_transition_duration: bool = False,
+    ) -> None:
         duration = float(ramp_seconds)
         initial = float(initial_scale)
         if not math.isfinite(duration) or duration <= 0.0:
@@ -359,15 +402,25 @@ class GravityScaleRamp:
         if not math.isfinite(initial) or not 0.0 <= initial <= 1.0:
             raise ValueError("initial_scale must be within [0, 1]")
         self.ramp_seconds = duration
+        self.fixed_transition_duration = bool(fixed_transition_duration)
         self.current_scale = initial
         self.target_scale = initial
         self._last_time_s: Optional[float] = None
+        self._transition_started_s: Optional[float] = None
+        self._transition_start_scale = initial
 
     def set_target(self, scale: float) -> None:
         target = float(scale)
         if not math.isfinite(target) or not 0.0 <= target <= 1.0:
             raise ValueError("target gravity scale must be within [0, 1]")
-        self.target_scale = target
+        if target != self.target_scale:
+            self.target_scale = target
+            if self.fixed_transition_duration:
+                # The next step owns the timestamp so set_target remains a
+                # pure validation/update call and cannot credit time between
+                # a ROS parameter read and the control-cycle boundary.
+                self._transition_started_s = None
+                self._transition_start_scale = self.current_scale
 
     def step(self, now_s: float) -> float:
         now = float(now_s)
@@ -380,6 +433,25 @@ class GravityScaleRamp:
         if elapsed < 0.0:
             raise ValueError("gravity ramp time moved backwards")
         self._last_time_s = now
+        if self.fixed_transition_duration:
+            if self.current_scale == self.target_scale:
+                self._transition_started_s = None
+                self._transition_start_scale = self.current_scale
+                return self.current_scale
+            if self._transition_started_s is None:
+                self._transition_started_s = now
+                self._transition_start_scale = self.current_scale
+                return self.current_scale
+            transition_elapsed = now - self._transition_started_s
+            fraction = min(1.0, transition_elapsed / self.ramp_seconds)
+            self.current_scale = self._transition_start_scale + fraction * (
+                self.target_scale - self._transition_start_scale
+            )
+            if fraction >= 1.0:
+                self.current_scale = self.target_scale
+                self._transition_started_s = None
+                self._transition_start_scale = self.current_scale
+            return self.current_scale
         maximum_change = elapsed / self.ramp_seconds
         difference = self.target_scale - self.current_scale
         if abs(difference) <= maximum_change:
@@ -393,6 +465,8 @@ class GravityScaleRamp:
 
         self.current_scale = 0.0
         self.target_scale = 0.0
+        self._transition_started_s = None
+        self._transition_start_scale = 0.0
         if now_s is not None:
             now = float(now_s)
             if not math.isfinite(now) or now < 0.0:
@@ -465,6 +539,19 @@ class GravityFeedforwardController:
         self.scale = GravityScaleRamp(ramp_seconds, initial_scale=0.0)
         self.rotor = RotorTorqueSlewLimiter(maximum_slew_nm_per_s)
         self._enabled = False
+
+    def configure_fixed_stage_transition_ramp(
+        self, ramp_seconds: float
+    ) -> None:
+        """Select fixed-duration stage ramps before empirical enablement."""
+
+        if self._enabled or self.scale.current_scale != 0.0:
+            raise ValueError("cannot reconfigure an active gravity ramp")
+        self.scale = GravityScaleRamp(
+            ramp_seconds,
+            initial_scale=0.0,
+            fixed_transition_duration=True,
+        )
 
     @staticmethod
     def validate_scale_target(value: float) -> float:

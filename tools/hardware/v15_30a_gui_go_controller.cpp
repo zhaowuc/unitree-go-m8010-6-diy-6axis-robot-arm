@@ -7,6 +7,7 @@
 #include <csignal>
 #include <cstddef>
 #include <cstdint>
+#include <ctime>
 #include <cstring>
 #include <deque>
 #include <fcntl.h>
@@ -19,6 +20,7 @@
 #include <memory>
 #include <numeric>
 #include <set>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -63,10 +65,9 @@ constexpr std::array<double, 6> kModelCommandUpper{{
 // authorization.  Half a degree covers endpoint quantization and trajectory
 // observer noise without extending any commanded target range.
 constexpr double kFeedbackEnvelopeTolerance = 0.5 * kPi / 180.0;
+constexpr double kJ2SyncWarningLimit = 0.25 * kPi / 180.0;
 constexpr double kJ2SyncLimit = 0.5 * kPi / 180.0;
-constexpr double kJ2SyncRecoveryLimit = 0.35 * kPi / 180.0;
-constexpr double kJ2SyncImmediateLimit = 2.0 * kPi / 180.0;
-constexpr int kJ2SyncTripConsecutiveFrames = 3;
+constexpr double kJ2SyncRecoveryLimit = kJ2SyncWarningLimit;
 constexpr int kJ2SyncRecoveryConsecutiveFrames = 5;
 constexpr double kJ2SessionStartupTolerance = 2.0 * kPi / 180.0;
 constexpr double kJ2StartupPermitRawDelta =
@@ -138,6 +139,8 @@ constexpr double kBrakeStationaritySpan = 0.20 * kPi / 180.0;
 constexpr double kTargetTimeoutSeconds = 90.0;
 constexpr double kLeaseSeconds = 0.5;
 constexpr double kFixedHoldCaptureWindow = 2.0 * kPi / 180.0;
+constexpr double kEmpiricalInitialHoldCaptureWindow =
+    0.25 * kPi / 180.0;
 constexpr double kFixedHoldRepeatTolerance = 1e-9;
 constexpr double kFixedHoldFeedbackFreshSeconds = 0.10;
 constexpr int kBrakeMode = 0;
@@ -173,7 +176,13 @@ constexpr std::array<double, 6> kKdLimits{{
 constexpr std::array<double, 6> kRecoveryFeedforwardLimits{{
     0.20, 1.75, 1.00, 0.40, 0.20, 0.0}};
 constexpr char kGravityAuthoritySchema[] =
+    "go-m8010-gravity-command-authority/1.1";
+constexpr char kOfficialGravityAuthoritySchema[] =
     "go-m8010-gravity-command-authority/1.0";
+constexpr char kEmpiricalAuthorityClass[] =
+    "EMPIRICAL_VALIDATION_ENVELOPE";
+constexpr char kEmpiricalRatingClassification[] =
+    "NOT_OFFICIAL_CONTINUOUS_RATING";
 constexpr char kProductionModelSha256[] =
     "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9";
 constexpr char kGravityConfigSha256[] =
@@ -739,7 +748,24 @@ struct Options {
   std::string expected_worker_sha256;
   std::string thermal_config_file;
   std::string expected_thermal_config_sha256;
+  std::string expected_gravity_authority_class;
+  std::string expected_empirical_envelope_id;
+  std::string expected_empirical_envelope_sha256;
+  std::string expected_gravity_anchor_sha256;
+  std::string expected_gravity_session_id;
+  std::string expected_gravity_state_instance_id;
 };
+
+struct ExpectedGravityAuthorityBinding {
+  std::string authority_class = "UNBOUND_SELF_TEST";
+  std::string empirical_envelope_id;
+  std::string empirical_envelope_sha256;
+  std::string anchor_sha256;
+  std::string session_id;
+  std::string state_instance_id;
+};
+
+ExpectedGravityAuthorityBinding g_expected_gravity_authority_binding;
 
 Options parse_options(int argc, char** argv) {
   Options options;
@@ -784,6 +810,18 @@ Options parse_options(int argc, char** argv) {
       options.thermal_config_file = next();
     else if (arg == "--expected-thermal-config-sha256")
       options.expected_thermal_config_sha256 = next();
+    else if (arg == "--expected-gravity-authority-class")
+      options.expected_gravity_authority_class = next();
+    else if (arg == "--expected-empirical-envelope-id")
+      options.expected_empirical_envelope_id = next();
+    else if (arg == "--expected-empirical-envelope-sha256")
+      options.expected_empirical_envelope_sha256 = next();
+    else if (arg == "--expected-gravity-anchor-sha256")
+      options.expected_gravity_anchor_sha256 = next();
+    else if (arg == "--expected-gravity-session-id")
+      options.expected_gravity_session_id = next();
+    else if (arg == "--expected-gravity-state-instance-id")
+      options.expected_gravity_state_instance_id = next();
     else throw std::runtime_error("CLI_OPTION_NOT_ALLOWED");
   }
   const bool j2_bundle_fields_missing =
@@ -830,6 +868,51 @@ Options parse_options(int argc, char** argv) {
   if (options.thermal_config_file.empty() ||
       options.expected_thermal_config_sha256.empty())
     throw std::runtime_error("THERMAL_CONFIG_AUTHORITY_GATE_MISSING");
+  if (!options.brake_only) {
+    const bool empirical = options.expected_gravity_authority_class ==
+        kEmpiricalAuthorityClass;
+    const bool official = options.expected_gravity_authority_class ==
+        "OFFICIAL_CONTINUOUS_RATING";
+    const bool none = options.expected_gravity_authority_class == "NONE";
+    if (!empirical && !official && !none)
+      throw std::runtime_error(
+          "GRAVITY_AUTHORITY_STARTUP_CLASS_MISSING");
+    if (none) {
+      if (!options.expected_empirical_envelope_id.empty() ||
+          !options.expected_empirical_envelope_sha256.empty() ||
+          !options.expected_gravity_anchor_sha256.empty() ||
+          !options.expected_gravity_session_id.empty() ||
+          !options.expected_gravity_state_instance_id.empty())
+        throw std::runtime_error(
+            "GRAVITY_AUTHORITY_NONE_BINDING_INVALID");
+    } else {
+      if (!valid_sha256(options.expected_gravity_anchor_sha256) ||
+          options.expected_gravity_session_id.empty() ||
+          !valid_source_instance_id(
+              options.expected_gravity_state_instance_id))
+        throw std::runtime_error(
+            "GRAVITY_AUTHORITY_STARTUP_BINDING_INVALID");
+      if (empirical) {
+        const auto& envelope_id = options.expected_empirical_envelope_id;
+        if (envelope_id.size() != 38U ||
+            envelope_id.rfind("v15-31b-empirical-", 0U) != 0U ||
+            !std::all_of(
+                envelope_id.begin() + 18, envelope_id.end(),
+                [](char character) {
+                  return (character >= '0' && character <= '9') ||
+                      (character >= 'a' && character <= 'f');
+                }) ||
+            !valid_sha256(
+                options.expected_empirical_envelope_sha256))
+          throw std::runtime_error(
+              "GRAVITY_EMPIRICAL_STARTUP_BINDING_INVALID");
+      } else if (!options.expected_empirical_envelope_id.empty() ||
+                 !options.expected_empirical_envelope_sha256.empty()) {
+        throw std::runtime_error(
+            "GRAVITY_OFFICIAL_EMPIRICAL_BINDING_FORBIDDEN");
+      }
+    }
+  }
   if (options.feedback_port < 1024 || options.feedback_port > 65535)
     throw std::runtime_error("FEEDBACK_PORT_OUT_OF_RANGE");
   return options;
@@ -1101,9 +1184,16 @@ int invalid_feedback_limit_for_bus(const std::string& bus) {
 }
 
 struct J2SyncFaultFilter {
-  int trip_frames = 0;
-  int recovery_frames = 0;
+  bool observation_valid = false;
+  bool warning = false;
   bool fault = false;
+  bool release_observed = false;
+  bool recovery_ready = false;
+  bool rearm_pending_next_cycle = false;
+  int recovery_frames = 0;
+  double trip_error_rad = 0.0;
+  std::uint64_t trip_activation_epoch = 0;
+  std::uint64_t minimum_rearm_epoch = 0;
 };
 
 struct ThermalInterlockState {
@@ -1654,41 +1744,104 @@ double frozen_required_rotor_gravity_nm(std::size_t joint) {
   return kFrozenMaximumGravityJointNm[joint] / (motor_share * kGear);
 }
 
-bool observe_j2_sync_error(J2SyncFaultFilter& state, double error_rad) {
-  if (!std::isfinite(error_rad)) {
-    state.fault = true;
-    state.trip_frames = kJ2SyncTripConsecutiveFrames;
-    state.recovery_frames = 0;
+void reset_j2_sync_recovery_evidence(J2SyncFaultFilter& state) {
+  state.release_observed = false;
+  state.recovery_ready = false;
+  state.rearm_pending_next_cycle = false;
+  state.recovery_frames = 0;
+}
+
+bool latch_j2_sync_interlock(
+    J2SyncFaultFilter& state, double error_rad,
+    std::uint64_t active_epoch, std::uint64_t current_minimum_epoch,
+    std::uint64_t highest_rejected_active_epoch) {
+  const bool newly_latched = !state.fault;
+  state.fault = true;
+  reset_j2_sync_recovery_evidence(state);
+  if (newly_latched)
+    state.trip_error_rad = std::isfinite(error_rad) ? error_rad : 0.0;
+  state.trip_activation_epoch = std::max(
+      state.trip_activation_epoch, active_epoch);
+  state.minimum_rearm_epoch = std::max({
+      state.minimum_rearm_epoch,
+      current_minimum_epoch,
+      saturating_next_activation_epoch(active_epoch),
+      saturating_next_activation_epoch(highest_rejected_active_epoch)});
+  return newly_latched;
+}
+
+bool observe_j2_sync_error(
+    J2SyncFaultFilter& state, double error_rad,
+    std::uint64_t active_epoch, std::uint64_t current_minimum_epoch,
+    std::uint64_t highest_rejected_active_epoch) {
+  state.observation_valid = std::isfinite(error_rad);
+  if (!state.observation_valid) {
+    state.warning = true;
+    (void)latch_j2_sync_interlock(
+        state, error_rad, active_epoch, current_minimum_epoch,
+        highest_rejected_active_epoch);
     return true;
   }
   const double magnitude = std::abs(error_rad);
+  state.warning = magnitude > kJ2SyncWarningLimit;
+  if (magnitude > kJ2SyncLimit) {
+    (void)latch_j2_sync_interlock(
+        state, error_rad, active_epoch, current_minimum_epoch,
+        highest_rejected_active_epoch);
+    return true;
+  }
   if (!state.fault) {
-    state.recovery_frames = 0;
-    if (magnitude >= kJ2SyncImmediateLimit) {
-      state.trip_frames = kJ2SyncTripConsecutiveFrames;
-      state.fault = true;
-    } else if (magnitude > kJ2SyncLimit) {
-      state.trip_frames = std::min(
-          state.trip_frames + 1, kJ2SyncTripConsecutiveFrames);
-      state.fault = state.trip_frames >= kJ2SyncTripConsecutiveFrames;
-    } else {
-      state.trip_frames = 0;
-    }
-    return state.fault;
+    reset_j2_sync_recovery_evidence(state);
+    return false;
   }
-  state.trip_frames = kJ2SyncTripConsecutiveFrames;
   if (magnitude <= kJ2SyncRecoveryLimit) {
-    state.recovery_frames = std::min(
-        state.recovery_frames + 1, kJ2SyncRecoveryConsecutiveFrames);
-    if (state.recovery_frames >= kJ2SyncRecoveryConsecutiveFrames) {
-      state.fault = false;
-      state.trip_frames = 0;
-      state.recovery_frames = 0;
-    }
+    if (state.recovery_frames < std::numeric_limits<int>::max())
+      ++state.recovery_frames;
+    state.recovery_ready =
+        state.recovery_frames >= kJ2SyncRecoveryConsecutiveFrames;
   } else {
-    state.recovery_frames = 0;
+    reset_j2_sync_recovery_evidence(state);
   }
-  return state.fault;
+  return true;
+}
+
+bool observe_explicit_j2_sync_release(
+    J2SyncFaultFilter& state, bool explicit_release_packet_received) {
+  if (!state.fault || !state.recovery_ready ||
+      !explicit_release_packet_received)
+    return false;
+  const bool newly_observed = !state.release_observed;
+  state.release_observed = true;
+  return newly_observed;
+}
+
+bool request_j2_sync_rearm_for_next_cycle(
+    J2SyncFaultFilter& state, bool command_lease_fresh,
+    bool active_owned_joint_requested,
+    bool all_domain_motors_valid_brake,
+    std::uint64_t activation_epoch,
+    std::uint64_t highest_rejected_active_epoch) {
+  const bool acceptable = state.fault && state.observation_valid &&
+      !state.warning && state.recovery_ready && state.release_observed &&
+      command_lease_fresh && active_owned_joint_requested &&
+      all_domain_motors_valid_brake &&
+      activation_epoch > state.trip_activation_epoch &&
+      activation_epoch >= state.minimum_rearm_epoch &&
+      activation_epoch > highest_rejected_active_epoch;
+  if (!acceptable) return false;
+  state.rearm_pending_next_cycle = true;
+  return true;
+}
+
+bool apply_pending_j2_sync_rearm_at_cycle_start(
+    J2SyncFaultFilter& state) {
+  if (!state.fault || !state.rearm_pending_next_cycle) return false;
+  state.fault = false;
+  state.observation_valid = false;
+  state.warning = false;
+  state.trip_error_rad = 0.0;
+  reset_j2_sync_recovery_evidence(state);
+  return true;
 }
 
 bool observe_feedback_frame_validity(
@@ -1708,11 +1861,11 @@ bool observe_feedback_frame_validity(
 }
 
 bool observe_j2_sync_unavailable(J2SyncFaultFilter& state) {
-  // Missing/asynchronous feedback cannot prove either a new mismatch or a
-  // recovery.  Clear only an unconfirmed consecutive-trip sequence; retain a
-  // previously confirmed fault until fresh paired samples satisfy hysteresis.
-  state.recovery_frames = 0;
-  if (!state.fault) state.trip_frames = 0;
+  // Missing/asynchronous feedback proves neither warning clearance nor safe
+  // recovery.  Retain a hard latch and invalidate all recovery/rearm evidence.
+  state.observation_valid = false;
+  state.warning = false;
+  reset_j2_sync_recovery_evidence(state);
   return state.fault;
 }
 
@@ -3225,15 +3378,45 @@ bool same_quintic_trajectory_descriptor(
 
 struct GravityCommandAuthority {
   bool present = false;
+  bool official_continuous_authority = false;
   std::string source_instance_id;
   std::uint64_t sequence = 0;
   std::uint64_t source_monotonic_ns = 0;
   std::string session_id;
   std::string state_instance_id;
+  std::string authority_class;
+  std::string rating_classification;
+  std::string empirical_envelope_id;
+  std::string empirical_envelope_sha256;
+  std::string empirical_envelope_expires_at_utc;
+  std::uint64_t empirical_envelope_deadline_monotonic_ns = 0;
+  std::string anchor_sha256;
+  std::uint64_t empirical_stage_index = 0;
+  bool empirical_position_validation_authorized = false;
+  double empirical_maximum_position_segment_seconds = 0.0;
+  double empirical_maximum_abs_position_segment_deg = 0.0;
   double gravity_scale = 0.0;
   double gravity_scale_target = 0.0;
   std::array<double, 6> feedforward_nm{};
 };
+
+bool empirical_expiry_is_future(const std::string& value) {
+  if (value.size() < 20U || value.back() != 'Z' ||
+      value.at(4) != '-' || value.at(7) != '-' || value.at(10) != 'T' ||
+      value.at(13) != ':' || value.at(16) != ':')
+    return false;
+  std::tm parsed{};
+  std::istringstream stream(value.substr(0U, 19U));
+  stream >> std::get_time(&parsed, "%Y-%m-%dT%H:%M:%S");
+  if (stream.fail()) return false;
+  if (value.size() > 20U) {
+    if (value.at(19) != '.') return false;
+    for (std::size_t index = 20U; index + 1U < value.size(); ++index)
+      if (value.at(index) < '0' || value.at(index) > '9') return false;
+  }
+  const std::time_t expires = timegm(&parsed);
+  return expires > 0 && std::time(nullptr) < expires;
+}
 
 struct GuiCommand {
   std::string schema = "go-m8010-gui-command/1.0";
@@ -3256,6 +3439,20 @@ struct GuiCommand {
   Clock::time_point received_at{};
   bool received = false;
 };
+
+bool command_uses_empirical_gravity_authority(const GuiCommand& command) {
+  return command.gravity_authority.present &&
+      !command.gravity_authority.official_continuous_authority;
+}
+
+bool empirical_gravity_authority_is_current(const GuiCommand& command) {
+  return !command_uses_empirical_gravity_authority(command) ||
+      (empirical_expiry_is_future(
+           command.gravity_authority.empirical_envelope_expires_at_utc) &&
+       monotonic_ns_at(Clock::now()) <
+           command.gravity_authority
+               .empirical_envelope_deadline_monotonic_ns);
+}
 
 std::uint64_t strict_positive_uint64(
     const nlohmann::json& value, const char* error) {
@@ -3317,18 +3514,40 @@ GravityCommandAuthority parse_gravity_command_authority(
   if (candidate.mode != "hold" && candidate.mode != "position")
     throw std::runtime_error("COMMAND_GRAVITY_AUTHORITY_MODE_INVALID");
   const auto& authority = value.at("gravity_authority");
-  constexpr std::array<const char*, 11> kFields{{
+  constexpr std::array<const char*, 22> kFields{{
+      "schema", "source_instance_id", "sequence", "source_monotonic_ns",
+      "model_sha256", "gravity_config_sha256", "session_id",
+      "state_instance_id", "gravity_scale", "gravity_scale_target",
+      "feedforward_nm", "authority_class", "rating_classification",
+      "empirical_envelope_id", "empirical_envelope_sha256",
+      "empirical_envelope_expires_at_utc",
+      "empirical_envelope_deadline_monotonic_ns", "anchor_sha256",
+      "empirical_stage_index", "empirical_position_validation_authorized",
+      "empirical_maximum_position_segment_seconds",
+      "empirical_maximum_abs_position_segment_deg"}};
+  if (!authority.is_object() || !authority.contains("schema") ||
+      !authority.at("schema").is_string())
+    throw std::runtime_error("COMMAND_GRAVITY_AUTHORITY_FIELDS_INVALID");
+  const std::string authority_schema =
+      authority.at("schema").get<std::string>();
+  const bool empirical = authority_schema == kGravityAuthoritySchema;
+  const bool official = authority_schema == kOfficialGravityAuthoritySchema;
+  if ((!empirical && !official) ||
+      authority.size() != (empirical ? kFields.size() : 11U))
+    throw std::runtime_error("COMMAND_GRAVITY_AUTHORITY_FIELDS_INVALID");
+  constexpr std::array<const char*, 11> kCommonFields{{
       "schema", "source_instance_id", "sequence", "source_monotonic_ns",
       "model_sha256", "gravity_config_sha256", "session_id",
       "state_instance_id", "gravity_scale", "gravity_scale_target",
       "feedforward_nm"}};
-  if (!authority.is_object() || authority.size() != kFields.size())
-    throw std::runtime_error("COMMAND_GRAVITY_AUTHORITY_FIELDS_INVALID");
-  for (const char* field : kFields)
+  for (const char* field : kCommonFields)
     if (!authority.contains(field))
       throw std::runtime_error("COMMAND_GRAVITY_AUTHORITY_FIELDS_INVALID");
-  if (!authority.at("schema").is_string() ||
-      authority.at("schema").get<std::string>() != kGravityAuthoritySchema ||
+  if (empirical)
+    for (const char* field : kFields)
+      if (!authority.contains(field))
+        throw std::runtime_error("COMMAND_GRAVITY_AUTHORITY_FIELDS_INVALID");
+  if (
       !authority.at("model_sha256").is_string() ||
       authority.at("model_sha256").get<std::string>() !=
           kProductionModelSha256 ||
@@ -3336,6 +3555,80 @@ GravityCommandAuthority parse_gravity_command_authority(
       authority.at("gravity_config_sha256").get<std::string>() !=
           kGravityConfigSha256)
     throw std::runtime_error("COMMAND_GRAVITY_AUTHORITY_HASH_INVALID");
+  result.official_continuous_authority = official;
+  const std::uint64_t received_ns = monotonic_ns_at(received_at);
+  if (empirical) {
+  if (!authority.at("authority_class").is_string() ||
+      authority.at("authority_class").get<std::string>() !=
+          kEmpiricalAuthorityClass ||
+      !authority.at("rating_classification").is_string() ||
+      authority.at("rating_classification").get<std::string>() !=
+          kEmpiricalRatingClassification)
+    throw std::runtime_error("COMMAND_GRAVITY_EMPIRICAL_CLASS_INVALID");
+  result.authority_class =
+      authority.at("authority_class").get<std::string>();
+  result.rating_classification =
+      authority.at("rating_classification").get<std::string>();
+  if (!authority.at("empirical_envelope_id").is_string() ||
+      !authority.at("empirical_envelope_sha256").is_string() ||
+      !authority.at("empirical_envelope_expires_at_utc").is_string() ||
+      !authority.at("anchor_sha256").is_string())
+    throw std::runtime_error("COMMAND_GRAVITY_EMPIRICAL_IDENTITY_INVALID");
+  result.empirical_envelope_id =
+      authority.at("empirical_envelope_id").get<std::string>();
+  result.empirical_envelope_sha256 =
+      authority.at("empirical_envelope_sha256").get<std::string>();
+  result.empirical_envelope_expires_at_utc =
+      authority.at("empirical_envelope_expires_at_utc").get<std::string>();
+  result.empirical_envelope_deadline_monotonic_ns = strict_positive_uint64(
+      authority.at("empirical_envelope_deadline_monotonic_ns"),
+      "COMMAND_GRAVITY_EMPIRICAL_DEADLINE_INVALID");
+  result.anchor_sha256 = authority.at("anchor_sha256").get<std::string>();
+  if (result.empirical_envelope_id.size() != 38U ||
+      result.empirical_envelope_id.rfind("v15-31b-empirical-", 0U) != 0U ||
+      !std::all_of(
+          result.empirical_envelope_id.begin() + 18,
+          result.empirical_envelope_id.end(), [](char character) {
+            return (character >= '0' && character <= '9') ||
+                (character >= 'a' && character <= 'f');
+          }) ||
+      !valid_sha256(result.empirical_envelope_sha256) ||
+      !valid_sha256(result.anchor_sha256) ||
+      !empirical_expiry_is_future(
+          result.empirical_envelope_expires_at_utc))
+    throw std::runtime_error("COMMAND_GRAVITY_EMPIRICAL_IDENTITY_INVALID");
+  constexpr std::uint64_t kMaximumEmpiricalLifetimeNs =
+      4200ULL * 1000ULL * 1000ULL * 1000ULL;
+  if (result.empirical_envelope_deadline_monotonic_ns <= received_ns ||
+      result.empirical_envelope_deadline_monotonic_ns - received_ns >
+          kMaximumEmpiricalLifetimeNs)
+    throw std::runtime_error(
+        "COMMAND_GRAVITY_EMPIRICAL_DEADLINE_INVALID");
+  result.empirical_stage_index = strict_nonnegative_int64(
+      authority.at("empirical_stage_index"),
+      "COMMAND_GRAVITY_EMPIRICAL_STAGE_INVALID");
+  if (result.empirical_stage_index >= 5U)
+    throw std::runtime_error("COMMAND_GRAVITY_EMPIRICAL_STAGE_INVALID");
+  if (!authority.at("empirical_position_validation_authorized").is_boolean() ||
+      !authority.at("empirical_maximum_position_segment_seconds").is_number() ||
+      !authority.at("empirical_maximum_abs_position_segment_deg").is_number())
+    throw std::runtime_error("COMMAND_GRAVITY_EMPIRICAL_POSITION_INVALID");
+  result.empirical_position_validation_authorized =
+      authority.at("empirical_position_validation_authorized").get<bool>();
+  result.empirical_maximum_position_segment_seconds =
+      authority.at("empirical_maximum_position_segment_seconds").get<double>();
+  result.empirical_maximum_abs_position_segment_deg =
+      authority.at("empirical_maximum_abs_position_segment_deg").get<double>();
+  if (!std::isfinite(result.empirical_maximum_position_segment_seconds) ||
+      !std::isfinite(result.empirical_maximum_abs_position_segment_deg) ||
+      std::abs(result.empirical_maximum_position_segment_seconds - 15.0) >
+          1e-12 ||
+      std::abs(result.empirical_maximum_abs_position_segment_deg - 5.0) >
+          1e-12 ||
+      (result.empirical_position_validation_authorized &&
+       result.empirical_stage_index != 4U))
+    throw std::runtime_error("COMMAND_GRAVITY_EMPIRICAL_POSITION_INVALID");
+  }
   if (!authority.at("source_instance_id").is_string())
     throw std::runtime_error("COMMAND_GRAVITY_SOURCE_INVALID");
   result.source_instance_id =
@@ -3349,7 +3642,6 @@ GravityCommandAuthority parse_gravity_command_authority(
   result.source_monotonic_ns = strict_positive_uint64(
       authority.at("source_monotonic_ns"),
       "COMMAND_GRAVITY_TIMESTAMP_INVALID");
-  const std::uint64_t received_ns = monotonic_ns_at(received_at);
   if (result.source_monotonic_ns > received_ns ||
       received_ns - result.source_monotonic_ns >
           kMaximumGravityAuthorityAgeNs)
@@ -3374,6 +3666,11 @@ GravityCommandAuthority parse_gravity_command_authority(
       result.gravity_scale < 0.0 || result.gravity_scale > 1.0 ||
       !approved_gravity_scale_target(result.gravity_scale_target))
     throw std::runtime_error("COMMAND_GRAVITY_SCALE_INVALID");
+  constexpr std::array<double, 5> kEmpiricalLevels{{
+      0.0, 0.25, 0.50, 0.75, 1.0}};
+  if (empirical && std::abs(result.gravity_scale_target -
+               kEmpiricalLevels[result.empirical_stage_index]) > 1e-12)
+    throw std::runtime_error("COMMAND_GRAVITY_EMPIRICAL_STAGE_INVALID");
   result.feedforward_nm = strict_finite_six_vector(
       authority.at("feedforward_nm"),
       "COMMAND_GRAVITY_FEEDFORWARD_SIZE_INVALID",
@@ -3386,6 +3683,31 @@ GravityCommandAuthority parse_gravity_command_authority(
   }
   if (std::abs(result.feedforward_nm[5]) > 1e-12)
     throw std::runtime_error("COMMAND_GRAVITY_J6_MUST_BE_ZERO");
+  const auto& expected = g_expected_gravity_authority_binding;
+  const bool startup_binding_enforced =
+      expected.authority_class != "UNBOUND_SELF_TEST";
+  if (startup_binding_enforced) {
+    if (expected.authority_class == "NONE")
+      throw std::runtime_error(
+          "COMMAND_GRAVITY_STARTUP_BINDING_NOT_AUTHORIZED");
+    if ((official && expected.authority_class !=
+                         "OFFICIAL_CONTINUOUS_RATING") ||
+        (empirical && expected.authority_class !=
+                          kEmpiricalAuthorityClass))
+      throw std::runtime_error(
+          "COMMAND_GRAVITY_STARTUP_CLASS_MISMATCH");
+    if (result.session_id != expected.session_id ||
+        result.state_instance_id != expected.state_instance_id)
+      throw std::runtime_error(
+          "COMMAND_GRAVITY_STARTUP_SESSION_MISMATCH");
+    if (empirical &&
+        (result.empirical_envelope_id != expected.empirical_envelope_id ||
+         result.empirical_envelope_sha256 !=
+             expected.empirical_envelope_sha256 ||
+         result.anchor_sha256 != expected.anchor_sha256))
+      throw std::runtime_error(
+          "COMMAND_GRAVITY_STARTUP_EMPIRICAL_BINDING_MISMATCH");
+  }
   result.present = true;
   return result;
 }
@@ -3717,6 +4039,13 @@ struct CommandSafetyState {
   std::string gravity_session_id;
   std::string gravity_state_instance_id;
   double gravity_scale_target = 0.0;
+  std::string gravity_empirical_envelope_id;
+  std::string gravity_empirical_envelope_sha256;
+  std::string gravity_anchor_sha256;
+  std::uint64_t gravity_empirical_stage_index = 0;
+  bool gravity_empirical_position_validation_authorized = false;
+  bool gravity_empirical_active = false;
+  std::string spent_gravity_empirical_envelope_sha256;
 };
 
 struct CommandRejectAggregate {
@@ -3951,6 +4280,15 @@ bool healthy_logical_position_for_joint(
     const std::vector<MotorRuntime>& motors, int joint_index,
     double& logical_position);
 
+void spend_empirical_gravity_authority(CommandSafetyState& safety) {
+  if (!safety.gravity_empirical_active ||
+      safety.gravity_empirical_envelope_sha256.empty())
+    return;
+  safety.spent_gravity_empirical_envelope_sha256 =
+      safety.gravity_empirical_envelope_sha256;
+  safety.gravity_empirical_active = false;
+}
+
 void validate_first_quintic_start_against_feedback(
     const GuiCommand& command, const std::vector<MotorRuntime>& motors);
 
@@ -3959,18 +4297,97 @@ void validate_and_observe_gravity_policy(
     CommandSafetyState& safety) {
   const bool active_owned = is_position_holding_mode(command.mode) &&
       command_selects_owned_joint(command, motors);
-  if (!active_owned || !command.gravity_authority.present) return;
+  if (!active_owned) return;
+  if (!command.gravity_authority.present && !command.recovery)
+    throw std::runtime_error("COMMAND_EMPIRICAL_AUTHORITY_MISSING");
+  if (!command.gravity_authority.present) return;
   const auto& authority = command.gravity_authority;
+  if (!authority.official_continuous_authority &&
+      !safety.spent_gravity_empirical_envelope_sha256.empty() &&
+      authority.empirical_envelope_sha256 ==
+          safety.spent_gravity_empirical_envelope_sha256)
+    throw std::runtime_error("COMMAND_EMPIRICAL_ENVELOPE_SPENT");
+  if (command.mode == "position" &&
+      !authority.official_continuous_authority &&
+      !authority.empirical_position_validation_authorized)
+    throw std::runtime_error(
+        "COMMAND_EMPIRICAL_POSITION_AUTHORITY_MISSING");
   if (safety.gravity_policy_valid &&
       safety.gravity_policy_epoch == command.activation_epoch) {
-    if (safety.gravity_source_instance_id != authority.source_instance_id ||
+    const bool identity_changed =
+        safety.gravity_source_instance_id != authority.source_instance_id ||
         safety.gravity_session_id != authority.session_id ||
         safety.gravity_state_instance_id != authority.state_instance_id ||
-        std::abs(safety.gravity_scale_target -
-                 authority.gravity_scale_target) > 1e-12)
+        safety.gravity_empirical_envelope_id !=
+            authority.empirical_envelope_id ||
+        safety.gravity_empirical_envelope_sha256 !=
+            authority.empirical_envelope_sha256 ||
+        safety.gravity_anchor_sha256 != authority.anchor_sha256;
+    const bool previously_empirical =
+        !safety.gravity_empirical_envelope_id.empty();
+    if (identity_changed ||
+        previously_empirical == authority.official_continuous_authority)
       throw std::runtime_error(
           "COMMAND_GRAVITY_POLICY_CHANGED_SAME_EPOCH");
+    if (authority.official_continuous_authority) {
+      if (safety.gravity_empirical_stage_index !=
+              authority.empirical_stage_index ||
+          safety.gravity_empirical_position_validation_authorized !=
+              authority.empirical_position_validation_authorized ||
+          std::abs(safety.gravity_scale_target -
+                   authority.gravity_scale_target) > 1e-12)
+        throw std::runtime_error(
+            "COMMAND_GRAVITY_POLICY_CHANGED_SAME_EPOCH");
+      return;
+    }
+    const bool same_stage =
+        safety.gravity_empirical_stage_index ==
+            authority.empirical_stage_index &&
+        std::abs(safety.gravity_scale_target -
+                 authority.gravity_scale_target) <= 1e-12;
+    const bool adjacent_stage =
+        authority.empirical_stage_index ==
+            safety.gravity_empirical_stage_index + 1U;
+    const bool position_authority_unchanged =
+        safety.gravity_empirical_position_validation_authorized ==
+            authority.empirical_position_validation_authorized;
+    const bool final_stage_position_unlock =
+        same_stage && authority.empirical_stage_index == 4U &&
+        !safety.gravity_empirical_position_validation_authorized &&
+        authority.empirical_position_validation_authorized;
+    if ((!same_stage && !adjacent_stage) ||
+        (adjacent_stage &&
+         authority.empirical_position_validation_authorized) ||
+        (!position_authority_unchanged &&
+         !final_stage_position_unlock))
+      throw std::runtime_error(
+          "COMMAND_GRAVITY_POLICY_CHANGED_SAME_EPOCH");
+    // The activation epoch still binds one unchanged current-position HOLD.
+    // A separately confirmed adjacent empirical rung is a monotonic sub-state
+    // whose continuously changing feedforward must reach the hardware on
+    // ordinary heartbeats; it must not require a worker/J6 re-enable.
+    safety.gravity_scale_target = authority.gravity_scale_target;
+    safety.gravity_empirical_stage_index =
+        authority.empirical_stage_index;
+    safety.gravity_empirical_position_validation_authorized =
+        authority.empirical_position_validation_authorized;
     return;
+  }
+  if (!authority.official_continuous_authority &&
+      safety.gravity_policy_valid) {
+    if (safety.gravity_empirical_envelope_id !=
+            authority.empirical_envelope_id ||
+        safety.gravity_anchor_sha256 != authority.anchor_sha256 ||
+        authority.empirical_stage_index <
+            safety.gravity_empirical_stage_index ||
+        authority.empirical_stage_index >
+            safety.gravity_empirical_stage_index + 1U)
+      throw std::runtime_error(
+          "COMMAND_EMPIRICAL_STAGE_SEQUENCE_INVALID");
+  } else if (!authority.official_continuous_authority &&
+             authority.empirical_stage_index != 0U) {
+    throw std::runtime_error(
+        "COMMAND_EMPIRICAL_FIRST_STAGE_NOT_ZERO");
   }
   safety.gravity_policy_valid = true;
   safety.gravity_policy_epoch = command.activation_epoch;
@@ -3978,6 +4395,15 @@ void validate_and_observe_gravity_policy(
   safety.gravity_session_id = authority.session_id;
   safety.gravity_state_instance_id = authority.state_instance_id;
   safety.gravity_scale_target = authority.gravity_scale_target;
+  safety.gravity_empirical_envelope_id = authority.empirical_envelope_id;
+  safety.gravity_empirical_envelope_sha256 =
+      authority.empirical_envelope_sha256;
+  safety.gravity_anchor_sha256 = authority.anchor_sha256;
+  safety.gravity_empirical_stage_index = authority.empirical_stage_index;
+  safety.gravity_empirical_position_validation_authorized =
+      authority.empirical_position_validation_authorized;
+  safety.gravity_empirical_active =
+      !authority.official_continuous_authority;
 }
 
 void validate_and_observe_position_authority(
@@ -4007,6 +4433,30 @@ void validate_and_observe_position_authority(
         received_ns >= command.quintic.execute_at_monotonic_ns)
       throw std::runtime_error("COMMAND_QUINTIC_FIRST_PACKET_TOO_LATE");
     validate_first_quintic_start_against_feedback(command, motors);
+    if (!command.gravity_authority.present)
+      throw std::runtime_error(
+          "COMMAND_EMPIRICAL_POSITION_SEGMENT_INVALID");
+    if (!command.gravity_authority.official_continuous_authority) {
+      if (!command.gravity_authority
+               .empirical_position_validation_authorized ||
+          static_cast<double>(command.quintic.duration_ns) * 1e-9 >
+              command.gravity_authority
+                  .empirical_maximum_position_segment_seconds + 1e-12)
+        throw std::runtime_error(
+            "COMMAND_EMPIRICAL_POSITION_SEGMENT_INVALID");
+      const double maximum_displacement =
+        command.gravity_authority.empirical_maximum_abs_position_segment_deg *
+        kPi / 180.0;
+      for (std::size_t joint = 0; joint < command.moving_joint_mask.size();
+           ++joint) {
+        if (command.moving_joint_mask[joint] &&
+            std::abs(command.quintic.target_rad[joint] -
+                     command.quintic.start_rad[joint]) >
+                maximum_displacement + 1e-12)
+          throw std::runtime_error(
+              "COMMAND_EMPIRICAL_POSITION_DISPLACEMENT_INVALID");
+      }
+    }
   }
   candidate.position_authority_schema_valid = true;
   candidate.position_authority_schema_epoch = command.activation_epoch;
@@ -4116,10 +4566,9 @@ bool capture_lease_safe_hold_command(
   candidate.moving_joint_mask.fill(false);
   if (bus == "j2") {
     if (motors.size() != 2U || !source.active_joint_mask[1]) return false;
-    // j2_sync_fault is the debounced, hysteretic coupled-axis decision.  Do
-    // not reintroduce a one-sample raw comparison here: a lease boundary plus
-    // asynchronous A/B feedback must preserve the authorized endpoint rather
-    // than converting a transient skew into BRAKE.
+    // j2_sync_fault is the worker's hard-latched coupled-axis decision.  This
+    // helper must consume that decision rather than independently reconstruct
+    // synchronization from non-atomic per-motor state at a lease boundary.
     // Lease loss is not permission to adopt a gravity/external-force offset.
     // Preserve the exact authorized endpoint even before arrival so the
     // fixed-position safe hold continues restoring toward it.
@@ -4365,8 +4814,14 @@ void validate_and_observe_fixed_hold_targets(
     double actual = 0.0;
     if (!healthy_logical_position_for_joint(motors, joint_index, actual))
       throw std::runtime_error("COMMAND_FIXED_HOLD_CAPTURE_FEEDBACK_UNHEALTHY");
+    const double capture_window =
+        command_uses_empirical_gravity_authority(command) &&
+            !command.gravity_authority
+                 .empirical_position_validation_authorized
+        ? kEmpiricalInitialHoldCaptureWindow
+        : kFixedHoldCaptureWindow;
     if (std::abs(command.targets[joint] - actual) >
-        kFixedHoldCaptureWindow + 1e-12)
+        capture_window + 1e-12)
       throw std::runtime_error("COMMAND_FIXED_HOLD_CAPTURE_WINDOW");
     candidate.fixed_target_valid[joint] = true;
     candidate.fixed_target_epoch[joint] = command.activation_epoch;
@@ -4882,7 +5337,7 @@ void command_mask_self_test() {
       {"source_instance_id", "0123456789abcdef0123456789abcdef"},
       {"source_monotonic_ns", quintic_received_ns},
       {"gravity_authority", {
-          {"schema", kGravityAuthoritySchema},
+          {"schema", kOfficialGravityAuthoritySchema},
           {"source_instance_id", "fedcba9876543210fedcba9876543210"},
           {"sequence", 1U},
           {"source_monotonic_ns", quintic_received_ns},
@@ -5301,41 +5756,68 @@ void command_mask_self_test() {
       integral_self_test.accumulator_nm != 0.0)
     throw std::runtime_error("HOLD_INTEGRAL_BOUND_RESET_SELF_TEST_FAILED");
 
-  J2SyncFaultFilter sync_filter;
-  if (observe_j2_sync_error(sync_filter, 0.6 * kPi / 180.0) ||
-      observe_j2_sync_error(sync_filter, 0.1 * kPi / 180.0) ||
-      observe_j2_sync_error(sync_filter, 0.6 * kPi / 180.0) ||
-      observe_j2_sync_error(sync_filter, 0.6 * kPi / 180.0) ||
-      !observe_j2_sync_error(sync_filter, 0.6 * kPi / 180.0))
-    throw std::runtime_error("J2_SYNC_TRANSIENT_FILTER_SELF_TEST_FAILED");
-  for (int frame = 0; frame < kJ2SyncRecoveryConsecutiveFrames - 1; ++frame)
-    if (!observe_j2_sync_error(sync_filter, 0.2 * kPi / 180.0))
-      throw std::runtime_error("J2_SYNC_HYSTERESIS_SELF_TEST_FAILED");
-  if (observe_j2_sync_error(sync_filter, 0.2 * kPi / 180.0))
-    throw std::runtime_error("J2_SYNC_HYSTERESIS_SELF_TEST_FAILED");
-  J2SyncFaultFilter severe_sync_filter;
-  if (!observe_j2_sync_error(
-          severe_sync_filter, kJ2SyncImmediateLimit + 1e-6))
-    throw std::runtime_error("J2_SYNC_IMMEDIATE_SELF_TEST_FAILED");
-  J2SyncFaultFilter unavailable_sync_filter;
+  J2SyncFaultFilter warning_sync;
   if (observe_j2_sync_error(
-          unavailable_sync_filter, 0.6 * kPi / 180.0) ||
+          warning_sync, kJ2SyncWarningLimit, 4U, 0U, 0U) ||
+      warning_sync.warning || !warning_sync.observation_valid ||
       observe_j2_sync_error(
-          unavailable_sync_filter, 0.6 * kPi / 180.0) ||
-      observe_j2_sync_unavailable(unavailable_sync_filter) ||
-      unavailable_sync_filter.trip_frames != 0 ||
+          warning_sync, kJ2SyncWarningLimit + 1e-9, 4U, 0U, 0U) ||
+      !warning_sync.warning || warning_sync.fault ||
       observe_j2_sync_error(
-          unavailable_sync_filter, 0.6 * kPi / 180.0) ||
-      observe_j2_sync_error(
-          unavailable_sync_filter, 0.6 * kPi / 180.0) ||
+          warning_sync, kJ2SyncLimit, 4U, 0U, 0U) ||
+      !warning_sync.warning || warning_sync.fault)
+    throw std::runtime_error("J2_SYNC_WARNING_BOUNDARY_SELF_TEST_FAILED");
+
+  J2SyncFaultFilter hard_sync;
+  if (!observe_j2_sync_error(
+          hard_sync, kJ2SyncLimit + 1e-9, 7U, 3U, 6U) ||
+      !hard_sync.fault || !hard_sync.warning ||
+      hard_sync.trip_activation_epoch != 7U ||
+      hard_sync.minimum_rearm_epoch != 8U)
+    throw std::runtime_error("J2_SYNC_SINGLE_PAIR_HARD_SELF_TEST_FAILED");
+  for (int frame = 0; frame < kJ2SyncRecoveryConsecutiveFrames - 1; ++frame) {
+    if (!observe_j2_sync_error(
+            hard_sync, 0.2 * kPi / 180.0, 7U, 8U, 7U) ||
+        hard_sync.recovery_ready || !hard_sync.fault)
+      throw std::runtime_error("J2_SYNC_RECOVERY_EVIDENCE_SELF_TEST_FAILED");
+  }
+  if (!observe_j2_sync_error(
+          hard_sync, 0.2 * kPi / 180.0, 7U, 8U, 7U) ||
+      !hard_sync.recovery_ready || hard_sync.warning ||
+      observe_explicit_j2_sync_release(hard_sync, false) ||
+      request_j2_sync_rearm_for_next_cycle(
+          hard_sync, true, true, true, 8U, 7U) ||
+      !observe_explicit_j2_sync_release(hard_sync, true) ||
+      request_j2_sync_rearm_for_next_cycle(
+          hard_sync, true, true, true, 7U, 7U) ||
+      request_j2_sync_rearm_for_next_cycle(
+          hard_sync, true, true, true, 8U, 8U) ||
+      !request_j2_sync_rearm_for_next_cycle(
+          hard_sync, true, true, true, 9U, 8U) ||
+      !hard_sync.fault || !hard_sync.rearm_pending_next_cycle)
+    throw std::runtime_error("J2_SYNC_EXPLICIT_REARM_SELF_TEST_FAILED");
+  if (!apply_pending_j2_sync_rearm_at_cycle_start(hard_sync) ||
+      hard_sync.fault || hard_sync.rearm_pending_next_cycle ||
+      hard_sync.release_observed || hard_sync.recovery_ready)
+    throw std::runtime_error("J2_SYNC_NEXT_CYCLE_REARM_SELF_TEST_FAILED");
+
+  J2SyncFaultFilter unavailable_sync;
+  if (!observe_j2_sync_error(
+          unavailable_sync, kJ2SyncLimit + 1e-9, 5U, 0U, 0U) ||
       !observe_j2_sync_error(
-          unavailable_sync_filter, 0.6 * kPi / 180.0))
+          unavailable_sync, 0.2 * kPi / 180.0, 5U, 6U, 5U) ||
+      !observe_j2_sync_unavailable(unavailable_sync) ||
+      unavailable_sync.observation_valid ||
+      unavailable_sync.recovery_frames != 0 ||
+      unavailable_sync.recovery_ready || !unavailable_sync.fault)
     throw std::runtime_error(
-        "J2_SYNC_UNAVAILABLE_FREEZE_SELF_TEST_FAILED");
-  if (!observe_j2_sync_unavailable(severe_sync_filter) ||
-      !severe_sync_filter.fault)
-    throw std::runtime_error(
-        "J2_SYNC_CONFIRMED_UNAVAILABLE_HOLD_SELF_TEST_FAILED");
+        "J2_SYNC_UNAVAILABLE_RESETS_REARM_SELF_TEST_FAILED");
+  J2SyncFaultFilter nonfinite_sync;
+  if (!observe_j2_sync_error(
+          nonfinite_sync, std::numeric_limits<double>::quiet_NaN(),
+          9U, 0U, 0U) ||
+      !nonfinite_sync.fault || nonfinite_sync.observation_valid)
+    throw std::runtime_error("J2_SYNC_NONFINITE_HARD_SELF_TEST_FAILED");
 
   GuiCommand fixed_hold = mixed_position;
   fixed_hold.mode = "hold";
@@ -5916,12 +6398,13 @@ void command_mask_self_test() {
           "j2", lease_source, lease_motors, false, false, lease_capture))
     throw std::runtime_error("LEASE_SAFE_HOLD_FAULT_SELF_TEST_FAILED");
   lease_motors[0].fault_latched = false;
-  lease_motors[0].unwrapped -= 2.0 * kGear * kJ2SyncLimit;
+  lease_motors[0].unwrapped -=
+      kGear * (kJ2SyncWarningLimit + 1e-6);
   if (!capture_lease_safe_hold_command(
           "j2", lease_source, lease_motors, false, false, lease_capture) ||
       std::abs(lease_capture.targets[1] - lease_source.targets[1]) > 1e-12)
     throw std::runtime_error(
-        "LEASE_SAFE_HOLD_TRANSIENT_SYNC_SELF_TEST_FAILED");
+        "LEASE_SAFE_HOLD_WARNING_SYNC_SELF_TEST_FAILED");
   if (capture_lease_safe_hold_command(
           "j2", lease_source, lease_motors, false, true, lease_capture))
     throw std::runtime_error("LEASE_SAFE_HOLD_SYNC_SELF_TEST_FAILED");
@@ -5971,6 +6454,29 @@ void command_mask_self_test() {
       command_epoch_is_acceptable(
           drag_active, drag_safety, j345_motors))
     throw std::runtime_error("COMMAND_DRAG_FENCE_SELF_TEST_FAILED");
+  CommandSafetyState empirical_release_safety;
+  empirical_release_safety.gravity_empirical_active = true;
+  empirical_release_safety.gravity_empirical_envelope_sha256 =
+      std::string(64U, 'a');
+  spend_empirical_gravity_authority(empirical_release_safety);
+  GuiCommand raced_empirical = mixed_position;
+  raced_empirical.activation_epoch = 100U;
+  raced_empirical.gravity_authority.present = true;
+  raced_empirical.gravity_authority.official_continuous_authority = false;
+  raced_empirical.gravity_authority.empirical_envelope_sha256 =
+      std::string(64U, 'a');
+  bool empirical_race_rejected = false;
+  try {
+    validate_and_observe_gravity_policy(
+        raced_empirical, j345_motors, empirical_release_safety);
+  } catch (const std::runtime_error& error) {
+    empirical_race_rejected =
+        std::string(error.what()) == "COMMAND_EMPIRICAL_ENVELOPE_SPENT";
+  }
+  if (!empirical_race_rejected ||
+      empirical_release_safety.gravity_empirical_active)
+    throw std::runtime_error(
+        "COMMAND_EMPIRICAL_RELEASE_SPEND_SELF_TEST_FAILED");
   command.activation_epoch = static_cast<std::uint64_t>(
       std::numeric_limits<std::int64_t>::max());
   observe_valid_command(command, j345_motors, safety);
@@ -6006,6 +6512,14 @@ CommandReceiveResult receive_latest(
       // active attempt can raise the rejected-epoch fence, but commit source
       // state only after every domain and target validation succeeds.
       validate_command_source_replay(candidate, receive_state);
+      if (!receive_state.active_source_instance_id.empty() &&
+          candidate.source_instance_id !=
+              receive_state.active_source_instance_id &&
+          is_position_holding_mode(candidate.mode) &&
+          command_selects_owned_joint(candidate, motors) &&
+          candidate.activation_epoch <= safety.last_seen_activation_epoch)
+        throw std::runtime_error(
+            "COMMAND_SOURCE_TAKEOVER_EPOCH_REPLAY");
       if (!command_epoch_is_acceptable(candidate, safety, motors))
         throw std::runtime_error("COMMAND_ACTIVATION_EPOCH_REPLAY");
       CommandSafetyState candidate_safety = safety;
@@ -6028,6 +6542,8 @@ CommandReceiveResult receive_latest(
       }
       const bool domain_release =
           command_releases_owned_domain(candidate, motors);
+      if (domain_release)
+        spend_empirical_gravity_authority(candidate_safety);
       observe_valid_command(candidate, motors, candidate_safety);
       observe_command_source(candidate, receive_state);
       safety = std::move(candidate_safety);
@@ -6036,8 +6552,17 @@ CommandReceiveResult receive_latest(
       command = std::move(candidate);
     }
     catch (const std::exception& error) {
-      record_command_rejection(
-          command_rejection_reason(error), receive_state, Clock::now());
+      const std::string reason = command_rejection_reason(error);
+      if (reason.rfind("COMMAND_GRAVITY_", 0U) == 0U ||
+          reason.rfind("COMMAND_EMPIRICAL_", 0U) == 0U) {
+        // An omitted or launch-binding-mismatched authority revokes the
+        // cached active command immediately.  Do not keep an older FOC/HOLD
+        // alive for the remainder of its lease after the identity violation.
+        spend_empirical_gravity_authority(safety);
+        command = GuiCommand{};
+        result.domain_release_received = true;
+      }
+      record_command_rejection(reason, receive_state, Clock::now());
     }
   }
   result.packet_budget_reached = true;
@@ -6154,7 +6679,8 @@ std::string thermal_state_for_raw_temperature(
 
 std::string feedback_payload(const std::vector<MotorRuntime>& motors,
                              std::uint64_t stamp, const std::string& mode,
-                             bool j2_sync_fault, bool domain_fault,
+                             const J2SyncFaultFilter& j2_sync_interlock,
+                             bool domain_fault,
                              bool lease_safe_hold,
                              const GuiCommand& control_command,
                              const std::array<double, 6>&
@@ -6241,7 +6767,22 @@ std::string feedback_payload(const std::vector<MotorRuntime>& motors,
       {"tau_j2_logical_total_nm", tau_j2_logical_total_nm},
       {"controller_mode", mode},
       {"controller_mode_by_motor", controller_mode_by_motor},
-      {"j2_sync_fault", j2_sync_fault},
+      {"j2_sync_fault", j2_sync_interlock.fault},
+      {"j2_sync_warning", j2_sync_interlock.warning},
+      {"j2_sync_observation_valid", j2_sync_interlock.observation_valid},
+      {"j2_sync_recovery_ready", j2_sync_interlock.recovery_ready},
+      {"j2_sync_release_observed", j2_sync_interlock.release_observed},
+      {"j2_sync_rearm_pending_next_cycle",
+       j2_sync_interlock.rearm_pending_next_cycle},
+      {"j2_sync_recovery_valid_pair_frames",
+       j2_sync_interlock.recovery_frames},
+      {"j2_sync_trip_error_rad", j2_sync_interlock.trip_error_rad},
+      {"j2_sync_trip_activation_epoch",
+       j2_sync_interlock.trip_activation_epoch},
+      {"j2_sync_minimum_rearm_epoch",
+       j2_sync_interlock.minimum_rearm_epoch},
+      {"j2_sync_warning_threshold_deg", 0.25},
+      {"j2_sync_hard_threshold_deg", 0.5},
       {"domain_fault", domain_fault},
       {"lease_safe_hold", lease_safe_hold},
       {"gravity_authority_present",
@@ -6266,7 +6807,40 @@ std::string feedback_payload(const std::vector<MotorRuntime>& motors,
        control_command.gravity_authority.present
            ? std::string(kGravityConfigSha256) : std::string()},
       {"gravity_continuous_rotor_limits_authoritative",
-       control_command.gravity_authority.present},
+       control_command.gravity_authority.present &&
+           control_command.gravity_authority.official_continuous_authority},
+      {"gravity_authority_class",
+       control_command.gravity_authority.present
+           ? control_command.gravity_authority.authority_class
+           : std::string()},
+      {"gravity_rating_classification",
+       control_command.gravity_authority.present
+           ? control_command.gravity_authority.rating_classification
+           : std::string()},
+      {"gravity_empirical_envelope_id",
+       control_command.gravity_authority.present
+           ? control_command.gravity_authority.empirical_envelope_id
+           : std::string()},
+      {"gravity_empirical_envelope_sha256",
+       control_command.gravity_authority.present
+           ? control_command.gravity_authority.empirical_envelope_sha256
+           : std::string()},
+      {"gravity_empirical_envelope_expires_at_utc",
+       control_command.gravity_authority.present
+           ? control_command.gravity_authority
+                 .empirical_envelope_expires_at_utc
+           : std::string()},
+      {"gravity_anchor_sha256",
+       control_command.gravity_authority.present
+           ? control_command.gravity_authority.anchor_sha256
+           : std::string()},
+      {"gravity_empirical_stage_index",
+       control_command.gravity_authority.present
+           ? control_command.gravity_authority.empirical_stage_index : 0U},
+      {"gravity_empirical_position_validation_authorized",
+       control_command.gravity_authority.present &&
+           control_command.gravity_authority
+               .empirical_position_validation_authorized},
       {"gravity_scale",
        control_command.gravity_authority.present
            ? control_command.gravity_authority.gravity_scale : 0.0},
@@ -6516,7 +7090,10 @@ int run(const Options& options) {
                  "J2_GOVERNOR=MEASURED_STATE_AFFINE_INTERVAL_NO_SOFT_BRAKE\n"
                  "J2_TRANSIENT_INVALID_FEEDBACK_FRAMES=4\n"
                  "J2_STARTUP_SERIAL_PRIME=BEFORE_UDP_PREFIX_MAX3_THEN_5_HEALTHY_BRAKE\n"
+                 "J2_SYNC_WARNING_DEG=0.25\n"
                  "J2_SYNC_HARD_DEG=0.5\n"
+                 "J2_SYNC_HARD_POLICY=SINGLE_VALID_PAIR_BOTH_BRAKE_LATCHED\n"
+                 "J2_SYNC_REARM_POLICY=FIVE_VALID_PAIRS_EXPLICIT_RELEASE_HIGHER_EPOCH_NEXT_CYCLE\n"
                   "J2_STARTUP_REFERENCE_POLICY=PARENT_BOUND_POWER_SESSION\n"
                   "J2_SESSION_STARTUP_TOLERANCE_DEG=2\n"
                   "J2_MISSING_SESSION_REFERENCE_POLICY=BRAKE_ONLY\n"
@@ -6572,6 +7149,19 @@ int run(const Options& options) {
                  "MOTOR_INTERNAL_ZERO_WRITE=NO\n";
     return 0;
   }
+  g_expected_gravity_authority_binding.authority_class =
+      options.brake_only ? "NONE" :
+      options.expected_gravity_authority_class;
+  g_expected_gravity_authority_binding.empirical_envelope_id =
+      options.expected_empirical_envelope_id;
+  g_expected_gravity_authority_binding.empirical_envelope_sha256 =
+      options.expected_empirical_envelope_sha256;
+  g_expected_gravity_authority_binding.anchor_sha256 =
+      options.expected_gravity_anchor_sha256;
+  g_expected_gravity_authority_binding.session_id =
+      options.expected_gravity_session_id;
+  g_expected_gravity_authority_binding.state_instance_id =
+      options.expected_gravity_state_instance_id;
   if (::prctl(PR_SET_PDEATHSIG, SIGTERM) != 0 || ::getppid() == 1)
     throw std::runtime_error("PARENT_DEATH_GUARD_FAILED");
   if (options.expected_thermal_config_sha256 != kThermalConfigSha256)
@@ -6678,7 +7268,6 @@ int run(const Options& options) {
   std::uint64_t lease_safe_hold_source_epoch = 0;
   bool j2_sync_fault = false;
   J2SyncFaultFilter j2_sync_filter;
-  bool j2_sync_transient_reported = false;
   bool j2_startup_verified = !active_power_session;
   bool j2_power_continuity_lost = false;
   bool domain_fault = false;
@@ -6719,6 +7308,10 @@ int run(const Options& options) {
   ActiveCommandBlockedLogState active_command_blocked_log;
   while (!g_stop.load()) {
     const auto loop_started = Clock::now();
+    const bool j2_sync_rearmed_this_cycle =
+        options.bus == "j2" &&
+        apply_pending_j2_sync_rearm_at_cycle_start(j2_sync_filter);
+    j2_sync_fault = j2_sync_filter.fault;
     const bool thermal_rearmed_this_cycle =
         apply_pending_thermal_rearm_at_cycle_start(thermal_interlock);
     const bool no_progress_rearmed_this_cycle =
@@ -6741,10 +7334,20 @@ int run(const Options& options) {
                 << no_progress_watchdog.minimum_rearm_epoch
                 << std::endl;
     }
+    if (j2_sync_rearmed_this_cycle) {
+      std::cerr << "J2_SYNC_REARM_APPLIED"
+                << " bus=" << options.bus
+                << " activation_epoch=" << command.activation_epoch
+                << " minimum_epoch="
+                << j2_sync_filter.minimum_rearm_epoch
+                << std::endl;
+    }
     const bool thermal_fault_latched_at_cycle_start =
         thermal_interlock.fault_latched;
     const bool no_progress_fault_latched_at_cycle_start =
         no_progress_watchdog.fault_latched;
+    const bool j2_sync_fault_latched_at_cycle_start =
+        j2_sync_filter.fault;
     auto latch_domain_fault = [&](const char* reason) {
       if (!domain_fault) domain_fault_reason = reason;
       domain_fault = true;
@@ -6799,6 +7402,15 @@ int run(const Options& options) {
         !g_stop.load() &&
         std::chrono::duration<double>(Clock::now() - command.received_at).count() >
             kLeaseSeconds;
+    const bool empirical_expired_before_receive = command.received &&
+        command_uses_empirical_gravity_authority(command) &&
+        !empirical_gravity_authority_is_current(command);
+    if (command_safety.gravity_empirical_active &&
+        (lease_expired_before_receive || empirical_expired_before_receive ||
+         domain_fault || j2_sync_fault ||
+         thermal_interlock.fault_latched ||
+         no_progress_watchdog.fault_latched || g_stop.load()))
+      spend_empirical_gravity_authority(command_safety);
     CommandReceiveResult receive_result;
     if (command_socket >= 0) {
       receive_result = receive_latest(
@@ -6842,6 +7454,16 @@ int run(const Options& options) {
           command_safety.minimum_activation_epoch,
           no_progress_watchdog.minimum_rearm_epoch);
     }
+    if (j2_sync_filter.fault) {
+      j2_sync_filter.minimum_rearm_epoch = std::max(
+          {j2_sync_filter.minimum_rearm_epoch,
+           command_safety.minimum_activation_epoch,
+           saturating_next_activation_epoch(
+               command_safety.highest_rejected_active_epoch)});
+      command_safety.minimum_activation_epoch = std::max(
+          command_safety.minimum_activation_epoch,
+          j2_sync_filter.minimum_rearm_epoch);
+    }
     if (thermal_fault_latched_at_cycle_start &&
         observe_explicit_thermal_release(
             thermal_interlock, explicit_release_packet_received)) {
@@ -6862,8 +7484,24 @@ int run(const Options& options) {
                 << no_progress_watchdog.minimum_rearm_epoch
                 << std::endl;
     }
+    if (j2_sync_fault_latched_at_cycle_start &&
+        observe_explicit_j2_sync_release(
+            j2_sync_filter, explicit_release_packet_received)) {
+      std::cerr << "J2_SYNC_RELEASE_OBSERVED"
+                << " bus=" << options.bus
+                << " command_epoch=" << command.activation_epoch
+                << " minimum_epoch="
+                << j2_sync_filter.minimum_rearm_epoch
+                << std::endl;
+    }
     const bool lease_expiry_detected =
         lease_expired_before_receive || !command_lease_fresh;
+    if (command_safety.gravity_empirical_active &&
+        (lease_expiry_detected || explicit_release_packet_received ||
+         domain_fault || j2_sync_fault ||
+         thermal_interlock.fault_latched ||
+         no_progress_watchdog.fault_latched))
+      spend_empirical_gravity_authority(command_safety);
     const GuiCommand& lease_expiry_source = lease_expired_before_receive
         ? command_before_receive : command;
     const bool fresh_command_explicitly_releases =
@@ -6918,6 +7556,11 @@ int run(const Options& options) {
         prior_external_hold_confirmed && !g_stop.load() &&
         !fresh_command_explicitly_releases &&
         !fresh_command_supersedes_expired_epoch &&
+        // An empirical proof is deliberately short-lived.  A dead Router
+        // must reach BRAKE at the 500 ms command lease boundary instead of
+        // converting the last proof/target into an unbounded local HOLD.
+        !command_uses_empirical_gravity_authority(
+            confirmed_external_hold_command) &&
         !thermal_interlock.fault_latched &&
         !no_progress_watchdog.fault_latched) {
       GuiCommand captured;
@@ -6962,6 +7605,8 @@ int run(const Options& options) {
     }
     const GuiCommand& control_command = lease_safe_hold_active
         ? lease_safe_hold_command : command;
+    const bool empirical_authority_expired =
+        !empirical_gravity_authority_is_current(control_command);
     double thermal_derating_factor = 1.0;
     for (const auto& motor : motors) {
       thermal_derating_factor = std::min(
@@ -6989,11 +7634,17 @@ int run(const Options& options) {
         !g_stop.load() && (lease_safe_hold_active || command_lease_fresh);
     std::string effective_mode = control_command.mode;
     if (options.brake_only) effective_mode = "brake";
+    // Re-evaluate wall-clock expiry every control cycle.  Validation only at
+    // UDP receive time leaves an active command live if the Router or gravity
+    // node dies immediately before the envelope expires.
+    if (empirical_authority_expired) effective_mode = "brake";
     if (!control_authority_available)
       effective_mode = "brake";
     if (explicit_release_packet_received)
       effective_mode = "brake";
     if (domain_fault) effective_mode = "brake";
+    if (options.bus == "j2" && j2_sync_fault)
+      effective_mode = "brake";
     if (thermal_interlock.fault_latched) effective_mode = "brake";
     if (no_progress_watchdog.fault_latched) effective_mode = "brake";
     if (active_power_session && !j2_startup_verified)
@@ -7003,6 +7654,11 @@ int run(const Options& options) {
     // vendor mode-0 BRAKE packet, never FOC with all-zero gains.
     if (effective_mode == "drag")
       effective_mode = "brake";
+    // Once an empirical lifecycle has reached a hardware BRAKE edge it is
+    // single-use spent.  Latch before a later UDP datagram can try the same
+    // envelope at a higher activation epoch.
+    if (effective_mode == "brake")
+      spend_empirical_gravity_authority(command_safety);
     if (!lease_safe_hold_active && effective_mode != "brake" &&
         control_command.activation_epoch <
             command_safety.minimum_activation_epoch)
@@ -7941,37 +8597,56 @@ int run(const Options& options) {
         motors[0].last_frame_valid && motors[1].last_frame_valid) {
       const double q_a = -1.0 * (motors[0].unwrapped - motors[0].reference) / kGear;
       const double q_b = +1.0 * (motors[1].unwrapped - motors[1].reference) / kGear;
-      // Synchronization is a live interlock, not a permanent torque-removal
-      // latch.  A single startup sample can straddle two feedback instants;
-      // once both valid axes are back inside the coupled tolerance, restore
-      // the common position command automatically.
+      // This is one valid J2A/J2B paired observation from the current control
+      // cycle.  The contract is strict: warning is live above 0.25 degree and
+      // any one pair above 0.5 degree latches BOTH motors in BRAKE immediately.
+      // A hard latch never clears merely because later samples look aligned.
       const double sync_error = q_a - q_b;
-      const bool raw_sync_exceeded = std::abs(sync_error) > kJ2SyncLimit;
       const bool previous_sync_fault = j2_sync_fault;
-      j2_sync_fault = observe_j2_sync_error(j2_sync_filter, sync_error);
-      if (raw_sync_exceeded && !j2_sync_fault &&
-          !j2_sync_transient_reported) {
-        std::cerr << "J2_SYNC_TRANSIENT_KEEPING_FOC"
+      const bool previous_sync_warning = j2_sync_filter.warning;
+      const bool previous_recovery_ready = j2_sync_filter.recovery_ready;
+      j2_sync_fault = observe_j2_sync_error(
+          j2_sync_filter, sync_error,
+          control_command.activation_epoch,
+          command_safety.minimum_activation_epoch,
+          command_safety.highest_rejected_active_epoch);
+      if (j2_sync_filter.warning && !previous_sync_warning) {
+        std::cerr << "J2_SYNC_WARNING"
                   << " error_deg=" << sync_error * 180.0 / kPi
-                  << " trip_frame=" << j2_sync_filter.trip_frames
-                  << " required_frames=" << kJ2SyncTripConsecutiveFrames
+                  << " warning_threshold_deg=0.25"
                   << std::endl;
-        j2_sync_transient_reported = true;
-      } else if (!raw_sync_exceeded && j2_sync_transient_reported) {
-        std::cerr << "J2_SYNC_TRANSIENT_RECOVERED" << std::endl;
-        j2_sync_transient_reported = false;
+      } else if (!j2_sync_filter.warning && previous_sync_warning) {
+        std::cerr << "J2_SYNC_WARNING_CLEARED"
+                  << " error_deg=" << sync_error * 180.0 / kPi
+                  << " hard_latch_retained=" << j2_sync_fault
+                  << std::endl;
       }
       if (j2_sync_fault && !previous_sync_fault) {
-        std::cerr << "J2_SYNC_FAULT_CONFIRMED"
+        command_safety.minimum_activation_epoch = std::max(
+            command_safety.minimum_activation_epoch,
+            j2_sync_filter.minimum_rearm_epoch);
+        std::cerr << "J2_SYNC_HARD_LATCHED"
                   << " error_deg=" << sync_error * 180.0 / kPi
+                  << " hard_threshold_deg=0.5"
+                  << " action=BOTH_BRAKE"
+                  << " activation_epoch="
+                  << j2_sync_filter.trip_activation_epoch
+                  << " minimum_epoch="
+                  << j2_sync_filter.minimum_rearm_epoch
                   << std::endl;
-        j2_sync_transient_reported = false;
-      } else if (!j2_sync_fault && previous_sync_fault) {
-        std::cerr << "J2_SYNC_FAULT_RECOVERED"
+      }
+      if (j2_sync_filter.recovery_ready && !previous_recovery_ready) {
+        std::cerr << "J2_SYNC_RECOVERY_READY"
                   << " error_deg=" << sync_error * 180.0 / kPi
+                  << " valid_pair_frames="
+                  << j2_sync_filter.recovery_frames
+                  << " latch_retained=YES"
+                  << " next=EXPLICIT_RELEASE_HIGHER_EPOCH"
                   << std::endl;
       }
       if (j2_sync_fault) {
+        effective_mode = "brake";
+        j2_pair_ready = false;
         for (auto& motor : motors) transact_and_commit_brake(motor);
       }
       const double q_common = 0.5 * (q_a + q_b);
@@ -8042,14 +8717,13 @@ int run(const Options& options) {
         }
         j2_governor_postcheck_reported = postcheck_exceeded;
       }
-    } else if (options.bus == "j2" && motors.size() == 2U &&
-               motors[0].reference_ready && motors[1].reference_ready &&
-               motors[0].valid && motors[1].valid) {
+    } else if (options.bus == "j2" && motors.size() == 2U) {
+      const bool previous_sync_warning = j2_sync_filter.warning;
       j2_sync_fault = observe_j2_sync_unavailable(j2_sync_filter);
-      if (j2_sync_transient_reported) {
-        std::cerr << "J2_SYNC_TRANSIENT_SAMPLE_GAP_KEEPING_FOC"
+      if (previous_sync_warning) {
+        std::cerr << "J2_SYNC_WARNING_OBSERVATION_UNAVAILABLE"
+                  << " hard_latch_retained=" << j2_sync_fault
                   << std::endl;
-        j2_sync_transient_reported = false;
       }
     }
     if (effective_mode == "position") {
@@ -8342,6 +9016,23 @@ int run(const Options& options) {
       for (auto& motor : motors) transact_and_commit_brake(motor);
     }
 
+    if (options.bus == "j2" && request_j2_sync_rearm_for_next_cycle(
+            j2_sync_filter, command_lease_fresh,
+            command_requests_active_owned_joint && !domain_fault &&
+                !thermal_interlock.fault_latched &&
+                !no_progress_watchdog.fault_latched && !g_stop.load(),
+            all_domain_motors_valid_brake_for_rearm(motors),
+            command.activation_epoch,
+            command_safety.highest_rejected_active_epoch)) {
+      // The release/higher-epoch decision cycle remains BOTH BRAKE.  Only the
+      // next loop's apply_pending_j2_sync_rearm_at_cycle_start() may clear it.
+      std::cerr << "J2_SYNC_REARM_PENDING_NEXT_CYCLE"
+                << " bus=" << options.bus
+                << " activation_epoch=" << command.activation_epoch
+                << " minimum_epoch="
+                << j2_sync_filter.minimum_rearm_epoch
+                << std::endl;
+    }
     if (request_thermal_rearm_for_next_cycle(
             thermal_interlock, command_lease_fresh,
             command_requests_active_owned_joint && !domain_fault &&
@@ -8399,7 +9090,7 @@ int run(const Options& options) {
       }
     }
     const std::string payload = feedback_payload(
-        motors, stamp, reported_mode, j2_sync_fault, domain_fault,
+        motors, stamp, reported_mode, j2_sync_filter, domain_fault,
         lease_safe_hold_active && reported_mode == "hold", control_command,
         applied_gravity_feedforward_nm,
         reported_trajectory_state, reported_trajectory_sample_index,

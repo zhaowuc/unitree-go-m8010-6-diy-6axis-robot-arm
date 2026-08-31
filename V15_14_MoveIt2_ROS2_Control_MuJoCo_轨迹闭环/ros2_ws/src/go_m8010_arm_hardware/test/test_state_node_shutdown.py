@@ -36,6 +36,9 @@ def load_with_ros_stubs(events, ros_state):
     state_model.parse_feedback_payload = lambda _payload, _receipt: ()
     state_model.parse_controller_feedback_metadata = lambda _payload, _samples: {}
     state_model.unavailable_worker_control_status = lambda _reason: {}
+    state_model.validate_j6_feedback_identity = (
+        lambda _payload, _receipt, **kwargs: kwargs.get("previous")
+    )
     state_model.validate_worker_supervisor_status = lambda value, _now, _age: value
     thermal_manager = ModuleType(f"{package_name}.thermal_manager")
 
@@ -244,6 +247,9 @@ def _bare_state_node(module, *, model):
     node.controller_faults = {"J6": True}
     node.controller_lease_safe_hold = {"J6": True}
     node.controller_thermal = {"J6": {"old": True}}
+    node.j6_feedback_identity = None
+    node.session_id = "test-session"
+    node.state_instance_id = "test-state-instance"
     node.invalid_payload_count = 0
     node.record_invalid_payload = lambda _error: setattr(
         node, "invalid_payload_count", node.invalid_payload_count + 1
@@ -477,3 +483,53 @@ def test_unverified_brake_never_becomes_brake_observed():
         TEST_THERMAL_LIMITS,
     )
     assert result["brake_observed"] is True
+
+
+def test_state_instance_id_is_strictly_pinnable_with_random_default(monkeypatch):
+    module, _no_signal_handlers = load_with_ros_stubs([], {
+        "ok": False, "on_spin": lambda: None,
+    })
+    monkeypatch.setattr(module.secrets, "token_hex", lambda size: "9" * (size * 2))
+    assert module.validated_state_instance_id("") == "9" * 32
+    assert module.validated_state_instance_id("a" * 32) == "a" * 32
+    for invalid in ("a" * 31, "a" * 33, "A" * 32, "g" * 32, " " * 32):
+        with pytest.raises(ValueError):
+            module.validated_state_instance_id(invalid)
+
+
+def test_complete_references_determine_session_before_first_feedback():
+    module, _no_signal_handlers = load_with_ros_stubs([], {
+        "ok": False, "on_spin": lambda: None,
+    })
+    expected = (
+        "persistent:0123456789abcdef:"
+        "j2session:1111111111111111:"
+        "goauxsession:2222222222222222"
+    )
+    assert module.complete_persistent_session_id(
+        "0123456789abcdef" + "0" * 48,
+        "1" * 64,
+        "2" * 64,
+    ) == expected
+    for values in (
+        (None, "1" * 64, "2" * 64),
+        ("0" * 64, None, "2" * 64),
+        ("0" * 64, "1" * 64, None),
+    ):
+        assert module.complete_persistent_session_id(*values) is None
+
+    source = SOURCE.read_text(encoding="utf-8")
+    initialize = source.index("self.session_id = complete_persistent_session_id(")
+    first_feedback_validation = source.index("def accept_payload(")
+    first_publish = source.index("def publish_state(")
+    assert initialize < first_feedback_validation < first_publish
+
+    launch = (
+        SOURCE.parents[2]
+        / "go_m8010_arm_gui"
+        / "launch"
+        / "arm_gui.launch.py"
+    ).read_text(encoding="utf-8")
+    assert 'DeclareLaunchArgument("state_instance_id", default_value="")' in launch
+    assert '"state_instance_id": LaunchConfiguration("state_instance_id")' in launch
+    assert 'condition=IfCondition(LaunchConfiguration("start_gravity_node"))' in launch

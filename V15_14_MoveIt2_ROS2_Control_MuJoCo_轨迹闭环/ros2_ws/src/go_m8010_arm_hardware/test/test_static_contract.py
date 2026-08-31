@@ -320,8 +320,9 @@ class StaticContractTest(unittest.TestCase):
             '"MOVING_VELOCITY_GUARD_SELF_TEST_FAILED"',
             '"J2_HOLD_PROTECTION_SELF_TEST_FAILED"',
             '"J2_PROFILE_ENDPOINT_HOLD_PROTECTION_SELF_TEST_FAILED"',
-            '"J2_SYNC_TRANSIENT_FILTER_SELF_TEST_FAILED"',
-            '"LEASE_SAFE_HOLD_TRANSIENT_SYNC_SELF_TEST_FAILED"',
+            '"J2_SYNC_SINGLE_PAIR_HARD_SELF_TEST_FAILED"',
+            '"J2_SYNC_EXPLICIT_REARM_SELF_TEST_FAILED"',
+            '"LEASE_SAFE_HOLD_WARNING_SYNC_SELF_TEST_FAILED"',
         ):
             self.assertIn(token, source)
         observer = source.split("bool apply_velocity_guards", 1)[1].split(
@@ -660,6 +661,20 @@ class StaticContractTest(unittest.TestCase):
         self.assertIn('snapshot["schema"] = "go-m8010-hardware-state/1.1"', source)
         self.assertIn('snapshot["state_instance_id"] = self.state_instance_id', source)
         self.assertIn('snapshot["source_monotonic_ns"] = now_monotonic_ns', source)
+        self.assertIn("validate_j6_feedback_identity", source)
+        self.assertIn("previous=self.j6_feedback_identity", source)
+        self.assertIn(
+            "expected_state_instance_id=self.state_instance_id", source
+        )
+        self.assertIn(
+            'snapshot["j6_raw_feedback_identity"]', source
+        )
+        self.assertLess(
+            source.index("self.model.update_batch(samples)"),
+            source.index(
+                "self.j6_feedback_identity = next_j6_feedback_identity"
+            ),
+        )
         self.assertIn("controller_metadata_for_hardware_state", source)
         self.assertIn('motor_state.get("fresh") is True', source)
 
@@ -692,7 +707,13 @@ class StaticContractTest(unittest.TestCase):
             '"FEEDBACK_ENDPOINT_TOLERANCE_SELF_TEST_FAILED"',
             '"REJECTED_TARGET_PRESERVES_POSITION_AUTHORITY_SELF_TEST_FAILED"',
             '"REJECTED_TARGET_PRESERVES_HOLD_AUTHORITY_SELF_TEST_FAILED"',
+            "kJ2SyncWarningLimit = 0.25",
             "kJ2SyncLimit = 0.5",
+            '"J2_SYNC_WARNING"',
+            '"J2_SYNC_HARD_LATCHED"',
+            '" action=BOTH_BRAKE"',
+            '"J2_SYNC_REARM_PENDING_NEXT_CYCLE"',
+            "apply_pending_j2_sync_rearm_at_cycle_start",
             "kHoldIntegralRotorHardNm",
             "kJ2IntegralRotorHardNm = kHoldIntegralRotorHardNm[1]",
             "kJ2PredictedRotorWorkNm = 1.75",
@@ -709,8 +730,8 @@ class StaticContractTest(unittest.TestCase):
             '"AUX_WIRE_GOVERNOR_SELF_TEST_FAILED"',
             '"J2_LOADED_MOTION_ENVELOPE_SELF_TEST_FAILED"',
             '"LEASE_SAFE_HOLD_STICKY_TRANSIENT_SELF_TEST_FAILED"',
-            '"J2_SYNC_UNAVAILABLE_FREEZE_SELF_TEST_FAILED"',
-            '"J2_SYNC_CONFIRMED_UNAVAILABLE_HOLD_SELF_TEST_FAILED"',
+            '"J2_SYNC_UNAVAILABLE_RESETS_REARM_SELF_TEST_FAILED"',
+            '"J2_SYNC_NONFINITE_HARD_SELF_TEST_FAILED"',
             "motor.last_frame_valid && motor.valid",
             "govern_j2_reference",
             "intersect_absolute_affine_constraint",
@@ -723,6 +744,30 @@ class StaticContractTest(unittest.TestCase):
             "position_endpoint_reached",
         ):
             self.assertIn(token, source)
+        for forbidden in (
+            "kJ2SyncImmediateLimit",
+            "kJ2SyncTripConsecutiveFrames",
+            '"J2_SYNC_TRANSIENT_KEEPING_FOC"',
+        ):
+            self.assertNotIn(forbidden, source)
+        observer = source.split("bool observe_j2_sync_error", 1)[1].split(
+            "bool observe_explicit_j2_sync_release", 1
+        )[0]
+        self.assertIn("magnitude > kJ2SyncWarningLimit", observer)
+        self.assertIn("magnitude > kJ2SyncLimit", observer)
+        runtime = source.split("const double sync_error = q_a - q_b;", 1)[1].split(
+            "const double q_common", 1
+        )[0]
+        self.assertLess(
+            runtime.index("observe_j2_sync_error"),
+            runtime.index("for (auto& motor : motors) transact_and_commit_brake(motor);"),
+        )
+        self.assertIn('effective_mode = "brake";', runtime)
+        self.assertIn("j2_pair_ready = false;", runtime)
+        self.assertIn(
+            '} else if (options.bus == "j2" && motors.size() == 2U) {',
+            source,
+        )
         self.assertNotIn("kTargetLimit =", source)
         self.assertNotIn("kJ2TargetLimit =", source)
         self.assertNotIn('latch_domain_fault("J2_FEEDFORWARD_BASE_INFEASIBLE")', source)

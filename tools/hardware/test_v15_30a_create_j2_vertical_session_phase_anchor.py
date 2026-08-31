@@ -442,6 +442,70 @@ class J2VerticalSessionPhaseAnchorTests(unittest.TestCase):
                 1, len(list(args.launch_permit_directory.glob("*.json")))
             )
 
+    def test_deferred_permit_is_published_later_without_rewriting_anchor(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            args, _ = make_fixture_tree(root)
+            args.apply = True
+            args.confirm = MODULE.APPLY_GATE
+            args.defer_launch_permit = True
+            args.publish_deferred_launch_permit = False
+            deferred = run_tool(args)
+            anchor_path = Path(deferred["anchor_path"])
+            permit_path = Path(deferred["permit_path"])
+            anchor_bytes = anchor_path.read_bytes()
+            self.assertTrue(deferred["anchor_published"])
+            self.assertFalse(deferred["launch_permit_published"])
+            self.assertTrue(anchor_path.is_file())
+            self.assertFalse(permit_path.exists())
+
+            args.defer_launch_permit = False
+            args.publish_deferred_launch_permit = True
+            published = run_tool(
+                args,
+                now_utc=TEST_ISSUED_AT_UTC.replace(second=20),
+                issued_boottime_ns=TEST_ISSUED_BOOTTIME_NS + 8_000_000_000,
+            )
+            self.assertFalse(published["anchor_published"])
+            self.assertTrue(published["launch_permit_published"])
+            self.assertEqual(anchor_path.read_bytes(), anchor_bytes)
+            self.assertTrue(permit_path.is_file())
+            with self.assertRaises(MODULE.AnchorValidationError):
+                run_tool(
+                    args,
+                    now_utc=TEST_ISSUED_AT_UTC.replace(second=21),
+                    issued_boottime_ns=TEST_ISSUED_BOOTTIME_NS + 9_000_000_000,
+                )
+
+    def test_deferred_permit_rejects_changed_or_missing_anchor(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            args, _ = make_fixture_tree(root)
+            args.apply = True
+            args.confirm = MODULE.APPLY_GATE
+            args.defer_launch_permit = False
+            args.publish_deferred_launch_permit = True
+            with self.assertRaisesRegex(
+                MODULE.AnchorValidationError, "exact immutable anchor"
+            ):
+                run_tool(args)
+
+            args.defer_launch_permit = True
+            args.publish_deferred_launch_permit = False
+            deferred = run_tool(args)
+            anchor_path = Path(deferred["anchor_path"])
+            anchor_path.write_bytes(anchor_path.read_bytes() + b" ")
+            args.defer_launch_permit = False
+            args.publish_deferred_launch_permit = True
+            with self.assertRaisesRegex(
+                MODULE.AnchorValidationError, "exact immutable anchor"
+            ):
+                run_tool(
+                    args,
+                    now_utc=TEST_ISSUED_AT_UTC.replace(second=20),
+                    issued_boottime_ns=TEST_ISSUED_BOOTTIME_NS + 8_000_000_000,
+                )
+
     def test_apply_requires_explicit_gate(self):
         with tempfile.TemporaryDirectory() as directory:
             args, _ = make_fixture_tree(Path(directory))

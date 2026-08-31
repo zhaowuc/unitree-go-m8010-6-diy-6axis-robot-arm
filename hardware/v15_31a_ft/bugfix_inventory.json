@@ -209,7 +209,7 @@
       "title": "evidence中的commit SHA无法解析",
       "finding": "NOT_FOUND",
       "disposition": "NOT_APPLICABLE",
-      "verification": "SOURCE_COMMIT_AND_COMMIT_1_RESOLVE_LOCALLY; COMMIT_2_CANNOT_EMBED_ITS_OWN_SHA_IN_ITS_TREE",
+      "verification": "SOURCE_COMMIT_COMMIT_1_AND_COMMIT_2_RESOLVE_LOCALLY",
       "evidence_paths": [".git"]
     },
     {

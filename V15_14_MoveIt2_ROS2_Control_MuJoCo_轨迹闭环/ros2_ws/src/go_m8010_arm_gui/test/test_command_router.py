@@ -3,6 +3,7 @@ import math
 import time
 from copy import deepcopy
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import yaml
@@ -362,6 +363,201 @@ def test_gravity_gate_observes_then_injects_exact_bounded_authority():
     }
 
 
+def _empirical_latest(now_ns: int, *, deadline_ns: int) -> dict:
+    return {
+        "authority_kind": "EMPIRICAL_VALIDATION_ENVELOPE",
+        "received_monotonic_ns": now_ns,
+        "schema": "go-m8010-gravity-command-authority/1.1",
+        "source_instance_id": STATE_SOURCE,
+        "sequence": 1,
+        "source_monotonic_ns": now_ns,
+        "model_sha256": PRODUCTION_MODEL_SHA256,
+        "gravity_config_sha256": GRAVITY_CONFIG_SHA256,
+        "authority_class": "EMPIRICAL_VALIDATION_ENVELOPE",
+        "rating_classification": "NOT_OFFICIAL_CONTINUOUS_RATING",
+        "empirical_envelope_id": "v15-31b-empirical-" + "1" * 20,
+        "empirical_envelope_sha256": "2" * 64,
+        "empirical_envelope_expires_at_utc": "2099-01-01T00:00:00Z",
+        "empirical_envelope_expires_timestamp": 4_071_859_200.0,
+        "empirical_envelope_deadline_monotonic_ns": deadline_ns,
+        "anchor_sha256": "3" * 64,
+        "empirical_stage_index": 4,
+        "empirical_position_validation_authorized": True,
+        "empirical_maximum_position_segment_seconds": 15.0,
+        "empirical_maximum_abs_position_segment_deg": 5.0,
+        "empirical_maximum_cumulative_position_trajectory_seconds": 600.0,
+        "session_id": "vertical-session",
+        "state_instance_id": STATE_SOURCE,
+        "gravity_scale": 1.0,
+        "gravity_scale_target": 1.0,
+        "feedforward_nm": [0.0] * 6,
+        "planned_trajectory_feasibility": {
+            "trajectory_sha256": RECIPE_SHA256,
+        },
+    }
+
+
+def test_empirical_authority_stale_or_deadline_revokes_once():
+    now_ns = 10_000_000_000
+    gate = GravityAuthorityGate(maximum_age_ns=250_000_000)
+    gate._latest = _empirical_latest(
+        now_ns, deadline_ns=now_ns + 1_000_000_000
+    )
+    assert not gate.revoke_unusable_empirical(
+        now_ns=now_ns + 1, now_timestamp=1.0
+    )
+    assert gate.revoke_unusable_empirical(
+        now_ns=now_ns + 250_000_001, now_timestamp=1.0
+    )
+    assert not gate.available
+    assert not gate.revoke_unusable_empirical(
+        now_ns=now_ns + 250_000_002, now_timestamp=1.0
+    )
+
+    gate._latest = _empirical_latest(
+        now_ns, deadline_ns=now_ns + 10
+    )
+    assert gate.revoke_unusable_empirical(
+        now_ns=now_ns + 10, now_timestamp=1.0
+    )
+
+
+def test_empirical_active_brake_spends_permit_before_feedback_race():
+    now_ns = 10_000_000_000
+    gate = GravityAuthorityGate(maximum_age_ns=10_000_000_000)
+    authority = _empirical_latest(
+        now_ns, deadline_ns=now_ns + 9_000_000_000
+    )
+    authority.update({
+        "empirical_stage_index": 0,
+        "empirical_position_validation_authorized": False,
+        "gravity_scale": 0.0,
+        "gravity_scale_target": 0.0,
+        "feedforward_nm": [0.0] * 6,
+    })
+    gate._latest = authority
+
+    # A startup BRAKE before the first empirical active packet is harmless.
+    gate.authorize({"mode": "brake"}, now_ns=now_ns)
+    gate._latest = authority
+    first_hold = json.loads(command(mode="hold"))
+    gate.authorize(first_hold, now_ns=now_ns + 1)
+
+    gate.authorize({"mode": "brake"}, now_ns=now_ns + 2)
+    assert not gate.available
+    raced_higher_epoch = json.loads(command(mode="hold"))
+    raced_higher_epoch["activation_epoch"] += 100
+    gate._latest = deepcopy(authority)
+    with pytest.raises(ValueError, match="不存在或已过期"):
+        gate.authorize(raced_higher_epoch, now_ns=now_ns + 3)
+
+
+def test_empirical_valid_to_invalid_status_requests_revocation_brake():
+    now_ns = time.monotonic_ns()
+    gate = GravityAuthorityGate()
+    gate._latest = _empirical_latest(
+        now_ns, deadline_ns=now_ns + 1_000_000_000
+    )
+    reasons = []
+    fake = SimpleNamespace(
+        gravity_authority_gate=gate,
+        _send_empirical_revocation_brake=reasons.append,
+    )
+    CommandRouter.on_gravity_status(
+        fake, SimpleNamespace(data='{"source_instance_id":"revoked"}')
+    )
+    assert reasons == ["EMPIRICAL_GRAVITY_AUTHORITY_REVOKED"]
+    assert not gate.available
+
+
+def test_empirical_revocation_brake_fans_out_to_all_four_domains():
+    class RecordingSocket:
+        def __init__(self):
+            self.sent = []
+
+        def sendto(self, payload, destination):
+            self.sent.append((json.loads(payload), destination))
+
+    class Logger:
+        def warning(self, _message):
+            pass
+
+        def error(self, _message):
+            pass
+
+    fake = SimpleNamespace(
+        gravity_authority_gate=SimpleNamespace(
+            spend_all_active_empirical=lambda: None
+        ),
+        socket=RecordingSocket(),
+        destinations=[
+            ("J1", ("127.0.0.1", 1)),
+            ("J2", ("127.0.0.1", 2)),
+            ("J345", ("127.0.0.1", 3)),
+            ("J6", ("127.0.0.1", 4)),
+        ],
+        last_command=None,
+        empirical_revocation_brakes=0,
+        last_empirical_revocation_reason=None,
+        get_logger=lambda: Logger(),
+    )
+    CommandRouter._send_empirical_revocation_brake(fake, "TEST_REVOKE")
+    assert len(fake.socket.sent) == 4
+    assert all(payload["mode"] == "brake" for payload, _ in fake.socket.sent)
+    assert all(
+        payload["active_joint_mask"] == [False] * 6
+        and payload["feedforward_nm"] == [0.0] * 6
+        and "gravity_authority" not in payload
+        for payload, _ in fake.socket.sent
+    )
+    assert fake.empirical_revocation_brakes == 1
+
+
+def test_empirical_position_budget_counts_unique_segments_not_refreshes():
+    now_ns = 10_000_000_000
+    gate = GravityAuthorityGate(maximum_age_ns=10_000_000_000)
+    gate._latest = _empirical_latest(
+        now_ns, deadline_ns=now_ns + 9_000_000_000
+    )
+
+    def segment(index, duration_ns=15_000_000_000):
+        return {
+            "schema": GUI_COMMAND_SCHEMA_V13,
+            "mode": "position",
+            "source_instance_id": COMMAND_SOURCE,
+            "activation_epoch": index + 1,
+            "collision_guard_proof": {
+                "session_id": "vertical-session",
+                "state_instance_id": STATE_SOURCE,
+            },
+            "plan_manifest": {"recipe_sha256": RECIPE_SHA256},
+            "plan_token_id": f"{index + 10:064x}",
+            "trajectory": {
+                "trajectory_sha256": f"{index + 100:064x}",
+                "segment_index": index,
+                "duration_ns": duration_ns,
+                "start_rad": [0.0] * 6,
+                "target_rad": [0.0] * 6,
+            },
+            "moving_joint_mask": [True, False, False, False, False, False],
+        }
+
+    first = segment(0)
+    gate.authorize(first, now_ns=now_ns + 1)
+    first_refresh = segment(0)
+    gate.authorize(first_refresh, now_ns=now_ns + 2)
+    assert gate._empirical_position_duration_ns_by_envelope["2" * 64] == (
+        15_000_000_000
+    )
+    for index in range(1, 40):
+        gate.authorize(segment(index), now_ns=now_ns + index + 2)
+    assert gate._empirical_position_duration_ns_by_envelope["2" * 64] == (
+        600_000_000_000
+    )
+    with pytest.raises(ValueError, match="budget exceeded"):
+        gate.authorize(segment(40), now_ns=now_ns + 100)
+
+
 def test_gravity_gate_requires_exact_recipe_proof_and_strictly_positive_margin():
     now_ns = 10_000_000_000
     gate = GravityAuthorityGate(maximum_age_ns=250_000_000)
@@ -477,6 +673,73 @@ def test_gravity_policy_source_session_and_scale_freeze_within_epoch():
     assert gate.observe_status(restarted, now_ns=now_ns + 20)
     with pytest.raises(ValueError, match="policy发生变化"):
         gate.authorize(same_epoch, now_ns=now_ns + 21)
+
+
+def test_empirical_adjacent_ramp_stage_reuses_hold_epoch_but_not_identity():
+    now_ns = 10_000_000_000
+    gate = GravityAuthorityGate(maximum_age_ns=250_000_000)
+    stage_zero = _empirical_latest(
+        now_ns, deadline_ns=now_ns + 10_000_000_000
+    )
+    stage_zero.update({
+        "empirical_stage_index": 0,
+        "empirical_position_validation_authorized": False,
+        "gravity_scale": 0.0,
+        "gravity_scale_target": 0.0,
+        "feedforward_nm": [0.0] * 6,
+    })
+    gate._latest = stage_zero
+    hold = json.loads(command(mode="hold"))
+    gate.authorize(hold, now_ns=now_ns)
+    epoch = hold["activation_epoch"]
+
+    stage_one = deepcopy(stage_zero)
+    stage_one.update({
+        "received_monotonic_ns": now_ns + 1,
+        "source_monotonic_ns": now_ns + 1,
+        "sequence": 2,
+        "empirical_stage_index": 1,
+        "gravity_scale": 0.01,
+        "gravity_scale_target": 0.25,
+        "feedforward_nm": [0.0, 0.01, 0.0, 0.0, 0.0, 0.0],
+    })
+    gate._latest = stage_one
+    next_heartbeat = json.loads(command(mode="hold"))
+    next_heartbeat["activation_epoch"] = epoch
+    gate.authorize(next_heartbeat, now_ns=now_ns + 2)
+    assert next_heartbeat["gravity_authority"]["empirical_stage_index"] == 1
+    assert next_heartbeat["feedforward_nm"] == stage_one["feedforward_nm"]
+
+    # Ordinary same-epoch heartbeats carry every continuous 2 s ramp sample.
+    stage_one["gravity_scale"] = 0.02
+    stage_one["feedforward_nm"][1] = 0.02
+    stage_one["received_monotonic_ns"] = now_ns + 3
+    stage_one["source_monotonic_ns"] = now_ns + 3
+    stage_one["sequence"] = 3
+    gate._latest = stage_one
+    ramp_heartbeat = json.loads(command(mode="hold"))
+    ramp_heartbeat["activation_epoch"] = epoch
+    gate.authorize(ramp_heartbeat, now_ns=now_ns + 4)
+    assert ramp_heartbeat["feedforward_nm"][1] == 0.02
+
+    skipped = deepcopy(stage_one)
+    skipped.update({
+        "empirical_stage_index": 3,
+        "gravity_scale_target": 0.75,
+    })
+    gate._latest = skipped
+    with pytest.raises(ValueError, match="policy发生变化"):
+        gate.authorize(
+            json.loads(command(mode="hold")), now_ns=now_ns + 5
+        )
+
+    changed_identity = deepcopy(stage_one)
+    changed_identity["anchor_sha256"] = "f" * 64
+    gate._latest = changed_identity
+    with pytest.raises(ValueError, match="policy发生变化"):
+        gate.authorize(
+            json.loads(command(mode="hold")), now_ns=now_ns + 6
+        )
 
 
 def test_gravity_gate_forces_zero_for_brake_and_drag():
@@ -1451,6 +1714,12 @@ def test_replay_guard_accepts_strict_progress_and_stale_source_takeover():
     first_document["sequence"] = 1
     takeover_ns = now_ns + 500_000_001
     first_document["source_monotonic_ns"] = takeover_ns
+    restarted, _payload = validate_command(
+        json.dumps(first_document), now_ns=takeover_ns
+    )
+    with pytest.raises(ValueError, match="更高激活纪元"):
+        guard.accept(restarted, now_ns=takeover_ns)
+    first_document["activation_epoch"] += 1
     restarted, _payload = validate_command(
         json.dumps(first_document), now_ns=takeover_ns
     )

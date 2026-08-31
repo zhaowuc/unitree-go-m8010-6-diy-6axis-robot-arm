@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Capture J1 and J3/J4/J5 raw phase under sequential BRAKE-only workers.
+"""Capture J1 and J3/J4/J5 raw phase under concurrent BRAKE-only workers.
 
 No persistent zero, recovery hint, command socket, HOLD, FOC, or active target is
-used.  Both physical buses must independently provide at least 500 stationary
-BRAKE frames over at least four seconds.  The output is one immutable evidence
-file consumed by the GO-AUX session-anchor issuer.
+used.  The physical buses use distinct loopback feedback ports and must
+independently provide at least 500 stationary BRAKE frames over at least four
+seconds.  The output is one immutable evidence file consumed by the GO-AUX
+session-anchor issuer.
 """
 
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import hashlib
 import importlib.util
 import json
@@ -619,15 +621,35 @@ def run(args: argparse.Namespace) -> int:
     recorded_boot_ns = raw_base.read_recorded_boottime_ns()
     domains = {}
     motors = {}
-    for bus in ("j1", "j345"):
-        domains[bus] = _capture_domain(
-            worker=worker, feedback_port=args.feedback_port, bus=bus,
-            target_packets=args.target_packets,
-            maximum_runtime_s=args.maximum_runtime_s,
-            thermal_config=args.thermal_config,
-            expected_thermal_config_sha256=args.expected_thermal_config_sha256,
-        )
-        motors.update(domains[bus]["motors"])
+    port_by_bus = {
+        "j1": int(getattr(args, "j1_feedback_port", None) or args.feedback_port),
+        "j345": int(
+            getattr(args, "j345_feedback_port", None) or (args.feedback_port + 1)
+        ),
+    }
+    if len(set(port_by_bus.values())) != 2 or any(
+        not 1024 <= port <= 65535 for port in port_by_bus.values()
+    ):
+        raise CaptureError("J1/J345 feedback ports must be distinct valid ports")
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=2, thread_name_prefix="go-aux-brake-capture"
+    ) as executor:
+        futures = {
+            bus: executor.submit(
+                _capture_domain,
+                worker=worker,
+                feedback_port=port_by_bus[bus],
+                bus=bus,
+                target_packets=args.target_packets,
+                maximum_runtime_s=args.maximum_runtime_s,
+                thermal_config=args.thermal_config,
+                expected_thermal_config_sha256=args.expected_thermal_config_sha256,
+            )
+            for bus in ("j1", "j345")
+        }
+        for bus in ("j1", "j345"):
+            domains[bus] = futures[bus].result()
+            motors.update(domains[bus]["motors"])
     timestamp = instant.strftime("%Y%m%dT%H%M%S%fZ")
     document = {
         "schema": CAPTURE_SCHEMA,
@@ -697,6 +719,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--thermal-config", type=Path, required=True)
     parser.add_argument("--expected-thermal-config-sha256", required=True)
     parser.add_argument("--feedback-port", type=int, default=15300)
+    parser.add_argument("--j1-feedback-port", type=int)
+    parser.add_argument("--j345-feedback-port", type=int)
     parser.add_argument("--target-packets", type=int, default=TARGET_PACKETS)
     parser.add_argument("--maximum-runtime-s", type=float, default=8.0)
     parser.add_argument("--output", type=Path, required=True)
@@ -710,6 +734,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args = parser.parse_args(argv)
     if not 1024 <= args.feedback_port <= 65535:
         parser.error("feedback port out of range")
+    selected_ports = (
+        args.j1_feedback_port or args.feedback_port,
+        args.j345_feedback_port or (args.feedback_port + 1),
+    )
+    if any(not 1024 <= port <= 65535 for port in selected_ports):
+        parser.error("J1/J345 feedback port out of range")
+    if selected_ports[0] == selected_ports[1]:
+        parser.error("J1/J345 feedback ports must be distinct")
     if not 500 <= args.target_packets <= 1500:
         parser.error("target packets must be in [500, 1500]")
     if not 5.0 <= args.maximum_runtime_s <= 15.0:

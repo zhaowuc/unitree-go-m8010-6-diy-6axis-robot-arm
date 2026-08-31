@@ -16,6 +16,7 @@ from go_m8010_arm_hardware.state_model import (
     parse_controller_feedback_metadata,
     parse_feedback_payload,
     unavailable_worker_control_status,
+    validate_j6_feedback_identity,
     validate_worker_supervisor_status,
 )
 
@@ -141,6 +142,19 @@ class ControllerFeedbackMetadataTest(unittest.TestCase):
         return {
             "schema": "go-m8010-motor-feedback/1.0",
             "source_monotonic_ns": stamp,
+            **(
+                {
+                    "source_instance_id": "9" * 32,
+                    "sequence": 1,
+                    "session_id": (
+                        "persistent:0123456789abcdef:"
+                        "j2session:1111111111111111:"
+                        "goauxsession:2222222222222222"
+                    ),
+                    "state_instance_id": "8" * 32,
+                }
+                if set(motors) == {"J6"} else {}
+            ),
             "samples": [
                 {
                     "motor": motor,
@@ -219,6 +233,27 @@ class ControllerFeedbackMetadataTest(unittest.TestCase):
             "gravity_scale_target": 0.5,
             "feedforward_nm": logical_feedforward,
         }
+
+    def test_j6_raw_identity_is_session_bound_and_strictly_increasing(self):
+        now = 5_000_000_000
+        payload = self.payload(("J6",), now)
+        first = validate_j6_feedback_identity(
+            payload,
+            now,
+            expected_session_id=payload["session_id"],
+            expected_state_instance_id=payload["state_instance_id"],
+        )
+        replay = dict(payload)
+        with self.assertRaisesRegex(ValueError, "replayed"):
+            validate_j6_feedback_identity(replay, now, previous=first)
+        changed = dict(payload)
+        changed["sequence"] = 2
+        changed["source_monotonic_ns"] = now + 1
+        changed["source_instance_id"] = "7" * 32
+        with self.assertRaisesRegex(ValueError, "changed"):
+            validate_j6_feedback_identity(
+                changed, now + 1, previous=first
+            )
 
     def parse(self, payload):
         receipt = payload["source_monotonic_ns"] + 1
@@ -807,6 +842,14 @@ class StateModelTest(unittest.TestCase):
         }
         j6_payload = {
             "source_monotonic_ns": now,
+            "source_instance_id": "9" * 32,
+            "sequence": 1,
+            "session_id": (
+                "persistent:0123456789abcdef:"
+                "j2session:1111111111111111:"
+                "goauxsession:2222222222222222"
+            ),
+            "state_instance_id": "8" * 32,
             "samples": [j6_sample],
             "tau_j2_logical_total_nm": None,
         }

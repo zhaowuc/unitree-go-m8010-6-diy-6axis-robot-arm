@@ -104,6 +104,8 @@ def load_function(name, extra_namespace=None):
     )
     module = ast.Module(body=[function], type_ignores=[])
     namespace = {
+        "datetime": datetime,
+        "timezone": timezone,
         "hashlib": hashlib,
         "json": json,
         "math": math,
@@ -163,10 +165,25 @@ def load_function(name, extra_namespace=None):
         "PLANNED_FEASIBILITY_SCHEMA": (
             "go-m8010-planned-load-thermal-feasibility/1.0"
         ),
+        "EMPIRICAL_PLANNED_FEASIBILITY_SCHEMA": (
+            "go-m8010-empirical-planned-load-thermal-feasibility/1.0"
+        ),
+        "EMPIRICAL_AUTHORITY_CLASS": "EMPIRICAL_VALIDATION_ENVELOPE",
+        "EMPIRICAL_RATING_CLASSIFICATION": (
+            "NOT_OFFICIAL_CONTINUOUS_RATING"
+        ),
+        "EMPIRICAL_THERMAL_EVALUATION_BASIS": (
+            "CURRENT_MEASURED_TEMPERATURE_BELOW_EMPIRICAL_ENTRY_"
+            "MODEL_GRAVITY_WITHIN_SOFTWARE_HARD_LIMIT_"
+            "NO_CONTINUOUS_RATING_CLAIM"
+        ),
         "GRAVITY_STATUS_TIMEOUT_S": 0.5,
         "GRAVITY_SCALE_LEVELS": (0.0, 0.25, 0.5, 0.75, 1.0),
         "GRAVITY_ROTOR_FEEDFORWARD_LIMIT_NM": (
             0.20, 1.75, 1.10, 0.40, 0.20, 0.0,
+        ),
+        "EMPIRICAL_GRAVITY_ROTOR_LIMIT_NM": (
+            0.20, 1.75, 1.75, 1.10, 0.40, 0.20, 0.0,
         ),
         "PRODUCTION_COLLISION_CONTRACT_SHA256": COLLISION_CONTRACT_SHA256,
         "PRODUCTION_KINEMATIC_GUARD_SHA256": KINEMATIC_GUARD_SHA256,
@@ -538,6 +555,117 @@ def _valid_gravity_status(now_ns=10_000_000_000):
     }
 
 
+def _valid_empirical_gravity_status(now_ns=10_000_000_000):
+    status = _valid_gravity_status(now_ns)
+    status.update({
+        "continuous_rotor_limits_authoritative": False,
+        "empirical_validation_authoritative": True,
+        "torque_authority_class": "EMPIRICAL_VALIDATION_ENVELOPE",
+        "gravity_scale": 1.0,
+        "gravity_scale_target": 1.0,
+        "empirical_validation": {
+            "authority_class": "EMPIRICAL_VALIDATION_ENVELOPE",
+            "rating_classification": "NOT_OFFICIAL_CONTINUOUS_RATING",
+            "envelope_id": "v15-31b-empirical-" + "1" * 20,
+            "envelope_sha256": "2" * 64,
+            "anchor_sha256": "3" * 64,
+            "expires_at_utc": datetime.fromtimestamp(
+                time.time() + 3600.0, timezone.utc
+            ).isoformat().replace("+00:00", "Z"),
+            "stage_index": 4,
+            "stage_level": 1.0,
+            "stage_complete": True,
+            "phase": "POSITION_VALIDATION",
+            "position_validation_authorized": True,
+            "maximum_position_segment_seconds": 15.0,
+            "maximum_abs_position_segment_deg": 5.0,
+            "maximum_cumulative_position_trajectory_seconds": 600.0,
+            "invalidated": False,
+            "blocker": None,
+            "continuous_operation_authorized": False,
+            "official_continuous_rating_claimed": False,
+        },
+    })
+    return status
+
+
+def _attach_empirical_planned_proof(status, trajectory_sha256="d" * 64):
+    gravity_maxima = {
+        name: 0.1
+        for name in ("J1", "J2A", "J2B", "J3", "J4", "J5")
+    }
+    gravity_maxima["J6"] = None
+    predicted_maxima = {
+        name: 0.2
+        for name in ("J1", "J2A", "J2B", "J3", "J4", "J5")
+    }
+    predicted_maxima["J6"] = None
+    empirical_limits = {
+        "J1": 0.20,
+        "J2A": 1.75,
+        "J2B": 1.75,
+        "J3": 1.10,
+        "J4": 0.40,
+        "J5": 0.20,
+        "J6": 0.0,
+    }
+    empirical = status["empirical_validation"]
+    status["planned_trajectory_feasibility"] = {
+        "schema": (
+            "go-m8010-empirical-planned-load-thermal-feasibility/1.0"
+        ),
+        "source": "whole_arm_gravity_node",
+        "source_instance_id": status["source_instance_id"],
+        "sequence": status["sequence"],
+        "source_monotonic_ns": status["source_monotonic_ns"],
+        "result": "PASS",
+        "load_feasibility": "PASS",
+        "thermal_feasibility": "PASS",
+        "current_temperature_margin_result": "PASS",
+        "request_sha256": "4" * 64,
+        "trajectory_sha256": trajectory_sha256,
+        "session_id": status["session_id"],
+        "state_instance_id": status["state_instance_id"],
+        "model_sha256": MODEL_SHA256,
+        "gravity_config_sha256": GRAVITY_CONFIG_SHA256,
+        "thermal_config_sha256": THERMAL_CONFIG_SHA256,
+        "continuous_rotor_limits_authoritative": False,
+        "authority_class": "EMPIRICAL_VALIDATION_ENVELOPE",
+        "rating_classification": "NOT_OFFICIAL_CONTINUOUS_RATING",
+        "empirical_validation_authoritative": True,
+        "empirical_envelope_id": empirical["envelope_id"],
+        "empirical_envelope_sha256": empirical["envelope_sha256"],
+        "temperature_limits_authoritative": True,
+        "sample_count": 101,
+        "evaluated_sample_count": 101,
+        "load_evaluation_basis": (
+            "MUJOCO_QFRC_BIAS_CONTINUOUS_PLUS_MJ_INVERSE_SHORT_PEAK_EVERY_SAMPLE"
+        ),
+        "thermal_evaluation_basis": (
+            "CURRENT_MEASURED_TEMPERATURE_BELOW_EMPIRICAL_ENTRY_"
+            "MODEL_GRAVITY_WITHIN_SOFTWARE_HARD_LIMIT_"
+            "NO_CONTINUOUS_RATING_CLAIM"
+        ),
+        "maximum_abs_gravity_joint_torque_nm_by_joint": {
+            f"J{index}": 0.5 for index in range(1, 7)
+        },
+        "maximum_abs_gravity_rotor_torque_nm_by_motor": gravity_maxima,
+        "maximum_abs_predicted_rotor_torque_nm_by_motor": predicted_maxima,
+        "continuous_rotor_torque_limit_nm_by_motor": None,
+        "empirical_gravity_rotor_limit_nm_by_motor": empirical_limits,
+        "minimum_empirical_gravity_rotor_margin_nm": 0.1,
+        "short_peak_rotor_torque_limit_nm_by_motor": None,
+        "minimum_continuous_rotor_torque_margin_nm": None,
+        "minimum_short_peak_rotor_torque_margin_nm": None,
+        "minimum_predicted_continuous_rotor_torque_margin_nm": None,
+        "minimum_rotor_torque_margin_nm": 0.1,
+        "minimum_thermal_margin_c": 5.0,
+        "blocker_code": None,
+        "blocker": None,
+    }
+    return status
+
+
 def test_gravity_status_authority_is_complete_fresh_and_fail_closed():
     validate = load_function("gravity_status_authorizes_hardware")
     checked_ns = 10_000_000_000
@@ -582,6 +710,68 @@ def test_gravity_status_authority_is_complete_fresh_and_fail_closed():
             state_instance_id="b" * 32,
             now_monotonic_ns=checked_ns,
         )
+
+
+def test_empirical_gravity_status_is_distinct_bounded_authority():
+    validate = load_function("gravity_status_authorizes_hardware")
+    checked_ns = 10_000_000_000
+    valid = _valid_empirical_gravity_status(checked_ns)
+    assert validate(
+        valid,
+        session_id="session-a",
+        state_instance_id="b" * 32,
+        now_monotonic_ns=checked_ns,
+    )
+
+    mutations = (
+        ("continuous_rotor_limits_authoritative", True),
+        ("empirical_validation_authoritative", False),
+        ("torque_authority_class", "OFFICIAL_CONTINUOUS_RATING"),
+    )
+    for field, value in mutations:
+        candidate = json.loads(json.dumps(valid))
+        candidate[field] = value
+        assert not validate(
+            candidate,
+            session_id="session-a",
+            state_instance_id="b" * 32,
+            now_monotonic_ns=checked_ns,
+        )
+
+    nested_mutations = (
+        ("rating_classification", "OFFICIAL_CONTINUOUS_RATING"),
+        ("official_continuous_rating_claimed", True),
+        ("continuous_operation_authorized", True),
+        ("invalidated", True),
+        ("envelope_sha256", "not-a-hash"),
+        ("anchor_sha256", "not-a-hash"),
+        ("maximum_abs_position_segment_deg", 5.1),
+        ("maximum_cumulative_position_trajectory_seconds", 600.1),
+        ("phase", "POSITION_VALIDATION_PENDING_RECONFIRMATION"),
+        ("stage_index", 3),
+    )
+    for field, value in nested_mutations:
+        candidate = json.loads(json.dumps(valid))
+        candidate["empirical_validation"][field] = value
+        assert not validate(
+            candidate,
+            session_id="session-a",
+            state_instance_id="b" * 32,
+            now_monotonic_ns=checked_ns,
+        )
+
+    expired = json.loads(json.dumps(valid))
+    expired["empirical_validation"]["expires_at_utc"] = (
+        datetime.fromtimestamp(time.time() - 1.0, timezone.utc)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+    assert not validate(
+        expired,
+        session_id="session-a",
+        state_instance_id="b" * 32,
+        now_monotonic_ns=checked_ns,
+    )
 
 
 def test_planned_load_and_thermal_proof_is_exact_path_bound_and_fail_closed():
@@ -699,6 +889,101 @@ def test_planned_load_and_thermal_proof_is_exact_path_bound_and_fail_closed():
             )
 
 
+def test_empirical_planned_proof_requires_position_stage_and_exact_envelope():
+    gravity_validate = load_function("gravity_status_authorizes_hardware")
+    validate = load_function(
+        "planned_load_feasibility_authorizes",
+        {"gravity_status_authorizes_hardware": gravity_validate},
+    )
+    checked_ns = 10_000_000_000
+    trajectory_sha256 = "d" * 64
+    valid = _attach_empirical_planned_proof(
+        _valid_empirical_gravity_status(checked_ns), trajectory_sha256
+    )
+    assert validate(
+        valid,
+        trajectory_sha256=trajectory_sha256,
+        session_id="session-a",
+        state_instance_id="b" * 32,
+        now_monotonic_ns=checked_ns,
+    )
+
+    proof_mutations = (
+        ("continuous_rotor_limits_authoritative", True),
+        ("authority_class", "OFFICIAL_CONTINUOUS_RATING"),
+        ("rating_classification", "OFFICIAL_CONTINUOUS_RATING"),
+        ("empirical_validation_authoritative", False),
+        ("empirical_envelope_id", "v15-31b-empirical-" + "9" * 20),
+        ("empirical_envelope_sha256", "9" * 64),
+        ("temperature_limits_authoritative", False),
+        ("minimum_thermal_margin_c", 0.0),
+        ("thermal_evaluation_basis", "OFFICIAL_CONTINUOUS_RATING"),
+        ("trajectory_sha256", "9" * 64),
+        ("session_id", "other-session"),
+        ("blocker_code", "EMPIRICAL_MODEL_GRAVITY_HARD_LIMIT_EXCEEDED"),
+    )
+    for field, value in proof_mutations:
+        candidate = json.loads(json.dumps(valid))
+        candidate["planned_trajectory_feasibility"][field] = value
+        assert not validate(
+            candidate,
+            trajectory_sha256=trajectory_sha256,
+            session_id="session-a",
+            state_instance_id="b" * 32,
+            now_monotonic_ns=checked_ns,
+        )
+
+    wrong_limit = json.loads(json.dumps(valid))
+    wrong_limit["planned_trajectory_feasibility"][
+        "empirical_gravity_rotor_limit_nm_by_motor"
+    ]["J4"] = 0.41
+    assert not validate(
+        wrong_limit,
+        trajectory_sha256=trajectory_sha256,
+        session_id="session-a",
+        state_instance_id="b" * 32,
+        now_monotonic_ns=checked_ns,
+    )
+
+    wrong_margin = json.loads(json.dumps(valid))
+    wrong_margin["planned_trajectory_feasibility"][
+        "minimum_empirical_gravity_rotor_margin_nm"
+    ] = 0.11
+    assert not validate(
+        wrong_margin,
+        trajectory_sha256=trajectory_sha256,
+        session_id="session-a",
+        state_instance_id="b" * 32,
+        now_monotonic_ns=checked_ns,
+    )
+
+    # Ladder authority may safely authorize HOLD, but it must never turn an
+    # otherwise well-formed nested proof into POSITION authority.
+    before_position = json.loads(json.dumps(valid))
+    before_position["empirical_validation"].update({
+        "stage_index": 3,
+        "stage_level": 0.75,
+        "stage_complete": True,
+        "phase": "GRAVITY_LADDER",
+        "position_validation_authorized": False,
+    })
+    before_position["gravity_scale"] = 0.75
+    before_position["gravity_scale_target"] = 0.75
+    assert gravity_validate(
+        before_position,
+        session_id="session-a",
+        state_instance_id="b" * 32,
+        now_monotonic_ns=checked_ns,
+    )
+    assert not validate(
+        before_position,
+        trajectory_sha256=trajectory_sha256,
+        session_id="session-a",
+        state_instance_id="b" * 32,
+        now_monotonic_ns=checked_ns,
+    )
+
+
 def test_plan_token_checklist_has_independent_planned_path_gate():
     source = SOURCE.read_text(encoding="utf-8")
     checks_start = source.index("    def _current_preview_checks(")
@@ -807,7 +1092,7 @@ def test_gravity_callback_accepts_only_current_status_schema():
     assert node.last_gravity_status_receipt == accepted_at
 
 
-def test_control_panel_exposes_only_the_four_v15_31a_actions():
+def test_control_panel_exposes_hold_and_the_four_v15_31a_workflow_actions():
     class FakeButton:
         def __init__(self, text):
             self.text = text
@@ -819,6 +1104,9 @@ def test_control_panel_exposes_only_the_four_v15_31a_actions():
 
         def setToolTip(self, tooltip):
             self.tooltip = tooltip
+
+        def setShortcut(self, shortcut):
+            self.shortcut = shortcut
 
         def setStyleSheet(self, _style):
             pass
@@ -877,14 +1165,42 @@ def test_control_panel_exposes_only_the_four_v15_31a_actions():
     window = FakeWindow()
     method(window)
     assert [button.text for button in window.buttons] == [
+        "保持当前位置",
         "预演轨迹",
         "下发到现实",
         "恢复初始化姿态",
         "停止并制动",
     ]
-    submit = window.buttons[1]
+    assert [button.shortcut for button in window.buttons] == [
+        "Alt+H", "Alt+P", "Alt+E", "Alt+R", "Alt+B",
+    ]
+    hold = window.buttons[0]
+    assert "HOLD" in hold.tooltip
+    assert "POSITION" in hold.tooltip
+    submit = window.buttons[2]
     assert not submit.enabled
     assert "预演" in submit.tooltip
+
+
+def test_visible_hold_requires_all_six_axes_before_capturing_current_pose():
+    method = load_main_window_method("_hold_current")
+    calls = []
+
+    class FakeWindow:
+        def _require_control_feedback(self, message, require_all=False):
+            calls.append((message, require_all))
+            return False
+
+        def _prepare_hold_at_actual(self):
+            raise AssertionError("blocked all-axis gate must not capture HOLD")
+
+        def _update_mode_label(self, _text):
+            raise AssertionError("blocked all-axis gate must not claim HOLD")
+
+    method(FakeWindow())
+    assert len(calls) == 1
+    assert calls[0][1] is True
+    assert "六个关节" in calls[0][0]
 
 
 def test_direct_save_call_cannot_change_read_only_initial_pose_bytes_or_hash():
@@ -3525,7 +3841,10 @@ def test_v15_31a_panel_removes_legacy_drive_policy_buttons():
         "可拖动模式（普通脱力）",
     ):
         assert legacy not in panel
-    for required in ("预演轨迹", "下发到现实", "恢复初始化姿态", "停止并制动"):
+    for required in (
+        "保持当前位置", "预演轨迹", "下发到现实",
+        "恢复初始化姿态", "停止并制动",
+    ):
         assert panel.count(required) >= 1
 
 
@@ -4379,6 +4698,11 @@ def test_stale_state_stream_never_reuses_old_hold_or_sync_confirmation():
     assert "if streams_fresh else []" in notice
     assert 'if j2_observed and hardware.get("j2_sync_fault", False):' in notice
     assert "elif j2_observed and sync_error > math.radians(0.5):" in notice
+    assert "elif j2_observed and sync_error > math.radians(0.25):" in notice
+    assert "J2同步硬联锁已锁存" in notice
+    assert "单个有效配对帧" in notice
+    assert "连续确认" not in notice
+    assert "当前不撤销位置保持" not in notice
 
     widgets_start = source.index("    def _refresh_joint_widgets(")
     widgets_end = source.index("    def _publish_command(", widgets_start)

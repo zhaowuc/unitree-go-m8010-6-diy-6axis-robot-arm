@@ -183,6 +183,50 @@ class GoAuxVerticalSessionPhaseAnchorTest(unittest.TestCase):
             self.assertEqual(permits["j345"]["scope"], "j345")
             self.assertTrue(all(path.read_bytes() == data for path, data in protected_before.items()))
 
+            args.apply = True
+            args.confirm = MODULE.APPLY_GATE
+            args.defer_launch_permit = True
+            args.publish_deferred_launch_permit = False
+            deferred = MODULE.run(
+                args,
+                now_utc=datetime(2026, 8, 28, 1, 2, 12, tzinfo=timezone.utc),
+                host_boot_id=BOOT_ID,
+                issued_boottime_ns=ISSUED_BOOT_NS,
+            )
+            anchor_path = Path(deferred["anchor_path"])
+            anchor_bytes = anchor_path.read_bytes()
+            self.assertTrue(deferred["anchor_published"])
+            self.assertFalse(deferred["launch_permits_published"])
+            self.assertTrue(all(
+                not Path(path).exists()
+                for path in deferred["permit_paths"].values()
+            ))
+
+            args.defer_launch_permit = False
+            args.publish_deferred_launch_permit = True
+            published = MODULE.run(
+                args,
+                now_utc=datetime(2026, 8, 28, 1, 2, 20, tzinfo=timezone.utc),
+                host_boot_id=BOOT_ID,
+                issued_boottime_ns=ISSUED_BOOT_NS + 8_000_000_000,
+            )
+            self.assertFalse(published["anchor_published"])
+            self.assertTrue(published["launch_permits_published"])
+            self.assertEqual(anchor_path.read_bytes(), anchor_bytes)
+            self.assertTrue(all(
+                Path(path).is_file()
+                for path in published["permit_paths"].values()
+            ))
+            with self.assertRaises(MODULE.base.AnchorValidationError):
+                MODULE.run(
+                    args,
+                    now_utc=datetime(
+                        2026, 8, 28, 1, 2, 21, tzinfo=timezone.utc
+                    ),
+                    host_boot_id=BOOT_ID,
+                    issued_boottime_ns=ISSUED_BOOT_NS + 9_000_000_000,
+                )
+
     def test_rejects_any_domain_below_500_brake_samples(self):
         with self.assertRaises(MODULE.base.AnchorValidationError):
             MODULE._validate_capture(capture(499))

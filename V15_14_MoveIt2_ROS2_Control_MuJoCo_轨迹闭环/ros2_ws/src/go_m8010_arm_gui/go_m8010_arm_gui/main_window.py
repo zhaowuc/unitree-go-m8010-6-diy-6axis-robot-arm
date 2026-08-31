@@ -89,10 +89,23 @@ GRAVITY_STATUS_SCHEMA = "go-m8010-gravity-status/1.1"
 PLANNED_FEASIBILITY_SCHEMA = (
     "go-m8010-planned-load-thermal-feasibility/1.0"
 )
+EMPIRICAL_PLANNED_FEASIBILITY_SCHEMA = (
+    "go-m8010-empirical-planned-load-thermal-feasibility/1.0"
+)
+EMPIRICAL_AUTHORITY_CLASS = "EMPIRICAL_VALIDATION_ENVELOPE"
+EMPIRICAL_RATING_CLASSIFICATION = "NOT_OFFICIAL_CONTINUOUS_RATING"
+EMPIRICAL_THERMAL_EVALUATION_BASIS = (
+    "CURRENT_MEASURED_TEMPERATURE_BELOW_EMPIRICAL_ENTRY_"
+    "MODEL_GRAVITY_WITHIN_SOFTWARE_HARD_LIMIT_"
+    "NO_CONTINUOUS_RATING_CLAIM"
+)
 PREVIEW_PLAN_BUILD_TIMEOUT_S = 15.0
 PLANNED_REQUEST_PUBLISH_MAX_AGE_NS = 1_000_000_000
 GRAVITY_SCALE_LEVELS = (0.0, 0.25, 0.50, 0.75, 1.0)
 GRAVITY_ROTOR_FEEDFORWARD_LIMIT_NM = (0.20, 1.75, 1.10, 0.40, 0.20, 0.0)
+EMPIRICAL_GRAVITY_ROTOR_LIMIT_NM = (
+    0.20, 1.75, 1.75, 1.10, 0.40, 0.20, 0.0,
+)
 TRAJECTORY_EXECUTE_LEAD_NS = 250_000_000
 SUMMARY_REFRESH_PERIOD_S = 0.2
 ROS_CALLBACK_BUDGET_PER_TICK = 8
@@ -985,6 +998,161 @@ def planned_load_feasibility_authorizes(
     predicted_maxima = proof.get(
         "maximum_abs_predicted_rotor_torque_nm_by_motor"
     )
+    if proof.get("schema") == EMPIRICAL_PLANNED_FEASIBILITY_SCHEMA:
+        empirical = status.get("empirical_validation")
+        empirical_limits = proof.get(
+            "empirical_gravity_rotor_limit_nm_by_motor"
+        )
+        go_motors = MOTOR_NAMES[:-1]
+        exact_empirical_loads = bool(
+            isinstance(gravity_joint_maxima, dict)
+            and set(gravity_joint_maxima)
+            == {"J1", "J2", "J3", "J4", "J5", "J6"}
+            and all(
+                type(value) in {int, float}
+                and math.isfinite(float(value))
+                and float(value) >= 0.0
+                for value in gravity_joint_maxima.values()
+            )
+            and isinstance(gravity_maxima, dict)
+            and set(gravity_maxima) == set(MOTOR_NAMES)
+            and isinstance(predicted_maxima, dict)
+            and set(predicted_maxima) == set(MOTOR_NAMES)
+            and isinstance(empirical_limits, dict)
+            and set(empirical_limits) == set(MOTOR_NAMES)
+            and all(
+                type(gravity_maxima[name]) in {int, float}
+                and math.isfinite(float(gravity_maxima[name]))
+                and float(gravity_maxima[name]) >= 0.0
+                and type(predicted_maxima[name]) in {int, float}
+                and math.isfinite(float(predicted_maxima[name]))
+                and float(predicted_maxima[name]) >= 0.0
+                and type(empirical_limits[name]) in {int, float}
+                and math.isfinite(float(empirical_limits[name]))
+                and abs(
+                    float(empirical_limits[name])
+                    - EMPIRICAL_GRAVITY_ROTOR_LIMIT_NM[index]
+                ) <= 1.0e-12
+                for index, name in enumerate(go_motors)
+            )
+            and (
+                gravity_maxima["J6"] is None
+                or (
+                    type(gravity_maxima["J6"]) in {int, float}
+                    and math.isfinite(float(gravity_maxima["J6"]))
+                    and float(gravity_maxima["J6"]) >= 0.0
+                )
+            )
+            and (
+                predicted_maxima["J6"] is None
+                or (
+                    type(predicted_maxima["J6"]) in {int, float}
+                    and math.isfinite(float(predicted_maxima["J6"]))
+                    and float(predicted_maxima["J6"]) >= 0.0
+                )
+            )
+            and type(empirical_limits["J6"]) in {int, float}
+            and math.isfinite(float(empirical_limits["J6"]))
+            and abs(
+                float(empirical_limits["J6"])
+                - EMPIRICAL_GRAVITY_ROTOR_LIMIT_NM[-1]
+            ) <= 1.0e-12
+        )
+        reproduced_empirical_margin = (
+            min(
+                float(empirical_limits[name]) - float(gravity_maxima[name])
+                for name in go_motors
+            )
+            if exact_empirical_loads else None
+        )
+        reported_empirical_margin = proof.get(
+            "minimum_empirical_gravity_rotor_margin_nm"
+        )
+        return bool(
+            gravity_status_authorizes_hardware(
+                status,
+                session_id=session_id,
+                state_instance_id=state_instance_id,
+                now_monotonic_ns=checked_ns,
+            )
+            and isinstance(empirical, dict)
+            and empirical.get("position_validation_authorized") is True
+            and empirical.get("phase") == "POSITION_VALIDATION"
+            and empirical.get("stage_index") == 4
+            and empirical.get("stage_complete") is True
+            and proof.get("source") == "whole_arm_gravity_node"
+            and proof.get("source_instance_id")
+            == status.get("source_instance_id")
+            and type(proof.get("sequence")) is int
+            and proof["sequence"] > 0
+            and proof.get("sequence") == status.get("sequence")
+            and type(source_ns) is int
+            and source_ns == status.get("source_monotonic_ns")
+            and 0 < source_ns <= checked_ns
+            and checked_ns - source_ns
+            <= int(GRAVITY_STATUS_TIMEOUT_S * 1.0e9)
+            and proof.get("result") == "PASS"
+            and proof.get("load_feasibility") == "PASS"
+            and proof.get("thermal_feasibility") == "PASS"
+            and proof.get("current_temperature_margin_result") == "PASS"
+            and isinstance(trajectory_sha256, str)
+            and len(trajectory_sha256) == 64
+            and all(
+                character in "0123456789abcdef"
+                for character in trajectory_sha256
+            )
+            and proof.get("trajectory_sha256") == trajectory_sha256
+            and proof.get("session_id") == session_id
+            and proof.get("state_instance_id") == state_instance_id
+            and proof.get("model_sha256") == PRODUCTION_MODEL_SHA256
+            and proof.get("gravity_config_sha256") == GRAVITY_CONFIG_SHA256
+            and proof.get("thermal_config_sha256") == THERMAL_CONFIG_SHA256
+            and isinstance(request_sha256, str)
+            and len(request_sha256) == 64
+            and all(
+                character in "0123456789abcdef"
+                for character in request_sha256
+            )
+            and proof.get("continuous_rotor_limits_authoritative") is False
+            and proof.get("authority_class") == EMPIRICAL_AUTHORITY_CLASS
+            and proof.get("rating_classification")
+            == EMPIRICAL_RATING_CLASSIFICATION
+            and proof.get("empirical_validation_authoritative") is True
+            and proof.get("empirical_envelope_id")
+            == empirical.get("envelope_id")
+            and proof.get("empirical_envelope_sha256")
+            == empirical.get("envelope_sha256")
+            and proof.get("temperature_limits_authoritative") is True
+            and proof.get("load_evaluation_basis")
+            == (
+                "MUJOCO_QFRC_BIAS_CONTINUOUS_PLUS_"
+                "MJ_INVERSE_SHORT_PEAK_EVERY_SAMPLE"
+            )
+            and proof.get("thermal_evaluation_basis")
+            == EMPIRICAL_THERMAL_EVALUATION_BASIS
+            and type(sample_count) is int
+            and sample_count > 0
+            and evaluated_sample_count == sample_count
+            and exact_empirical_loads
+            and reproduced_empirical_margin is not None
+            and reproduced_empirical_margin >= 0.0
+            and type(reported_empirical_margin) in {int, float}
+            and math.isfinite(float(reported_empirical_margin))
+            and abs(
+                float(reported_empirical_margin)
+                - reproduced_empirical_margin
+            ) <= 1.0e-12
+            and type(minimum_load_margin) in {int, float}
+            and math.isfinite(float(minimum_load_margin))
+            and abs(
+                float(minimum_load_margin) - reproduced_empirical_margin
+            ) <= 1.0e-12
+            and type(minimum_thermal_margin) in {int, float}
+            and math.isfinite(float(minimum_thermal_margin))
+            and float(minimum_thermal_margin) > 0.0
+            and proof.get("blocker_code") is None
+            and proof.get("blocker") is None
+        )
     continuous_limits = proof.get(
         "continuous_rotor_torque_limit_nm_by_motor"
     )
@@ -1268,6 +1436,125 @@ def gravity_status_authorizes_hardware(
     target = status.get("gravity_scale_target")
     source_ns = status.get("source_monotonic_ns")
     hardware_source_ns = status.get("hardware_state_source_monotonic_ns")
+    continuous_authoritative = status.get(
+        "continuous_rotor_limits_authoritative"
+    )
+    empirical = status.get("empirical_validation")
+    empirical_expiry_valid = False
+    empirical_stage_valid = False
+    empirical_stage_level = None
+    if isinstance(empirical, dict):
+        expires_text = empirical.get("expires_at_utc")
+        if isinstance(expires_text, str) and expires_text.endswith("Z"):
+            try:
+                expires_timestamp = datetime.fromisoformat(
+                    expires_text[:-1] + "+00:00"
+                ).astimezone(timezone.utc).timestamp()
+                remaining_seconds = expires_timestamp - time.time()
+                empirical_expiry_valid = bool(
+                    math.isfinite(expires_timestamp)
+                    and 0.0 < remaining_seconds <= 4200.0
+                )
+            except (OverflowError, ValueError):
+                empirical_expiry_valid = False
+        stage_index = empirical.get("stage_index")
+        stage_level = empirical.get("stage_level")
+        phase = empirical.get("phase")
+        stage_complete = empirical.get("stage_complete")
+        position_authorized = empirical.get(
+            "position_validation_authorized"
+        )
+        if (
+            type(stage_index) is int
+            and 0 <= stage_index < len(GRAVITY_SCALE_LEVELS)
+            and type(stage_level) in {int, float}
+            and math.isfinite(float(stage_level))
+            and abs(
+                float(stage_level) - GRAVITY_SCALE_LEVELS[stage_index]
+            ) <= 1.0e-12
+            and type(stage_complete) is bool
+            and type(position_authorized) is bool
+        ):
+            empirical_stage_level = float(stage_level)
+            empirical_stage_valid = bool(
+                (
+                    position_authorized
+                    and phase == "POSITION_VALIDATION"
+                    and stage_index == len(GRAVITY_SCALE_LEVELS) - 1
+                    and stage_complete
+                    and empirical.get("blocker") is None
+                )
+                or (
+                    not position_authorized
+                    and (
+                        phase == "GRAVITY_LADDER"
+                        or (
+                            phase
+                            == "POSITION_VALIDATION_PENDING_RECONFIRMATION"
+                            and stage_index
+                            == len(GRAVITY_SCALE_LEVELS) - 1
+                            and stage_complete
+                        )
+                    )
+                )
+            )
+    official_authority_valid = bool(
+        continuous_authoritative is True
+        and status.get("empirical_validation_authoritative") is not True
+        and status.get("torque_authority_class")
+        != EMPIRICAL_AUTHORITY_CLASS
+    )
+    empirical_authority_valid = bool(
+        continuous_authoritative is False
+        and status.get("empirical_validation_authoritative") is True
+        and status.get("torque_authority_class")
+        == EMPIRICAL_AUTHORITY_CLASS
+        and isinstance(empirical, dict)
+        and empirical.get("authority_class") == EMPIRICAL_AUTHORITY_CLASS
+        and empirical.get("rating_classification")
+        == EMPIRICAL_RATING_CLASSIFICATION
+        and isinstance(empirical.get("envelope_id"), str)
+        and len(empirical["envelope_id"]) == 38
+        and empirical["envelope_id"].startswith("v15-31b-empirical-")
+        and isinstance(empirical.get("envelope_sha256"), str)
+        and len(empirical["envelope_sha256"]) == 64
+        and all(
+            character in "0123456789abcdef"
+            for character in empirical["envelope_sha256"]
+        )
+        and isinstance(empirical.get("anchor_sha256"), str)
+        and len(empirical["anchor_sha256"]) == 64
+        and all(
+            character in "0123456789abcdef"
+            for character in empirical["anchor_sha256"]
+        )
+        and empirical_expiry_valid
+        and empirical_stage_valid
+        and empirical.get("invalidated") is False
+        and empirical.get("continuous_operation_authorized") is False
+        and empirical.get("official_continuous_rating_claimed") is False
+        and type(empirical.get("maximum_position_segment_seconds"))
+        in {int, float}
+        and math.isfinite(float(
+            empirical["maximum_position_segment_seconds"]
+        ))
+        and float(empirical["maximum_position_segment_seconds"]) == 15.0
+        and type(empirical.get("maximum_abs_position_segment_deg"))
+        in {int, float}
+        and math.isfinite(float(
+            empirical["maximum_abs_position_segment_deg"]
+        ))
+        and float(empirical["maximum_abs_position_segment_deg"]) == 5.0
+        and type(empirical.get(
+            "maximum_cumulative_position_trajectory_seconds"
+        )) in {int, float}
+        and math.isfinite(float(
+            empirical["maximum_cumulative_position_trajectory_seconds"]
+        ))
+        and float(
+            empirical["maximum_cumulative_position_trajectory_seconds"]
+        ) == 600.0
+    )
     return bool(
         status.get("schema") == GRAVITY_STATUS_SCHEMA
         and status.get("source") == "whole_arm_gravity_node"
@@ -1299,7 +1586,7 @@ def gravity_status_authorizes_hardware(
         and status.get("pose_feasibility") == "PASS"
         and status.get("blocker") is None
         and status.get("hardware_enable_requested") is True
-        and status.get("continuous_rotor_limits_authoritative") is True
+        and (official_authority_valid or empirical_authority_valid)
         and status.get("actuation_interface_present") is True
         and isinstance(status.get("last_update_age_s"), (int, float))
         and math.isfinite(float(status["last_update_age_s"]))
@@ -1324,6 +1611,13 @@ def gravity_status_authorizes_hardware(
         and math.isfinite(float(target))
         and any(abs(float(target) - level) <= 1.0e-12
                 for level in GRAVITY_SCALE_LEVELS)
+        and (
+            not empirical_authority_valid
+            or (
+                empirical_stage_level is not None
+                and abs(float(target) - empirical_stage_level) <= 1.0e-12
+            )
+        )
         and status.get("hardware_tff_enabled") is bool(float(target) > 0.0)
     )
 
@@ -2713,13 +3007,28 @@ class MainWindow(QMainWindow):
         box = QGroupBox("固定位置模式：虚拟先行，明确确认后才可下发现实")
         layout = QGridLayout(box)
         buttons = [
+            ("保持当前位置", self._hold_current),
             ("预演轨迹", self._start_virtual_preview),
             ("下发到现实", self._execute_target),
             ("恢复初始化姿态", self._return_initial_pose),
             ("停止并制动", self._emergency_brake),
         ]
+        shortcuts = {
+            "保持当前位置": "Alt+H",
+            "预演轨迹": "Alt+P",
+            "下发到现实": "Alt+E",
+            "恢复初始化姿态": "Alt+R",
+            "停止并制动": "Alt+B",
+        }
         for index, (text, callback) in enumerate(buttons):
             button = self._button(text, callback)
+            button.setShortcut(shortcuts[text])
+            if text == "保持当前位置":
+                self.hold_current_button = button
+                button.setToolTip(
+                    "在六轴新鲜健康反馈下仅捕获一次当前角度，"
+                    "建立全轴闭环HOLD；不发布POSITION轨迹"
+                )
             if text == "下发到现实":
                 self.execute_target_button = button
                 button.setEnabled(False)
@@ -2733,24 +3042,24 @@ class MainWindow(QMainWindow):
             "当前固定模式：位置控制　｜　控制请求：制动　｜　硬件确认：等待状态反馈"
         )
         self.mode_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.mode_label, 1, 0, 1, 4)
+        layout.addWidget(self.mode_label, 1, 0, 1, 5)
         servo_notice = QLabel(
             "说明：调整计划滑条只改变虚拟目标，不会发布真实运动。"
             "停止并制动会撤销位置伺服和承重保持，重载关节必须有可靠机械支撑。"
         )
         servo_notice.setWordWrap(True)
-        layout.addWidget(servo_notice, 2, 0, 1, 4)
+        layout.addWidget(servo_notice, 2, 0, 1, 5)
         self.workflow_status = QLabel(
             "工作流：等待设置虚拟候选姿态；未授权现实运动"
         )
         self.workflow_status.setWordWrap(True)
         self.workflow_status.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.workflow_status, 3, 0, 1, 4)
+        layout.addWidget(self.workflow_status, 3, 0, 1, 5)
         self.workflow_progress = QProgressBar()
         self.workflow_progress.setRange(0, 100)
         self.workflow_progress.setValue(0)
         self.workflow_progress.setFormat("虚拟预演未开始")
-        layout.addWidget(self.workflow_progress, 4, 0, 1, 4)
+        layout.addWidget(self.workflow_progress, 4, 0, 1, 5)
         return box
 
     def _set_workflow_state(
@@ -4399,7 +4708,8 @@ class MainWindow(QMainWindow):
 
     def _hold_current(self) -> None:
         if not self._require_control_feedback(
-            "关节与硬件状态流需保持新鲜，且至少一个关节健康连接，当前不能保持。"
+            "建立当前姿态HOLD需要六个关节均有新鲜、健康反馈。",
+            require_all=True,
         ):
             return
         self._prepare_hold_at_actual()
@@ -6028,11 +6338,21 @@ class MainWindow(QMainWindow):
         except (TypeError, ValueError):
             sync_error = math.inf
         if j2_observed and hardware.get("j2_sync_fault", False):
-            notices.append(("J2同步状态异常；界面显示不代表该轴仍在保持", "critical"))
+            notices.append((
+                "J2同步硬联锁已锁存；J2A/J2B均应处于BRAKE，"
+                "须完成显式恢复流程后才能重新授权",
+                "critical",
+            ))
         elif j2_observed and sync_error > math.radians(0.5):
             notices.append((
-                "J2单帧同步偏差正在硬件端连续确认；"
-                "当前不撤销位置保持。",
+                "J2同步偏差已超过0.5°，但硬联锁状态尚未回报；"
+                "遥测不一致，禁止继续主动授权。",
+                "critical",
+            ))
+        elif j2_observed and sync_error > math.radians(0.25):
+            notices.append((
+                "J2同步偏差已超过0.25°警告阈值；"
+                "超过0.5°的单个有效配对帧会锁存J2A/J2B BOTH BRAKE。",
                 "warning",
             ))
         if any(self.faulted):

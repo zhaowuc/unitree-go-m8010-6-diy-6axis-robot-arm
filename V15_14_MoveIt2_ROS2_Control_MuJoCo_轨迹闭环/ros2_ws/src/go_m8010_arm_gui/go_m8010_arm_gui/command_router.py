@@ -10,6 +10,7 @@ import struct
 import time
 from collections import OrderedDict
 from copy import deepcopy
+from datetime import datetime, timezone
 from typing import Optional
 
 import rclpy
@@ -26,8 +27,10 @@ QUINTIC_PROFILE = "quintic-rest-to-rest-v1"
 PLAN_MANIFEST_SCHEMA = "go-m8010-plan-manifest/1.0"
 GRAVITY_STATUS_SCHEMA = "go-m8010-gravity-status/1.1"
 GRAVITY_COMMAND_AUTHORITY_SCHEMA = (
-    "go-m8010-gravity-command-authority/1.0"
+    "go-m8010-gravity-command-authority/1.1"
 )
+EMPIRICAL_AUTHORITY_CLASS = "EMPIRICAL_VALIDATION_ENVELOPE"
+EMPIRICAL_RATING_CLASSIFICATION = "NOT_OFFICIAL_CONTINUOUS_RATING"
 GRAVITY_STATUS_TOPIC = "/whole_arm/gravity_status"
 GRAVITY_CONFIG_SHA256 = (
     "307469b8384fd35547327ba1d5f80aa440e6b9663406ab7c9d9469bea263335d"
@@ -37,6 +40,9 @@ THERMAL_CONFIG_SHA256 = (
 )
 PLANNED_FEASIBILITY_SCHEMA = (
     "go-m8010-planned-load-thermal-feasibility/1.0"
+)
+EMPIRICAL_PLANNED_FEASIBILITY_SCHEMA = (
+    "go-m8010-empirical-planned-load-thermal-feasibility/1.0"
 )
 PLANNED_LOAD_EVALUATION_BASIS = (
     "MUJOCO_QFRC_BIAS_CONTINUOUS_PLUS_MJ_INVERSE_SHORT_PEAK_EVERY_SAMPLE"
@@ -1083,12 +1089,106 @@ def _validated_planned_feasibility_proof(
     source_monotonic_ns: int,
     session_id: str,
     state_instance_id: str,
+    empirical_envelope_id: Optional[str] = None,
+    empirical_envelope_sha256: Optional[str] = None,
 ) -> Optional[dict]:
     """Validate POSITION-only proof without revoking current-pose HOLD authority."""
 
     try:
         if not isinstance(value, dict):
             raise ValueError
+        if value.get("schema") == EMPIRICAL_PLANNED_FEASIBILITY_SCHEMA:
+            gravity_joint = value.get(
+                "maximum_abs_gravity_joint_torque_nm_by_joint"
+            )
+            gravity_rotor = value.get(
+                "maximum_abs_gravity_rotor_torque_nm_by_motor"
+            )
+            predicted_rotor = value.get(
+                "maximum_abs_predicted_rotor_torque_nm_by_motor"
+            )
+            limits = value.get(
+                "empirical_gravity_rotor_limit_nm_by_motor"
+            )
+            go_motors = ("J1", "J2A", "J2B", "J3", "J4", "J5")
+            if (
+                not isinstance(gravity_joint, dict)
+                or set(gravity_joint)
+                != {"J1", "J2", "J3", "J4", "J5", "J6"}
+                or not isinstance(gravity_rotor, dict)
+                or set(gravity_rotor) != set(MOTOR_NAMES)
+                or not isinstance(predicted_rotor, dict)
+                or set(predicted_rotor) != set(MOTOR_NAMES)
+                or not isinstance(limits, dict)
+                or set(limits) != set(MOTOR_NAMES)
+                or any(
+                    type(gravity_rotor[name]) not in {int, float}
+                    or not math.isfinite(float(gravity_rotor[name]))
+                    or float(gravity_rotor[name]) < 0.0
+                    or type(limits[name]) not in {int, float}
+                    or abs(
+                        float(limits[name])
+                        - {
+                            "J1": 0.20, "J2A": 1.75, "J2B": 1.75,
+                            "J3": 1.10, "J4": 0.40, "J5": 0.20,
+                        }[name]
+                    ) > 1.0e-12
+                    for name in go_motors
+                )
+                or limits.get("J6") != 0.0
+            ):
+                raise ValueError
+            margin = min(
+                float(limits[name]) - float(gravity_rotor[name])
+                for name in go_motors
+            )
+            reported_margin = _strict_finite_number(
+                value.get("minimum_empirical_gravity_rotor_margin_nm"),
+                "empirical gravity margin",
+            )
+            thermal_margin = _strict_finite_number(
+                value.get("minimum_thermal_margin_c"),
+                "empirical thermal margin",
+            )
+            if (
+                value.get("source") != "whole_arm_gravity_node"
+                or value.get("source_instance_id") != source_instance_id
+                or value.get("sequence") != sequence
+                or value.get("source_monotonic_ns") != source_monotonic_ns
+                or value.get("result") != "PASS"
+                or value.get("load_feasibility") != "PASS"
+                or value.get("thermal_feasibility") != "PASS"
+                or value.get("current_temperature_margin_result") != "PASS"
+                or not _valid_sha256(value.get("request_sha256"))
+                or not _valid_sha256(value.get("trajectory_sha256"))
+                or value.get("session_id") != session_id
+                or value.get("state_instance_id") != state_instance_id
+                or value.get("model_sha256") != PRODUCTION_MODEL_SHA256
+                or value.get("gravity_config_sha256") != GRAVITY_CONFIG_SHA256
+                or value.get("thermal_config_sha256") != THERMAL_CONFIG_SHA256
+                or value.get("continuous_rotor_limits_authoritative") is not False
+                or value.get("authority_class") != EMPIRICAL_AUTHORITY_CLASS
+                or value.get("rating_classification")
+                != EMPIRICAL_RATING_CLASSIFICATION
+                or value.get("empirical_validation_authoritative") is not True
+                or value.get("empirical_envelope_id") != empirical_envelope_id
+                or value.get("empirical_envelope_sha256")
+                != empirical_envelope_sha256
+                or value.get("temperature_limits_authoritative") is not True
+                or value.get("load_evaluation_basis")
+                != PLANNED_LOAD_EVALUATION_BASIS
+                or value.get("thermal_evaluation_basis")
+                != "CURRENT_MEASURED_TEMPERATURE_BELOW_EMPIRICAL_ENTRY_"
+                   "MODEL_GRAVITY_WITHIN_SOFTWARE_HARD_LIMIT_"
+                   "NO_CONTINUOUS_RATING_CLAIM"
+                or abs(reported_margin - margin) > 1.0e-12
+                or margin < 0.0
+                or thermal_margin <= 0.0
+                or value.get("blocker_code") is not None
+                or value.get("blocker") is not None
+            ):
+                raise ValueError
+            return deepcopy(value)
         gravity_joint = value.get(
             "maximum_abs_gravity_joint_torque_nm_by_joint"
         )
@@ -1245,25 +1345,128 @@ class GravityAuthorityGate:
         self._latest: Optional[dict] = None
         self._last_by_source: OrderedDict[str, tuple[int, int]] = OrderedDict()
         self._session_bindings: OrderedDict[
-            tuple[str, int], tuple[str, str, str, float]
+            tuple[str, int],
+            tuple[str, str, str, float, str, str, str, bool, int],
         ] = (
             OrderedDict()
         )
+        self._empirical_stage_by_envelope: OrderedDict[
+            str, tuple[int, float]
+        ] = OrderedDict()
+        self._empirical_deadline_by_envelope: OrderedDict[str, int] = (
+            OrderedDict()
+        )
+        self._empirical_position_segment_duration_ns: OrderedDict[
+            tuple[str, str, str, int], int
+        ] = OrderedDict()
+        self._empirical_position_duration_ns_by_envelope: dict[str, int] = {}
+        self._empirical_active_by_sha256: OrderedDict[str, None] = (
+            OrderedDict()
+        )
+        self._empirical_spent_by_sha256: OrderedDict[str, None] = (
+            OrderedDict()
+        )
+
+    def _remember_empirical_lifecycle(
+        self, table: OrderedDict[str, None], envelope_sha256: str,
+    ) -> None:
+        table.pop(envelope_sha256, None)
+        table[envelope_sha256] = None
+        while len(table) > self.maximum_bindings:
+            table.popitem(last=False)
+
+    def spend_all_active_empirical(self) -> None:
+        """Irreversibly fence every empirical permit that became active."""
+
+        for envelope_sha256 in tuple(self._empirical_active_by_sha256):
+            self._remember_empirical_lifecycle(
+                self._empirical_spent_by_sha256, envelope_sha256
+            )
+        self._empirical_active_by_sha256.clear()
+        latest = self._latest
+        if (
+            latest is not None
+            and latest.get("authority_kind")
+            == "EMPIRICAL_VALIDATION_ENVELOPE"
+            and latest.get("empirical_envelope_sha256")
+            in self._empirical_spent_by_sha256
+        ):
+            self._latest = None
 
     @property
     def available(self) -> bool:
         return self._latest is not None
+
+    @property
+    def empirical_identity(self) -> Optional[tuple[str, str]]:
+        """Return the live empirical identity without exposing its payload."""
+
+        latest = self._latest
+        if (
+            latest is None
+            or latest.get("authority_kind")
+            != "EMPIRICAL_VALIDATION_ENVELOPE"
+        ):
+            return None
+        return (
+            latest["empirical_envelope_id"],
+            latest["empirical_envelope_sha256"],
+        )
+
+    def revoke_unusable_empirical(
+        self,
+        *,
+        now_ns: Optional[int] = None,
+        now_timestamp: Optional[float] = None,
+    ) -> bool:
+        """Atomically revoke a stale/expired empirical authority.
+
+        This method is deliberately polled by the Router status timer.  A
+        stopped gravity node therefore cannot leave the last accepted
+        authority resident merely because no newer ROS message arrives.
+        """
+
+        latest = self._latest
+        if (
+            latest is None
+            or latest.get("authority_kind")
+            != "EMPIRICAL_VALIDATION_ENVELOPE"
+        ):
+            return False
+        checked_ns = time.monotonic_ns() if now_ns is None else now_ns
+        checked_timestamp = (
+            time.time() if now_timestamp is None else now_timestamp
+        )
+        unusable = (
+            checked_ns < latest["source_monotonic_ns"]
+            or checked_ns - latest["source_monotonic_ns"]
+            > self.maximum_age_ns
+            or checked_ns < latest["received_monotonic_ns"]
+            or checked_ns - latest["received_monotonic_ns"]
+            > self.maximum_age_ns
+            or checked_timestamp
+            >= latest["empirical_envelope_expires_timestamp"]
+            or checked_ns
+            >= latest["empirical_envelope_deadline_monotonic_ns"]
+        )
+        if not unusable:
+            return False
+        self._latest = None
+        return True
 
     def observe_status(self, value: object, now_ns: Optional[int] = None) -> bool:
         observed_ns = time.monotonic_ns() if now_ns is None else now_ns
         try:
             if not isinstance(value, dict):
                 raise ValueError
+            if value.get("continuous_rotor_limits_authoritative") is True:
+                return self._observe_official_status(value, observed_ns)
             source = value.get("source_instance_id")
             sequence = value.get("sequence")
             source_ns = value.get("source_monotonic_ns")
             session_id = value.get("session_id")
             state_instance_id = value.get("state_instance_id")
+            empirical = value.get("empirical_validation")
             if (
                 value.get("schema") != GRAVITY_STATUS_SCHEMA
                 or value.get("source") != "whole_arm_gravity_node"
@@ -1285,10 +1488,98 @@ class GravityAuthorityGate:
                 or value.get("finite_bounded") is not True
                 or value.get("pose_feasibility") != "PASS"
                 or value.get("hardware_enable_requested") is not True
-                or value.get("continuous_rotor_limits_authoritative") is not True
+                or value.get("continuous_rotor_limits_authoritative") is not False
+                or value.get("empirical_validation_authoritative") is not True
                 or value.get("actuation_interface_present") is not True
                 or value.get("blocker") is not None
+                or not isinstance(empirical, dict)
             ):
+                raise ValueError
+            envelope_id = empirical.get("envelope_id")
+            envelope_sha256 = empirical.get("envelope_sha256")
+            anchor_sha256 = empirical.get("anchor_sha256")
+            stage_index = empirical.get("stage_index")
+            stage_level = _strict_finite_number(
+                empirical.get("stage_level"), "empirical stage level"
+            )
+            position_validation_authorized = empirical.get(
+                "position_validation_authorized"
+            )
+            maximum_position_segment_seconds = _strict_finite_number(
+                empirical.get("maximum_position_segment_seconds"),
+                "empirical position segment duration",
+            )
+            maximum_abs_position_segment_deg = _strict_finite_number(
+                empirical.get("maximum_abs_position_segment_deg"),
+                "empirical position segment displacement",
+            )
+            maximum_cumulative_position_trajectory_seconds = (
+                _strict_finite_number(
+                    empirical.get(
+                        "maximum_cumulative_position_trajectory_seconds"
+                    ),
+                    "empirical cumulative position trajectory duration",
+                )
+            )
+            expires_text = empirical.get("expires_at_utc")
+            if (
+                empirical.get("authority_class") != EMPIRICAL_AUTHORITY_CLASS
+                or empirical.get("rating_classification")
+                != EMPIRICAL_RATING_CLASSIFICATION
+                or not isinstance(envelope_id, str)
+                or len(envelope_id) != 38
+                or not envelope_id.startswith("v15-31b-empirical-")
+                or not _valid_sha256(envelope_sha256)
+                or envelope_sha256 in self._empirical_spent_by_sha256
+                or not _valid_sha256(anchor_sha256)
+                or type(stage_index) is not int
+                or not 0 <= stage_index < len(GRAVITY_SCALE_LEVELS)
+                or abs(stage_level - GRAVITY_SCALE_LEVELS[stage_index])
+                > 1.0e-12
+                or empirical.get("invalidated") is not False
+                or empirical.get("continuous_operation_authorized") is not False
+                or empirical.get("official_continuous_rating_claimed") is not False
+                or type(position_validation_authorized) is not bool
+                or maximum_position_segment_seconds != 15.0
+                or maximum_abs_position_segment_deg != 5.0
+                or maximum_cumulative_position_trajectory_seconds != 600.0
+                or (
+                    position_validation_authorized
+                    and (
+                        empirical.get("phase") != "POSITION_VALIDATION"
+                        or stage_index != 4
+                        or empirical.get("stage_complete") is not True
+                    )
+                )
+                or not isinstance(expires_text, str)
+                or not expires_text.endswith("Z")
+            ):
+                raise ValueError
+            try:
+                expires_timestamp = datetime.fromisoformat(
+                    expires_text[:-1] + "+00:00"
+                ).astimezone(timezone.utc).timestamp()
+            except ValueError as exc:
+                raise ValueError from exc
+            wall_now = time.time()
+            remaining_seconds = expires_timestamp - wall_now
+            if (
+                not math.isfinite(expires_timestamp)
+                or not 0.0 < remaining_seconds <= 4200.0
+            ):
+                raise ValueError
+            candidate_deadline_ns = observed_ns + int(
+                remaining_seconds * 1.0e9
+            )
+            previous_deadline_ns = self._empirical_deadline_by_envelope.get(
+                envelope_id
+            )
+            monotonic_deadline_ns = (
+                candidate_deadline_ns
+                if previous_deadline_ns is None
+                else min(previous_deadline_ns, candidate_deadline_ns)
+            )
+            if monotonic_deadline_ns <= observed_ns:
                 raise ValueError
             planned_proof = _validated_planned_feasibility_proof(
                 value.get("planned_trajectory_feasibility"),
@@ -1297,6 +1588,8 @@ class GravityAuthorityGate:
                 source_monotonic_ns=source_ns,
                 session_id=session_id,
                 state_instance_id=state_instance_id,
+                empirical_envelope_id=envelope_id,
+                empirical_envelope_sha256=envelope_sha256,
             )
             age_s = _strict_finite_number(
                 value.get("last_update_age_s"), "重力状态更新时间"
@@ -1339,6 +1632,20 @@ class GravityAuthorityGate:
                 )
                 or value.get("hardware_tff_enabled")
                 is not bool(target > 0.0)
+                or abs(target - stage_level) > 1.0e-12
+            ):
+                raise ValueError
+            previous_stage = self._empirical_stage_by_envelope.get(envelope_id)
+            if previous_stage is None:
+                if stage_index != 0 or target != 0.0:
+                    raise ValueError
+            elif (
+                stage_index < previous_stage[0]
+                or stage_index > previous_stage[0] + 1
+                or (
+                    stage_index == previous_stage[0]
+                    and abs(stage_level - previous_stage[1]) > 1.0e-12
+                )
             ):
                 raise ValueError
             current = (sequence, source_ns)
@@ -1349,7 +1656,24 @@ class GravityAuthorityGate:
                 raise ValueError
             self._last_by_source.clear()
             self._last_by_source[source] = current
+            if envelope_id not in self._empirical_stage_by_envelope and (
+                len(self._empirical_stage_by_envelope) >= self.maximum_bindings
+            ):
+                self._empirical_stage_by_envelope.popitem(last=False)
+            self._empirical_stage_by_envelope[envelope_id] = (
+                stage_index, stage_level
+            )
+            if (
+                envelope_id not in self._empirical_deadline_by_envelope
+                and len(self._empirical_deadline_by_envelope)
+                >= self.maximum_bindings
+            ):
+                self._empirical_deadline_by_envelope.popitem(last=False)
+            self._empirical_deadline_by_envelope[envelope_id] = (
+                monotonic_deadline_ns
+            )
             self._latest = {
+                "authority_kind": "EMPIRICAL_VALIDATION_ENVELOPE",
                 "received_monotonic_ns": observed_ns,
                 "schema": GRAVITY_COMMAND_AUTHORITY_SCHEMA,
                 "source_instance_id": source,
@@ -1357,6 +1681,29 @@ class GravityAuthorityGate:
                 "source_monotonic_ns": source_ns,
                 "model_sha256": PRODUCTION_MODEL_SHA256,
                 "gravity_config_sha256": GRAVITY_CONFIG_SHA256,
+                "authority_class": EMPIRICAL_AUTHORITY_CLASS,
+                "rating_classification": EMPIRICAL_RATING_CLASSIFICATION,
+                "empirical_envelope_id": envelope_id,
+                "empirical_envelope_sha256": envelope_sha256,
+                "empirical_envelope_expires_at_utc": expires_text,
+                "empirical_envelope_expires_timestamp": expires_timestamp,
+                "empirical_envelope_deadline_monotonic_ns": (
+                    monotonic_deadline_ns
+                ),
+                "anchor_sha256": anchor_sha256,
+                "empirical_stage_index": stage_index,
+                "empirical_position_validation_authorized": (
+                    position_validation_authorized
+                ),
+                "empirical_maximum_position_segment_seconds": (
+                    maximum_position_segment_seconds
+                ),
+                "empirical_maximum_abs_position_segment_deg": (
+                    maximum_abs_position_segment_deg
+                ),
+                "empirical_maximum_cumulative_position_trajectory_seconds": (
+                    maximum_cumulative_position_trajectory_seconds
+                ),
                 "session_id": session_id,
                 "state_instance_id": state_instance_id,
                 "gravity_scale": scale,
@@ -1372,9 +1719,102 @@ class GravityAuthorityGate:
             self._latest = None
             return False
 
+    def _observe_official_status(self, value: dict, observed_ns: int) -> bool:
+        """Preserve the V15.31A official-continuous path as a distinct 1.0 proof."""
+
+        try:
+            source = value.get("source_instance_id")
+            sequence = value.get("sequence")
+            source_ns = value.get("source_monotonic_ns")
+            session_id = value.get("session_id")
+            state_instance_id = value.get("state_instance_id")
+            if (
+                value.get("schema") != GRAVITY_STATUS_SCHEMA
+                or value.get("source") != "whole_arm_gravity_node"
+                or not _valid_source_instance_id(source)
+                or type(sequence) is not int
+                or not 1 <= sequence <= INT64_MAXIMUM
+                or type(source_ns) is not int
+                or not 0 < source_ns <= observed_ns
+                or observed_ns - source_ns > self.maximum_age_ns
+                or not isinstance(session_id, str) or not session_id
+                or not isinstance(state_instance_id, str) or not state_instance_id
+                or value.get("model_sha256") != PRODUCTION_MODEL_SHA256
+                or value.get("production_model_hash_match") is not True
+                or value.get("gravity_config_sha256") != GRAVITY_CONFIG_SHA256
+                or value.get("anchor_valid") is not True
+                or value.get("finite_bounded") is not True
+                or value.get("pose_feasibility") != "PASS"
+                or value.get("hardware_enable_requested") is not True
+                or value.get("continuous_rotor_limits_authoritative") is not True
+                or value.get("empirical_validation_authoritative") is True
+                or value.get("actuation_interface_present") is not True
+                or value.get("blocker") is not None
+            ):
+                raise ValueError
+            planned_proof = _validated_planned_feasibility_proof(
+                value.get("planned_trajectory_feasibility"),
+                source_instance_id=source,
+                sequence=sequence,
+                source_monotonic_ns=source_ns,
+                session_id=session_id,
+                state_instance_id=state_instance_id,
+            )
+            age_s = _strict_finite_number(value.get("last_update_age_s"), "gravity age")
+            hardware_sequence = value.get("hardware_state_sequence")
+            hardware_source_ns = value.get("hardware_state_source_monotonic_ns")
+            if (
+                age_s < 0.0 or age_s * 1.0e9 > self.maximum_age_ns
+                or type(hardware_sequence) is not int or hardware_sequence <= 0
+                or type(hardware_source_ns) is not int
+                or not 0 < hardware_source_ns <= source_ns
+                or source_ns - hardware_source_ns > self.maximum_age_ns
+                or not _valid_sha256(value.get("q_actual_sha256"))
+            ):
+                raise ValueError
+            _finite_six(value.get("gravity_joint_nm"), "gravity")
+            feedforward = _finite_six(value.get("feedforward_nm"), "feedforward")
+            scale = _strict_finite_number(value.get("gravity_scale"), "scale")
+            target = _strict_finite_number(value.get("gravity_scale_target"), "target")
+            if (
+                not 0.0 <= scale <= 1.0
+                or target not in GRAVITY_SCALE_LEVELS
+                or abs(feedforward[5]) > 1.0e-12
+                or any(abs(item) > limit + 1.0e-12 for item, limit in zip(feedforward, GRAVITY_ROTOR_FEEDFORWARD_LIMIT_NM))
+                or value.get("hardware_tff_enabled") is not bool(target > 0.0)
+            ):
+                raise ValueError
+            current = (sequence, source_ns)
+            previous = self._last_by_source.get(source)
+            if previous is not None and (current[0] <= previous[0] or current[1] <= previous[1]):
+                raise ValueError
+            self._last_by_source.clear()
+            self._last_by_source[source] = current
+            self._latest = {
+                "authority_kind": "OFFICIAL_CONTINUOUS_RATING",
+                "received_monotonic_ns": observed_ns,
+                "schema": "go-m8010-gravity-command-authority/1.0",
+                "source_instance_id": source,
+                "sequence": sequence,
+                "source_monotonic_ns": source_ns,
+                "model_sha256": PRODUCTION_MODEL_SHA256,
+                "gravity_config_sha256": GRAVITY_CONFIG_SHA256,
+                "session_id": session_id,
+                "state_instance_id": state_instance_id,
+                "gravity_scale": scale,
+                "gravity_scale_target": target,
+                "feedforward_nm": list(feedforward),
+                "planned_trajectory_feasibility": deepcopy(planned_proof),
+            }
+            return True
+        except (KeyError, TypeError, ValueError, OverflowError):
+            self._latest = None
+            return False
+
     def authorize(self, command: dict, now_ns: Optional[int] = None) -> None:
         checked_ns = time.monotonic_ns() if now_ns is None else now_ns
         if command.get("mode") in {"brake", "drag"}:
+            self.spend_all_active_empirical()
             command["feedforward_nm"] = [0.0] * 6
             command.pop("gravity_authority", None)
             return
@@ -1396,6 +1836,24 @@ class GravityAuthorityGate:
             or checked_ns - latest["source_monotonic_ns"] > self.maximum_age_ns
             or checked_ns < latest["received_monotonic_ns"]
             or checked_ns - latest["received_monotonic_ns"] > self.maximum_age_ns
+            or (
+                latest.get("authority_kind")
+                == "EMPIRICAL_VALIDATION_ENVELOPE"
+                and time.time()
+                >= latest["empirical_envelope_expires_timestamp"]
+            )
+            or (
+                latest.get("authority_kind")
+                == "EMPIRICAL_VALIDATION_ENVELOPE"
+                and checked_ns
+                >= latest["empirical_envelope_deadline_monotonic_ns"]
+            )
+            or (
+                latest.get("authority_kind")
+                == "EMPIRICAL_VALIDATION_ENVELOPE"
+                and latest.get("empirical_envelope_sha256")
+                in self._empirical_spent_by_sha256
+            )
         ):
             raise ValueError("重力authority不存在或已过期")
         binding_key = (
@@ -1407,6 +1865,11 @@ class GravityAuthorityGate:
             latest["session_id"],
             latest["state_instance_id"],
             latest["gravity_scale_target"],
+            latest.get("empirical_envelope_id", ""),
+            latest.get("empirical_envelope_sha256", ""),
+            latest.get("anchor_sha256", ""),
+            latest.get("empirical_position_validation_authorized", True),
+            latest.get("empirical_stage_index", -1),
         )
         proof = command.get("collision_guard_proof")
         if command.get("mode") == "position" and (
@@ -1424,22 +1887,158 @@ class GravityAuthorityGate:
             != planned_proof.get("trajectory_sha256")
         ):
             raise ValueError("整轨负载/热证明与计划manifest不匹配")
+        if (
+            command.get("mode") == "position"
+            and latest.get("empirical_position_validation_authorized", True)
+            is not True
+        ):
+            raise ValueError("empirical gravity ladder has not unlocked POSITION")
+        if (
+            command.get("mode") == "position"
+            and latest.get("authority_kind")
+            == "EMPIRICAL_VALIDATION_ENVELOPE"
+        ):
+            trajectory = command.get("trajectory")
+            if (
+                not isinstance(trajectory, dict)
+                or trajectory.get("duration_ns", 0)
+                > int(
+                    latest[
+                        "empirical_maximum_position_segment_seconds"
+                    ] * 1.0e9
+                )
+                or any(
+                    moving
+                    and abs(float(target) - float(start))
+                    > math.radians(
+                        latest[
+                            "empirical_maximum_abs_position_segment_deg"
+                        ]
+                    ) + 1.0e-12
+                    for moving, start, target in zip(
+                        command.get("moving_joint_mask", ()),
+                        trajectory.get("start_rad", ()),
+                        trajectory.get("target_rad", ()),
+                    )
+                )
+            ):
+                raise ValueError("empirical POSITION segment exceeds bounded scope")
         existing = self._session_bindings.get(binding_key)
         if existing is not None and existing != session_binding:
-            raise ValueError("同一激活纪元的重力policy发生变化")
+            empirical = (
+                latest.get("authority_kind")
+                == "EMPIRICAL_VALIDATION_ENVELOPE"
+            )
+            identity_unchanged = (
+                existing[:3] == session_binding[:3]
+                and existing[4:7] == session_binding[4:7]
+            )
+            previous_target = existing[3]
+            previous_position_authorized = existing[7]
+            previous_stage = existing[8]
+            next_target = session_binding[3]
+            next_position_authorized = session_binding[7]
+            next_stage = session_binding[8]
+            same_stage_refresh = (
+                next_stage == previous_stage
+                and abs(next_target - previous_target) <= 1.0e-12
+                and (
+                    next_position_authorized
+                    == previous_position_authorized
+                    or (
+                        previous_stage == len(GRAVITY_SCALE_LEVELS) - 1
+                        and previous_position_authorized is False
+                        and next_position_authorized is True
+                    )
+                )
+            )
+            adjacent_stage_transition = (
+                next_stage == previous_stage + 1
+                and next_position_authorized is False
+                and abs(
+                    next_target - GRAVITY_SCALE_LEVELS[next_stage]
+                ) <= 1.0e-12
+            )
+            if not (
+                empirical
+                and identity_unchanged
+                and (same_stage_refresh or adjacent_stage_transition)
+            ):
+                raise ValueError("同一激活纪元的重力policy发生变化")
+            # The GUI activation epoch identifies the unchanged current-pose
+            # HOLD.  The envelope's separately confirmed adjacent stage is a
+            # monotonic sub-state, so update this binding in place and let the
+            # next heartbeat carry each ramp sample without re-enabling any
+            # worker or recapturing J6.
+            self._session_bindings[binding_key] = session_binding
         if existing is None:
             if len(self._session_bindings) >= self.maximum_bindings:
                 raise ValueError("重力session冻结表已满")
             self._session_bindings[binding_key] = session_binding
+        if (
+            command.get("mode") == "position"
+            and latest.get("authority_kind")
+            == "EMPIRICAL_VALIDATION_ENVELOPE"
+        ):
+            trajectory = command["trajectory"]
+            segment_key = (
+                latest["empirical_envelope_sha256"],
+                command["plan_token_id"],
+                trajectory["trajectory_sha256"],
+                trajectory["segment_index"],
+            )
+            duration_ns = trajectory["duration_ns"]
+            previous_duration_ns = (
+                self._empirical_position_segment_duration_ns.get(segment_key)
+            )
+            if (
+                previous_duration_ns is not None
+                and previous_duration_ns != duration_ns
+            ):
+                raise ValueError("empirical POSITION segment duration changed")
+            if previous_duration_ns is None:
+                if (
+                    len(self._empirical_position_segment_duration_ns)
+                    >= self.maximum_bindings
+                ):
+                    raise ValueError("empirical POSITION budget table is full")
+                envelope_sha256 = latest["empirical_envelope_sha256"]
+                consumed_ns = (
+                    self._empirical_position_duration_ns_by_envelope.get(
+                        envelope_sha256, 0
+                    )
+                )
+                maximum_ns = int(
+                    latest[
+                        "empirical_maximum_cumulative_position_trajectory_seconds"
+                    ] * 1.0e9
+                )
+                if consumed_ns + duration_ns > maximum_ns:
+                    raise ValueError(
+                        "empirical cumulative POSITION trajectory budget exceeded"
+                    )
+                self._empirical_position_segment_duration_ns[segment_key] = (
+                    duration_ns
+                )
+                self._empirical_position_duration_ns_by_envelope[
+                    envelope_sha256
+                ] = consumed_ns + duration_ns
         authority = {
             key: deepcopy(value)
             for key, value in latest.items()
             if key not in {
-                "received_monotonic_ns", "planned_trajectory_feasibility"
+                "received_monotonic_ns", "planned_trajectory_feasibility",
+                "empirical_envelope_expires_timestamp", "authority_kind",
+                "empirical_maximum_cumulative_position_trajectory_seconds",
             }
         }
         command["feedforward_nm"] = list(authority["feedforward_nm"])
         command["gravity_authority"] = authority
+        if latest.get("authority_kind") == "EMPIRICAL_VALIDATION_ENVELOPE":
+            self._remember_empirical_lifecycle(
+                self._empirical_active_by_sha256,
+                latest["empirical_envelope_sha256"],
+            )
 
 
 def _validated_command_source(
@@ -1473,6 +2072,7 @@ class CommandReplayGuard:
         self._last_by_source: dict[str, tuple[int, int]] = {}
         self._active_source: Optional[str] = None
         self._active_source_last_accepted_ns: Optional[int] = None
+        self._highest_activation_epoch = 0
 
     def check(self, command: dict, now_ns: Optional[int] = None) -> None:
         """Check replay/source ownership without advancing accepted state."""
@@ -1489,6 +2089,14 @@ class CommandReplayGuard:
             <= COMMAND_SOURCE_TAKEOVER_TIMEOUT_NS
         ):
             raise ValueError("另一GUI来源仍在控制")
+        if (
+            self._active_source is not None
+            and source != self._active_source
+            and command.get("mode") in {"hold", "position"}
+            and command.get("activation_epoch", 0)
+            <= self._highest_activation_epoch
+        ):
+            raise ValueError("新GUI来源必须使用更高激活纪元")
         current = (command["sequence"], command["source_monotonic_ns"])
         previous = self._last_by_source.get(source)
         if previous is not None and (
@@ -1512,6 +2120,10 @@ class CommandReplayGuard:
         self._last_by_source[source] = current
         self._active_source = source
         self._active_source_last_accepted_ns = checked_at_ns
+        self._highest_activation_epoch = max(
+            self._highest_activation_epoch,
+            command.get("activation_epoch", 0),
+        )
 
     def accept(self, command: dict, now_ns: Optional[int] = None) -> None:
         checked_at_ns = time.monotonic_ns() if now_ns is None else now_ns
@@ -1945,6 +2557,8 @@ class CommandRouter(Node):
         self.collision_guard_gate = CollisionGuardProofGate()
         self.plan_manifest_gate = PlanManifestGate()
         self.gravity_authority_gate = GravityAuthorityGate()
+        self.empirical_revocation_brakes = 0
+        self.last_empirical_revocation_reason: Optional[str] = None
         self.rejected = 0
         self.rejection_tracker = RejectionTracker()
         self.timer = self.create_timer(0.5, self.publish_status)
@@ -1969,16 +2583,72 @@ class CommandRouter(Node):
     def on_gravity_status(self, message: String) -> None:
         """Observe the independent model authority; invalid data revokes it."""
 
+        previous_empirical = self.gravity_authority_gate.empirical_identity
         try:
             value = json.loads(message.data)
         except (json.JSONDecodeError, TypeError):
             self.gravity_authority_gate.observe_status(
                 None, now_ns=time.monotonic_ns()
             )
+            if previous_empirical is not None:
+                self._send_empirical_revocation_brake(
+                    "MALFORMED_GRAVITY_STATUS"
+                )
             return
-        self.gravity_authority_gate.observe_status(
+        accepted = self.gravity_authority_gate.observe_status(
             value, now_ns=time.monotonic_ns()
         )
+        if previous_empirical is not None and (
+            not accepted
+            or self.gravity_authority_gate.empirical_identity
+            != previous_empirical
+        ):
+            self._send_empirical_revocation_brake(
+                "EMPIRICAL_GRAVITY_AUTHORITY_REVOKED"
+            )
+
+    def _send_empirical_revocation_brake(self, reason: str) -> None:
+        """Fence all four UDP domains on an empirical revocation edge."""
+
+        self.gravity_authority_gate.spend_all_active_empirical()
+        now_ns = time.monotonic_ns()
+        brake = {
+            "schema": GUI_COMMAND_SCHEMA_V12,
+            "sequence": 0,
+            "source_instance_id": "emergency-brake",
+            "source_monotonic_ns": now_ns,
+            "mode": "brake",
+            "targets_rad": [0.0] * 6,
+            "active_joint_mask": [False] * 6,
+            "moving_joint_mask": [False] * 6,
+            "activation_epoch": 0,
+            "maximum_velocity_rad_s": math.radians(5.0),
+            "maximum_acceleration_rad_s2": math.radians(20.0),
+            "kp": [0.0] * 6,
+            "kd": [0.0] * 6,
+            "feedforward_nm": [0.0] * 6,
+        }
+        failures: list[str] = []
+        for domain, destination in self.destinations:
+            try:
+                self.socket.sendto(
+                    payload_for_domain(brake, domain), destination
+                )
+            except OSError:
+                failures.append(domain)
+        self.last_command = brake
+        self.empirical_revocation_brakes += 1
+        self.last_empirical_revocation_reason = reason
+        if failures:
+            self.get_logger().error(
+                "经验验证authority撤销BRAKE发送失败："
+                f"domains={','.join(failures)}; reason={reason}"
+            )
+        else:
+            self.get_logger().warning(
+                "经验验证authority已撤销，四故障域已发送BRAKE："
+                f"reason={reason}"
+            )
 
     def on_command(self, message: String) -> None:
         try:
@@ -2023,6 +2693,13 @@ class CommandRouter(Node):
     def publish_status(self) -> None:
         self._log_rejection_reports(self.rejection_tracker.flush())
         now_ns = time.monotonic_ns()
+        if self.gravity_authority_gate.revoke_unusable_empirical(
+            now_ns=now_ns
+        ):
+            self._send_empirical_revocation_brake(
+                "EMPIRICAL_GRAVITY_AUTHORITY_STALE_OR_EXPIRED"
+            )
+            now_ns = time.monotonic_ns()
         age_ms = None
         if self.last_command is not None:
             age_ms = (now_ns - self.last_command["source_monotonic_ns"]) / 1.0e6
@@ -2040,6 +2717,10 @@ class CommandRouter(Node):
             "tracked_plan_tokens": self.plan_manifest_gate.tracked_token_count,
             "completed_plan_tokens": self.plan_manifest_gate.completed_token_count,
             "gravity_authority_available": self.gravity_authority_gate.available,
+            "empirical_revocation_brakes": self.empirical_revocation_brakes,
+            "last_empirical_revocation_reason": (
+                self.last_empirical_revocation_reason
+            ),
             "j2_forwarded_mode": (
                 None if self.last_command is None else
                 json.loads(payload_for_domain(self.last_command, "J2"))["mode"]

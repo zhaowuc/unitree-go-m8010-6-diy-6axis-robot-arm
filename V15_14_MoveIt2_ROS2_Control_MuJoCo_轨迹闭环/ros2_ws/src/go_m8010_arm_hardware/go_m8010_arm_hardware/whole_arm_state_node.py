@@ -40,6 +40,7 @@ from .state_model import (
     parse_controller_feedback_metadata,
     parse_feedback_payload,
     unavailable_worker_control_status,
+    validate_j6_feedback_identity,
     validate_worker_supervisor_status,
 )
 from .thermal_manager import (
@@ -55,6 +56,42 @@ WARNING_LOG_INTERVAL_NS = 5_000_000_000
 CONTROLLER_MODES = frozenset({"brake", "drag", "hold", "position", "unknown"})
 WORKER_SUPERVISOR_STATUS_FILENAME = "worker_supervisor_status.json"
 WORKER_SUPERVISOR_STATUS_MAX_BYTES = 16_384
+
+
+def validated_state_instance_id(configured: str) -> str:
+    """Return one strict launch-pinned state identity or a random default."""
+
+    if configured == "":
+        return secrets.token_hex(16)
+    if len(configured) != 32 or any(
+        character not in "0123456789abcdef" for character in configured
+    ):
+        raise ValueError(
+            "state_instance_id must be exactly 32 lowercase hexadecimal characters"
+        )
+    return configured
+
+
+def complete_persistent_session_id(
+    persistent_zero_sha256: Optional[str],
+    j2_session_reference_sha256: Optional[str],
+    go_aux_session_reference_sha256: Optional[str],
+) -> Optional[str]:
+    """Build the immutable session identity when every reference is loaded."""
+
+    if not all(
+        (
+            persistent_zero_sha256,
+            j2_session_reference_sha256,
+            go_aux_session_reference_sha256,
+        )
+    ):
+        return None
+    return (
+        f"persistent:{persistent_zero_sha256[:16]}"
+        f":j2session:{j2_session_reference_sha256[:16]}"
+        f":goauxsession:{go_aux_session_reference_sha256[:16]}"
+    )
 
 
 def read_worker_supervisor_status_file(
@@ -556,7 +593,11 @@ class WholeArmStateNode(Node):
         self.declare_parameter("go_aux_session_reference_path", "")
         self.declare_parameter("thermal_config_path", "")
         self.declare_parameter("worker_supervisor_freshness_s", 1.0)
+        self.declare_parameter("state_instance_id", "")
 
+        state_instance_id = validated_state_instance_id(
+            str(self.get_parameter("state_instance_id").value)
+        )
         rate_hz = float(self.get_parameter("publish_rate_hz").value)
         monitor_rate_hz = float(self.get_parameter("monitor_rate_hz").value)
         if rate_hz < 50.0 or monitor_rate_hz <= 0.0:
@@ -702,7 +743,7 @@ class WholeArmStateNode(Node):
         self.timer = self.create_timer(1.0 / rate_hz, self.publish_state)
         self.monitor_timer = self.create_timer(1.0 / monitor_rate_hz, self.monitor)
         self.sequence = 0
-        self.state_instance_id = secrets.token_hex(16)
+        self.state_instance_id = state_instance_id
         self.invalid_payload_count = 0
         self.publish_intervals_ms: list[float] = []
         self.source_latencies_ms: list[float] = []
@@ -718,7 +759,16 @@ class WholeArmStateNode(Node):
         self.controller_feedback: dict[str, dict] = {}
         self.j2_sync_fault = False
         self.reference_announced = False
-        self.session_id: Optional[str] = None
+        # With the complete disk-backed reference set, the session identity is
+        # known before the first motor frame.  This lets a separately started
+        # read-only J6 producer bind its very first feedback datagram without
+        # weakening the state node's strict identity check.
+        self.session_id = complete_persistent_session_id(
+            self.persistent_zero_sha256,
+            self.j2_session_reference_sha256,
+            self.go_aux_session_reference_sha256,
+        )
+        self.j6_feedback_identity: Optional[dict[str, object]] = None
         self.warning_last_logged_ns: dict[str, int] = {}
         self.warning_suppressed: dict[str, int] = {}
         self.get_logger().info(
@@ -806,6 +856,15 @@ class WholeArmStateNode(Node):
             if payload.get("schema") != "go-m8010-motor-feedback/1.0":
                 raise ValueError("feedback payload schema mismatch")
             samples = list(parse_feedback_payload(payload, receipt_ns))
+            next_j6_feedback_identity = self.j6_feedback_identity
+            if len(samples) == 1 and samples[0].motor == "J6":
+                next_j6_feedback_identity = validate_j6_feedback_identity(
+                    payload,
+                    receipt_ns,
+                    previous=self.j6_feedback_identity,
+                    expected_session_id=self.session_id,
+                    expected_state_instance_id=self.state_instance_id,
+                )
             metadata_updates = parse_controller_feedback_metadata(
                 payload, samples
             )
@@ -838,6 +897,7 @@ class WholeArmStateNode(Node):
             self.controller_faults = next_faults
             self.controller_lease_safe_hold = next_lease_holds
             self.controller_thermal = next_thermal
+            self.j6_feedback_identity = next_j6_feedback_identity
         except Exception as exc:
             self.record_invalid_payload(exc)
 
@@ -850,7 +910,13 @@ class WholeArmStateNode(Node):
                 boot_id = Path("/proc/sys/kernel/random/boot_id").read_text(encoding="utf-8").strip()
             except OSError:
                 boot_id = "boot-id-unavailable"
-            if self.persistent_zero_sha256:
+            if self.session_id is not None:
+                self.get_logger().info(
+                    "PERSISTENT_SOFTWARE_ZERO_V1 已从磁盘加载；"
+                    "J2 及 J1/J3/J4/J5 已绑定完整的本次上电会话参考；"
+                    "电机内部零位与RID未改写"
+                )
+            elif self.persistent_zero_sha256:
                 j2_suffix = (
                     f":j2session:{self.j2_session_reference_sha256[:16]}"
                     if self.j2_session_reference_sha256
@@ -935,6 +1001,11 @@ class WholeArmStateNode(Node):
         snapshot["state_instance_id"] = self.state_instance_id
         snapshot["source_monotonic_ns"] = now_monotonic_ns
         snapshot["session_id"] = self.session_id
+        snapshot["j6_raw_feedback_identity"] = (
+            None
+            if self.j6_feedback_identity is None
+            else dict(self.j6_feedback_identity)
+        )
         snapshot["invalid_payload_count"] = self.invalid_payload_count
         snapshot["cad_zero"] = "PENDING"
         snapshot["ros_zero"] = (

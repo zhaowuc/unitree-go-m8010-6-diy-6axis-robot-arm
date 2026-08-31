@@ -64,6 +64,14 @@ WORKER_UNAVAILABLE_REASONS = frozenset({
 J2_SESSION_MOTORS = frozenset({"J2A", "J2B"})
 GO_AUX_SESSION_MOTORS = frozenset({"J1", "J3", "J4", "J5"})
 POWER_SESSION_MOTORS = J2_SESSION_MOTORS | GO_AUX_SESSION_MOTORS
+
+
+def _valid_sha256(value: object) -> bool:
+    return bool(
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
 J2_SESSION_STARTUP_TOLERANCE_RAD = math.radians(2.0)
 SESSION_STARTUP_TOLERANCE_RAD = J2_SESSION_STARTUP_TOLERANCE_RAD
 VALID_FEEDBACK_MOTOR_SETS = frozenset({
@@ -955,6 +963,62 @@ class MirrorSessionReferenceV1:
         }
 
 
+def validate_j6_feedback_identity(
+    payload: Mapping[str, object],
+    receipt_monotonic_ns: int,
+    *,
+    previous: Optional[Mapping[str, object]] = None,
+    expected_session_id: Optional[str] = None,
+    expected_state_instance_id: Optional[str] = None,
+) -> dict[str, object]:
+    """Bind raw J6 DISABLED evidence to one worker and model session."""
+
+    source = payload.get("source_instance_id")
+    sequence = payload.get("sequence")
+    source_ns = payload.get("source_monotonic_ns")
+    session = payload.get("session_id")
+    state = payload.get("state_instance_id")
+    lower_hex = "0123456789abcdef"
+    if (
+        not isinstance(source, str)
+        or len(source) != 32
+        or any(character not in lower_hex for character in source)
+        or type(sequence) is not int
+        or not 1 <= sequence <= (1 << 63) - 1
+        or type(source_ns) is not int
+        or not 0 < source_ns <= receipt_monotonic_ns
+        or receipt_monotonic_ns - source_ns > FEEDBACK_SOURCE_MAX_AGE_NS
+        or not isinstance(session, str)
+        or not session
+        or not isinstance(state, str)
+        or len(state) != 32
+        or any(character not in lower_hex for character in state)
+    ):
+        raise ValueError("J6 feedback identity is missing or invalid")
+    if expected_session_id is not None and session != expected_session_id:
+        raise ValueError("J6 feedback session binding mismatch")
+    if (
+        expected_state_instance_id is not None
+        and state != expected_state_instance_id
+    ):
+        raise ValueError("J6 feedback state binding mismatch")
+    if previous is not None and (
+        source != previous.get("source_instance_id")
+        or session != previous.get("session_id")
+        or state != previous.get("state_instance_id")
+        or sequence <= previous.get("sequence", 0)
+        or source_ns <= previous.get("source_monotonic_ns", 0)
+    ):
+        raise ValueError("J6 feedback identity changed or replayed")
+    return {
+        "source_instance_id": source,
+        "sequence": sequence,
+        "source_monotonic_ns": source_ns,
+        "session_id": session,
+        "state_instance_id": state,
+    }
+
+
 def parse_feedback_payload(
     payload: Mapping, receipt_monotonic_ns: int
 ) -> tuple[MotorFeedback, ...]:
@@ -1150,6 +1214,8 @@ def parse_feedback_payload(
         feedbacks.append(feedback)
     if frozenset(seen_motors) not in VALID_FEEDBACK_MOTOR_SETS:
         raise ValueError("feedback samples do not form one complete fault domain")
+    if seen_motors == {"J6"}:
+        validate_j6_feedback_identity(payload, receipt_monotonic_ns)
     if "tau_j2_logical_total_nm" not in payload:
         raise ValueError("tau_j2_logical_total_nm is required")
     reported_j2_total = payload["tau_j2_logical_total_nm"]
@@ -1552,8 +1618,22 @@ def parse_controller_feedback_metadata(
         "gravity_config_sha256",
         "gravity_continuous_rotor_limits_authoritative",
     }
+    gravity_empirical_identity_fields = {
+        "gravity_authority_class",
+        "gravity_rating_classification",
+        "gravity_empirical_envelope_id",
+        "gravity_empirical_envelope_sha256",
+        "gravity_empirical_envelope_expires_at_utc",
+        "gravity_anchor_sha256",
+        "gravity_empirical_stage_index",
+        "gravity_empirical_position_validation_authorized",
+    }
     gravity_observed = bool(
-        (gravity_fields | gravity_identity_fields).intersection(payload)
+        (
+            gravity_fields
+            | gravity_identity_fields
+            | gravity_empirical_identity_fields
+        ).intersection(payload)
     )
     if gravity_observed:
         if not gravity_fields.issubset(payload):
@@ -1587,10 +1667,23 @@ def parse_controller_feedback_metadata(
         identity_observed = bool(gravity_identity_fields.intersection(payload))
         if identity_observed and not gravity_identity_fields.issubset(payload):
             raise ValueError("gravity policy identity metadata is incomplete")
+        empirical_identity_observed = bool(
+            gravity_empirical_identity_fields.intersection(payload)
+        )
+        if (
+            empirical_identity_observed
+            and not gravity_empirical_identity_fields.issubset(payload)
+        ):
+            raise ValueError("empirical gravity identity metadata is incomplete")
         identity_status = "NOT_ECHOED"
         source_instance_id = session_id = state_instance_id = None
         model_sha256 = gravity_config_sha256 = None
         continuous_authoritative = None
+        authority_class = rating_classification = None
+        empirical_envelope_id = empirical_envelope_sha256 = None
+        empirical_envelope_expires_at_utc = anchor_sha256 = None
+        empirical_stage_index = None
+        empirical_position_validation_authorized = None
         if identity_observed:
             identity_status = payload["gravity_policy_identity_status"]
             source_instance_id = payload["gravity_source_instance_id"]
@@ -1601,6 +1694,27 @@ def parse_controller_feedback_metadata(
             continuous_authoritative = payload[
                 "gravity_continuous_rotor_limits_authoritative"
             ]
+            if empirical_identity_observed:
+                authority_class = payload["gravity_authority_class"]
+                rating_classification = payload[
+                    "gravity_rating_classification"
+                ]
+                empirical_envelope_id = payload[
+                    "gravity_empirical_envelope_id"
+                ]
+                empirical_envelope_sha256 = payload[
+                    "gravity_empirical_envelope_sha256"
+                ]
+                empirical_envelope_expires_at_utc = payload[
+                    "gravity_empirical_envelope_expires_at_utc"
+                ]
+                anchor_sha256 = payload["gravity_anchor_sha256"]
+                empirical_stage_index = payload[
+                    "gravity_empirical_stage_index"
+                ]
+                empirical_position_validation_authorized = payload[
+                    "gravity_empirical_position_validation_authorized"
+                ]
             if type(continuous_authoritative) is not bool:
                 raise ValueError("gravity continuous authority must be boolean")
             if authority_present:
@@ -1618,7 +1732,58 @@ def parse_controller_feedback_metadata(
                     or not 1 <= len(state_instance_id) <= 512
                     or model_sha256 != PRODUCTION_MODEL_SHA256
                     or gravity_config_sha256 != GRAVITY_CONFIG_SHA256
-                    or continuous_authoritative is not True
+                    or continuous_authoritative not in {True, False}
+                    or (
+                        continuous_authoritative is False
+                        and (
+                            not empirical_identity_observed
+                            or authority_class
+                            != "EMPIRICAL_VALIDATION_ENVELOPE"
+                    or rating_classification
+                    != "NOT_OFFICIAL_CONTINUOUS_RATING"
+                    or not isinstance(empirical_envelope_id, str)
+                    or len(empirical_envelope_id) != 38
+                    or not empirical_envelope_id.startswith(
+                        "v15-31b-empirical-"
+                    )
+                    or not _valid_sha256(empirical_envelope_sha256)
+                    or not isinstance(
+                        empirical_envelope_expires_at_utc, str
+                    )
+                    or not empirical_envelope_expires_at_utc.endswith("Z")
+                    or not _valid_sha256(anchor_sha256)
+                    or type(empirical_stage_index) is not int
+                    or not 0 <= empirical_stage_index < 5
+                    or gravity_scale_target
+                    != GRAVITY_SCALE_TARGET_LEVELS[empirical_stage_index]
+                    or type(empirical_position_validation_authorized)
+                    is not bool
+                    or (
+                        empirical_position_validation_authorized
+                        and empirical_stage_index != 4
+                    )
+                        )
+                    )
+                    or (
+                        continuous_authoritative is True
+                        and empirical_identity_observed
+                        and (
+                            any(
+                                value != ""
+                                for value in (
+                                    authority_class,
+                                    rating_classification,
+                                    empirical_envelope_id,
+                                    empirical_envelope_sha256,
+                                    empirical_envelope_expires_at_utc,
+                                    anchor_sha256,
+                                )
+                            )
+                            or empirical_stage_index != 0
+                            or empirical_position_validation_authorized
+                            is not False
+                        )
+                    )
                 ):
                     raise ValueError("gravity policy identity is invalid")
             elif (
@@ -1631,6 +1796,23 @@ def parse_controller_feedback_metadata(
                     )
                 )
                 or continuous_authoritative is not False
+                or (
+                    empirical_identity_observed
+                    and (
+                        empirical_stage_index != 0
+                        or empirical_position_validation_authorized is not False
+                        or any(
+                            value != ""
+                            for value in (
+                                authority_class, rating_classification,
+                                empirical_envelope_id,
+                                empirical_envelope_sha256,
+                                empirical_envelope_expires_at_utc,
+                                anchor_sha256,
+                            )
+                        )
+                    )
+                )
                 or gravity_scale != 0.0
                 or gravity_scale_target != 0.0
                 or any(value != 0.0 for value in feedforward_nm)
@@ -1649,6 +1831,18 @@ def parse_controller_feedback_metadata(
             "model_sha256": model_sha256,
             "gravity_config_sha256": gravity_config_sha256,
             "continuous_rotor_limits_authoritative": continuous_authoritative,
+            "authority_class": authority_class,
+            "rating_classification": rating_classification,
+            "empirical_envelope_id": empirical_envelope_id,
+            "empirical_envelope_sha256": empirical_envelope_sha256,
+            "empirical_envelope_expires_at_utc": (
+                empirical_envelope_expires_at_utc
+            ),
+            "anchor_sha256": anchor_sha256,
+            "empirical_stage_index": empirical_stage_index,
+            "empirical_position_validation_authorized": (
+                empirical_position_validation_authorized
+            ),
         }
     else:
         gravity = {
@@ -1664,6 +1858,14 @@ def parse_controller_feedback_metadata(
             "model_sha256": None,
             "gravity_config_sha256": None,
             "continuous_rotor_limits_authoritative": None,
+            "authority_class": None,
+            "rating_classification": None,
+            "empirical_envelope_id": None,
+            "empirical_envelope_sha256": None,
+            "empirical_envelope_expires_at_utc": None,
+            "anchor_sha256": None,
+            "empirical_stage_index": None,
+            "empirical_position_validation_authorized": None,
         }
 
     by_motor = {}

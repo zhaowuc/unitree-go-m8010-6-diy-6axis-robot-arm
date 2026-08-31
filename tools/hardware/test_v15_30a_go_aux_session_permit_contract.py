@@ -101,6 +101,83 @@ class GoAuxSessionPermitContractTest(unittest.TestCase):
         ):
             self.assertIn(token, self.state_node)
 
+    def test_active_workers_freeze_gravity_identity_before_hardware(self) -> None:
+        cli_fields = (
+            "--expected-gravity-authority-class",
+            "--expected-empirical-envelope-id",
+            "--expected-empirical-envelope-sha256",
+            "--expected-gravity-anchor-sha256",
+            "--expected-gravity-session-id",
+            "--expected-gravity-state-instance-id",
+        )
+        for field in cli_fields:
+            # Every one of J1/J2/J345/J6 receives the same frozen binding.
+            self.assertGreaterEqual(self.supervisor.count(field), 4)
+            self.assertIn(field, self.controller)
+        run = self.controller[self.controller.index("int run(const Options& options)") :]
+        freeze = run.index(
+            "g_expected_gravity_authority_binding.authority_class"
+        )
+        hardware_access = run.index("::access(definition.port", freeze)
+        self.assertLess(freeze, hardware_access)
+        for token in (
+            "GRAVITY_AUTHORITY_STARTUP_CLASS_MISSING",
+            "GRAVITY_AUTHORITY_STARTUP_BINDING_INVALID",
+            "COMMAND_GRAVITY_STARTUP_BINDING_NOT_AUTHORIZED",
+            "COMMAND_GRAVITY_STARTUP_CLASS_MISMATCH",
+            "COMMAND_GRAVITY_STARTUP_SESSION_MISMATCH",
+            "COMMAND_GRAVITY_STARTUP_EMPIRICAL_BINDING_MISMATCH",
+            'expected.authority_class != "UNBOUND_SELF_TEST"',
+            'reason.rfind("COMMAND_GRAVITY_", 0U)',
+            'reason.rfind("COMMAND_EMPIRICAL_", 0U)',
+            "command = GuiCommand{};",
+            "const bool adjacent_stage =",
+            "authority.empirical_stage_index ==",
+            "safety.gravity_empirical_stage_index + 1U",
+            "continuously changing feedforward must reach the hardware",
+            "spent_gravity_empirical_envelope_sha256",
+            "spend_empirical_gravity_authority",
+            "COMMAND_EMPIRICAL_ENVELOPE_SPENT",
+            "COMMAND_EMPIRICAL_RELEASE_SPEND_SELF_TEST_FAILED",
+        ):
+            self.assertIn(token, self.controller)
+        self.assertIn(
+            'authority_class = "UNBOUND_SELF_TEST"', self.controller
+        )
+        self.assertIn(
+            'expected.authority_class == "NONE"', self.controller
+        )
+        revoke = self.controller.index(
+            'reason.rfind("COMMAND_GRAVITY_", 0U) == 0U'
+        )
+        spend_revoke = self.controller.index(
+            "spend_empirical_gravity_authority(safety);", revoke
+        )
+        clear_cached = self.controller.index(
+            "command = GuiCommand{};", revoke
+        )
+        self.assertLess(spend_revoke, clear_cached)
+        pre_receive = self.controller.index(
+            "const bool empirical_expired_before_receive"
+        )
+        receive = self.controller.index(
+            "receive_latest(", pre_receive
+        )
+        self.assertLess(
+            self.controller.index(
+                "spend_empirical_gravity_authority(command_safety);",
+                pre_receive,
+            ),
+            receive,
+        )
+        effective_brake = self.controller.index(
+            'if (effective_mode == "brake")'
+        )
+        self.assertIn(
+            "spend_empirical_gravity_authority(command_safety);",
+            self.controller[effective_brake:effective_brake + 250],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

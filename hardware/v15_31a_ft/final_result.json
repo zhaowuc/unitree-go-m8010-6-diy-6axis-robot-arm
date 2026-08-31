@@ -4,8 +4,8 @@
   "report_fields": [
     {"id": 1, "name": "source_branch_commit", "value": {"branch": "snapshot/v15-30e-current-20260830", "commit": "093bebcce2aaa98dc75171a826e7714f0024b399"}},
     {"id": 2, "name": "new_branch", "value": "agent/v15-31a-ft-gravity-position-thermal-dual-twin-gui"},
-    {"id": 3, "name": "implementation_commits", "value": {"commit_1": "41f982cd3683a8600208d70a28a33a95972c5468", "commit_2": "THIS_FILE_IS_PART_OF_COMMIT_2; RESOLVABLE_SHA_REPORTED_EXTERNALLY_AFTER_PUSH"}},
-    {"id": 4, "name": "evidence_commit", "value": "SAME_AS_COMMIT_2; RESOLVABLE_SHA_REPORTED_EXTERNALLY_AFTER_PUSH"},
+    {"id": 3, "name": "implementation_commits", "value": {"commit_1": "41f982cd3683a8600208d70a28a33a95972c5468", "commit_2": "60f0272fc4b54b86a87eec1012af1c3c92ca7924"}},
+    {"id": 4, "name": "evidence_commit", "value": "60f0272fc4b54b86a87eec1012af1c3c92ca7924"},
     {"id": 5, "name": "multi_agent_roles_executed", "value": ["contract_final_audit", "planned_path_feasibility_and_gravity_pipeline", "async_preview_planner", "integrator_build_test_evidence_and_git"]},
     {"id": 6, "name": "torque_semantics_authority", "value": "PASS"},
     {"id": 7, "name": "gravity_model_mapping", "value": {"result": "BLOCKED_POWER_OFF", "software_chain": "GRAVITY_NODE_TO_ROUTER_TO_GO_CONNECTED", "runtime_authority": "FAIL_CLOSED_CONTINUOUS_ROTOR_LIMITS_FALSE", "tff_transmitted": false}},

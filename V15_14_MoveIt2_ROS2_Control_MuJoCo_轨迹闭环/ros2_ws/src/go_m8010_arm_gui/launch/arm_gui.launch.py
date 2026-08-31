@@ -6,6 +6,7 @@ from pathlib import Path
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, LogInfo, RegisterEventHandler
+from launch.conditions import IfCondition
 from launch.event_handlers import OnProcessExit
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -40,6 +41,7 @@ def generate_launch_description() -> LaunchDescription:
             "go_aux_session_reference_path": LaunchConfiguration(
                 "go_aux_session_reference_path"
             ),
+            "state_instance_id": LaunchConfiguration("state_instance_id"),
             "thermal_config_path": hardware_share + "/config/thermal_limits.yaml",
         }],
     )
@@ -79,11 +81,21 @@ def generate_launch_description() -> LaunchDescription:
         executable="whole_arm_gravity_node",
         name="whole_arm_gravity_node",
         output="screen",
+        condition=IfCondition(LaunchConfiguration("start_gravity_node")),
         parameters=[{
             "model_path": LaunchConfiguration("model_path"),
             "gravity_config_path": hardware_share + "/config/gravity_control.yaml",
             "thermal_config_path": hardware_share + "/config/thermal_limits.yaml",
             "anchor_path": LaunchConfiguration("gravity_anchor_path"),
+            "empirical_envelope_path": LaunchConfiguration(
+                "empirical_envelope_path"
+            ),
+            "expected_empirical_envelope_sha256": LaunchConfiguration(
+                "expected_empirical_envelope_sha256"
+            ),
+            "empirical_claim_directory": LaunchConfiguration(
+                "empirical_claim_directory"
+            ),
             "calculation_rate_hz": 100.0,
             "joint_state_maximum_age_ms": 250.0,
             # Both values default fail-closed.  A powered validation stage
@@ -142,7 +154,14 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("recovery_hint_path", default_value=""),
         DeclareLaunchArgument("j2_session_reference_path", default_value=""),
         DeclareLaunchArgument("go_aux_session_reference_path", default_value=""),
+        DeclareLaunchArgument("state_instance_id", default_value=""),
         DeclareLaunchArgument("gravity_anchor_path", default_value=""),
+        DeclareLaunchArgument("start_gravity_node", default_value="true"),
+        DeclareLaunchArgument("empirical_envelope_path", default_value=""),
+        DeclareLaunchArgument(
+            "expected_empirical_envelope_sha256", default_value=""
+        ),
+        DeclareLaunchArgument("empirical_claim_directory", default_value=""),
         DeclareLaunchArgument(
             "gravity_enabled_for_hardware", default_value="false"
         ),
@@ -183,5 +202,5 @@ def generate_launch_description() -> LaunchDescription:
             on_exit=[LogInfo(msg=(
                 "重力诊断节点已退出；硬件Tff保持禁用，GUI必须拒绝新的现实轨迹。"
             ))],
-        )),
+        ), condition=IfCondition(LaunchConfiguration("start_gravity_node"))),
     ])

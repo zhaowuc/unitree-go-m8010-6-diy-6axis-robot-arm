@@ -1,13 +1,19 @@
 import ast
+import hashlib
 import importlib.util
 import io
 import json
 import math
+import os
+import re
+import stat
 import sys
+import tempfile
 import time
 from contextlib import redirect_stdout
 from pathlib import Path
 from types import SimpleNamespace
+from datetime import datetime, timezone
 
 
 MODULE_DIRECTORY = Path(__file__).resolve().parent
@@ -22,6 +28,49 @@ MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
 
+def load_feedback_handoff_functions():
+    tree = ast.parse(CONTROLLER.read_text(encoding="utf-8"))
+    names = {
+        "valid_lower_sha256",
+        "_load_json_without_duplicate_keys",
+        "_secure_regular_file_bytes",
+        "_fsync_directory",
+        "claim_feedback_handoff",
+        "consume_feedback_handoff",
+    }
+    functions = [
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name in names
+    ]
+    namespace = {
+        "Any": object,
+        "ExpectedFeedbackIdentityBinding": object,
+        "Path": Path,
+        "hashlib": hashlib,
+        "json": json,
+        "os": os,
+        "re": re,
+        "stat": stat,
+        "time": time,
+        "FEEDBACK_HANDOFF_SCHEMA": "go-m8010-j6-feedback-handoff/1.0",
+        "RAW_CAPTURE_SCHEMA": (
+            "go-m8010-j6-disabled-raw-capture-statistics/1.0"
+        ),
+        "MAXIMUM_FEEDBACK_SEQUENCE": (1 << 63) - 1,
+        "MAXIMUM_HANDOFF_BYTES": 64 * 1024,
+        "MAXIMUM_RAW_CAPTURE_BYTES": 16 * 1024 * 1024,
+    }
+    exec(
+        compile(
+            ast.fix_missing_locations(ast.Module(body=functions, type_ignores=[])),
+            str(CONTROLLER),
+            "exec",
+        ),
+        namespace,
+    )
+    return namespace
+
+
 def load_thermal_config_function():
     tree = ast.parse(CONTROLLER.read_text(encoding="utf-8"))
     function = next(
@@ -34,6 +83,16 @@ def load_thermal_config_function():
         "math": math,
         "THERMAL_CONFIG_SHA256": (
             "1926264805858f62fffc9360ef0c9d4d7f8a7e232e171105450769d493ff5467"
+        ),
+        "J6_FEEDBACK_SOURCE_INSTANCE_ID": "9" * 32,
+        "J6_FEEDBACK_SEQUENCE": 0,
+        "EXPECTED_GRAVITY_AUTHORITY_BINDING": SimpleNamespace(
+            session_id=(
+                "persistent:0123456789abcdef:"
+                "j2session:1111111111111111:"
+                "goauxsession:2222222222222222"
+            ),
+            state_instance_id="8" * 32,
         ),
     }
     exec(
@@ -86,6 +145,7 @@ def load_mode_functions():
         "command_rejection_reason",
         "command_requests_j6_active",
         "command_requests_j6_fixed_hold",
+        "command_uses_empirical_gravity_authority",
         "command_epoch_is_acceptable",
         "command_epoch_was_rejected",
         "enabled_feedback_is_healthy",
@@ -126,6 +186,7 @@ def load_mode_functions():
         "FEEDBACK_HARD_LOWER": -math.pi - math.radians(0.5),
         "FEEDBACK_HARD_UPPER": math.pi + math.radians(0.5),
         "HOLD_ENTRY_TARGET_LIMIT": math.radians(5.0),
+        "EMPIRICAL_INITIAL_HOLD_ENTRY_TARGET_LIMIT": math.radians(0.25),
         "RESTORE_VELOCITY_LIMIT": math.radians(1.0),
         "ACTIVE_DEADLINE_CYCLE_LIMIT_S": 0.02,
         "FAULT_STATES": {8, 9, 0xA, 0xB, 0xC, 0xD, 0xE},
@@ -134,6 +195,73 @@ def load_mode_functions():
     exec(
         compile(ast.fix_missing_locations(ast.Module(body=functions, type_ignores=[])),
                 str(CONTROLLER), "exec"),
+        namespace,
+    )
+    return namespace
+
+
+def load_empirical_authority_functions():
+    tree = ast.parse(CONTROLLER.read_text(encoding="utf-8"))
+    names = {
+        "command_uses_empirical_gravity_authority",
+        "empirical_gravity_authority_is_current",
+    }
+    functions = [
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name in names
+    ]
+    namespace = {
+        "time": time,
+        "datetime": datetime,
+        "timezone": timezone,
+    }
+    exec(
+        compile(
+            ast.fix_missing_locations(ast.Module(body=functions, type_ignores=[])),
+            str(CONTROLLER),
+            "exec",
+        ),
+        namespace,
+    )
+    return namespace
+
+
+def load_gravity_startup_binding_functions():
+    tree = ast.parse(CONTROLLER.read_text(encoding="utf-8"))
+    names = {
+        "valid_lower_sha256",
+        "validate_gravity_authority_startup_binding",
+        "validate_feedback_startup_binding",
+        "enforce_gravity_authority_startup_binding",
+    }
+    definitions = [
+        node for node in tree.body
+        if (
+            isinstance(node, ast.ClassDef)
+            and node.name in {
+                "ExpectedGravityAuthorityBinding",
+                "ExpectedFeedbackIdentityBinding",
+                "GravityAuthorityStartupBindingError",
+            }
+        )
+        or (
+            isinstance(node, ast.FunctionDef)
+            and node.name in names
+        )
+    ]
+    namespace = {
+        "NamedTuple": __import__("typing").NamedTuple,
+        "argparse": __import__("argparse"),
+        "re": __import__("re"),
+    }
+    exec(
+        compile(
+            ast.fix_missing_locations(
+                ast.Module(body=definitions, type_ignores=[])
+            ),
+            str(CONTROLLER),
+            "exec",
+        ),
         namespace,
     )
     return namespace
@@ -152,8 +280,11 @@ def load_command_channel_functions():
         "make_command_source_replay_state",
         "make_command_receive_events",
         "command_source_takeover_is_blocked",
+        "command_source_takeover_epoch_is_fresh",
         "command_source_is_newer",
         "commit_command_source",
+        "commit_empirical_command_authority",
+        "spend_active_empirical_command_authority",
         "commit_position_execution_binding",
         "observe_valid_command_epoch",
         "command_epoch_is_acceptable",
@@ -167,7 +298,14 @@ def load_command_channel_functions():
     }
     functions = [
         node for node in tree.body
-        if isinstance(node, ast.FunctionDef) and node.name in names
+        if (
+            isinstance(node, ast.FunctionDef)
+            and node.name in names
+        )
+        or (
+            isinstance(node, ast.ClassDef)
+            and node.name == "GravityAuthorityStartupBindingError"
+        )
     ]
     namespace = {
         "json": json,
@@ -275,6 +413,24 @@ def load_send_feedback():
         ),
         "THERMAL_CONFIG_SHA256": (
             "1926264805858f62fffc9360ef0c9d4d7f8a7e232e171105450769d493ff5467"
+        ),
+        "J6_FEEDBACK_SOURCE_INSTANCE_ID": "9" * 32,
+        "J6_FEEDBACK_SEQUENCE": 0,
+        "EXPECTED_GRAVITY_AUTHORITY_BINDING": SimpleNamespace(
+            session_id=(
+                "persistent:0123456789abcdef:"
+                "j2session:1111111111111111:"
+                "goauxsession:2222222222222222"
+            ),
+            state_instance_id="8" * 32,
+        ),
+        "EXPECTED_FEEDBACK_IDENTITY_BINDING": SimpleNamespace(
+            session_id=(
+                "persistent:0123456789abcdef:"
+                "j2session:1111111111111111:"
+                "goauxsession:2222222222222222"
+            ),
+            state_instance_id="8" * 32,
         ),
     }
     exec(
@@ -586,6 +742,239 @@ def test_j6_receive_events_marks_only_a_newly_accepted_domain_release_packet():
     )
     assert current["mode"] == "brake"
     assert events["domain_release_received"] is True
+
+
+def test_j6_startup_binding_violation_immediately_revokes_cached_command():
+    functions = load_command_channel_functions()
+    receive_latest = functions["receive_latest"]
+
+    class FakeSocket:
+        def __init__(self, packets):
+            self.packets = list(packets)
+
+        def recv(self, _size):
+            if not self.packets:
+                raise BlockingIOError
+            return self.packets.pop(0)
+
+    current, minimum, last_seen = receive_latest(
+        FakeSocket([command_payload(sequence=1)]), None, 0, 0
+    )
+    assert current is not None and current["mode"] == "position"
+
+    def reject_startup_binding(_command, _received_ns, _state):
+        raise functions["GravityAuthorityStartupBindingError"](
+            "changed startup envelope"
+        )
+
+    functions["validate_empirical_command_authority"] = (
+        reject_startup_binding
+    )
+    current, _minimum, _last_seen = receive_latest(
+        FakeSocket([command_payload(sequence=2)]),
+        current,
+        minimum,
+        last_seen,
+        require_empirical_authority=True,
+    )
+    assert current is None
+
+
+def test_j6_empirical_hold_brake_higher_epoch_race_stays_braked():
+    functions = load_command_channel_functions()
+    receive_latest = functions["receive_latest"]
+    envelope_sha256 = "a" * 64
+
+    def validate_empirical(command, _received_ns, replay_state):
+        if command["mode"] == "brake":
+            return None
+        if envelope_sha256 in replay_state["empirical_spent_sha256"]:
+            raise ValueError("J6 empirical envelope spent")
+        return (
+            "v15-31b-empirical-0123456789abcdefabcd",
+            envelope_sha256,
+            "b" * 64,
+            "session",
+            "c" * 32,
+            0,
+        )
+
+    functions["validate_empirical_command_authority"] = validate_empirical
+
+    class FakeSocket:
+        def __init__(self, packets):
+            self.packets = list(packets)
+
+        def recv(self, _size):
+            if not self.packets:
+                raise BlockingIOError
+            return self.packets.pop(0)
+
+    source_ns = time.monotonic_ns() - 1_000_000
+    active = json.loads(command_payload(
+        source_monotonic_ns=source_ns, sequence=1
+    ))
+    active["mode"] = "hold"
+    active["moving_joint_mask"] = [False] * 6
+    active["activation_epoch"] = 7
+    brake = dict(active)
+    brake.update({
+        "mode": "brake",
+        "active_joint_mask": [False] * 6,
+        "moving_joint_mask": [False] * 6,
+        "sequence": 2,
+        "source_monotonic_ns": source_ns + 1,
+    })
+    raced = dict(active)
+    raced.update({
+        "activation_epoch": 8,
+        "sequence": 3,
+        "source_monotonic_ns": source_ns + 2,
+    })
+    replay_state = functions["make_command_source_replay_state"]()
+    rejection_state = functions["make_command_rejection_state"]()
+    with redirect_stdout(io.StringIO()):
+        current, minimum, last_seen = receive_latest(
+            FakeSocket([
+                json.dumps(active).encode(),
+                json.dumps(brake).encode(),
+                json.dumps(raced).encode(),
+            ]),
+            None,
+            0,
+            0,
+            rejection_state,
+            replay_state,
+            require_empirical_authority=True,
+        )
+    assert current is not None and current["mode"] == "brake"
+    assert envelope_sha256 in replay_state["empirical_spent_sha256"]
+    assert replay_state["empirical_active_sha256"] is None
+    assert rejection_state["total"] == 1
+    assert minimum == 8 and last_seen == 7
+
+
+def test_j6_empirical_startup_binding_revoke_spends_before_higher_epoch_race():
+    functions = load_command_channel_functions()
+    receive_latest = functions["receive_latest"]
+    envelope_sha256 = "9" * 64
+
+    def validate_empirical(command, _received_ns, replay_state):
+        sequence = command["sequence"]
+        if sequence == 2:
+            raise functions["GravityAuthorityStartupBindingError"](
+                "changed startup envelope"
+            )
+        if envelope_sha256 in replay_state["empirical_spent_sha256"]:
+            raise ValueError("J6 empirical envelope spent")
+        return (
+            "v15-31b-empirical-0123456789abcdefabcd",
+            envelope_sha256,
+            "8" * 64,
+            "session",
+            "7" * 32,
+            0,
+        )
+
+    functions["validate_empirical_command_authority"] = validate_empirical
+
+    class FakeSocket:
+        def __init__(self, packets):
+            self.packets = list(packets)
+
+        def recv(self, _size):
+            if not self.packets:
+                raise BlockingIOError
+            return self.packets.pop(0)
+
+    source_ns = time.monotonic_ns() - 1_000_000
+    packets = []
+    for sequence, epoch in ((1, 7), (2, 8), (3, 9)):
+        packet = json.loads(command_payload(
+            source_monotonic_ns=source_ns + sequence,
+            sequence=sequence,
+        ))
+        packet.update({
+            "mode": "hold",
+            "moving_joint_mask": [False] * 6,
+            "activation_epoch": epoch,
+        })
+        packets.append(json.dumps(packet).encode())
+
+    replay_state = functions["make_command_source_replay_state"]()
+    rejection_state = functions["make_command_rejection_state"]()
+    with redirect_stdout(io.StringIO()):
+        current, _minimum, _last_seen = receive_latest(
+            FakeSocket(packets),
+            None,
+            0,
+            0,
+            rejection_state,
+            replay_state,
+            require_empirical_authority=True,
+        )
+    assert current is None
+    assert replay_state["empirical_active_sha256"] is None
+    assert envelope_sha256 in replay_state["empirical_spent_sha256"]
+    assert rejection_state["total"] == 2
+
+
+def test_j6_empirical_lease_expiry_spends_before_same_sha_receive():
+    functions = load_command_channel_functions()
+    replay_state = functions["make_command_source_replay_state"]()
+    envelope_sha256 = "d" * 64
+    functions["commit_empirical_command_authority"](
+        replay_state,
+        (
+            "v15-31b-empirical-0123456789abcdefabcd",
+            envelope_sha256,
+            "e" * 64,
+            "session",
+            "f" * 32,
+            0,
+        ),
+    )
+    functions["spend_active_empirical_command_authority"](replay_state)
+    assert replay_state["empirical_active_sha256"] is None
+    assert envelope_sha256 in replay_state["empirical_spent_sha256"]
+
+    source = CONTROLLER.read_text(encoding="utf-8")
+    pre_receive = source.split(
+        "lease_expired_before_receive = bool(", 1
+    )[1].split(
+        "command, minimum_activation_epoch, last_seen_activation_epoch = receive_latest(",
+        1,
+    )[0]
+    assert "spend_active_empirical_command_authority(" in pre_receive
+    assert "lease_expired_before_receive" in pre_receive
+    assert "empirical_expired_before_receive" in pre_receive
+    assert "fault_latched" in pre_receive
+    assert 'thermal_interlock["fault_latched"]' in pre_receive
+    assert 'no_progress_watchdog["fault_latched"]' in pre_receive
+    assert "or STOP" in pre_receive
+
+
+def test_j6_empirical_lifecycle_latch_ignores_pre_activation_and_official_brake():
+    functions = load_command_channel_functions()
+    replay_state = functions["make_command_source_replay_state"]()
+
+    # Startup BRAKE and an official authority binding cannot spend or arm an
+    # empirical permit that has never become active.
+    functions["spend_active_empirical_command_authority"](replay_state)
+    functions["commit_empirical_command_authority"](
+        replay_state,
+        (
+            "OFFICIAL_CONTINUOUS_RATING",
+            "session",
+            "1" * 32,
+            "",
+            "",
+            0,
+        ),
+    )
+    functions["spend_active_empirical_command_authority"](replay_state)
+    assert replay_state["empirical_active_sha256"] is None
+    assert replay_state["empirical_spent_sha256"] == {}
 
 
 def test_quintic_reference_uses_integer_grid_and_exact_endpoint_pins():
@@ -2289,6 +2678,451 @@ def test_j6_new_hold_epoch_must_match_fresh_actual_but_same_epoch_is_frozen():
     assert safe(command, "hold", 8, feedback, 10.0, 2.0, 10.1)
 
 
+def test_j6_empirical_pre_position_hold_uses_quarter_degree_capture():
+    safe = load_mode_functions()["hold_command_entry_is_safe"]
+    feedback = SimpleNamespace(
+        position=2.0,
+        velocity=0.0,
+        state=1,
+        mos_temp=25,
+        coil_temp=26,
+    )
+    command = {
+        "mode": "hold",
+        "targets_rad": [0.0] * 6,
+        "active_joint_mask": [False] * 5 + [True],
+        "activation_epoch": 8,
+        "gravity_authority": {
+            "schema": "go-m8010-gravity-command-authority/1.1",
+            "authority_class": "EMPIRICAL_VALIDATION_ENVELOPE",
+            "empirical_position_validation_authorized": False,
+        },
+    }
+    command["targets_rad"][5] = math.radians(0.25)
+    assert safe(command, "brake", 7, feedback, 10.0, 2.0, 10.1)
+    command["targets_rad"][5] = math.radians(0.251)
+    assert not safe(command, "brake", 7, feedback, 10.0, 2.0, 10.1)
+    command["gravity_authority"][
+        "empirical_position_validation_authorized"
+    ] = True
+    command["targets_rad"][5] = math.radians(5.0)
+    assert safe(command, "brake", 7, feedback, 10.0, 2.0, 10.1)
+
+
+def test_j6_active_startup_binding_is_complete_immutable_and_fail_closed():
+    functions = load_gravity_startup_binding_functions()
+    validate = functions["validate_gravity_authority_startup_binding"]
+    enforce = functions["enforce_gravity_authority_startup_binding"]
+    arguments = SimpleNamespace(
+        expected_gravity_authority_class=(
+            "EMPIRICAL_VALIDATION_ENVELOPE"
+        ),
+        expected_empirical_envelope_id=(
+            "v15-31b-empirical-0123456789abcdefabcd"
+        ),
+        expected_empirical_envelope_sha256="a" * 64,
+        expected_gravity_anchor_sha256="b" * 64,
+        expected_gravity_session_id=(
+            "persistent:0123456789abcdef:"
+            "j2session:1111111111111111:"
+            "goauxsession:2222222222222222"
+        ),
+        expected_gravity_state_instance_id="c" * 32,
+    )
+    binding = validate(arguments)
+    functions["EXPECTED_GRAVITY_AUTHORITY_BINDING"] = binding
+    packet = {
+        "session_id": binding.session_id,
+        "state_instance_id": binding.state_instance_id,
+        "empirical_envelope_id": binding.empirical_envelope_id,
+        "empirical_envelope_sha256": binding.empirical_envelope_sha256,
+        "anchor_sha256": binding.anchor_sha256,
+    }
+    enforce(packet, "EMPIRICAL_VALIDATION_ENVELOPE")
+
+    for field in (
+        "session_id",
+        "state_instance_id",
+        "empirical_envelope_id",
+        "empirical_envelope_sha256",
+        "anchor_sha256",
+    ):
+        changed = dict(packet)
+        changed[field] = "0" * len(changed[field])
+        try:
+            enforce(changed, "EMPIRICAL_VALIDATION_ENVELOPE")
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"J6 accepted changed startup pin: {field}")
+
+    functions["EXPECTED_GRAVITY_AUTHORITY_BINDING"] = binding._replace(
+        authority_class="NONE"
+    )
+    try:
+        enforce(packet, "EMPIRICAL_VALIDATION_ENVELOPE")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("J6 accepted authority without a startup permit")
+
+    missing_hash = SimpleNamespace(**vars(arguments))
+    missing_hash.expected_empirical_envelope_sha256 = ""
+    try:
+        validate(missing_hash)
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("J6 accepted an incomplete empirical startup pin")
+
+    source = CONTROLLER.read_text(encoding="utf-8")
+    assert source.count("enforce_gravity_authority_startup_binding(") >= 3
+    bind_before_state = source.index(
+        "validate_gravity_authority_startup_binding(args)"
+    )
+    persistent_state = source.index(
+        "persistent_reference = load_persistent_zero(args.zero_file)"
+    )
+    assert bind_before_state < persistent_state
+
+
+def test_j6_official_startup_binding_preserves_official_schema_path():
+    functions = load_gravity_startup_binding_functions()
+    validate = functions["validate_gravity_authority_startup_binding"]
+    enforce = functions["enforce_gravity_authority_startup_binding"]
+    arguments = SimpleNamespace(
+        expected_gravity_authority_class="OFFICIAL_CONTINUOUS_RATING",
+        expected_empirical_envelope_id="",
+        expected_empirical_envelope_sha256="",
+        expected_gravity_anchor_sha256="d" * 64,
+        expected_gravity_session_id=(
+            "persistent:0123456789abcdef:"
+            "j2session:1111111111111111:"
+            "goauxsession:2222222222222222"
+        ),
+        expected_gravity_state_instance_id="e" * 32,
+    )
+    binding = validate(arguments)
+    functions["EXPECTED_GRAVITY_AUTHORITY_BINDING"] = binding
+    enforce(
+        {
+            "session_id": binding.session_id,
+            "state_instance_id": binding.state_instance_id,
+        },
+        "OFFICIAL_CONTINUOUS_RATING",
+    )
+    try:
+        enforce(
+            {
+                "session_id": binding.session_id,
+                "state_instance_id": "f" * 32,
+            },
+            "OFFICIAL_CONTINUOUS_RATING",
+        )
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("J6 accepted a changed official state binding")
+
+
+def test_j6_feedback_identity_is_independent_fail_closed_and_tx_inert():
+    functions = load_gravity_startup_binding_functions()
+    validate_authority = functions[
+        "validate_gravity_authority_startup_binding"
+    ]
+    validate_feedback = functions["validate_feedback_startup_binding"]
+    enforce_authority = functions[
+        "enforce_gravity_authority_startup_binding"
+    ]
+    session_id = (
+        "persistent:0123456789abcdef:"
+        "j2session:1111111111111111:"
+        "goauxsession:2222222222222222"
+    )
+    none_arguments = SimpleNamespace(
+        expected_gravity_authority_class="NONE",
+        expected_empirical_envelope_id="",
+        expected_empirical_envelope_sha256="",
+        expected_gravity_anchor_sha256="",
+        expected_gravity_session_id="",
+        expected_gravity_state_instance_id="",
+    )
+    none_binding = validate_authority(none_arguments)
+    feedback_arguments = SimpleNamespace(
+        feedback_session_id=session_id,
+        feedback_state_instance_id="a" * 32,
+    )
+    feedback_binding = validate_feedback(
+        feedback_arguments, none_binding
+    )
+    assert feedback_binding.session_id == session_id
+    assert feedback_binding.state_instance_id == "a" * 32
+    assert none_binding.authority_class == "NONE"
+
+    functions["EXPECTED_GRAVITY_AUTHORITY_BINDING"] = none_binding
+    try:
+        enforce_authority(
+            {
+                "session_id": session_id,
+                "state_instance_id": "a" * 32,
+            },
+            "OFFICIAL_CONTINUOUS_RATING",
+        )
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("feedback identity granted active gravity authority")
+
+    for bad_session, bad_state in (
+        (session_id, ""),
+        ("", "a" * 32),
+        (session_id.upper(), "a" * 32),
+        (session_id, "A" * 32),
+        (session_id, "a" * 31),
+    ):
+        try:
+            validate_feedback(
+                SimpleNamespace(
+                    feedback_session_id=bad_session,
+                    feedback_state_instance_id=bad_state,
+                ),
+                none_binding,
+            )
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError("J6 accepted an invalid feedback identity")
+
+    active_arguments = SimpleNamespace(
+        expected_gravity_authority_class="OFFICIAL_CONTINUOUS_RATING",
+        expected_empirical_envelope_id="",
+        expected_empirical_envelope_sha256="",
+        expected_gravity_anchor_sha256="b" * 64,
+        expected_gravity_session_id=session_id,
+        expected_gravity_state_instance_id="c" * 32,
+    )
+    active_binding = validate_authority(active_arguments)
+    matched = validate_feedback(
+        SimpleNamespace(
+            feedback_session_id=session_id,
+            feedback_state_instance_id="c" * 32,
+        ),
+        active_binding,
+    )
+    assert matched.session_id == active_binding.session_id
+    try:
+        validate_feedback(
+            SimpleNamespace(
+                feedback_session_id=session_id,
+                feedback_state_instance_id="d" * 32,
+            ),
+            active_binding,
+        )
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("J6 accepted split active/feedback identities")
+
+    source = CONTROLLER.read_text(encoding="utf-8")
+    validation = source[
+        source.index("def validate_feedback_startup_binding(") :
+        source.index("\ndef enforce_gravity_authority_startup_binding(")
+    ]
+    for forbidden_tx in (
+        "send_enable(",
+        "send_disable(",
+        "logger.send(",
+        "refresh_request(",
+    ):
+        assert forbidden_tx not in validation
+    assert source.count("transport.send_enable()") == 1
+    assert "--feedback-session-id" in source
+    assert "--feedback-state-instance-id" in source
+    feedback_validation = source.index(
+        "EXPECTED_FEEDBACK_IDENTITY_BINDING = validate_feedback_startup_binding("
+    )
+    persistent_state = source.index(
+        "persistent_reference = load_persistent_zero(args.zero_file)"
+    )
+    assert feedback_validation < persistent_state
+
+
+def test_j6_feedback_handoff_is_single_use_continuous_and_pre_hardware():
+    functions = load_feedback_handoff_functions()
+    # Windows cannot represent the production Linux owner/mode contract.  The
+    # behavioral test keeps the no-follow reader boundary while the source
+    # assertions below preserve that Linux-only contract verbatim.
+    functions["_secure_regular_file_bytes"] = (
+        lambda path, maximum_bytes, _label: Path(path).read_bytes()
+    )
+    functions["_fsync_directory"] = lambda _path: None
+    binding = SimpleNamespace(
+        session_id=(
+            "persistent:0123456789abcdef:"
+            "j2session:1111111111111111:"
+            "goauxsession:2222222222222222"
+        ),
+        state_instance_id="a" * 32,
+    )
+    source_id = "b" * 32
+    last_sequence = 505
+    last_source_ns = 1_000_000
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory).resolve()
+        raw_path = root / "j6_raw.json"
+        pending = root / "j6_handoff.json"
+        raw_document = {
+            "schema": "go-m8010-j6-disabled-raw-capture-statistics/1.0",
+            "status": "PASS",
+            "packet_count": 500,
+            "physical_power_off_required": False,
+            "terminal": {
+                "required_final_disabled_frames": 5,
+                "confirmed": True,
+                "channel_closed": True,
+            },
+            "readonly_feedback_udp": {
+                "session_id": binding.session_id,
+                "state_instance_id": binding.state_instance_id,
+                "source_instance_id": source_id,
+                "published_count": last_sequence,
+                "last_sequence": last_sequence,
+                "last_source_monotonic_ns": last_source_ns,
+                "socket_closed": True,
+                "active_control_authorized": False,
+                "can_tx_policy": "DISABLED_CLASSIC_CAN_REFRESH_ONLY",
+            },
+            "safety": {
+                "active_or_hold_commands_sent": 0,
+                "active_commands_sent": 0,
+                "hold_commands_sent": 0,
+                "forbidden_tx_attempt_count": 0,
+            },
+        }
+        raw_path.write_text(
+            json.dumps(raw_document) + "\n", encoding="utf-8"
+        )
+        handoff = {
+            "schema": "go-m8010-j6-feedback-handoff/1.0",
+            "handoff_id": f"j6-feedback-{source_id}-{last_sequence}",
+            "session_id": binding.session_id,
+            "state_instance_id": binding.state_instance_id,
+            "source_instance_id": source_id,
+            "last_sequence": last_sequence,
+            "last_source_monotonic_ns": last_source_ns,
+            "raw_capture": {
+                "path": str(raw_path),
+                "sha256": hashlib.sha256(raw_path.read_bytes()).hexdigest(),
+            },
+            "terminal": {
+                "drive_state": 0,
+                "controller_mode": "brake",
+                "confirmed": True,
+                "channel_closed": True,
+            },
+            "forwarding": {
+                "destination": "127.0.0.1:15300",
+                "published_count": last_sequence,
+                "socket_closed": True,
+            },
+            "active_control_authorized": False,
+            "can_tx_policy": "DISABLED_CLASSIC_CAN_REFRESH_ONLY",
+            "single_use_claim_required": True,
+        }
+        pending.write_text(json.dumps(handoff) + "\n", encoding="utf-8")
+        source, sequence = functions["consume_feedback_handoff"](
+            pending, binding, 15300, now_monotonic_ns=last_source_ns + 1
+        )
+        assert source == source_id
+        assert sequence == last_sequence
+        assert not pending.exists()
+        assert pending.with_name(f"{pending.name}.claimed").is_file()
+        try:
+            functions["consume_feedback_handoff"](
+                pending, binding, 15300,
+                now_monotonic_ns=last_source_ns + 2,
+            )
+        except (RuntimeError, OSError):
+            pass
+        else:
+            raise AssertionError("J6 reused a consumed feedback handoff")
+
+    source_text = CONTROLLER.read_text(encoding="utf-8")
+    consumer = source_text[
+        source_text.index("def consume_feedback_handoff(") :
+        source_text.index("\ndef validate_gravity_authority_startup_binding(")
+    ]
+    for forbidden_hardware in (
+        "RawCanLogger(", "exact_usb_identity(", "logger.send(",
+        "send_enable(", "send_disable(",
+    ):
+        assert forbidden_hardware not in consumer
+    assert "os.O_NOFOLLOW" in source_text
+    assert "stat.S_IMODE(metadata.st_mode) != 0o600" in source_text
+    assert "metadata.st_nlink != 1" in source_text
+    consume_at = source_text.index(
+        ") = consume_feedback_handoff("
+    )
+    assert consume_at < source_text.index("exact_usb_identity()", consume_at)
+    assert source_text.count("transport.send_enable()") == 1
+    assert 'parser.add_argument("--feedback-handoff-file"' in source_text
+
+
+def test_j6_invalid_feedback_handoff_is_spent_before_validation():
+    functions = load_feedback_handoff_functions()
+    functions["_secure_regular_file_bytes"] = (
+        lambda path, maximum_bytes, _label: Path(path).read_bytes()
+    )
+    functions["_fsync_directory"] = lambda _path: None
+    binding = SimpleNamespace(
+        session_id=(
+            "persistent:0123456789abcdef:"
+            "j2session:1111111111111111:"
+            "goauxsession:2222222222222222"
+        ),
+        state_instance_id="a" * 32,
+    )
+    with tempfile.TemporaryDirectory() as directory:
+        pending = Path(directory).resolve() / "invalid_handoff.json"
+        pending.write_text('{"schema":"invalid"}\n', encoding="utf-8")
+        try:
+            functions["consume_feedback_handoff"](
+                pending, binding, 15300, now_monotonic_ns=2_000_000
+            )
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError("J6 accepted an invalid feedback handoff")
+        assert not pending.exists()
+        assert pending.with_name(f"{pending.name}.claimed").is_file()
+
+
+def test_j6_empirical_deadline_is_checked_each_cycle_and_lease_is_not_captured():
+    functions = load_empirical_authority_functions()
+    current = functions["empirical_gravity_authority_is_current"]
+    command = {
+        "gravity_authority": {
+            "schema": "go-m8010-gravity-command-authority/1.1",
+            "authority_class": "EMPIRICAL_VALIDATION_ENVELOPE",
+            "empirical_envelope_deadline_monotonic_ns": 2_000,
+            "empirical_envelope_expires_at_utc": "2099-01-01T00:00:00Z",
+        }
+    }
+    wall = datetime(2026, 8, 31, tzinfo=timezone.utc)
+    assert current(command, now_monotonic_ns=1_999, now_utc=wall)
+    assert not current(command, now_monotonic_ns=2_000, now_utc=wall)
+
+    source = CONTROLLER.read_text(encoding="utf-8")
+    lease_capture = source.split(
+        "lease_capture_source = command_source_for_lease_capture(", 1
+    )[1].split("if captured_target is not None:", 1)[0]
+    assert "command_uses_empirical_gravity_authority" in lease_capture
+    expiry_to_brake = source.split(
+        "empirical_authority_expired = bool(", 1
+    )[1].split("rejected_active_command = bool(", 1)[0]
+    assert 'or empirical_authority_expired' in expiry_to_brake
+
+
 def test_j6_pre_enable_rechecks_hold_target_after_each_receive():
     functions = load_mode_functions()
     safe_mode = functions["safe_pre_enable_mode"]
@@ -2518,6 +3352,10 @@ def test_j6_feedback_reports_lease_safe_hold_state():
     )
     payload = json.loads(fake_socket.sent[0][0])
     assert payload["controller_mode"] == "hold"
+    assert payload["source_instance_id"] == "9" * 32
+    assert payload["sequence"] == 1
+    assert payload["session_id"].startswith("persistent:")
+    assert payload["state_instance_id"] == "8" * 32
     assert payload["lease_safe_hold"] is True
     assert payload["rejected_commands"] == 3
     assert payload["last_rejection_reason"] == "JSON格式无效"
@@ -3143,6 +3981,25 @@ def test_j6_active_source_blocks_takeover_for_500ms_then_allows_it():
     assert replay_state["active_source_instance_id"] == second["source_instance_id"]
 
 
+def test_j6_new_source_takeover_requires_strictly_higher_epoch():
+    functions = load_command_channel_functions()
+    fresh = functions["command_source_takeover_epoch_is_fresh"]
+    replay_state = functions["make_command_source_replay_state"]()
+    replay_state["active_source_instance_id"] = "0" * 32
+    command = {
+        "mode": "position",
+        "active_joint_mask": [False] * 5 + [True],
+        "source_instance_id": "1" * 32,
+        "activation_epoch": 7,
+    }
+    assert not fresh(command, replay_state, 7)
+    command["activation_epoch"] = 8
+    assert fresh(command, replay_state, 7)
+    command["source_instance_id"] = "0" * 32
+    command["activation_epoch"] = 7
+    assert fresh(command, replay_state, 7)
+
+
 def test_j6_brake_bypasses_and_does_not_mutate_source_replay_state():
     functions = load_command_channel_functions()
     receive_latest = functions["receive_latest"]
@@ -3165,6 +4022,9 @@ def test_j6_brake_bypasses_and_does_not_mutate_source_replay_state():
         },
         "active_source_instance_id": source_id,
         "active_source_last_received_monotonic_ns": 456789,
+        "empirical_authority_binding": None,
+        "empirical_active_sha256": None,
+        "empirical_spent_sha256": {},
     }
     brake = json.loads(command_payload(schema="go-m8010-gui-command/1.0"))
     brake["mode"] = "brake"
