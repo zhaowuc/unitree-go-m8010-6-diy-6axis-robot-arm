@@ -296,7 +296,10 @@ def _validate_safe_motor_summary(name: str, value: Any) -> None:
         f"power-on {name} reports abnormal velocity",
     )
     modes = value.get("observed_modes")
-    allowed = {"disabled"} if name == "J6" else {"brake"}
+    # The whole-arm state model intentionally normalizes the J6 drive's raw
+    # DISABLED state to ``brake``.  Accept either spelling for J6 while still
+    # rejecting every active controller mode.
+    allowed = {"brake", "disabled"} if name == "J6" else {"brake"}
     _require(
         isinstance(modes, list)
         and bool(modes)
@@ -377,8 +380,13 @@ def validate_power_on(
         )
         motors = exact_motor_mapping(sample.get("per_motor"), f"{label} per_motor")
         for name in MOTOR_NAMES:
-            expected_mode = "disabled" if name == "J6" else "brake"
-            _require(modes[name] == expected_mode, f"{label} {name} left BRAKE/DISABLED")
+            allowed_modes = (
+                {"brake", "disabled"} if name == "J6" else {"brake"}
+            )
+            _require(
+                modes[name] in allowed_modes,
+                f"{label} {name} left BRAKE/DISABLED",
+            )
             motor = motors[name]
             _require(isinstance(motor, Mapping), f"{label} {name} record is invalid")
             _require(

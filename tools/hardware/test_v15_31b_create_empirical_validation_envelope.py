@@ -67,7 +67,7 @@ def _power_on() -> dict:
             "max_abs_merror": 0,
             "communication_interruptions": 0,
             "abnormal_velocity_detected": False,
-            "observed_modes": ["disabled" if name == "J6" else "brake"],
+            "observed_modes": ["brake"],
         }
     return {
         "schema_version": "V15.31B-power-on-readonly-v1",
@@ -423,6 +423,7 @@ def test_rejects_model_demand_above_software_hard_limit(tmp_path: Path) -> None:
     [
         (lambda power, gravity: power["per_motor"]["J3"].update(max_temperature_c=55.0), "entry temperature"),
         (lambda power, gravity: power["per_motor"]["J2A"].update(max_abs_merror=1), "merror"),
+        (lambda power, gravity: power["per_motor"]["J6"].update(observed_modes=["position"]), "BRAKE/DISABLED"),
         (lambda power, gravity: power["j2"].update(max_abs_e_sync_deg=0.251), "sync exceeds warning"),
         (lambda power, gravity: gravity.update(hardware_tff_enabled=True), "enabled hardware Tff"),
         (lambda power, gravity: gravity.update(tff_transmitted=True), "transmitted Tff"),
