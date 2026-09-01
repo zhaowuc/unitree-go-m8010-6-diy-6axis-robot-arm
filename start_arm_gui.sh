@@ -2771,7 +2771,11 @@ reported=()
 for index in "${!WORKER_PIDS[@]}"; do
   if [[ "${WORKER_BOUND[$index]}" -eq 1 ]]; then reported+=(0); else reported+=(1); fi
 done
-while kill -0 "$ROS_PID" 2>/dev/null; do
+MONITORED_CORE_PID="$ROS_PID"
+if [[ "$REUSE_RUNNING_ARM_GUI_CORE" == "true" ]]; then
+  MONITORED_CORE_PID="$EXTERNAL_ARM_GUI_CORE_PID"
+fi
+while kill -0 "$MONITORED_CORE_PID" 2>/dev/null; do
   if ! worker_is_live "$WORKER_SUPERVISOR_PID"; then
     wait "$WORKER_SUPERVISOR_PID" 2>/dev/null || true
     tail -n 20 "$WORKER_SUPERVISOR_LOG" >&2 2>/dev/null || true
@@ -2788,4 +2792,7 @@ while kill -0 "$ROS_PID" 2>/dev/null; do
   done
   sleep 0.5
 done
+if [[ "$REUSE_RUNNING_ARM_GUI_CORE" == "true" ]]; then
+  fail "复用的 arm GUI 核心进程已退出"
+fi
 wait "$ROS_PID"

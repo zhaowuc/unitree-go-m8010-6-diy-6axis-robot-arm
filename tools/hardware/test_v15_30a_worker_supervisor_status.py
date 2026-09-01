@@ -301,3 +301,5 @@ def test_reused_core_does_not_fail_its_own_udp_listener_preflight() -> None:
         'if [[ "$REUSE_RUNNING_ARM_GUI_CORE" != "true" ]] '
         '&& udp_port_in_use 15300; then'
     ) in script
+    assert 'MONITORED_CORE_PID="$EXTERNAL_ARM_GUI_CORE_PID"' in script
+    assert 'while kill -0 "$MONITORED_CORE_PID"' in script
