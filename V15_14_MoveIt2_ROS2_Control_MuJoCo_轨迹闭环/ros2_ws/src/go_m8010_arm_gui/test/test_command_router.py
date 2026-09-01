@@ -423,6 +423,41 @@ def test_empirical_authority_stale_or_deadline_revokes_once():
     )
 
 
+def test_zero_hold_transition_deadline_covers_authorize_and_timer_staleness():
+    now_ns = 10_000_000_000
+    gate = GravityAuthorityGate(maximum_age_ns=250_000_000)
+    authority = _empirical_latest(
+        now_ns, deadline_ns=now_ns + 5_000_000_000
+    )
+    authority.update({
+        "empirical_stage_index": 0,
+        "empirical_position_validation_authorized": False,
+        "gravity_scale": 0.0,
+        "gravity_scale_target": 0.0,
+        "feedforward_nm": [0.0] * 6,
+    })
+    gate._latest = authority
+    checked = now_ns + 500_000_000
+    transition_deadline = now_ns + EMPIRICAL_ZERO_HOLD_TRANSITION_GRACE_NS
+    hold = json.loads(command(mode="hold"))
+    gate.authorize(
+        hold,
+        now_ns=checked,
+        zero_hold_transition_deadline_ns=transition_deadline,
+    )
+    assert hold["feedforward_nm"] == [0.0] * 6
+    assert not gate.revoke_unusable_empirical(
+        now_ns=checked,
+        now_timestamp=1.0,
+        zero_hold_transition_deadline_ns=transition_deadline,
+    )
+    assert gate.revoke_unusable_empirical(
+        now_ns=transition_deadline + 1,
+        now_timestamp=1.0,
+        zero_hold_transition_deadline_ns=transition_deadline,
+    )
+
+
 def test_empirical_active_brake_spends_permit_before_feedback_race():
     now_ns = 10_000_000_000
     gate = GravityAuthorityGate(maximum_age_ns=10_000_000_000)

@@ -1419,6 +1419,7 @@ class GravityAuthorityGate:
         *,
         now_ns: Optional[int] = None,
         now_timestamp: Optional[float] = None,
+        zero_hold_transition_deadline_ns: Optional[int] = None,
     ) -> bool:
         """Atomically revoke a stale/expired empirical authority.
 
@@ -1438,13 +1439,24 @@ class GravityAuthorityGate:
         checked_timestamp = (
             time.time() if now_timestamp is None else now_timestamp
         )
-        unusable = (
+        stale = (
             checked_ns < latest["source_monotonic_ns"]
             or checked_ns - latest["source_monotonic_ns"]
             > self.maximum_age_ns
             or checked_ns < latest["received_monotonic_ns"]
             or checked_ns - latest["received_monotonic_ns"]
             > self.maximum_age_ns
+        )
+        zero_hold_transition = bool(
+            type(zero_hold_transition_deadline_ns) is int
+            and checked_ns <= zero_hold_transition_deadline_ns
+            and latest.get("empirical_stage_index") == 0
+            and latest.get("gravity_scale") == 0.0
+            and latest.get("gravity_scale_target") == 0.0
+            and latest.get("feedforward_nm") == [0.0] * 6
+        )
+        unusable = (
+            (stale and not zero_hold_transition)
             or checked_timestamp
             >= latest["empirical_envelope_expires_timestamp"]
             or checked_ns
@@ -1812,7 +1824,13 @@ class GravityAuthorityGate:
             self._latest = None
             return False
 
-    def authorize(self, command: dict, now_ns: Optional[int] = None) -> None:
+    def authorize(
+        self,
+        command: dict,
+        now_ns: Optional[int] = None,
+        *,
+        zero_hold_transition_deadline_ns: Optional[int] = None,
+    ) -> None:
         checked_ns = time.monotonic_ns() if now_ns is None else now_ns
         if command.get("mode") in {"brake", "drag"}:
             self.spend_all_active_empirical()
@@ -1831,12 +1849,33 @@ class GravityAuthorityGate:
             command.pop("gravity_authority", None)
             return
         latest = self._latest
+        stale = bool(
+            latest is not None
+            and (
+                checked_ns < latest["source_monotonic_ns"]
+                or checked_ns - latest["source_monotonic_ns"]
+                > self.maximum_age_ns
+                or checked_ns < latest["received_monotonic_ns"]
+                or checked_ns - latest["received_monotonic_ns"]
+                > self.maximum_age_ns
+            )
+        )
+        zero_hold_transition = bool(
+            isinstance(latest, dict)
+            and command.get("mode") == "hold"
+            and command.get("moving_joint_mask") == [False] * 6
+            and type(zero_hold_transition_deadline_ns) is int
+            and checked_ns <= zero_hold_transition_deadline_ns
+            and latest.get("authority_kind")
+            == "EMPIRICAL_VALIDATION_ENVELOPE"
+            and latest.get("empirical_stage_index") == 0
+            and latest.get("gravity_scale") == 0.0
+            and latest.get("gravity_scale_target") == 0.0
+            and latest.get("feedforward_nm") == [0.0] * 6
+        )
         if (
             latest is None
-            or checked_ns < latest["source_monotonic_ns"]
-            or checked_ns - latest["source_monotonic_ns"] > self.maximum_age_ns
-            or checked_ns < latest["received_monotonic_ns"]
-            or checked_ns - latest["received_monotonic_ns"] > self.maximum_age_ns
+            or (stale and not zero_hold_transition)
             or (
                 latest.get("authority_kind")
                 == "EMPIRICAL_VALIDATION_ENVELOPE"
@@ -2703,20 +2742,33 @@ class CommandRouter(Node):
             # receive data.  Exact refreshes are recognized by the frozen
             # manifest record and do not re-apply the first-packet lead gate.
             self.plan_manifest_gate.authorize(normalized, now_ns=now_ns)
-            self.gravity_authority_gate.authorize(normalized, now_ns=now_ns)
+            if (
+                normalized.get("mode") == "hold"
+                and previous_mode != "hold"
+                and getattr(
+                    self, "empirical_zero_hold_transition_started_ns", None
+                ) is None
+            ):
+                self.empirical_zero_hold_transition_started_ns = now_ns
+            grace_started_ns = getattr(
+                self, "empirical_zero_hold_transition_started_ns", None
+            )
+            grace_deadline_ns = (
+                None
+                if type(grace_started_ns) is not int
+                else grace_started_ns
+                + EMPIRICAL_ZERO_HOLD_TRANSITION_GRACE_NS
+            )
+            self.gravity_authority_gate.authorize(
+                normalized,
+                now_ns=now_ns,
+                zero_hold_transition_deadline_ns=grace_deadline_ns,
+            )
             self.replay_guard.commit(normalized, now_ns=now_ns)
             for domain, destination in self.destinations:
                 self.socket.sendto(payload_for_domain(normalized, domain), destination)
             self.last_command = normalized
-            if normalized.get("mode") == "hold" and previous_mode != "hold":
-                authority = normalized.get("gravity_authority")
-                if (
-                    isinstance(authority, dict)
-                    and authority.get("gravity_scale_target") == 0.0
-                    and normalized.get("feedforward_nm") == [0.0] * 6
-                ):
-                    self.empirical_zero_hold_transition_started_ns = now_ns
-            elif normalized.get("mode") != "hold":
+            if normalized.get("mode") != "hold":
                 self.empirical_zero_hold_transition_started_ns = None
         except Exception as exc:
             reports = self.rejection_tracker.record(exc)
@@ -2743,7 +2795,16 @@ class CommandRouter(Node):
         self._log_rejection_reports(self.rejection_tracker.flush())
         now_ns = time.monotonic_ns()
         if self.gravity_authority_gate.revoke_unusable_empirical(
-            now_ns=now_ns
+            now_ns=now_ns,
+            zero_hold_transition_deadline_ns=(
+                None
+                if type(getattr(
+                    self, "empirical_zero_hold_transition_started_ns", None
+                ))
+                is not int
+                else self.empirical_zero_hold_transition_started_ns
+                + EMPIRICAL_ZERO_HOLD_TRANSITION_GRACE_NS
+            ),
         ):
             self._send_empirical_revocation_brake(
                 "EMPIRICAL_GRAVITY_AUTHORITY_STALE_OR_EXPIRED"
