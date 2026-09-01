@@ -28,6 +28,7 @@ from go_m8010_arm_gui.command_router import (
     GUI_COMMAND_SCHEMA_V13,
     GRAVITY_CONFIG_SHA256,
     GRAVITY_STATUS_SCHEMA,
+    EMPIRICAL_ZERO_HOLD_TRANSITION_GRACE_NS,
     MODEL_COMMAND_LOWER_RAD,
     MODEL_COMMAND_UPPER_RAD,
     MOTOR_NAMES,
@@ -466,6 +467,43 @@ def test_empirical_valid_to_invalid_status_requests_revocation_brake():
     CommandRouter.on_gravity_status(
         fake, SimpleNamespace(data='{"source_instance_id":"revoked"}')
     )
+    assert reasons == ["EMPIRICAL_GRAVITY_AUTHORITY_REVOKED"]
+    assert not gate.available
+
+
+def test_zero_scale_first_hold_has_bounded_status_transition_grace(monkeypatch):
+    now_ns = 10_000_000_000
+    gate = GravityAuthorityGate()
+    authority = _empirical_latest(
+        now_ns, deadline_ns=now_ns + 1_000_000_000
+    )
+    authority.update({
+        "empirical_stage_index": 0,
+        "empirical_position_validation_authorized": False,
+        "gravity_scale": 0.0,
+        "gravity_scale_target": 0.0,
+        "feedforward_nm": [0.0] * 6,
+    })
+    gate._latest = authority
+    reasons = []
+    fake = SimpleNamespace(
+        gravity_authority_gate=gate,
+        empirical_zero_hold_transition_started_ns=now_ns,
+        last_command={
+            "mode": "hold",
+            "moving_joint_mask": [False] * 6,
+        },
+        _send_empirical_revocation_brake=reasons.append,
+    )
+    clock = [now_ns + 1]
+    monkeypatch.setattr(time, "monotonic_ns", lambda: clock[0])
+    invalid = SimpleNamespace(data='{"source_instance_id":"transition"}')
+    CommandRouter.on_gravity_status(fake, invalid)
+    assert reasons == []
+    assert gate.available
+
+    clock[0] = now_ns + EMPIRICAL_ZERO_HOLD_TRANSITION_GRACE_NS + 1
+    CommandRouter.on_gravity_status(fake, invalid)
     assert reasons == ["EMPIRICAL_GRAVITY_AUTHORITY_REVOKED"]
     assert not gate.available
 

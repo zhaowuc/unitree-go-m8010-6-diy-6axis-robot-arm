@@ -53,6 +53,7 @@ PLANNED_THERMAL_EVALUATION_BASIS = (
     "NO_HEAT_RISE_MODEL"
 )
 GRAVITY_STATUS_MAXIMUM_AGE_NS = 250_000_000
+EMPIRICAL_ZERO_HOLD_TRANSITION_GRACE_NS = 250_000_000
 GRAVITY_SCALE_LEVELS = (0.0, 0.25, 0.50, 0.75, 1.0)
 # Software command envelopes derived from the frozen model and existing
 # controller guards.  They are not continuous motor ratings.
@@ -2559,6 +2560,7 @@ class CommandRouter(Node):
         self.gravity_authority_gate = GravityAuthorityGate()
         self.empirical_revocation_brakes = 0
         self.last_empirical_revocation_reason: Optional[str] = None
+        self.empirical_zero_hold_transition_started_ns: Optional[int] = None
         self.rejected = 0
         self.rejection_tracker = RejectionTracker()
         self.timer = self.create_timer(0.5, self.publish_status)
@@ -2584,6 +2586,8 @@ class CommandRouter(Node):
         """Observe the independent model authority; invalid data revokes it."""
 
         previous_empirical = self.gravity_authority_gate.empirical_identity
+        previous_authority = deepcopy(self.gravity_authority_gate._latest)
+        now_ns = time.monotonic_ns()
         try:
             value = json.loads(message.data)
         except (json.JSONDecodeError, TypeError):
@@ -2596,16 +2600,48 @@ class CommandRouter(Node):
                 )
             return
         accepted = self.gravity_authority_gate.observe_status(
-            value, now_ns=time.monotonic_ns()
+            value, now_ns=now_ns
         )
         if previous_empirical is not None and (
             not accepted
             or self.gravity_authority_gate.empirical_identity
             != previous_empirical
         ):
+            grace_started_ns = getattr(
+                self, "empirical_zero_hold_transition_started_ns", None
+            )
+            grace_eligible = bool(
+                not accepted
+                and isinstance(previous_authority, dict)
+                and previous_authority.get("authority_kind")
+                == "EMPIRICAL_VALIDATION_ENVELOPE"
+                and previous_authority.get("empirical_stage_index") == 0
+                and previous_authority.get("gravity_scale") == 0.0
+                and previous_authority.get("gravity_scale_target") == 0.0
+                and previous_authority.get("feedforward_nm") == [0.0] * 6
+                and isinstance(getattr(self, "last_command", None), dict)
+                and self.last_command.get("mode") == "hold"
+                and self.last_command.get("moving_joint_mask") == [False] * 6
+                and type(grace_started_ns) is int
+                and 0 <= now_ns - grace_started_ns
+                <= EMPIRICAL_ZERO_HOLD_TRANSITION_GRACE_NS
+                and not (
+                    isinstance(value, dict)
+                    and isinstance(value.get("empirical_validation"), dict)
+                    and value["empirical_validation"].get("invalidated") is True
+                )
+            )
+            if grace_eligible:
+                self.gravity_authority_gate._latest = previous_authority
+                return
             self._send_empirical_revocation_brake(
                 "EMPIRICAL_GRAVITY_AUTHORITY_REVOKED"
             )
+        elif accepted and isinstance(value.get("empirical_validation"), dict):
+            if value["empirical_validation"].get("blocker") != (
+                "EMPIRICAL_ZERO_CURRENT_POSITION_HOLD_PENDING"
+            ):
+                self.empirical_zero_hold_transition_started_ns = None
 
     def _send_empirical_revocation_brake(self, reason: str) -> None:
         """Fence all four UDP domains on an empirical revocation edge."""
@@ -2653,6 +2689,9 @@ class CommandRouter(Node):
     def on_command(self, message: String) -> None:
         try:
             now_ns = time.monotonic_ns()
+            previous_mode = (
+                None if self.last_command is None else self.last_command.get("mode")
+            )
             normalized, _payload = validate_command(
                 message.data,
                 now_ns=now_ns,
@@ -2669,6 +2708,16 @@ class CommandRouter(Node):
             for domain, destination in self.destinations:
                 self.socket.sendto(payload_for_domain(normalized, domain), destination)
             self.last_command = normalized
+            if normalized.get("mode") == "hold" and previous_mode != "hold":
+                authority = normalized.get("gravity_authority")
+                if (
+                    isinstance(authority, dict)
+                    and authority.get("gravity_scale_target") == 0.0
+                    and normalized.get("feedforward_nm") == [0.0] * 6
+                ):
+                    self.empirical_zero_hold_transition_started_ns = now_ns
+            elif normalized.get("mode") != "hold":
+                self.empirical_zero_hold_transition_started_ns = None
         except Exception as exc:
             reports = self.rejection_tracker.record(exc)
             self.rejected = self.rejection_tracker.total
