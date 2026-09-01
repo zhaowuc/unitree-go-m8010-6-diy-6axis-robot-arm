@@ -53,7 +53,7 @@ PLANNED_THERMAL_EVALUATION_BASIS = (
     "NO_HEAT_RISE_MODEL"
 )
 GRAVITY_STATUS_MAXIMUM_AGE_NS = 250_000_000
-EMPIRICAL_ZERO_HOLD_TRANSITION_GRACE_NS = 250_000_000
+EMPIRICAL_ZERO_HOLD_TRANSITION_GRACE_NS = 2_000_000_000
 GRAVITY_SCALE_LEVELS = (0.0, 0.25, 0.50, 0.75, 1.0)
 # Software command envelopes derived from the frozen model and existing
 # controller guards.  They are not continuous motor ratings.
