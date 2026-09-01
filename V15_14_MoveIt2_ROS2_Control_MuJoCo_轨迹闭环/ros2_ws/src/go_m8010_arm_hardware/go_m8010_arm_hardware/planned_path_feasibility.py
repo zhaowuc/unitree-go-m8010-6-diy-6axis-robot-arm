@@ -38,6 +38,9 @@ THERMAL_CONFIG_SHA256 = (
 )
 MOTOR_NAMES = ("J1", "J2A", "J2B", "J3", "J4", "J5", "J6")
 JOINT_NAMES = ("J1", "J2", "J3", "J4", "J5", "J6")
+HARDWARE_STATE_JOINT_NAMES = (
+    "joint1", "joint2", "joint3", "joint4", "joint5", "joint6",
+)
 MAXIMUM_SEGMENTS = 4096
 MAXIMUM_INTERVALS = 1_000_000
 REQUEST_MAXIMUM_AGE_NS = 2_000_000_000
@@ -657,7 +660,8 @@ def hardware_pose_feedback_blocker(
         hardware_state.get("schema") != "go-m8010-hardware-state/1.1"
         or hardware_state.get("session_id") != session_id
         or hardware_state.get("state_instance_id") != state_instance_id
-        or tuple(hardware_state.get("joint_names", ())) != JOINT_NAMES
+        or tuple(hardware_state.get("joint_names", ()))
+        != HARDWARE_STATE_JOINT_NAMES
     ):
         return "HARDWARE_POSE_STATE_IDENTITY_INVALID"
     source_ns = hardware_state.get("source_monotonic_ns")

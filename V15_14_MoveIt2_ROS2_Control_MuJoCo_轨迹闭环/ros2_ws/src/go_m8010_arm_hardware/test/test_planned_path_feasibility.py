@@ -321,7 +321,7 @@ def test_pose_authority_rejects_stale_motor_inside_fresh_outer_snapshot():
         "session_id": "session-a",
         "state_instance_id": "2" * 32,
         "source_monotonic_ns": now_ns - 1_000_000,
-        "joint_names": list(subject.JOINT_NAMES),
+        "joint_names": list(subject.HARDWARE_STATE_JOINT_NAMES),
         "healthy": True,
         "per_motor": {
             name: {
@@ -345,6 +345,16 @@ def test_pose_authority_rejects_stale_motor_inside_fresh_outer_snapshot():
         session_id="session-a",
         state_instance_id="2" * 32,
     ) == ""
+
+    planning_names = copy.deepcopy(state)
+    planning_names["joint_names"] = list(subject.JOINT_NAMES)
+    assert subject.hardware_pose_feedback_blocker(
+        planning_names,
+        now_monotonic_ns=now_ns,
+        maximum_age_ns=250_000_000,
+        session_id="session-a",
+        state_instance_id="2" * 32,
+    ) == "HARDWARE_POSE_STATE_IDENTITY_INVALID"
 
     stale = copy.deepcopy(state)
     stale["per_motor"]["J2B"]["fresh"] = False
