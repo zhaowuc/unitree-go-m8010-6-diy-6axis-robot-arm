@@ -293,3 +293,11 @@ def test_start_script_integrates_heartbeat_with_readiness_monitor_and_cleanup() 
     assert cleanup.index("stop_worker_supervisor_status") < cleanup.index(
         'kill -TERM "$pid"'
     )
+
+
+def test_reused_core_does_not_fail_its_own_udp_listener_preflight() -> None:
+    script = (ROOT / "start_arm_gui.sh").read_text(encoding="utf-8")
+    assert (
+        'if [[ "$REUSE_RUNNING_ARM_GUI_CORE" != "true" ]] '
+        '&& udp_port_in_use 15300; then'
+    ) in script

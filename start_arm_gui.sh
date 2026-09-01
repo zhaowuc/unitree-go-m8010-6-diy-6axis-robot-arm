@@ -1900,7 +1900,7 @@ declare -A GO_DEVICE=(
   [J345]='/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if02-port0'
 )
 if [[ "$PREBUILD_ONLY" -eq 0 ]]; then
-  if udp_port_in_use 15300; then
+  if [[ "$REUSE_RUNNING_ARM_GUI_CORE" != "true" ]] && udp_port_in_use 15300; then
     fail "ROS2 硬件状态核心 UDP 端口 15300 已被占用"
   fi
   for domain in J1 J2 J345 J6; do
