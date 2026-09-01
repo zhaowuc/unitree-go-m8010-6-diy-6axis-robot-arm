@@ -253,6 +253,25 @@ def test_cross_topic_reordering_is_paired_without_weakening_identity() -> None:
     assert value.build_document()["valid_sample_count"] == 41
 
 
+def test_joint_state_ui_crosscheck_is_diagnostic_not_authoritative() -> None:
+    value = recorder()
+    state = hardware_state(1, 1_000_000_000, pose_for(0))
+    status = gravity_status(1, 1_001_000_000, state)
+    status["joint_state_crosscheck"] = False
+    value.add_hardware_state(state)
+    value.add_gravity_status(status)
+    assert value.joint_state_crosscheck_false_count == 1
+
+    invalid = recorder()
+    status["joint_state_crosscheck"] = "false"
+    invalid.add_hardware_state(state)
+    with pytest.raises(
+        capture.GravityReadOnlyCaptureError,
+        match="cross-check is invalid",
+    ):
+        invalid.add_gravity_status(status)
+
+
 def test_discards_only_pre_window_volatile_subscription_race() -> None:
     value = recorder()
     missed = hardware_state(10, 1_000_000_000, pose_for(0))

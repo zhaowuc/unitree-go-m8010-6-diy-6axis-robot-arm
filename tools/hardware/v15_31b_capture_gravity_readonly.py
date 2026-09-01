@@ -453,6 +453,7 @@ class GravityReadOnlyRecorder:
         self.maximum_velocity_rad_s = 0.0
         self.maximum_abs_j2_gravity_nm = 0.0
         self.maximum_abs_gravity_nm = 0.0
+        self.joint_state_crosscheck_false_count = 0
 
     @property
     def duration_ns(self) -> int:
@@ -749,10 +750,15 @@ class GravityReadOnlyRecorder:
                 f"{label} q_actual hash does not match paired hardware state"
             )
         crosscheck = document.get("joint_state_crosscheck")
-        if crosscheck not in {None, True}:
+        if crosscheck is not None and type(crosscheck) is not bool:
             raise GravityReadOnlyCaptureError(
-                f"{label} /joint_states cross-check disagrees"
+                f"{label} /joint_states cross-check is invalid"
             )
+        if crosscheck is False:
+            # /joint_states is an asynchronous UI mirror and can name an
+            # adjacent sample.  The authoritative pose above is already
+            # paired by hardware sequence/timestamp and verified by SHA-256.
+            self.joint_state_crosscheck_false_count += 1
         rate = finite_number(
             document.get("calculation_rate_hz"), f"{label}.calculation_rate_hz"
         )
@@ -964,6 +970,9 @@ class GravityReadOnlyRecorder:
                 "maximum_abs_velocity_rad_s": self.maximum_velocity_rad_s,
                 "maximum_model_comparison_error_nm": self.maximum_model_error_nm,
                 "maximum_direction_probe_second_difference_nm": probe_second_difference,
+                "joint_state_crosscheck_false_count": (
+                    self.joint_state_crosscheck_false_count
+                ),
             },
             "validation_basis": {
                 "model_pose_alignment": (
