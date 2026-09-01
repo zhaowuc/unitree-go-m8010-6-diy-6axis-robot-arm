@@ -174,23 +174,134 @@ class RawCanLogger:
         self.master_id: Optional[int] = None
         self._events: list[RawEvent] = []
         self._lock = threading.Lock()
-        self.context = DmCanContext()
-        count = int(self.context.find_devices())
-        if count != 1:
-            self.context._ctx = None
-            raise Blocked(f"expected exactly one DM adapter, observed {count}")
-        self.device = self.context.get_device(0)
-        if not self.device.open():
-            self.context._ctx = None
-            raise Blocked("DM adapter open failed")
-        self.device.enable_channel(self.channel, True)
-        info = self.device.get_channel_baudrate(self.channel)
-        if info is None or bool(info.canfd) or int(info.can_baudrate) != CAN_BITRATE:
-            self.close()
-            raise Blocked("adapter is not channel 0 Classic CAN at 1 Mbps")
-        self.device.hook_recv_callback(self._on_receive)
-        self.device.hook_sent_callback(self._on_sent)
-        self.device.hook_err_callback(self._on_error)
+        self.context = None
+        self.device = None
+        self._context_type = DmCanContext
+        self._closed = False
+        self._last_send_delivered = False
+        self._communication_interlock_pending = False
+        self._reconnect_attempt_count = 0
+        self._reconnect_success_count = 0
+        self._reconnect_delay_s = 0.10
+        self._next_reconnect_at = 0.0
+        self._open_exact_adapter(initial=True)
+
+    @property
+    def last_send_delivered(self) -> bool:
+        return self._last_send_delivered
+
+    @property
+    def reconnect_attempt_count(self) -> int:
+        return self._reconnect_attempt_count
+
+    @property
+    def reconnect_success_count(self) -> int:
+        return self._reconnect_success_count
+
+    def consume_communication_interlock(self) -> bool:
+        pending = self._communication_interlock_pending or self.device is None
+        self._communication_interlock_pending = False
+        return pending
+
+    def _dispose_adapter(self) -> None:
+        device = self.device
+        self.device = None
+        if device is not None:
+            try:
+                device.enable_channel(self.channel, False)
+            except Exception:
+                pass
+            try:
+                device.close()
+            except Exception:
+                pass
+        context = self.context
+        self.context = None
+        if context is not None:
+            try:
+                context._ctx = None
+            except Exception:
+                pass
+
+    def _open_exact_adapter(self, *, initial: bool) -> bool:
+        if self._closed:
+            return False
+        now = time.monotonic()
+        if not initial and now < self._next_reconnect_at:
+            return False
+        if not initial:
+            self._reconnect_attempt_count += 1
+        self._dispose_adapter()
+        try:
+            exact_usb_identity()
+            context = self._context_type()
+            count = int(context.find_devices())
+            if count != 1:
+                context._ctx = None
+                raise Blocked(
+                    f"expected exactly one DM adapter, observed {count}"
+                )
+            device = context.get_device(0)
+            if not device.open():
+                context._ctx = None
+                raise Blocked("DM adapter open failed")
+            device.enable_channel(self.channel, True)
+            info = device.get_channel_baudrate(self.channel)
+            if (
+                info is None
+                or bool(info.canfd)
+                or int(info.can_baudrate) != CAN_BITRATE
+            ):
+                try:
+                    device.enable_channel(self.channel, False)
+                    device.close()
+                finally:
+                    context._ctx = None
+                raise Blocked(
+                    "adapter is not channel 0 Classic CAN at 1 Mbps"
+                )
+            self.context = context
+            self.device = device
+            device.hook_recv_callback(self._on_receive)
+            device.hook_sent_callback(self._on_sent)
+            device.hook_err_callback(self._on_error)
+        except Exception:
+            self._dispose_adapter()
+            if initial:
+                raise
+            self._next_reconnect_at = now + self._reconnect_delay_s
+            self._reconnect_delay_s = min(self._reconnect_delay_s * 2.0, 2.0)
+            return False
+        if not initial:
+            self._reconnect_success_count += 1
+            self._communication_interlock_pending = True
+            self._reconnect_delay_s = 0.10
+            self._next_reconnect_at = 0.0
+            self._send_recovery_disable_prime()
+        return True
+
+    def _send_recovery_disable_prime(self) -> None:
+        """On a new adapter epoch, transmit only DISABLE/refresh frames."""
+
+        if self.device is None:
+            return
+        disable = b"\xFF" * 7 + b"\xFD"
+        refresh = refresh_request()
+        try:
+            for _index in range(3):
+                if not self.device.send_can(
+                    self.channel, self.motor_id, 8, disable,
+                    False, False, False, False,
+                ):
+                    raise RuntimeError("recovery DISABLE send failed")
+            for _index in range(5):
+                if not self.device.send_can(
+                    self.channel, 0x7FF, 8, refresh,
+                    False, False, False, False,
+                ):
+                    raise RuntimeError("recovery refresh send failed")
+        except Exception:
+            self._dispose_adapter()
 
     @staticmethod
     def dlc_bytes(dlc: int) -> int:
@@ -258,12 +369,27 @@ class RawCanLogger:
         )
         with self._lock:
             self._events.append(event)
-        ok = self.device.send_can(
-            self.channel, can_id, len(payload), payload,
-            False, False, False, False,
-        )
+        self._last_send_delivered = False
+        if self.device is None:
+            self._communication_interlock_pending = True
+            self._open_exact_adapter(initial=False)
+            return sent_at
+        try:
+            ok = self.device.send_can(
+                self.channel, can_id, len(payload), payload,
+                False, False, False, False,
+            )
+        except Exception:
+            ok = False
         if not ok:
-            raise RuntimeError(f"CAN send failed: {label} ID=0x{can_id:X}")
+            self._communication_interlock_pending = True
+            self._dispose_adapter()
+            self._next_reconnect_at = 0.0
+            self._open_exact_adapter(initial=False)
+            # Never replay the interrupted request on a newly opened module.
+            # The recovery path above emits only DISABLE/refresh frames.
+            return sent_at
+        self._last_send_delivered = True
         return sent_at
 
     def snapshot(self) -> list[RawEvent]:
@@ -278,18 +404,8 @@ class RawCanLogger:
             return events
 
     def close(self) -> None:
-        try:
-            self.device.enable_channel(self.channel, False)
-        except Exception:
-            pass
-        try:
-            self.device.close()
-        except Exception:
-            pass
-        try:
-            self.context._ctx = None
-        except Exception:
-            pass
+        self._closed = True
+        self._dispose_adapter()
 
     def allowed_feedback_ids(self) -> set[int]:
         ids = {self.motor_id}

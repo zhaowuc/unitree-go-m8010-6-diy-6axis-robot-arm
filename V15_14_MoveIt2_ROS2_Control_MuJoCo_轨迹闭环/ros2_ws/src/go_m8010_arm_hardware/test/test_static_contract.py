@@ -81,7 +81,7 @@ class StaticContractTest(unittest.TestCase):
         ):
             self.assertIn(token, source)
         prime_call = source.index(
-            "prime_j2_serial_before_feedback(serial, motors, tx_audit)"
+            "prime_j2_serial_before_feedback(*serial, motors, tx_audit)"
         )
         feedback_socket = source.index(
             "const int feedback_socket = ::socket", prime_call

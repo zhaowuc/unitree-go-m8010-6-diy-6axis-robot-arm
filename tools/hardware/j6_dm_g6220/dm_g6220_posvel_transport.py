@@ -44,6 +44,19 @@ class DmG6220PosVelTransport:
     def send_enable(self) -> float:
         return self._logger.send(MOTOR_ID, b"\xFF" * 7 + b"\xFC", "FC_ENABLE")
 
+    def consume_communication_interlock(self) -> bool:
+        """Report a lost/reopened adapter epoch exactly at the controller."""
+
+        return self._logger.consume_communication_interlock()
+
+    @property
+    def reconnect_attempt_count(self) -> int:
+        return self._logger.reconnect_attempt_count
+
+    @property
+    def reconnect_success_count(self) -> int:
+        return self._logger.reconnect_success_count
+
     def send_disable(self, label: str = "FD_DISABLE") -> float:
         return self._logger.send(MOTOR_ID, b"\xFF" * 7 + b"\xFD", label)
 

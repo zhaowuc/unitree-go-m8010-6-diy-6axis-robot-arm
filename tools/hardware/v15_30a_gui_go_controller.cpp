@@ -1031,6 +1031,12 @@ struct MotorRuntime {
   // republished as fresh or used to mint a new collision authorization.
   bool last_frame_valid = false;
   bool fault_latched = false;
+  // Transport continuity is recoverable only through the in-process
+  // BRAKE-only recommissioning state machine.  Keep it distinct from drive,
+  // envelope, thermal and motion faults so a power-cycle cannot accidentally
+  // clear an unrelated safety latch.
+  bool transport_fault_latched = false;
+  bool non_transport_fault_latched = false;
   // Temperature is an actuation interlock, not evidence that the serial link
   // or motor identity was lost.  Keep it separate from `valid` and from the
   // permanent non-thermal fault latch so an over-temperature worker can stay
@@ -1856,6 +1862,7 @@ bool observe_feedback_frame_validity(
       motor.consecutive_invalid + 1, std::max(1, invalid_limit));
   if (motor.consecutive_invalid < std::max(1, invalid_limit)) return false;
   motor.valid = false;
+  motor.transport_fault_latched = true;
   motor.fault_latched = true;
   return true;
 }
@@ -6971,12 +6978,14 @@ bool send_terminal_brake(SerialPort& serial, std::vector<MotorRuntime>& motors,
 
 class TerminalBrakeGuard {
  public:
-  TerminalBrakeGuard(SerialPort& serial, std::vector<MotorRuntime>& motors,
+  TerminalBrakeGuard(std::unique_ptr<SerialPort>& serial,
+                     std::vector<MotorRuntime>& motors,
                      const std::string& bus, TxAudit& audit)
       : serial_(serial), motors_(motors), bus_(bus), audit_(audit) {}
   ~TerminalBrakeGuard() {
     if (!armed_) return;
-    const bool confirmed = send_terminal_brake(serial_, motors_, bus_, audit_);
+    const bool confirmed = serial_ &&
+        send_terminal_brake(*serial_, motors_, bus_, audit_);
     const char* report = confirmed
         ? "TERMINAL_PATH=EXCEPTION\nFINAL_MODE=BRAKE\nFINAL_BRAKE=PASS\n"
         : "TERMINAL_PATH=EXCEPTION\nFINAL_MODE=UNCONFIRMED\nFINAL_BRAKE=FAIL\n";
@@ -6995,17 +7004,155 @@ class TerminalBrakeGuard {
   }
   bool brake_and_disarm() noexcept {
     const bool confirmed =
-        !armed_ || send_terminal_brake(serial_, motors_, bus_, audit_);
+        !armed_ || (serial_ &&
+            send_terminal_brake(*serial_, motors_, bus_, audit_));
     armed_ = false;
     return confirmed;
   }
  private:
-  SerialPort& serial_;
+  std::unique_ptr<SerialPort>& serial_;
   std::vector<MotorRuntime>& motors_;
   const std::string& bus_;
   TxAudit& audit_;
   bool armed_ = true;
 };
+
+bool recover_go_transport_in_brake(
+    const BusDefinition& definition, std::unique_ptr<SerialPort>& serial,
+    std::vector<MotorRuntime>& motors, const std::string& bus,
+    double maximum_phase_delta_rad, TxAudit& audit,
+    std::uint64_t& recovery_attempt_count,
+    std::uint64_t& recovery_success_count) {
+  ++recovery_attempt_count;
+  const std::uint64_t episode = recovery_attempt_count;
+  std::cerr << "COMMUNICATION_RECOVERY_BEGIN"
+            << " bus=" << bus
+            << " episode=" << episode
+            << " policy=BRAKE_ONLY_RECOMMISSION"
+            << std::endl;
+
+  if (serial) (void)send_terminal_brake(*serial, motors, bus, audit);
+  serial.reset();
+  std::vector<std::deque<double>> stable_windows(motors.size());
+  std::chrono::milliseconds reopen_delay(100);
+  std::uint64_t reopen_attempt = 0U;
+
+  while (!g_stop.load()) {
+    if (!serial) {
+      ++reopen_attempt;
+      try {
+        serial = std::make_unique<SerialPort>(
+            definition.port, 16, 4000000, 20000, BlockYN::NO,
+            bytesize_t::eightbits, parity_t::parity_none,
+            stopbits_t::stopbits_one, flowcontrol_t::flowcontrol_none);
+        reopen_delay = std::chrono::milliseconds(100);
+        std::cerr << "COMMUNICATION_TRANSPORT_REOPENED"
+                  << " bus=" << bus
+                  << " episode=" << episode
+                  << " reopen_attempt=" << reopen_attempt
+                  << std::endl;
+      } catch (...) {
+        std::cerr << "COMMUNICATION_TRANSPORT_WAIT"
+                  << " bus=" << bus
+                  << " episode=" << episode
+                  << " reopen_attempt=" << reopen_attempt
+                  << " retry_ms=" << reopen_delay.count()
+                  << std::endl;
+        std::this_thread::sleep_for(reopen_delay);
+        reopen_delay = std::min(
+            reopen_delay * 2, std::chrono::milliseconds(2000));
+        continue;
+      }
+    }
+
+    bool cycle_safe = true;
+    for (std::size_t index = 0; index < motors.size(); ++index) {
+      auto& motor = motors[index];
+      motor.last_tau_cmd_rotor_nm = 0.0;
+      MotorCmd brake = make_command(
+          motor.id, kBrakeMode, 0.0, 0.0, 0.0, 0.0);
+      const Feedback feedback = transact(
+          *serial, brake, motor.id, kBrakeMode, audit);
+      if (!feedback.continuity_valid) {
+        cycle_safe = false;
+        stable_windows[index].clear();
+        continue;
+      }
+      motor.last_q = feedback.data.q;
+      motor.last_dq = feedback.data.dq;
+      motor.last_tau = feedback.data.tau;
+      motor.temperature = feedback.data.temp;
+      motor.merror = feedback.data.merror;
+      motor.returned_mode = feedback.data.mode;
+      motor.last_valid_feedback_monotonic_ns = monotonic_ns();
+      motor.unwrapped = motor.unwrap.update(motor.last_q);
+      const double logical =
+          motor.sign * (motor.unwrapped - motor.reference) / kGear;
+      const double phase_reference = motor.session_reference_configured
+          ? motor.session_reference : motor.reference;
+      const double phase_delta = std::abs(std::remainder(
+          motor.unwrapped - phase_reference, 2.0 * kPi));
+      const bool sample_safe = feedback.data.merror == 0 &&
+          feedback.data.temp >= 0 &&
+          feedback.data.temp < g_thermal_policy.thermal_stop_c &&
+          std::isfinite(logical) &&
+          within_mechanical_feedback_envelope(motor.joint_index, logical) &&
+          phase_delta <= maximum_phase_delta_rad + 1e-12;
+      if (!sample_safe) {
+        cycle_safe = false;
+        stable_windows[index].clear();
+        continue;
+      }
+      auto& window = stable_windows[index];
+      window.push_back(motor.unwrapped);
+      while (window.size() > 5U) window.pop_front();
+    }
+
+    if (cycle_safe && bus == "j2" && motors.size() == 2U) {
+      const double q_a =
+          -1.0 * (motors[0].unwrapped - motors[0].reference) / kGear;
+      const double q_b =
+          +1.0 * (motors[1].unwrapped - motors[1].reference) / kGear;
+      if (!std::isfinite(q_a) || !std::isfinite(q_b) ||
+          std::abs(q_a - q_b) > kJ2SyncLimit + 1e-12) {
+        cycle_safe = false;
+        for (auto& window : stable_windows) window.clear();
+      }
+    }
+    bool stable = cycle_safe && std::all_of(
+        stable_windows.begin(), stable_windows.end(),
+        [](const std::deque<double>& window) {
+          if (window.size() != 5U) return false;
+          const auto minmax = std::minmax_element(
+              window.begin(), window.end());
+          return *minmax.second - *minmax.first <=
+              kGear * kBrakeStationaritySpan + 1e-12;
+        });
+    if (stable) {
+      for (auto& motor : motors) {
+        motor.valid = true;
+        motor.last_frame_valid = true;
+        motor.consecutive_invalid = 0;
+        motor.transport_fault_latched = false;
+        motor.fault_latched = motor.non_transport_fault_latched;
+        motor.speed_ready = false;
+        motor.fast_speed_count = 0;
+        motor.slow_speed_count = 0;
+      }
+      ++recovery_success_count;
+      std::cerr << "COMMUNICATION_RECOVERY_READY"
+                << " bus=" << bus
+                << " episode=" << episode
+                << " stable_brake_frames=5"
+                << " old_command_discarded=YES"
+                << " repreview_required=YES"
+                << std::endl;
+      return true;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+  return false;
+}
 
 int run(const Options& options) {
   g_thermal_policy = self_test_thermal_policy();
@@ -7230,15 +7377,16 @@ int run(const Options& options) {
   for (const char* path : definition.locks)
     locks.push_back(std::make_unique<ProcessLock>(path));
   if (active_power_session) consume_j2_launch_permit(j2_launch_permit);
-  SerialPort serial(definition.port, 16, 4000000, 20000, BlockYN::NO,
-                    bytesize_t::eightbits, parity_t::parity_none,
-                    stopbits_t::stopbits_one, flowcontrol_t::flowcontrol_none);
+  auto serial = std::make_unique<SerialPort>(
+      definition.port, 16, 4000000, 20000, BlockYN::NO,
+      bytesize_t::eightbits, parity_t::parity_none,
+      stopbits_t::stopbits_one, flowcontrol_t::flowcontrol_none);
   TxAudit tx_audit(options.brake_only);
   TerminalBrakeGuard brake_guard(serial, motors, options.bus, tx_audit);
   J2StartupBrakePrimeEvidence j2_startup_brake_prime;
   if (options.bus == "j2")
     j2_startup_brake_prime =
-        prime_j2_serial_before_feedback(serial, motors, tx_audit);
+        prime_j2_serial_before_feedback(*serial, motors, tx_audit);
 
   int command_socket = -1;
   const int feedback_socket = ::socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
@@ -7285,6 +7433,8 @@ int run(const Options& options) {
   position_started_at.fill(Clock::now());
   auto next = Clock::now();
   std::uint64_t cycles = 0;
+  std::uint64_t communication_recovery_attempt_count = 0;
+  std::uint64_t communication_recovery_success_count = 0;
   bool previous_j2_pair_ready = false;
   std::array<BoundedHoldIntegralState, 6> hold_integral_states{};
   std::array<double, 6> hold_integral_wire_nm{};
@@ -8229,7 +8379,7 @@ int run(const Options& options) {
       MotorCmd packet = make_command(motor.id, send_mode, q, dq, kp, kd, tau);
       any_foc_sent = any_foc_sent || send_mode == kFocMode;
       const Feedback feedback = transact(
-          serial, packet, motor.id, send_mode, tx_audit);
+          *serial, packet, motor.id, send_mode, tx_audit);
       if (options.bus == "j2") {
         auto& log = invalid_feedback_logs[motor_runtime_index];
         const auto diagnostic_now = Clock::now();
@@ -8286,8 +8436,10 @@ int run(const Options& options) {
         // continuity_valid and becomes a hard communication fault only after
         // the consecutive-invalid threshold. Drive errors remain an immediate
         // non-thermal latch; temperature has its own live BRAKE interlock.
-        if (feedback.data.merror != 0 || feedback.data.temp < 0)
+        if (feedback.data.merror != 0 || feedback.data.temp < 0) {
+          motor.non_transport_fault_latched = true;
           motor.fault_latched = true;
+        }
         const bool newly_latched = observe_raw_temperature_thermal_trip(
             thermal_interlock, feedback.data.temp,
             control_command.activation_epoch,
@@ -8438,8 +8590,10 @@ int run(const Options& options) {
         }
         if (motor.reference_ready) {
           const double logical = motor.sign * (motor.unwrapped - motor.reference) / kGear;
-          if (!within_mechanical_feedback_envelope(motor.joint_index, logical))
+          if (!within_mechanical_feedback_envelope(motor.joint_index, logical)) {
+            motor.non_transport_fault_latched = true;
             motor.fault_latched = true;
+          }
         }
       }
       if (motor_feedback_requires_domain_brake(motor)) {
@@ -8476,9 +8630,51 @@ int run(const Options& options) {
                 << std::endl;
     }
 
-    if (active_power_session && j2_power_continuity_lost)
-      throw std::runtime_error(j2_active_session
-          ? "J2_POWER_CONTINUITY_LOST" : "GO_AUX_POWER_CONTINUITY_LOST");
+    if (active_power_session && j2_power_continuity_lost) {
+      if (command_socket >= 0) {
+        ::close(command_socket);
+        command_socket = -1;
+      }
+      const std::uint64_t lost_epoch = command.activation_epoch;
+      command_safety.highest_rejected_active_epoch = std::max(
+          command_safety.highest_rejected_active_epoch, lost_epoch);
+      command_safety.minimum_activation_epoch = std::max(
+          command_safety.minimum_activation_epoch,
+          saturating_next_activation_epoch(lost_epoch));
+      command = GuiCommand{};
+      command_receive_state = CommandReceiveState{};
+      previous_mode = "brake";
+      previous_active_joint_mask.fill(false);
+      previous_moving_joint_mask.fill(false);
+      q_command.fill(0.0);
+      dq_command.fill(0.0);
+      prior_external_hold_confirmed = false;
+      lease_safe_hold_active = false;
+      lease_safe_hold_abort_pending = false;
+      position_tracking.fill(false);
+      position_tracking_epoch.fill(0U);
+      position_endpoint_reached.fill(false);
+      position_arrived_once.fill(false);
+      position_arrival_overdue.fill(false);
+      const double recovery_phase_limit = j2_launch_permit.maximum_raw_phase_delta_rad;
+      if (!recover_go_transport_in_brake(
+              definition, serial, motors, options.bus,
+              recovery_phase_limit, tx_audit,
+              communication_recovery_attempt_count,
+              communication_recovery_success_count)) {
+        break;
+      }
+      j2_power_continuity_lost = false;
+      j2_pair_ready = options.bus != "j2" || motors.size() == 2U;
+      command_socket = open_command_socket(definition);
+      std::cerr << "COMMUNICATION_COMMAND_RECEIVER_REOPENED"
+                << " bus=" << options.bus
+                << " command_port=" << definition.command_port
+                << " minimum_activation_epoch="
+                << command_safety.minimum_activation_epoch
+                << std::endl;
+      continue;
+    }
     if (active_power_session && !j2_startup_verified) {
       const bool histories_ready = std::all_of(
           motors.begin(), motors.end(), [&](const MotorRuntime& motor) {
@@ -8543,7 +8739,7 @@ int run(const Options& options) {
       MotorCmd brake = make_command(
           motor.id, kBrakeMode, 0.0, 0.0, 0.0, 0.0);
       const Feedback brake_feedback = transact(
-          serial, brake, motor.id, kBrakeMode, tx_audit);
+          *serial, brake, motor.id, kBrakeMode, tx_audit);
       const bool sustained_invalid = observe_feedback_frame_validity(
           motor, brake_feedback.continuity_valid,
           invalid_feedback_limit_for_bus(options.bus));
@@ -8554,8 +8750,10 @@ int run(const Options& options) {
         motor.merror = brake_feedback.data.merror;
         motor.returned_mode = brake_feedback.data.mode;
         if (brake_feedback.data.merror != 0 ||
-            brake_feedback.data.temp < 0)
+            brake_feedback.data.temp < 0) {
+          motor.non_transport_fault_latched = true;
           motor.fault_latched = true;
+        }
         if (observe_raw_temperature_thermal_trip(
                 thermal_interlock, brake_feedback.data.temp,
                 control_command.activation_epoch,
@@ -9230,6 +9428,10 @@ int run(const Options& options) {
              << "\n"
              << "GO_AUX_LAUNCH_PERMIT_STATE="
              << (go_aux_active_session ? j2_launch_permit.state : "NONE") << "\n"
+             << "COMMUNICATION_RECOVERY_ATTEMPT_COUNT="
+             << communication_recovery_attempt_count << "\n"
+             << "COMMUNICATION_RECOVERY_SUCCESS_COUNT="
+             << communication_recovery_success_count << "\n"
              << "COMPLETED_CYCLES=" << cycles << "\n"
             << "TX_ATTEMPT_TOTAL=" << tx_audit.tx_attempt_total << "\n"
             << "BRAKE_TX_ATTEMPT_COUNT="

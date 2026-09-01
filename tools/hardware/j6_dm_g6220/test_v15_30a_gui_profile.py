@@ -2058,7 +2058,9 @@ def test_j6_stale_cached_feedback_blocks_new_position_before_send():
     )
     gate = source[pre_send_gate:mode_selection]
     assert "enabled_feedback_is_healthy(" in gate
-    assert "fault_latched = True" in gate
+    assert 'latch_enabled_feedback_failure("ACTIVE_FEEDBACK_UNHEALTHY")' in gate
+    assert "old_command_discarded=YES repreview_required=YES" in source
+    assert "J6_COMMUNICATION_RECOVERY_READY" in source
 
 
 def test_j6_feedback_hard_envelope_has_half_degree_endpoint_noise_tolerance():

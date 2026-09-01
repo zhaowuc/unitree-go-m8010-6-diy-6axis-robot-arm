@@ -3003,6 +3003,10 @@ def run(args: argparse.Namespace) -> int:
         enabled = False
         enabled_confirmed = False
         fault_latched = False
+        communication_fault_latched = False
+        non_communication_fault_latched = False
+        communication_recovery_frames = 0
+        communication_recovery_episode_count = 0
         q_command = 0.0
         dq_command = 0.0
         previous_mode = "brake"
@@ -3046,6 +3050,104 @@ def run(args: argparse.Namespace) -> int:
         previous_cycle_started_at = None
         previous_cycle_enabled = False
         cycles = 0
+
+        def latch_communication_loss(reason: str) -> None:
+            nonlocal command
+            nonlocal communication_fault_latched
+            nonlocal communication_recovery_episode_count
+            nonlocal communication_recovery_frames
+            nonlocal dq_command
+            nonlocal enabled
+            nonlocal enabled_at
+            nonlocal enabled_confirmed
+            nonlocal final_disabled
+            nonlocal fault_latched
+            nonlocal highest_rejected_active_epoch
+            nonlocal last_accepted_hold_epoch
+            nonlocal last_accepted_hold_target
+            nonlocal last_position_epoch
+            nonlocal last_position_target
+            nonlocal lease_safe_hold_active
+            nonlocal lease_safe_hold_target
+            nonlocal minimum_activation_epoch
+            nonlocal position_arrival_overdue
+            nonlocal position_started_at
+            nonlocal prior_external_hold_confirmed
+            nonlocal q_command
+
+            if not communication_fault_latched:
+                lost_epoch = max(
+                    last_seen_activation_epoch,
+                    0 if command is None else command["activation_epoch"],
+                )
+                highest_rejected_active_epoch = max(
+                    highest_rejected_active_epoch, lost_epoch
+                )
+                minimum_activation_epoch = max(
+                    minimum_activation_epoch,
+                    saturating_next_activation_epoch(lost_epoch),
+                )
+                communication_recovery_episode_count += 1
+                print(
+                    "J6_COMMUNICATION_RECOVERY_BEGIN "
+                    f"episode={communication_recovery_episode_count} "
+                    f"reason={reason} "
+                    f"minimum_activation_epoch={minimum_activation_epoch} "
+                    "old_command_discarded=YES repreview_required=YES",
+                    flush=True,
+                )
+            communication_fault_latched = True
+            communication_recovery_frames = 0
+            fault_latched = True
+            final_disabled = False
+            for disable_index in range(3):
+                try:
+                    transport.send_disable(
+                        f"GUI_COMM_RECOVERY_DISABLE_{disable_index + 1}"
+                    )
+                except Exception:
+                    pass
+            spend_active_empirical_command_authority(
+                command_source_replay_state
+            )
+            command = None
+            enabled = False
+            enabled_confirmed = False
+            enabled_at = None
+            lease_safe_hold_active = False
+            lease_safe_hold_target = None
+            prior_external_hold_confirmed = False
+            position_started_at = None
+            position_arrival_overdue = False
+            last_position_target = None
+            last_position_epoch = None
+            last_accepted_hold_target = None
+            last_accepted_hold_epoch = None
+            q_command = 0.0
+            dq_command = 0.0
+
+        def consume_transport_interlock(label: str) -> bool:
+            if not transport.consume_communication_interlock():
+                return False
+            latch_communication_loss(label)
+            return True
+
+        def latch_enabled_feedback_failure(reason: str) -> None:
+            nonlocal fault_latched
+            nonlocal non_communication_fault_latched
+            checked_at = time.monotonic()
+            transport_like = bool(
+                latest is None
+                or latest_at is None
+                or checked_at - latest_at > FEEDBACK_MAX_AGE_S
+                or (latest is not None and latest.state == 0)
+            )
+            if transport_like:
+                latch_communication_loss(reason)
+            else:
+                non_communication_fault_latched = True
+                fault_latched = True
+
         while not STOP:
             cycle_started_at = time.monotonic()
             thermal_rearmed_this_cycle = (
@@ -3136,6 +3238,16 @@ def run(args: argparse.Namespace) -> int:
                 command_receive_events,
                 True,
             )
+            if communication_fault_latched and command is not None:
+                rejected_epoch = command["activation_epoch"]
+                highest_rejected_active_epoch = max(
+                    highest_rejected_active_epoch, rejected_epoch
+                )
+                minimum_activation_epoch = max(
+                    minimum_activation_epoch,
+                    saturating_next_activation_epoch(rejected_epoch),
+                )
+                command = None
             now = time.monotonic()
             command_lease_fresh = command_lease_is_fresh(command, now)
             empirical_authority_expired = bool(
@@ -3184,7 +3296,7 @@ def run(args: argparse.Namespace) -> int:
                     now,
                 )
             ):
-                fault_latched = True
+                latch_enabled_feedback_failure("ACTIVE_FEEDBACK_UNHEALTHY")
             if lease_safe_hold_active:
                 if external_command_explicitly_releases_safe_hold(command, now):
                     print(
@@ -3207,7 +3319,9 @@ def run(args: argparse.Namespace) -> int:
                 ):
                     lease_safe_hold_active = False
                     lease_safe_hold_target = None
-                    fault_latched = True
+                    latch_enabled_feedback_failure(
+                        "LEASE_SAFE_HOLD_FEEDBACK_UNHEALTHY"
+                    )
                     last_unsafe_lease_resume_signature = None
                 elif external_command_can_resume_from_safe_hold(
                     command,
@@ -3451,7 +3565,7 @@ def run(args: argparse.Namespace) -> int:
                     time.monotonic(),
                 )
             ):
-                fault_latched = True
+                latch_enabled_feedback_failure("COMMAND_BOUNDARY_FEEDBACK_UNHEALTHY")
             # A hard health failure is terminal for active output in this
             # cycle.  Apply it after every rejected-target fallback so no HOLD
             # rewrite can emit one additional POS_VEL frame.
@@ -3500,6 +3614,7 @@ def run(args: argparse.Namespace) -> int:
                 # Never join a deterministic trajectory after its common start.
                 # A later cycle must not fast-forward from an unconfirmed enable
                 # handshake into the middle of the preflighted reference.
+                non_communication_fault_latched = True
                 fault_latched = True
                 mode = "brake"
                 active = False
@@ -3556,10 +3671,12 @@ def run(args: argparse.Namespace) -> int:
                     ) not in {"hold", "position"}:
                         break
                     logger.send(0x7FF, refresh_request(), "GUI_PRE_ENABLE_FRESHNESS")
+                    if consume_transport_interlock("PRE_ENABLE_REFRESH"):
+                        break
                     time.sleep(PERIOD)
                     decoded_events, fatal_event = drain_feedback_batch(logger)
                     if fatal_event:
-                        fault_latched = True
+                        latch_communication_loss("PRE_ENABLE_CAN_ERROR")
                     for refreshed, refreshed_at in decoded_events:
                         latest, latest_at = refreshed, refreshed_at
                 command, minimum_activation_epoch, last_seen_activation_epoch = receive_latest(
@@ -3592,7 +3709,13 @@ def run(args: argparse.Namespace) -> int:
                     active = False
                 elif (fault_latched or latest is None or latest_at is None or latest.state != 0 or
                         time.monotonic() - latest_at > FEEDBACK_MAX_AGE_S):
-                    fault_latched = True
+                    if latest is None or latest_at is None or (
+                        time.monotonic() - latest_at > FEEDBACK_MAX_AGE_S
+                    ):
+                        latch_communication_loss("PRE_ENABLE_FEEDBACK_UNAVAILABLE")
+                    else:
+                        non_communication_fault_latched = True
+                        fault_latched = True
                     mode = "brake"
                     active = False
                 else:
@@ -3600,6 +3723,8 @@ def run(args: argparse.Namespace) -> int:
                     q_command = -(latest.position - reference)
                     dq_command = 0.0
                     transport.send_pos_vel_command(latest.position, 0.0, "GUI_PRELOAD_CURRENT_DISABLED")
+                    if consume_transport_interlock("PRELOAD_CURRENT_DISABLED"):
+                        continue
                     command, minimum_activation_epoch, last_seen_activation_epoch = receive_latest(
                         command_socket,
                         command,
@@ -3632,7 +3757,11 @@ def run(args: argparse.Namespace) -> int:
                         mode = pre_enable_mode
                         final_disabled = False
                         transport.send_enable()
+                        if consume_transport_interlock("ENABLE"):
+                            continue
                         transport.send_pos_vel_command(latest.position, 0.0, "GUI_HOLD_IMMEDIATE")
+                        if consume_transport_interlock("HOLD_IMMEDIATE"):
+                            continue
                         enabled = True
                         enabled_confirmed = False
                         enabled_at = time.monotonic()
@@ -3640,7 +3769,8 @@ def run(args: argparse.Namespace) -> int:
             if not active and enabled:
                 final_disabled = disable_and_verify(transport, logger)
                 if not final_disabled:
-                    raise RuntimeError("J6未能确认DISABLED终态")
+                    latch_communication_loss("DISABLE_UNCONFIRMED")
+                    continue
                 enabled = False
                 enabled_confirmed = False
                 enabled_at = None
@@ -3653,6 +3783,8 @@ def run(args: argparse.Namespace) -> int:
                 transport.send_pos_vel_command(
                     reference - q_command, 0.0, "GUI_ENABLE_CONFIRM_HOLD"
                 )
+                if consume_transport_interlock("ENABLE_CONFIRM_HOLD"):
+                    continue
             elif mode == "position" and command is not None and enabled:
                 if command_is_v13_quintic_position(command):
                     q_ref, speed_limit, trajectory_state, sample_index = (
@@ -3680,6 +3812,8 @@ def run(args: argparse.Namespace) -> int:
                         protocol_velocity,
                         "GUI_POSITION_QUINTIC_REFRESH",
                     )
+                    if consume_transport_interlock("POSITION_QUINTIC"):
+                        continue
                 else:
                     requested_target = command["targets_rad"][5]
                     actual_logical = (
@@ -3716,6 +3850,8 @@ def run(args: argparse.Namespace) -> int:
                         protocol_velocity,
                         "GUI_POSITION_REFRESH",
                     )
+                    if consume_transport_interlock("POSITION"):
+                        continue
             elif mode == "hold" and enabled:
                 fixed_hold_target = (
                     lease_safe_hold_target
@@ -3734,12 +3870,22 @@ def run(args: argparse.Namespace) -> int:
                     if lease_safe_hold_active
                     else "GUI_HOLD_REFRESH",
                 )
+                if consume_transport_interlock("HOLD_REFRESH"):
+                    continue
             else:
+                if communication_fault_latched:
+                    transport.send_disable("GUI_COMM_RECOVERY_DISABLE_REFRESH")
+                    if consume_transport_interlock(
+                        "COMM_RECOVERY_DISABLE_REFRESH"
+                    ):
+                        continue
                 logger.send(0x7FF, refresh_request(), "GUI_DISABLED_REFRESH")
+                if consume_transport_interlock("DISABLED_REFRESH"):
+                    continue
 
             decoded_events, fatal_event = drain_feedback_batch(logger)
             if fatal_event:
-                fault_latched = True
+                latch_communication_loss("CAN_ERROR_EVENT")
             if decoded_events:
                 latest, latest_at = decoded_events[-1]
                 decoded = latest
@@ -3754,6 +3900,7 @@ def run(args: argparse.Namespace) -> int:
                     <= FEEDBACK_HARD_UPPER
                     or not math.isfinite(decoded.velocity)
                 ):
+                    non_communication_fault_latched = True
                     fault_latched = True
                 rapid_motion = bool(enabled and abs(decoded.velocity) > 0.7)
                 if rapid_motion and not rapid_motion_degraded:
@@ -3810,19 +3957,63 @@ def run(args: argparse.Namespace) -> int:
                         flush=True,
                     )
                 if current_temperature_c < 0.0 or decoded.state in FAULT_STATES:
+                    non_communication_fault_latched = True
                     fault_latched = True
                 if (enabled and decoded.state != 1 and enabled_at is not None and
                         time.monotonic() - enabled_at > 0.2):
-                    fault_latched = True
+                    if decoded.state == 0:
+                        latch_communication_loss("DRIVE_RESET_TO_DISABLED")
+                    else:
+                        non_communication_fault_latched = True
+                        fault_latched = True
                 if (enabled and decoded.state == 1 and enabled_at is not None and
                         latest_at is not None and latest_at >= enabled_at and
                         not enabled_confirmed):
                     enabled_confirmed = True
                 if not enabled and decoded.state != 0:
+                    non_communication_fault_latched = True
                     fault_latched = True
             fresh = latest is not None and latest_at is not None and time.monotonic() - latest_at <= FEEDBACK_MAX_AGE_S
             if enabled and not fresh:
-                fault_latched = True
+                latch_communication_loss("ACTIVE_FEEDBACK_STALE")
+            if communication_fault_latched:
+                recovery_sample_safe = bool(
+                    decoded_events
+                    and not fatal_event
+                    and latest is not None
+                    and latest.state == 0
+                    and fresh
+                    and math.isfinite(latest.position)
+                    and math.isfinite(latest.velocity)
+                    and abs(latest.velocity) <= 0.05
+                    and FEEDBACK_HARD_LOWER
+                    <= -(latest.position - reference)
+                    <= FEEDBACK_HARD_UPPER
+                    and 0
+                    <= latest.mos_temp
+                    < thermal_limits["thermal_stop_c"]
+                    and 0
+                    <= latest.coil_temp
+                    < thermal_limits["thermal_stop_c"]
+                )
+                if recovery_sample_safe:
+                    communication_recovery_frames += 1
+                else:
+                    communication_recovery_frames = 0
+                if communication_recovery_frames >= 5:
+                    communication_fault_latched = False
+                    communication_recovery_frames = 0
+                    fault_latched = non_communication_fault_latched
+                    final_disabled = True
+                    print(
+                        "J6_COMMUNICATION_RECOVERY_READY "
+                        f"episode={communication_recovery_episode_count} "
+                        "stable_disabled_frames=5 "
+                        f"adapter_reconnect_attempts={transport.reconnect_attempt_count} "
+                        f"adapter_reconnect_successes={transport.reconnect_success_count} "
+                        "old_command_discarded=YES repreview_required=YES",
+                        flush=True,
+                    )
             if thermal_interlock["fault_latched"]:
                 cooldown_qualified = bool(
                     decoded_events
@@ -3929,7 +4120,8 @@ def run(args: argparse.Namespace) -> int:
             ):
                 final_disabled = disable_and_verify(transport, logger)
                 if not final_disabled:
-                    raise RuntimeError("J6锁存制动后未能确认DISABLED终态")
+                    latch_communication_loss("LATCHED_DISABLE_UNCONFIRMED")
+                    continue
                 enabled = False
                 enabled_confirmed = False
                 enabled_at = None
