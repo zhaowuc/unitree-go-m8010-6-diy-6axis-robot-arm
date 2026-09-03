@@ -538,13 +538,15 @@ def test_worker_feedforward_echo_requires_causal_match_within_300ms():
     ) is None
 
 
-def test_worker_echo_wait_is_only_the_first_300ms_of_ramp():
+def test_worker_echo_wait_allows_one_async_sample_gap_but_not_stale_echo():
     pending = runner_mod._worker_echo_propagation_pending
     assert pending(None, "RAMP", 0)
     assert pending(None, "RAMP", 300_000_000)
     assert pending(None, "RAMP", 300_000_001)
     assert pending(None, "HOLD", 1)
     assert not pending(None, "HOLD", 300_000_001)
+    assert pending(None, "HOLD", 300_000_001, 100_000_000)
+    assert not pending(None, "HOLD", 300_000_001, 100_000_001)
     assert not pending(object(), "RAMP", 1)
 
 

@@ -482,7 +482,10 @@ def _latest_go_worker_feedforward_echo_match(
 
 
 def _worker_echo_propagation_pending(
-    matched_echo: object, phase: str, phase_elapsed_ns: int,
+    matched_echo: object,
+    phase: str,
+    phase_elapsed_ns: int,
+    last_match_age_ns: Optional[int] = None,
 ) -> bool:
     return bool(
         matched_echo is None
@@ -492,6 +495,11 @@ def _worker_echo_propagation_pending(
                 phase == "HOLD"
                 and 0 <= phase_elapsed_ns
                 <= MAXIMUM_GRAVITY_WORKER_ECHO_LAG_NS
+            )
+            or (
+                last_match_age_ns is not None
+                and 0 <= last_match_age_ns
+                <= MAXIMUM_GRAVITY_LADDER_SAMPLE_GAP_NS
             )
         )
     )
@@ -899,6 +907,7 @@ class ActiveAcceptanceRunner:
         self.gravity_source_last: Optional[tuple[int, int]] = None
         self.gravity_worker_echo_source_identity: Optional[str] = None
         self.gravity_worker_echo_source_last: Optional[tuple[int, int]] = None
+        self.gravity_worker_echo_last_match_sample_ns: Optional[int] = None
         self.gravity_worker_echo_history: list[
             tuple[int, int, tuple[float, ...], dict[str, float]]
         ] = []
@@ -1516,8 +1525,13 @@ class ActiveAcceptanceRunner:
             actual_worker_ff,
             echo_source_ns_by_motor=worker_echo_source_ns_by_motor,
         )
+        last_match_age_ns = (
+            None
+            if self.gravity_worker_echo_last_match_sample_ns is None
+            else sample_ns - self.gravity_worker_echo_last_match_sample_ns
+        )
         if _worker_echo_propagation_pending(
-            matched_echo, phase, phase_elapsed_ns
+            matched_echo, phase, phase_elapsed_ns, last_match_age_ns
         ):
             return
         _require(
@@ -1525,6 +1539,7 @@ class ActiveAcceptanceRunner:
             "GRAVITY_LADDER_NODE_WORKER_FEEDFORWARD_ECHO_NOT_PROPAGATED_300MS",
         )
         assert matched_echo is not None
+        self.gravity_worker_echo_last_match_sample_ns = sample_ns
         (
             matched_published_ns,
             matched_sequence,
