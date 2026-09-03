@@ -1531,6 +1531,24 @@ class ActiveAcceptanceRunner:
         ]
         slopes = state.get("thermal_status_by_motor")
         _require(isinstance(slopes, Mapping), "GRAVITY_LADDER_THERMAL_STATUS_MISSING")
+        temperature = max(
+            float(per_motor[motor]["temperature_c"]) for motor in MOTOR_NAMES
+        )
+        stage_label = f"{int(level * 100)}%"
+        stage_rows = [
+            row for row in self.gravity_ladder_rows
+            if row["stage"] == stage_label
+        ]
+        reported_slopes = [
+            self._optional_metadata_number(slopes, motor, "slope_c_per_min")
+            for motor in MOTOR_NAMES
+        ]
+        temperature_slope = max(
+            [abs(self._derived_temperature_slope(
+                stage_rows, sample_ns, temperature, "temperature_c"
+            ))]
+            + [abs(value) for value in reported_slopes if value is not None]
+        )
         no_progress = state.get("no_progress_status_by_motor")
         saturation = bool(
             isinstance(no_progress, Mapping)
@@ -1544,7 +1562,7 @@ class ActiveAcceptanceRunner:
             "timestamp_utc": _utc_text(),
             "monotonic_ns": sample_ns,
             "observer_receipt_monotonic_ns": now_ns,
-            "stage": f"{int(level * 100)}%",
+            "stage": stage_label,
             "phase": phase,
             "gravity_scale_target": target,
             "gravity_scale_applied": applied,
@@ -1557,11 +1575,8 @@ class ActiveAcceptanceRunner:
             ),
             "gravity_ff_contribution_rotor_nm": max(abs(value) for value in ff),
             "total_command_rotor_nm": max(abs(value) for value in command),
-            "temperature_c": max(float(per_motor[motor]["temperature_c"]) for motor in MOTOR_NAMES),
-            "temperature_slope_c_per_min": max(
-                abs(self._metadata_number(slopes, motor, "slope_c_per_min"))
-                for motor in MOTOR_NAMES
-            ),
+            "temperature_c": temperature,
+            "temperature_slope_c_per_min": temperature_slope,
             "j2_e_sync_deg": _rad_to_deg(state["j2_e_sync_rad"]),
             "saturation_observed": saturation,
             "merror": max(int(per_motor[motor]["merror"]) for motor in MOTOR_NAMES),
@@ -3636,8 +3651,24 @@ class ActiveAcceptanceRunner:
         b_cmd = _finite(b.get("tau_cmd_rotor_nm"), "THERMAL_J2B_COMMAND_INVALID")
         thermal_status = state.get("thermal_status_by_motor", {})
         no_progress = state.get("no_progress_status_by_motor", {})
-        a_slope = self._metadata_number(thermal_status, "J2A", "slope_c_per_min")
-        b_slope = self._metadata_number(thermal_status, "J2B", "slope_c_per_min")
+        a_reported_slope = self._optional_metadata_number(
+            thermal_status, "J2A", "slope_c_per_min"
+        )
+        b_reported_slope = self._optional_metadata_number(
+            thermal_status, "J2B", "slope_c_per_min"
+        )
+        a_slope = (
+            self._derived_temperature_slope(
+                rows, sample_source_ns, a_temperature, "j2a_temperature_c"
+            )
+            if a_reported_slope is None else a_reported_slope
+        )
+        b_slope = (
+            self._derived_temperature_slope(
+                rows, sample_source_ns, b_temperature, "j2b_temperature_c"
+            )
+            if b_reported_slope is None else b_reported_slope
+        )
         saturation = any(
             isinstance(no_progress, Mapping)
             and isinstance(no_progress.get(motor), Mapping)
@@ -3689,6 +3720,32 @@ class ActiveAcceptanceRunner:
         item = mapping.get(motor)
         _require(isinstance(item, Mapping), f"{motor}_{field}_MISSING")
         return _finite(item.get(field), f"{motor}_{field}_INVALID")
+
+    @staticmethod
+    def _optional_metadata_number(
+        mapping: object, motor: str, field: str,
+    ) -> Optional[float]:
+        _require(isinstance(mapping, Mapping), f"{motor}_{field}_MISSING")
+        item = mapping.get(motor)
+        _require(isinstance(item, Mapping), f"{motor}_{field}_MISSING")
+        value = item.get(field)
+        return None if value is None else _finite(value, f"{motor}_{field}_INVALID")
+
+    @staticmethod
+    def _derived_temperature_slope(
+        rows: Sequence[Mapping[str, Any]], sample_ns: int,
+        temperature_c: float, temperature_field: str,
+    ) -> float:
+        if not rows:
+            return 0.0
+        elapsed_ns = sample_ns - int(rows[0]["monotonic_ns"])
+        _require(elapsed_ns >= 0, "TEMPERATURE_SLOPE_TIME_REGRESSION")
+        if elapsed_ns == 0:
+            return 0.0
+        start_c = _finite(
+            rows[0][temperature_field], "TEMPERATURE_SLOPE_START_INVALID"
+        )
+        return (temperature_c - start_c) * 60.0e9 / elapsed_ns
 
     def approve_thermal_stage(self, duration_min: int, *, now_ns: int) -> None:
         _require(self.thermal_pending_review == duration_min, "THERMAL_STAGE_NOT_PENDING_REVIEW")

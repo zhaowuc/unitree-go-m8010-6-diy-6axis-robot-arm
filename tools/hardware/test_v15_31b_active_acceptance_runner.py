@@ -518,6 +518,18 @@ def test_worker_feedforward_echo_requires_causal_match_within_300ms():
     ) is None
 
 
+def test_missing_worker_temperature_slope_is_derived_from_runner_samples():
+    run = runner_mod.ActiveAcceptanceRunner(binding())
+    metadata = {"J2A": {"slope_c_per_min": None}}
+    assert run._optional_metadata_number(
+        metadata, "J2A", "slope_c_per_min"
+    ) is None
+    rows = [{"monotonic_ns": 1_000_000_000, "temperature_c": 30.0}]
+    assert run._derived_temperature_slope(
+        rows, 61_000_000_000, 31.0, "temperature_c"
+    ) == 1.0
+
+
 def test_sticky_zero_and_terminal_jump_cannot_erase_echo_failure():
     expected = runner_mod._expected_go_worker_feedforward
     match = runner_mod._latest_go_worker_feedforward_echo_match
