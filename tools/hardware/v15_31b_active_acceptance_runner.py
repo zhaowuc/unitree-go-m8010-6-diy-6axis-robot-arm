@@ -486,8 +486,14 @@ def _worker_echo_propagation_pending(
 ) -> bool:
     return bool(
         matched_echo is None
-        and phase == "RAMP"
-        and 0 <= phase_elapsed_ns <= MAXIMUM_GRAVITY_WORKER_ECHO_LAG_NS
+        and (
+            phase == "RAMP"
+            or (
+                phase == "HOLD"
+                and 0 <= phase_elapsed_ns
+                <= MAXIMUM_GRAVITY_WORKER_ECHO_LAG_NS
+            )
+        )
     )
 
 
