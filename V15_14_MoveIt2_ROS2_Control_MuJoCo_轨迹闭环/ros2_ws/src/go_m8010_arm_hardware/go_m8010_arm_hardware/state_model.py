@@ -36,7 +36,7 @@ THERMAL_TRIP_REASONS = frozenset({
     "RAW_TEMPERATURE_LIMIT",
     "EXACT_TRAJECTORY_DERATING_ABORT",
 })
-GRAVITY_SCALE_TARGET_LEVELS = frozenset({0.0, 0.25, 0.5, 0.75, 1.0})
+GRAVITY_SCALE_TARGET_LEVELS = (0.0, 0.25, 0.5, 0.75, 1.0)
 # These are frozen-model software envelopes.  They are deliberately not
 # represented as continuous motor ratings anywhere in the state contract.
 GRAVITY_FEEDFORWARD_LIMITS_NM = (0.20, 1.75, 1.10, 0.40, 0.20, 0.0)

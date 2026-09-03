@@ -510,6 +510,29 @@ class ControllerFeedbackMetadataTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "absent gravity"):
             self.parse(payload)
 
+    def test_empirical_zero_hold_feedback_metadata_is_accepted(self):
+        payload = self.payload()
+        payload.update({
+            "gravity_continuous_rotor_limits_authoritative": False,
+            "gravity_scale": 0.0,
+            "gravity_scale_target": 0.0,
+            "feedforward_nm": [0.0] * 6,
+            "gravity_authority_class": "EMPIRICAL_VALIDATION_ENVELOPE",
+            "gravity_rating_classification": "NOT_OFFICIAL_CONTINUOUS_RATING",
+            "gravity_empirical_envelope_id": "v15-31b-empirical-" + "1" * 20,
+            "gravity_empirical_envelope_sha256": "2" * 64,
+            "gravity_empirical_envelope_expires_at_utc": "2099-01-01T00:00:00Z",
+            "gravity_anchor_sha256": "3" * 64,
+            "gravity_empirical_stage_index": 0,
+            "gravity_empirical_position_validation_authorized": False,
+        })
+        for sample in payload["samples"]:
+            sample["gravity_feedforward_rotor_nm"] = 0.0
+        result = self.parse(payload)
+        self.assertTrue(all(
+            record["gravity"]["authority_present"] for record in result.values()
+        ))
+
 
 class StateModelTest(unittest.TestCase):
     def make_feedback(self, motor, position, velocity=0.0, now=None):
