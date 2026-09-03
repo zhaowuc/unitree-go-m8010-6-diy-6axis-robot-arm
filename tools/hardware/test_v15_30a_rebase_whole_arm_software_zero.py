@@ -495,6 +495,17 @@ def test_j2_startup_prime_elapsed_boundaries_are_accepted(elapsed_ns: int) -> No
     )
 
 
+def test_go_multiturn_position_does_not_relax_j6_protocol_envelope() -> None:
+    go = {"motors": {"J2B": go_motor(14.8)}}
+    assert rebase.capture_measurement(
+        go, "J2B", expected_count=500
+    )["raw_position_rad"] == 14.8
+
+    j6 = {"motors": {"J6": j6_motor(14.8)}}
+    with pytest.raises(ValueError, match="outside the protocol envelope"):
+        rebase.capture_measurement(j6, "J6", expected_count=500, j6=True)
+
+
 @pytest.mark.parametrize(
     "mutator",
     [

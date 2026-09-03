@@ -74,7 +74,8 @@ MIN_SAMPLE_COUNT = 500
 MIN_CAPTURE_COVERAGE_S = 4.0
 MAX_GO_CAPTURE_SPAN_RAD = GEAR_RATIO * math.radians(0.20)
 MAX_J6_CAPTURE_SPAN_RAD = math.radians(0.20)
-MAX_PROTOCOL_POSITION_RAD = 12.5
+MAX_GO_PROTOCOL_POSITION_RAD = float(1 << 16)
+MAX_J6_PROTOCOL_POSITION_RAD = 12.5
 MAX_CAPTURE_BUNDLE_SPAN_NS = 120_000_000_000
 MAX_CAPTURE_AGE_NS = 300_000_000_000
 J2_STARTUP_PRIME_MAX_INVALID_PREFIX_PAIRS = 3
@@ -638,7 +639,10 @@ def capture_measurement(
     maximum = values["maximum"]
     span = values["span"]
     deviation = values["standard_deviation"]
-    if any(abs(value) > MAX_PROTOCOL_POSITION_RAD for value in (mean, minimum, maximum)):
+    maximum_position = (
+        MAX_J6_PROTOCOL_POSITION_RAD if j6 else MAX_GO_PROTOCOL_POSITION_RAD
+    )
+    if any(abs(value) > maximum_position for value in (mean, minimum, maximum)):
         raise ValueError(f"{name} capture is outside the protocol envelope")
     if not minimum <= mean <= maximum:
         raise ValueError(f"{name} capture mean is outside its range")
