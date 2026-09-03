@@ -543,6 +543,40 @@ def test_zero_scale_first_hold_has_bounded_status_transition_grace(monkeypatch):
     assert not gate.available
 
 
+def test_zero_hold_grace_survives_holding_until_stage_zero_completes():
+    identity = ("v15-31b-empirical-" + "1" * 20, "2" * 64)
+    gate = SimpleNamespace(
+        empirical_identity=identity,
+        _latest=_empirical_latest(
+            10_000_000_000, deadline_ns=20_000_000_000
+        ),
+        observe_status=lambda _value, now_ns: True,
+    )
+    fake = SimpleNamespace(
+        gravity_authority_gate=gate,
+        empirical_zero_hold_transition_started_ns=10_000_000_000,
+        _send_empirical_revocation_brake=lambda _reason: None,
+    )
+    holding = {
+        "empirical_validation": {
+            "stage_index": 0,
+            "stage_complete": False,
+            "invalidated": False,
+            "blocker": "EMPIRICAL_STAGE_HOLDING",
+        }
+    }
+    CommandRouter.on_gravity_status(
+        fake, SimpleNamespace(data=json.dumps(holding))
+    )
+    assert fake.empirical_zero_hold_transition_started_ns == 10_000_000_000
+
+    holding["empirical_validation"]["stage_complete"] = True
+    CommandRouter.on_gravity_status(
+        fake, SimpleNamespace(data=json.dumps(holding))
+    )
+    assert fake.empirical_zero_hold_transition_started_ns is None
+
+
 def test_empirical_revocation_brake_fans_out_to_all_four_domains():
     class RecordingSocket:
         def __init__(self):

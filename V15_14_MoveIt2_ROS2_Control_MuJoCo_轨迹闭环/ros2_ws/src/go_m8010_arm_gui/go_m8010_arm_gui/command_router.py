@@ -2677,8 +2677,11 @@ class CommandRouter(Node):
                 "EMPIRICAL_GRAVITY_AUTHORITY_REVOKED"
             )
         elif accepted and isinstance(value.get("empirical_validation"), dict):
-            if value["empirical_validation"].get("blocker") != (
-                "EMPIRICAL_ZERO_CURRENT_POSITION_HOLD_PENDING"
+            empirical = value["empirical_validation"]
+            if (
+                empirical.get("stage_index") != 0
+                or empirical.get("stage_complete") is True
+                or empirical.get("invalidated") is True
             ):
                 self.empirical_zero_hold_transition_started_ns = None
 
