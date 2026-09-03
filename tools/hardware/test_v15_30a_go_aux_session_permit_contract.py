@@ -29,7 +29,9 @@ class GoAuxSessionPermitContractTest(unittest.TestCase):
         start = self.controller.index("std::string actual_zero_sha256;")
         load = self.controller.index("load_persistent_zero(options.zero_file, motors)", start)
         guard = self.controller.rindex("if (!options.brake_only)", start, load)
-        serial_open = self.controller.index("SerialPort serial(", load)
+        serial_open = self.controller.index(
+            "auto serial = std::make_unique<SerialPort>(", load
+        )
         self.assertLess(guard, load)
         self.assertLess(load, serial_open)
         self.assertIn("BRAKE_ONLY_CAPABILITY=YES", self.controller)
@@ -37,7 +39,7 @@ class GoAuxSessionPermitContractTest(unittest.TestCase):
     def test_aux_permit_is_consumed_before_serial_and_spent_before_udp_bind(self) -> None:
         run = self.controller[self.controller.index("int run(const Options& options)") :]
         consume = run.index("consume_j2_launch_permit(j2_launch_permit)")
-        serial_open = run.index("SerialPort serial(")
+        serial_open = run.index("auto serial = std::make_unique<SerialPort>(")
         verify = run.index("GO_AUX_STARTUP_BRAKE_RECHECK_FAILED")
         spend = run.index("spend_j2_launch_permit(j2_launch_permit)", verify)
         bind = run.index("command_socket = open_command_socket(definition)", spend)

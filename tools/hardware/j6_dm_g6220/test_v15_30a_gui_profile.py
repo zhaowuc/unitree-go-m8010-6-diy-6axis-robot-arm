@@ -205,6 +205,7 @@ def load_empirical_authority_functions():
     names = {
         "command_uses_empirical_gravity_authority",
         "empirical_gravity_authority_is_current",
+        "gravity_authority_maximum_age_ns",
     }
     functions = [
         node for node in tree.body
@@ -214,6 +215,8 @@ def load_empirical_authority_functions():
         "time": time,
         "datetime": datetime,
         "timezone": timezone,
+        "COMMAND_SOURCE_MAX_AGE_NS": 250_000_000,
+        "EMPIRICAL_ZERO_HOLD_TRANSITION_MAX_AGE_NS": 2_000_000_000,
     }
     exec(
         compile(
@@ -3123,6 +3126,27 @@ def test_j6_empirical_deadline_is_checked_each_cycle_and_lease_is_not_captured()
         "empirical_authority_expired = bool(", 1
     )[1].split("rejected_active_command = bool(", 1)[0]
     assert 'or empirical_authority_expired' in expiry_to_brake
+
+
+def test_j6_zero_hold_transition_alone_gets_bounded_authority_age_grace():
+    maximum_age = load_empirical_authority_functions()[
+        "gravity_authority_maximum_age_ns"
+    ]
+    command = {"mode": "hold", "moving_joint_mask": [False] * 6}
+    authority = {
+        "schema": "go-m8010-gravity-command-authority/1.1",
+        "authority_class": "EMPIRICAL_VALIDATION_ENVELOPE",
+        "empirical_stage_index": 0,
+        "gravity_scale": 0.0,
+        "gravity_scale_target": 0.0,
+        "feedforward_nm": [0.0] * 6,
+    }
+    assert maximum_age(command, authority) == 2_000_000_000
+    command["moving_joint_mask"][5] = True
+    assert maximum_age(command, authority) == 250_000_000
+    command["moving_joint_mask"][5] = False
+    authority["gravity_scale_target"] = 0.25
+    assert maximum_age(command, authority) == 250_000_000
 
 
 def test_j6_pre_enable_rechecks_hold_target_after_each_receive():

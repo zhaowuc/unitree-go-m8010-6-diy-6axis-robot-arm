@@ -318,7 +318,7 @@ class J2SessionPermitContractTest(unittest.TestCase):
         run = self.controller[run_start:]
         self.assertLess(
             run.index("consume_j2_launch_permit(j2_launch_permit)"),
-            run.index("SerialPort serial"),
+            run.index("auto serial = std::make_unique<SerialPort>("),
         )
         verification = run.index("J2_STARTUP_BRAKE_RECHECK_FAILED")
         spend = run.index("spend_j2_launch_permit", verification)
@@ -327,25 +327,33 @@ class J2SessionPermitContractTest(unittest.TestCase):
         self.assertLess(spend, bind)
         self.assertLess(bind, verified)
 
-    def test_recheck_stays_brake_only_and_continuity_loss_is_terminal(self) -> None:
+    def test_recheck_stays_brake_only_and_continuity_loss_recovers_safely(self) -> None:
         for evidence in (
             "J2_STARTUP_RECHECK_NON_BRAKE_MODE",
             "minimum_brake_frames",
             "max_raw_phase_delta_rad",
             "max_raw_span_rad",
             "J2_STARTUP_BRAKE_RECHECK_FAILED",
-            "J2_POWER_CONTINUITY_LOST",
+            "COMMUNICATION_RECOVERY_BEGIN",
+            "COMMUNICATION_RECOVERY_READY",
+            "COMMUNICATION_COMMAND_RECEIVER_REOPENED",
             "(!active_power_session || j2_startup_verified)",
         ):
             self.assertIn(evidence, self.controller)
         # One malformed reply is published as communication_ok=false but does
-        # not unload the pair.  Power-session continuity becomes terminal at
-        # the audited consecutive-invalid threshold.
+        # not unload the pair. Sustained loss closes the command socket and
+        # recovers in BRAKE before reopening it with a higher epoch required.
         invalid_mark = self.controller.index(
             "if (active_power_session && sustained_invalid)"
         )
-        terminal = self.controller.index('"J2_POWER_CONTINUITY_LOST"', invalid_mark)
-        self.assertLess(invalid_mark, terminal)
+        recover = self.controller.index(
+            "recover_go_transport_in_brake(", invalid_mark
+        )
+        reopen = self.controller.index(
+            "COMMUNICATION_COMMAND_RECEIVER_REOPENED", recover
+        )
+        self.assertLess(invalid_mark, recover)
+        self.assertLess(recover, reopen)
 
     def test_issuer_and_consumer_share_lifecycle_and_time_bounds(self) -> None:
         for source in (self.controller, self.issuer):

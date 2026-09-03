@@ -48,6 +48,7 @@ FEEDBACK_MAX_AGE_S = 0.15
 REJECTION_LOG_INTERVAL_S = 5.0
 COMMAND_PACKET_BUDGET = 128
 COMMAND_SOURCE_MAX_AGE_NS = 250_000_000
+EMPIRICAL_ZERO_HOLD_TRANSITION_MAX_AGE_NS = 2_000_000_000
 COMMAND_SOURCE_TAKEOVER_LEASE_NS = 500_000_000
 COMMAND_SOURCE_REPLAY_LIMIT = 32
 ACTIVE_DEADLINE_CONSECUTIVE_LIMIT = 3
@@ -909,6 +910,24 @@ def command_is_v13_quintic_position(command: dict | None) -> bool:
     )
 
 
+def gravity_authority_maximum_age_ns(command: dict, authority: dict) -> int:
+    zero_hold_transition = (
+        authority.get("schema") == "go-m8010-gravity-command-authority/1.1"
+        and authority.get("authority_class") == "EMPIRICAL_VALIDATION_ENVELOPE"
+        and command.get("mode") == "hold"
+        and command.get("moving_joint_mask") == [False] * 6
+        and authority.get("empirical_stage_index") == 0
+        and authority.get("gravity_scale") == 0.0
+        and authority.get("gravity_scale_target") == 0.0
+        and authority.get("feedforward_nm") == [0.0] * 6
+    )
+    return (
+        EMPIRICAL_ZERO_HOLD_TRANSITION_MAX_AGE_NS
+        if zero_hold_transition
+        else COMMAND_SOURCE_MAX_AGE_NS
+    )
+
+
 def validate_empirical_command_authority(
     command: dict, received_monotonic_ns: int, replay_state: dict
 ) -> tuple | None:
@@ -997,7 +1016,8 @@ def validate_empirical_command_authority(
     if (
         type(source_ns) is not int
         or not 0 < source_ns <= received_monotonic_ns
-        or received_monotonic_ns - source_ns > COMMAND_SOURCE_MAX_AGE_NS
+        or received_monotonic_ns - source_ns
+        > gravity_authority_maximum_age_ns(command, authority)
         or type(sequence) is not int
         or sequence <= 0
     ):

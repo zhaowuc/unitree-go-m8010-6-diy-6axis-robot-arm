@@ -188,6 +188,8 @@ constexpr char kProductionModelSha256[] =
 constexpr char kGravityConfigSha256[] =
     "307469b8384fd35547327ba1d5f80aa440e6b9663406ab7c9d9469bea263335d";
 constexpr std::uint64_t kMaximumGravityAuthorityAgeNs = 250000000ULL;
+constexpr std::uint64_t kEmpiricalZeroHoldTransitionMaximumAgeNs =
+    2000000000ULL;
 // Frozen-model command envelopes, not continuous motor torque ratings.
 constexpr std::array<double, 6> kGravityFeedforwardLimits{{
     0.20, 1.75, 1.10, 0.40, 0.20, 0.0}};
@@ -3447,6 +3449,26 @@ struct GuiCommand {
   bool received = false;
 };
 
+std::uint64_t gravity_authority_maximum_age_ns(
+    const GuiCommand& command, const GravityCommandAuthority& authority) {
+  const bool zero_hold_transition =
+      !authority.official_continuous_authority &&
+      authority.authority_class == kEmpiricalAuthorityClass &&
+      command.mode == "hold" &&
+      std::none_of(
+          command.moving_joint_mask.begin(), command.moving_joint_mask.end(),
+          [](bool moving) { return moving; }) &&
+      authority.empirical_stage_index == 0U &&
+      std::abs(authority.gravity_scale) <= 1e-12 &&
+      std::abs(authority.gravity_scale_target) <= 1e-12 &&
+      std::all_of(
+          authority.feedforward_nm.begin(), authority.feedforward_nm.end(),
+          [](double value) { return std::abs(value) <= 1e-12; });
+  return zero_hold_transition
+      ? kEmpiricalZeroHoldTransitionMaximumAgeNs
+      : kMaximumGravityAuthorityAgeNs;
+}
+
 bool command_uses_empirical_gravity_authority(const GuiCommand& command) {
   return command.gravity_authority.present &&
       !command.gravity_authority.official_continuous_authority;
@@ -3649,10 +3671,6 @@ GravityCommandAuthority parse_gravity_command_authority(
   result.source_monotonic_ns = strict_positive_uint64(
       authority.at("source_monotonic_ns"),
       "COMMAND_GRAVITY_TIMESTAMP_INVALID");
-  if (result.source_monotonic_ns > received_ns ||
-      received_ns - result.source_monotonic_ns >
-          kMaximumGravityAuthorityAgeNs)
-    throw std::runtime_error("COMMAND_GRAVITY_TIMESTAMP_STALE");
   if (!authority.at("session_id").is_string() ||
       !authority.at("state_instance_id").is_string())
     throw std::runtime_error("COMMAND_GRAVITY_SESSION_INVALID");
@@ -3690,6 +3708,10 @@ GravityCommandAuthority parse_gravity_command_authority(
   }
   if (std::abs(result.feedforward_nm[5]) > 1e-12)
     throw std::runtime_error("COMMAND_GRAVITY_J6_MUST_BE_ZERO");
+  if (result.source_monotonic_ns > received_ns ||
+      received_ns - result.source_monotonic_ns >
+          gravity_authority_maximum_age_ns(candidate, result))
+    throw std::runtime_error("COMMAND_GRAVITY_TIMESTAMP_STALE");
   const auto& expected = g_expected_gravity_authority_binding;
   const bool startup_binding_enforced =
       expected.authority_class != "UNBOUND_SELF_TEST";
@@ -4891,6 +4913,29 @@ int enforce_brake_only_wire_mode(bool brake_only, int requested_mode) {
 }
 
 void command_mask_self_test() {
+  GuiCommand zero_hold_transition;
+  zero_hold_transition.mode = "hold";
+  GravityCommandAuthority zero_empirical_authority;
+  zero_empirical_authority.authority_class = kEmpiricalAuthorityClass;
+  if (gravity_authority_maximum_age_ns(
+          zero_hold_transition, zero_empirical_authority) !=
+      kEmpiricalZeroHoldTransitionMaximumAgeNs)
+    throw std::runtime_error(
+        "COMMAND_ZERO_HOLD_TRANSITION_AGE_SELF_TEST_FAILED");
+  zero_hold_transition.moving_joint_mask[0] = true;
+  if (gravity_authority_maximum_age_ns(
+          zero_hold_transition, zero_empirical_authority) !=
+      kMaximumGravityAuthorityAgeNs)
+    throw std::runtime_error(
+        "COMMAND_MOVING_AUTHORITY_AGE_SELF_TEST_FAILED");
+  zero_hold_transition.moving_joint_mask[0] = false;
+  zero_empirical_authority.gravity_scale_target = 0.25;
+  if (gravity_authority_maximum_age_ns(
+          zero_hold_transition, zero_empirical_authority) !=
+      kMaximumGravityAuthorityAgeNs)
+    throw std::runtime_error(
+        "COMMAND_NONZERO_AUTHORITY_AGE_SELF_TEST_FAILED");
+
   if (enforce_brake_only_wire_mode(true, kBrakeMode) != kBrakeMode)
     throw std::runtime_error("BRAKE_ONLY_BRAKE_SELF_TEST_FAILED");
   bool non_brake_rejected = false;
