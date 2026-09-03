@@ -2489,6 +2489,19 @@ class ActiveAcceptanceRunner:
                         self.final_brake_hardware_state_sha256 = _document_sha256(state)
                         self.post_workflow_phase = "COMPLETE"
         except AcceptanceError as exc:
+            workflow_started = bool(
+                self.gravity_ladder_active
+                or self.gravity_ladder_complete
+                or self.position_started_ns is not None
+                or self.post_execution is not None
+                or self.comparison_condition is not None
+                or self.thermal_stage is not None
+                or self.thermal_pending_review is not None
+                or self.final_brake_requested
+                or self.post_workflow_phase != "SINGLE_JOINT"
+            )
+            if not workflow_started and self.latest_hardware is None:
+                return
             domains = self._related_domains_for_state_failure(str(exc))
             self.fail(str(exc), domains, now_ns)
 

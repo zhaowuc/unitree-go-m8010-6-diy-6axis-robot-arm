@@ -485,6 +485,26 @@ def test_default_is_offline_dry_run_and_never_claims_a_motion_publisher(capsys):
     assert "import socket" not in source
 
 
+def test_pre_workflow_control_startup_transient_is_not_permanently_latched():
+    run = runner_mod.ActiveAcceptanceRunner(binding())
+    transient = state(run.binding, 1_000_000_000, 1)
+    transient["control_available_by_domain"]["J1"] = False
+    run.observe_hardware_state(transient, now_ns=1_000_000_000)
+    assert run.failure is None
+    assert run.latest_hardware is None
+
+    healthy = state(run.binding, 1_100_000_000, 2)
+    run.observe_hardware_state(healthy, now_ns=1_100_000_000)
+    assert run.latest_hardware is not None
+
+    run.gravity_ladder_active = True
+    active_failure = state(run.binding, 1_200_000_000, 3)
+    active_failure["control_available_by_domain"]["J1"] = False
+    run.observe_hardware_state(active_failure, now_ns=1_200_000_000)
+    assert run.failure is not None
+    assert run.failure.reason == "HARDWARE_WORKER_CONTROL_UNAVAILABLE"
+
+
 def test_worker_feedforward_echo_requires_causal_match_within_300ms():
     expected = runner_mod._expected_go_worker_feedforward
     match = runner_mod._latest_go_worker_feedforward_echo_match
