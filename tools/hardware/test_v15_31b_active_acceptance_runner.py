@@ -538,6 +538,15 @@ def test_worker_feedforward_echo_requires_causal_match_within_300ms():
     ) is None
 
 
+def test_worker_echo_wait_is_only_the_first_300ms_of_ramp():
+    pending = runner_mod._worker_echo_propagation_pending
+    assert pending(None, "RAMP", 0)
+    assert pending(None, "RAMP", 300_000_000)
+    assert not pending(None, "RAMP", 300_000_001)
+    assert not pending(None, "HOLD", 1)
+    assert not pending(object(), "RAMP", 1)
+
+
 def test_missing_worker_temperature_slope_is_derived_from_runner_samples():
     run = runner_mod.ActiveAcceptanceRunner(binding())
     metadata = {"J2A": {"slope_c_per_min": None}}

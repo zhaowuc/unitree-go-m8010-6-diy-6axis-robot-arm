@@ -481,6 +481,16 @@ def _latest_go_worker_feedforward_echo_match(
     return None
 
 
+def _worker_echo_propagation_pending(
+    matched_echo: object, phase: str, phase_elapsed_ns: int,
+) -> bool:
+    return bool(
+        matched_echo is None
+        and phase == "RAMP"
+        and 0 <= phase_elapsed_ns <= MAXIMUM_GRAVITY_WORKER_ECHO_LAG_NS
+    )
+
+
 def _valid_sha256(value: object) -> bool:
     return bool(
         isinstance(value, str)
@@ -1500,6 +1510,10 @@ class ActiveAcceptanceRunner:
             actual_worker_ff,
             echo_source_ns_by_motor=worker_echo_source_ns_by_motor,
         )
+        if _worker_echo_propagation_pending(
+            matched_echo, phase, phase_elapsed_ns
+        ):
+            return
         _require(
             matched_echo is not None,
             "GRAVITY_LADDER_NODE_WORKER_FEEDFORWARD_ECHO_NOT_PROPAGATED_300MS",
