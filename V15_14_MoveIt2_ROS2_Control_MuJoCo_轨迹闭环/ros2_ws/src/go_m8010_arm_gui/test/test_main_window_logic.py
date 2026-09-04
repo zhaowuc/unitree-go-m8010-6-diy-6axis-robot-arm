@@ -1128,6 +1128,9 @@ def test_control_panel_exposes_hold_and_the_four_v15_31a_workflow_actions():
         def setWordWrap(self, _enabled):
             pass
 
+        def setStyleSheet(self, _style):
+            pass
+
     class FakeProgress:
         def setRange(self, *_args):
             pass
@@ -1136,6 +1139,12 @@ def test_control_panel_exposes_hold_and_the_four_v15_31a_workflow_actions():
             pass
 
         def setFormat(self, _text):
+            pass
+
+        def setMinimumHeight(self, _height):
+            pass
+
+        def setStyleSheet(self, _style):
             pass
 
     method = load_main_window_method(
@@ -1165,9 +1174,9 @@ def test_control_panel_exposes_hold_and_the_four_v15_31a_workflow_actions():
     window = FakeWindow()
     method(window)
     assert [button.text for button in window.buttons] == [
-        "保持当前位置",
-        "预演轨迹",
-        "下发到现实",
+        "1. 保持当前位置",
+        "2. 预演轨迹",
+        "3. 下发到现实",
         "恢复初始化姿态",
         "停止并制动",
     ]
@@ -1551,7 +1560,7 @@ def test_only_plan_sliders_are_long_expanding_and_use_full_model_bounds():
     slider = source[slider_start:slider_end]
     assert "self.limits[index] if bounds is None else bounds" in slider
     assert "slider.setRange(round(lower * 100.0), round(upper * 100.0))" in slider
-    assert "slider.setMinimumWidth(420)" in slider
+    assert "slider.setMinimumWidth(240)" in slider
     assert "QSizePolicy.Expanding" in slider
 
     virtual_start = slider_end
@@ -1576,6 +1585,11 @@ def test_window_fits_available_screen_and_keeps_large_content_scrollable():
     assert "screen.availableGeometry()" in source
     assert "fitted_window_size(available.width(), available.height())" in source
     assert "self.resize(1920, 980)" not in source
+    assert source.index("outer.addWidget(self._control_panel())") < source.index(
+        "outer.addLayout(twins, 1)"
+    )
+    assert "虚拟驱动现实（默认，无需寻找单独按钮）" in source
+    assert "self.workflow_progress.setMinimumHeight(32)" in source
 
 
 def test_scroll_gutter_and_summary_refresh_are_layout_stable():

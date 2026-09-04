@@ -2796,6 +2796,7 @@ class MainWindow(QMainWindow):
         columns.addWidget(self._virtual_panel(), 2)
         columns.addWidget(self._real_panel(), 3)
         outer.addLayout(columns)
+        outer.addWidget(self._control_panel())
 
         # Two independent renderers deliberately own different MjData objects.
         # The planned side consumes only q_plan_target/q_plan_trajectory; the
@@ -2823,7 +2824,6 @@ class MainWindow(QMainWindow):
                 twins.addWidget(unavailable, 1)
         self.mujoco_preview = self.planned_mujoco_preview
         outer.addLayout(twins, 1)
-        outer.addWidget(self._control_panel())
         outer.addWidget(self._task_status_panel())
         outer.addWidget(self._motor_status_panel())
 
@@ -2878,7 +2878,7 @@ class MainWindow(QMainWindow):
         slider.setRange(round(lower * 100.0), round(upper * 100.0))
         slider.setSingleStep(1)
         slider.setPageStep(100)
-        slider.setMinimumWidth(420)
+        slider.setMinimumWidth(240)
         slider.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         return slider
 
@@ -2899,7 +2899,7 @@ class MainWindow(QMainWindow):
             spin.setRange(*edit_bounds)
             spin.setDecimals(2)
             spin.setSingleStep(0.1)
-            spin.setMinimumWidth(180)
+            spin.setMinimumWidth(100)
             limit_text = (
                 f"历史3D模型完整关节范围："
                 f"绝对{absolute_bounds[0]:+.2f}° .. {absolute_bounds[1]:+.2f}°，"
@@ -3021,7 +3021,10 @@ class MainWindow(QMainWindow):
             "停止并制动": "Alt+B",
         }
         for index, (text, callback) in enumerate(buttons):
-            button = self._button(text, callback)
+            button = self._button(
+                f"{index + 1}. {text}" if index < 3 else text,
+                callback,
+            )
             button.setShortcut(shortcuts[text])
             if text == "保持当前位置":
                 self.hold_current_button = button
@@ -3039,9 +3042,13 @@ class MainWindow(QMainWindow):
                 )
             layout.addWidget(button, 0, index)
         self.mode_label = QLabel(
-            "当前固定模式：位置控制　｜　控制请求：制动　｜　硬件确认：等待状态反馈"
+            "当前方向：虚拟驱动现实（默认，无需寻找单独按钮）　｜　"
+            "控制请求：制动　｜　硬件确认：等待状态反馈"
         )
         self.mode_label.setAlignment(Qt.AlignCenter)
+        self.mode_label.setStyleSheet(
+            "padding: 7px; background: #0d47a1; color: white; font-weight: bold;"
+        )
         layout.addWidget(self.mode_label, 1, 0, 1, 5)
         servo_notice = QLabel(
             "说明：调整计划滑条只改变虚拟目标，不会发布真实运动。"
@@ -3054,11 +3061,14 @@ class MainWindow(QMainWindow):
         )
         self.workflow_status.setWordWrap(True)
         self.workflow_status.setAlignment(Qt.AlignCenter)
+        self.workflow_status.setStyleSheet("font-weight: bold; font-size: 14px;")
         layout.addWidget(self.workflow_status, 3, 0, 1, 5)
         self.workflow_progress = QProgressBar()
         self.workflow_progress.setRange(0, 100)
         self.workflow_progress.setValue(0)
         self.workflow_progress.setFormat("虚拟预演未开始")
+        self.workflow_progress.setMinimumHeight(32)
+        self.workflow_progress.setStyleSheet("font-weight: bold; font-size: 14px;")
         layout.addWidget(self.workflow_progress, 4, 0, 1, 5)
         return box
 
@@ -5285,6 +5295,8 @@ class MainWindow(QMainWindow):
 
     def _update_mode_label(self, extra: str = "") -> None:
         direction_text = "现实驱动虚拟" if self.direction is ArmMode.REAL_TO_SIM else "虚拟驱动现实"
+        if self.direction is ArmMode.SIM_TO_REAL:
+            direction_text += "（默认，无需寻找单独按钮）"
         drive_text = {
             "brake": "制动", "drag": "关闭驱动力／拖动",
             "hold": "保持", "position": "位置控制",
