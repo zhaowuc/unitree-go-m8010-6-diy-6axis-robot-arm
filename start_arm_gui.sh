@@ -308,11 +308,11 @@ else
   xdpyinfo >/dev/null 2>&1 || fail "无法访问当前 Ubuntu 图形会话"
   if [[ -n "${QT_QPA_PLATFORM:-}" ]]; then
     : # Respect an explicitly selected, already validated Qt display backend.
-  elif dpkg-query -W -f='${Status}' libxcb-cursor0 2>/dev/null | grep -q 'install ok installed'; then
-    export QT_QPA_PLATFORM=xcb
   elif [[ -S "$XDG_RUNTIME_DIR/wayland-0" ]]; then
     export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}"
     export QT_QPA_PLATFORM=wayland
+  elif dpkg-query -W -f='${Status}' libxcb-cursor0 2>/dev/null | grep -q 'install ok installed'; then
+    export QT_QPA_PLATFORM=xcb
   else
     fail "既无可用 Wayland 会话，也缺少 libxcb-cursor0"
   fi
