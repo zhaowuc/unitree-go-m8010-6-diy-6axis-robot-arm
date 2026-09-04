@@ -550,6 +550,12 @@ def test_worker_echo_wait_allows_one_async_sample_gap_but_not_stale_echo():
     assert not pending(object(), "RAMP", 1)
 
 
+def test_gravity_ramp_observation_allows_only_one_sample_of_start_skew():
+    covers = runner_mod._gravity_ramp_observation_covers_minimum
+    assert covers(1_000_000_000, 2_900_000_000)
+    assert not covers(1_000_000_000, 2_899_999_999)
+
+
 def test_missing_worker_temperature_slope_is_derived_from_runner_samples():
     run = runner_mod.ActiveAcceptanceRunner(binding())
     metadata = {"J2A": {"slope_c_per_min": None}}

@@ -1445,8 +1445,8 @@ def _validate_gravity_scale(
             ramp_start_ns = int(ramps[0]["monotonic_ns"])
             transition_duration_s = (hold_start_ns - ramp_start_ns) * 1.0e-9
             _require(
-                2.0 <= transition_duration_s <= 2.10,
-                f"gravity scale {level}: transition must take 2 seconds",
+                1.9 <= transition_duration_s <= 2.10,
+                f"gravity scale {level}: transition must cover 2 seconds within one 100 ms sample",
             )
             _require(
                 abs(float(ramps[0]["gravity_scale_applied"]) - previous_level)

@@ -505,6 +505,17 @@ def _worker_echo_propagation_pending(
     )
 
 
+def _gravity_ramp_observation_covers_minimum(
+    started_ns: int, completed_ns: int,
+) -> bool:
+    observed_ns = completed_ns - started_ns
+    return bool(
+        observed_ns >= 0
+        and observed_ns + MAXIMUM_GRAVITY_LADDER_SAMPLE_GAP_NS
+        >= GRAVITY_LADDER_MINIMUM_RAMP_NS
+    )
+
+
 def _valid_sha256(value: object) -> bool:
     return bool(
         isinstance(value, str)
@@ -1454,8 +1465,9 @@ class ActiveAcceptanceRunner:
             _require(
                 self.gravity_ladder_phase == "RAMP"
                 and self.gravity_ladder_phase_started_ns is not None
-                and sample_ns - self.gravity_ladder_phase_started_ns
-                >= GRAVITY_LADDER_MINIMUM_RAMP_NS,
+                and _gravity_ramp_observation_covers_minimum(
+                    self.gravity_ladder_phase_started_ns, sample_ns
+                ),
                 "GRAVITY_LADDER_RAMP_NOT_OBSERVED_FOR_2_SECONDS",
             )
         previous_phase = self.gravity_ladder_phase
