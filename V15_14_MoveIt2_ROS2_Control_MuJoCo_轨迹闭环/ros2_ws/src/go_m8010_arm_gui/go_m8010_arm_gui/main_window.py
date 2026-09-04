@@ -6034,7 +6034,10 @@ class MainWindow(QMainWindow):
             bool(requested[index] and self.connected[index])
             for index in range(6)
         ]
-        self.activation_epoch += 1
+        self.activation_epoch = max(
+            self.activation_epoch + 1,
+            time.monotonic_ns() & ((1 << 63) - 1),
+        )
 
     def _confirmed_joint_modes(self) -> list[Optional[str]]:
         by_motor = (self.node.latest_hardware or {}).get(

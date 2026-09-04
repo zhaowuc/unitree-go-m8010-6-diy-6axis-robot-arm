@@ -4076,6 +4076,24 @@ def test_partial_hold_retakeover_preserves_every_existing_active_target():
     assert window.events.index("hold") < window.events.index("resume")
 
 
+def test_active_joint_authorization_uses_current_epoch_for_source_takeover():
+    authorize = load_main_window_method(
+        "_authorize_active_joints",
+        {"time": SimpleNamespace(monotonic_ns=lambda: 1_000_000)},
+    )
+    window = SimpleNamespace(
+        activation_epoch=10,
+        connected=[True] * 6,
+        requested_active_joint_mask=[False] * 6,
+    )
+    authorize(window, [True] * 6)
+    assert window.activation_epoch == 1_000_000
+
+    window.activation_epoch = 2_000_000
+    authorize(window, [True] * 6)
+    assert window.activation_epoch == 2_000_001
+
+
 def test_fixed_hold_policy_from_brake_or_drag_requires_feedback_then_enters_hold():
     method = load_main_window_method(
         "_set_fixed_hold_after_arrival",
