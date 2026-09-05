@@ -2761,6 +2761,14 @@ class ActiveAcceptanceRunner:
         self.endpoint_last_stable_sample_ns = None
         self.awaiting_position_command = False
 
+    def _position_displacement_reached(self, joint: str, phase: str, actual_rad: float) -> bool:
+        if phase not in {"PLUS_5", "MINUS_5"}:
+            return True
+        _require(joint in self.position_actual_center_start_rad, "POSITION_ACTUAL_CENTER_START_MISSING")
+        displacement_deg = _rad_to_deg(actual_rad - self.position_actual_center_start_rad[joint])
+        direction = 1.0 if phase == "PLUS_5" else -1.0
+        return direction * displacement_deg >= POSITION_DISPLACEMENT_DEG - 1.0e-6
+
     def _advance_position(self, state: Mapping[str, Any], now_ns: int) -> None:
         _require(self.position_started_ns is not None, "POSITION_NOT_STARTED")
         _require(self._fresh_confirmation(now_ns, 1.0), "OPERATOR_CONFIRMATION_STALE")
@@ -2850,6 +2858,7 @@ class ActiveAcceptanceRunner:
         stable = (
             abs(error_deg) <= ENDPOINT_ERROR_DEG
             and abs(_rad_to_deg(velocities[joint_index])) <= 0.25
+            and self._position_displacement_reached(joint, phase, actual_rad)
         )
         if not stable:
             self.endpoint_dwell_started_ns = None
@@ -2969,17 +2978,11 @@ class ActiveAcceptanceRunner:
         signed_displacement_deg = _rad_to_deg(
             actual_rad - actual_center_start_rad
         )
-        if phase == "PLUS_5":
+        if phase in {"PLUS_5", "MINUS_5"}:
             _require(
-                signed_displacement_deg
-                >= POSITION_DISPLACEMENT_DEG - 1.0e-6,
-                "POSITION_PLUS_ACTUAL_MOTION_BELOW_5_DEG",
-            )
-        elif phase == "MINUS_5":
-            _require(
-                signed_displacement_deg
-                <= -POSITION_DISPLACEMENT_DEG + 1.0e-6,
-                "POSITION_MINUS_ACTUAL_MOTION_BELOW_5_DEG",
+                self._position_displacement_reached(joint, phase, actual_rad),
+                "POSITION_PLUS_ACTUAL_MOTION_BELOW_5_DEG" if phase == "PLUS_5"
+                else "POSITION_MINUS_ACTUAL_MOTION_BELOW_5_DEG",
             )
         motors = MOTOR_BY_JOINT[joint]
         temperature = max(

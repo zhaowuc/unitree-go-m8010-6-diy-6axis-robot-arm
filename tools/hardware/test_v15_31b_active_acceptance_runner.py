@@ -1396,69 +1396,105 @@ def test_position_status_has_no_start_when_not_commandable():
     assert run.status(now_ns=2)["position"]["expected_start_vector_rad"] is None
 
 
-def test_position_rejects_endpoint_that_did_not_actually_move_five_degrees():
+@pytest.mark.parametrize("direction", (-1.0, 1.0))
+@pytest.mark.parametrize("actual_center_deg", (0.0, 0.0268))
+@pytest.mark.parametrize("eventually_reaches", (False, True))
+def test_endpoint_waits_for_full_actual_displacement_then_dwell_or_deadline(
+    direction, actual_center_deg, eventually_reaches,
+):
     run = runner_mod.ActiveAcceptanceRunner(binding())
     bound = run.binding
     now = 56_000_000_000
     sequence = 1
-    positions = [0.0] * 6
+    # The observed CENTER_START differs from the frozen command center.
+    positions = [math.radians(actual_center_deg - 0.02)] + [0.0] * 5
     assert run.observe_confirmation(confirmation(bound, now), now_ns=now)
     refresh_gravity(run, now)
-    run.observe_hardware_state(
-        state(bound, now, sequence, positions=positions), now_ns=now
-    )
+    run.observe_hardware_state(state(bound, now, sequence, positions=positions), now_ns=now)
     run.gravity_ladder_complete = True
     run.comparison_complete = {"WITHOUT_FF", "WITH_FF"}
     run.start_position(now_ns=now)
+    positions[0] = math.radians(actual_center_deg)
     for _ in range(6):
         now += 100_000_000
         sequence += 1
         refresh_gravity(run, now)
-        run.observe_hardware_state(
-            state(bound, now, sequence, positions=positions), now_ns=now
-        )
-    assert run.expected_phase == "PLUS_5"
-    position_status = run.status(now_ns=now)["position"]
-    assert position_status["expected_joint"] == "J1"
-    assert position_status["expected_phase"] == "PLUS_5"
-    assert position_status["expected_target_rad"] == pytest.approx(
-        math.radians(5.0)
-    )
-    assert position_status["expected_target_deg"] == pytest.approx(5.0)
-    assert position_status["expected_target_vector_rad"] == pytest.approx(
-        [math.radians(5.0), 0.0, 0.0, 0.0, 0.0, 0.0]
-    )
+        run.observe_hardware_state(state(bound, now, sequence, positions=positions), now_ns=now)
+    assert run.position_actual_center_start_rad["J1"] == positions[0]
+    assert run.position_actual_center_start_rad["J1"] != run.center_rad[0]
+    # Exercise each directional phase at its center-start boundary.
+    run.position_phase_index = 1 if direction > 0 else 3
+    phase = run.expected_phase
     now += 1
     command, target, trajectory_sha, plan_token = position_command(
-        bound, run, now, 1, positions
+        bound, run, now, 1, run.center_rad,
     )
     refresh_gravity(run, now, command["plan_manifest"]["recipe_sha256"])
     run.observe_gui_command(command, now_ns=now)
+    assert run.failure is None
+    accepted_at = now
     run.observe_router_status({
         "schema": runner_mod.ROUTER_STATUS_SCHEMA,
-        "last_mode": "position",
-        "last_moving_joint_mask": command["moving_joint_mask"],
+        "last_mode": "position", "last_moving_joint_mask": command["moving_joint_mask"],
         "last_command_age_ms": 1.0,
     }, now_ns=now)
-    target[0] = math.radians(4.5001)
-    modes = {motor: "hold" for motor in runner_mod.MOTOR_NAMES}
-    modes["J1"] = "position"
-    for _ in range(6):
+    center_rows = len(run.position_rows)
+
+    def observe(displacement_deg, velocity_deg_s=0.0, mode="position", trajectory_state="COMPLETE"):
+        nonlocal now, sequence
         now += 100_000_000
         sequence += 1
+        actual = list(positions)
+        actual[0] += math.radians(direction * displacement_deg)
+        modes = dict.fromkeys(runner_mod.MOTOR_NAMES, "hold")
+        modes["J1"] = mode
+        sample = state(bound, now, sequence, positions=actual, modes=modes,
+            trajectory_joint="J1", trajectory_sha=trajectory_sha, plan_token=plan_token)
+        sample["velocity_rad_s"][0] = math.radians(direction * velocity_deg_s)
+        sample["per_motor"]["J1"]["trajectory_state"] = trajectory_state
         refresh_gravity(run, now, command["plan_manifest"]["recipe_sha256"])
-        run.observe_hardware_state(state(
-            bound,
-            now,
-            sequence,
-            positions=target,
-            modes=modes,
-            trajectory_joint="J1",
-            trajectory_sha=trajectory_sha,
-            plan_token=plan_token,
-        ), now_ns=now)
-    assert run.failure is not None
-    assert run.failure.reason == "POSITION_PLUS_ACTUAL_MOTION_BELOW_5_DEG"
+        run.observe_hardware_state(sample, now_ns=now)
+
+    observe(0.0, mode="hold", trajectory_state="INACTIVE")
+    observe(0.0, mode="hold", trajectory_state="INACTIVE")
+    observe(0.0, trajectory_state="PREPARED")
+    for step in range(1, 21):
+        observe(4.73 * step / 20, 4.73 / 2, trajectory_state="RUNNING")
+    # Reference is COMPLETE, but measured travel has only reached 4.73 degrees.
+    for _ in range(6):
+        observe(4.73)
+        assert run.failure is None
+        assert len(run.position_rows) == center_rows
+        assert run.endpoint_dwell_started_ns is None
+        assert run.status(now_ns=now)["position"]["last_completed_trajectory_sha256"] is None
+    reason = "POSITION_PLUS_ACTUAL_MOTION_BELOW_5_DEG" if direction > 0 else "POSITION_MINUS_ACTUAL_MOTION_BELOW_5_DEG"
+    with pytest.raises(runner_mod.AcceptanceError, match=reason):
+        run._record_position_endpoint(run.latest_hardware, now, runner_mod.ENDPOINT_DWELL_NS)
+    assert len(run.position_rows) == center_rows
+
+    if eventually_reaches:
+        for step in range(1, 6):
+            observe(4.73 + 0.27 * step / 5, 0.54)
+            assert run.failure is None and len(run.position_rows) == center_rows
+        for _ in range(5):
+            observe(5.0)
+            assert run.failure is None and len(run.position_rows) == center_rows
+        observe(5.0)
+        assert run.failure is None
+        assert len(run.position_rows) == center_rows + 1
+        row = run.position_rows[-1]
+        assert row["phase"] == phase and row["endpoint_dwell_s"] >= 0.5
+        assert row["actual_center_start_deg"] == pytest.approx(actual_center_deg)
+        assert row["actual_displacement_from_center_deg"] == pytest.approx(direction * 5.0)
+    else:
+        while now - accepted_at <= runner_mod.MAXIMUM_SEGMENT_NS:
+            observe(4.73)
+            if now - accepted_at <= runner_mod.MAXIMUM_SEGMENT_NS:
+                assert run.failure is None and len(run.position_rows) == center_rows
+        assert run.failure.reason == "POSITION_SEGMENT_RUNTIME_EXCEEDED_15_SECONDS"
+        assert len(run.position_rows) == center_rows
+    assert command["targets_rad"] == target
+    assert run.position_trajectory_budget_ns == command["trajectory"]["duration_ns"]
 
 
 def test_hardware_state_rejects_new_sequence_with_replayed_source_time():

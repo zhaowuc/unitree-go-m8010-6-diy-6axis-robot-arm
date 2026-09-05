@@ -43,7 +43,7 @@ sys.path.insert(0, str(ROOT / "tools/hardware/j6_dm_g6220"))
 from go_m8010_arm_gui import command_router as router
 from go_m8010_arm_gui import main_window as gui
 from go_m8010_arm_gui.workflow_contract import (
-    WorkflowState, trajectory_command_descriptor, trajectory_plan_manifest,
+    WorkflowState, generate_quintic_trajectory, trajectory_command_descriptor, trajectory_plan_manifest,
     trajectory_sample_index_at,
 )
 from go_m8010_arm_hardware import gravity_model as gm
@@ -206,7 +206,7 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
             assert sampled["q_rad"] == pytest.approx(reference.q_rad, abs=1e-12)
             assert sampled["dq_rad_s"] == pytest.approx(reference.dq_rad_s, abs=1e-12)
 
-    def observe(positions, *, stage=4, position_authorized=True, moving_joint=None, command=None, segment=None):
+    def observe(positions, *, stage=4, position_authorized=True, moving_joint=None, command=None, segment=None, actual_velocity_rad_s=None):
         nonlocal sequence, last_worker_feedforward
         sequence += 1
         now = clock[0]
@@ -240,10 +240,11 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
                 execute_at_monotonic_ns=descriptor["execute_at_monotonic_ns"],
                 duration_ns=descriptor["duration_ns"], interval_count=descriptor["interval_count"])
             sample = segment.samples[index]
-            state["velocity_rad_s"] = list(sample.dq_rad_s)
+            velocity = sample.dq_rad_s if actual_velocity_rad_s is None else actual_velocity_rad_s
+            state["velocity_rad_s"] = list(velocity)
             for motor in moving_motors:
                 state["per_motor"][motor].update({
-                    "dq_joint_rad_s": sample.dq_rad_s[int(moving_joint[1:]) - 1],
+                    "dq_joint_rad_s": velocity[int(moving_joint[1:]) - 1],
                     "trajectory_plan_token_id": command["plan_token_id"],
                     "trajectory_sha256": descriptor["trajectory_sha256"],
                     "trajectory_state": "PREPARED" if now < descriptor["execute_at_monotonic_ns"] else "COMPLETE" if index == descriptor["interval_count"] else "RUNNING",
@@ -434,17 +435,56 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
         run.observe_router_status({"schema": feedback.runner_mod.ROUTER_STATUS_SCHEMA,
             "last_mode": normalized["mode"], "last_moving_joint_mask": normalized["moving_joint_mask"],
             "last_command_age_ms": 0.0}, now_ns=clock[0])
-        for _ in range(100):
+        delayed_endpoint = joint == "J1" and phase == "PLUS_5"
+        plateau_checked = False
+        strict_endpoint_seen_ns = None
+        if delayed_endpoint:
+            # Synthetic measurement history, not a claim about physical I-loop
+            # convergence: 0.2688 deg following error, a 0.6 s static plateau,
+            # then a continuous <=1 deg/s correction to the unchanged endpoint.
+            residual = math.radians(0.2688)
+            displacement = segment.target_rad[joint_index] - segment.start_rad[joint_index]
+            following_ratio = 1.0 - residual / displacement
+            lagged_target = list(segment.target_rad)
+            lagged_target[joint_index] -= residual
+            tail = generate_quintic_trajectory(lagged_target, segment.target_rad, limits,
+                duration_s=0.6, maximum_sample_period_s=0.01)
+            assert max(abs(sample.dq_rad_s[joint_index]) for sample in tail.samples) <= math.radians(1.0)
+            profile_end_ns = command["trajectory"]["execute_at_monotonic_ns"] + command["trajectory"]["duration_ns"]
+            tail_start_ns = profile_end_ns + 600_000_000
+        for _ in range(140 if delayed_endpoint else 100):
             clock[0] += 50_000_000
             descriptor = command["trajectory"]
             index = trajectory_sample_index_at(clock[0],
                 execute_at_monotonic_ns=descriptor["execute_at_monotonic_ns"],
                 duration_ns=descriptor["duration_ns"], interval_count=descriptor["interval_count"])
+            actual_position = list(segment.samples[index].q_rad)
+            actual_velocity = list(segment.samples[index].dq_rad_s)
+            if delayed_endpoint:
+                if clock[0] < profile_end_ns:
+                    actual_position[joint_index] = segment.start_rad[joint_index] + following_ratio * (actual_position[joint_index] - segment.start_rad[joint_index])
+                    actual_velocity[joint_index] *= following_ratio
+                else:
+                    tail_index = trajectory_sample_index_at(clock[0],
+                        execute_at_monotonic_ns=tail_start_ns, duration_ns=600_000_000,
+                        interval_count=tail.profile.interval_count)
+                    actual_position = list(tail.samples[tail_index].q_rad)
+                    actual_velocity = list(tail.samples[tail_index].dq_rad_s)
+                    if tail_index == tail.profile.interval_count and strict_endpoint_seen_ns is None:
+                        strict_endpoint_seen_ns = clock[0]
             command_sequence += 1
             run.observe_gui_command({**command, "sequence": command_sequence,
                 "source_monotonic_ns": clock[0]}, now_ns=clock[0])
-            observe(list(segment.samples[index].q_rad), moving_joint=joint, command=command, segment=segment)
+            observe(actual_position, moving_joint=joint, command=command, segment=segment,
+                actual_velocity_rad_s=actual_velocity)
+            if delayed_endpoint and profile_end_ns + 500_000_000 <= clock[0] < tail_start_ns:
+                assert run.active_segment is not None, "a stable sub-5-degree endpoint must wait, not ACK or fail"
+                assert run.failure is None
+                plateau_checked = True
             if run.active_segment is None:
+                if delayed_endpoint:
+                    assert plateau_checked and strict_endpoint_seen_ns is not None
+                    assert clock[0] - strict_endpoint_seen_ns >= feedback.runner_mod.ENDPOINT_DWELL_NS
                 break
         assert run.active_segment is None, "runner did not acknowledge sampled trajectory and endpoint dwell"
         assert run.status(now_ns=clock[0])["position"]["last_completed_trajectory_sha256"] == segment.sha256
