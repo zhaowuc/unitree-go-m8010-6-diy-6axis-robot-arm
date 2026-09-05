@@ -2316,6 +2316,65 @@ def joint_temperature_text(hardware: dict, index: int, fresh: bool) -> str:
     return " / ".join(values)
 
 
+def gravity_preparation_status(hardware, gravity, acceptance, *, gravity_fresh, acceptance_fresh):
+    """Describe the current bound session; a 100% scale alone is not a PASS."""
+    waiting = ("等待重力服务；暂不可下发", 0, False, "warning")
+    if not isinstance(hardware, dict) or not isinstance(gravity, dict) or not gravity_fresh:
+        return waiting
+    if any(gravity.get(k) != hardware.get(k) for k in ("session_id", "state_instance_id")):
+        return ("会话已改变，等待新重力状态", 0, False, "warning")
+    empirical = gravity.get("empirical_validation", {})
+    if not isinstance(empirical, dict):
+        return waiting
+    scale = gravity.get("gravity_scale")
+    percent = round(100 * float(scale)) if type(scale) in {int, float} and math.isfinite(scale) else 0
+    percent = max(0, min(100, percent))
+    bound = acceptance.get("binding", {}) if isinstance(acceptance, dict) else {}
+    acceptance_current = bool(
+        acceptance_fresh and isinstance(bound, dict)
+        and all(bound.get(k) == hardware.get(k) for k in ("session_id", "state_instance_id"))
+        and bound.get("envelope_sha256") == empirical.get("envelope_sha256")
+        and isinstance(bound.get("envelope_sha256"), str)
+    )
+    failure = acceptance.get("failure") if acceptance_current else None
+    if isinstance(failure, dict):
+        reason = str(failure.get("reason", "未知原因"))
+        meanings = {
+            "COMPARISON_WITH_FF_TARGET_DIFFERS_FROM_WITHOUT_FF": "两次对照目标不一致",
+            "HARDWARE_WORKER_CONTROL_UNAVAILABLE": "硬件控制服务不可用",
+            "HARDWARE_STATE_NOT_SAFETY_READY": "电机反馈或安全状态异常",
+            "OPERATOR_STOP_AND_BRAKE": "会话已停止",
+            "POSITION_TARGET_SEQUENCE_MISMATCH": "目标与当前验收阶段不一致，请载入验收目标",
+        }
+        return ("验证已中止：" + meanings.get(reason, reason) + " [" + reason + "]", percent, False, "critical")
+    if empirical.get("invalidated") is True:
+        return ("重力授权已失效：" + str(empirical.get("blocker")), percent, False, "critical")
+    if not acceptance_current:
+        return ("重力 " + str(percent) + "%；等待本会话验收状态（不可下发）", percent, False, "warning")
+    ladder = acceptance.get("gravity_ladder", {})
+    conditions = acceptance.get("comparison", {}).get("complete_conditions", [])
+    position = acceptance.get("position", {})
+    if (empirical.get("position_validation_authorized") is True
+            and ladder.get("complete") is True
+            and {"WITHOUT_FF", "WITH_FF"}.issubset(set(conditions))
+            and position.get("started") is True):
+        if position.get("awaiting_gui_command") is True:
+            joint = str(position.get("expected_joint", ""))
+            target = position.get("expected_target_deg")
+            angle = f"{target:+.2f}°" if type(target) in {int, float} and math.isfinite(target) else ""
+            return (f"重力阶梯和对照已通过 ✓  下一步：载入 {joint} {angle} 验收目标 → 2. 预演轨迹", 100, True, "normal")
+        return ("重力已就绪；正在确认到位/保持状态", 100, False, "info")
+    if empirical.get("stage_complete") is True and empirical.get("stage_index") == 4:
+        return ("重力已到 100%；正在完成对照和当前位置确认，请保持等待", 100, False, "info")
+    blocker = empirical.get("blocker")
+    if blocker == "EMPIRICAL_ZERO_CURRENT_POSITION_HOLD_PENDING":
+        return ("等待保持：请点击 1. 保持当前位置；之后自动执行 0 → 25 → 50 → 75 → 100%", 0, False, "info")
+    level = empirical.get("stage_level")
+    stage = f"{round(level * 100)}%" if type(level) in {int, float} and math.isfinite(level) else "未知"
+    action = "保持验证中" if blocker == "EMPIRICAL_STAGE_HOLDING" else "正在缓升" if blocker == "EMPIRICAL_STAGE_RAMPING" else "正在确认"
+    return (f"重力阶梯：目标 {stage}，实际 {percent}% · {action}；完成后将显示绿色通过提示", percent, False, "info")
+
+
 class ArmGuiNode(Node):
     def __init__(self) -> None:
         super().__init__("arm_control_gui")
@@ -2365,12 +2424,14 @@ class ArmGuiNode(Node):
         self.latest_mujoco: Optional[dict] = None
         self.latest_control_status: Optional[dict] = None
         self.latest_gravity_status: Optional[dict] = None
+        self.latest_acceptance_status: Optional[dict] = None
         self.latest_collision_result: Optional[dict] = None
         self.last_joint_receipt = 0.0
         self.last_hardware_receipt = 0.0
         self.last_mujoco_receipt = 0.0
         self.last_control_status_receipt = 0.0
         self.last_gravity_status_receipt = 0.0
+        self.last_acceptance_status_receipt = 0.0
         self.last_collision_result_receipt = 0.0
         self.command_source_instance_id = secrets.token_hex(16)
         self.planned_path_request_sequence = 0
@@ -2388,6 +2449,9 @@ class ArmGuiNode(Node):
         )
         self.create_subscription(
             String, "/whole_arm/gravity_status", self._gravity_status_callback, 10
+        )
+        self.create_subscription(
+            String, "/whole_arm/v15_31b/acceptance_status", self._acceptance_status_callback, 10
         )
         self.create_subscription(
             String,
@@ -2475,6 +2539,15 @@ class ArmGuiNode(Node):
                 return
             self.latest_gravity_status = value
             self.last_gravity_status_receipt = time.monotonic()
+        except json.JSONDecodeError:
+            pass
+
+    def _acceptance_status_callback(self, message: String) -> None:
+        try:
+            value = json.loads(message.data)
+            if isinstance(value, dict) and value.get("schema") == "go-m8010-v15-31b-acceptance-status/1.0":
+                self.latest_acceptance_status = value
+                self.last_acceptance_status_receipt = time.monotonic()
         except json.JSONDecodeError:
             pass
 
@@ -3074,27 +3147,80 @@ class MainWindow(QMainWindow):
             "padding: 7px; background: #0d47a1; color: white; font-weight: bold;"
         )
         layout.addWidget(self.mode_label, 1, 0, 1, 5)
+        self.gravity_stage_status = QLabel("等待重力和验收状态")
+        self.gravity_stage_status.setWordWrap(True)
+        layout.addWidget(self.gravity_stage_status, 2, 0, 1, 4)
+        self.acceptance_target_button = self._button("载入当前验收目标", self._load_acceptance_target)
+        self.acceptance_target_button.setEnabled(False)
+        self.acceptance_target_button.setToolTip("仅载入本阶段完整精度的虚拟目标；仍需预演通过和点击下发")
+        layout.addWidget(self.acceptance_target_button, 2, 4)
+        self.gravity_stage_progress = QProgressBar()
+        self.gravity_stage_progress.setRange(0, 100)
+        self.gravity_stage_progress.setValue(0)
+        self.gravity_stage_progress.setFormat("重力阶梯：0%")
+        layout.addWidget(self.gravity_stage_progress, 3, 0, 1, 5)
         servo_notice = QLabel(
             "说明：调整计划滑条只改变虚拟目标，不会发布真实运动。"
             "停止并制动会撤销位置伺服和承重保持，重载关节必须有可靠机械支撑。"
         )
         servo_notice.setWordWrap(True)
-        layout.addWidget(servo_notice, 2, 0, 1, 5)
+        layout.addWidget(servo_notice, 4, 0, 1, 5)
         self.workflow_status = QLabel(
             "工作流：等待设置虚拟候选姿态；未授权现实运动"
         )
         self.workflow_status.setWordWrap(True)
         self.workflow_status.setAlignment(Qt.AlignCenter)
         self.workflow_status.setStyleSheet("font-weight: bold; font-size: 14px;")
-        layout.addWidget(self.workflow_status, 3, 0, 1, 5)
+        layout.addWidget(self.workflow_status, 5, 0, 1, 5)
         self.workflow_progress = QProgressBar()
         self.workflow_progress.setRange(0, 100)
         self.workflow_progress.setValue(0)
         self.workflow_progress.setFormat("虚拟预演未开始")
         self.workflow_progress.setMinimumHeight(32)
         self.workflow_progress.setStyleSheet("font-weight: bold; font-size: 14px;")
-        layout.addWidget(self.workflow_progress, 4, 0, 1, 5)
+        layout.addWidget(self.workflow_progress, 6, 0, 1, 5)
         return box
+
+    def _refresh_gravity_preparation(self, now: float) -> None:
+        text, percent, ready, level = gravity_preparation_status(
+            self.node.latest_hardware, self.node.latest_gravity_status,
+            self.node.latest_acceptance_status,
+            gravity_fresh=self.node.gravity_status_fresh(now),
+            acceptance_fresh=receipt_is_fresh(self.node.last_acceptance_status_receipt, now, 1.0),
+        )
+        set_widget_text_if_changed(self.gravity_stage_status, text)
+        colors = {"normal": "#1b5e20", "info": "#0d47a1", "warning": "#8a4b00", "critical": "#b71c1c"}
+        self.gravity_stage_status.setStyleSheet(
+            f"background: {colors[level]}; color: white; padding: 7px; font-weight: bold;"
+        )
+        self.gravity_stage_progress.setValue(percent)
+        self.gravity_stage_progress.setFormat(f"重力 {percent}% — " + ("验证通过" if ready else "请看上方阶段状态"))
+        set_widget_enabled_if_changed(self.acceptance_target_button, ready and self.hardware_mode != "position")
+
+    def _load_acceptance_target(self) -> None:
+        now = time.monotonic()
+        _, _, ready, _ = gravity_preparation_status(
+            self.node.latest_hardware, self.node.latest_gravity_status, self.node.latest_acceptance_status,
+            gravity_fresh=self.node.gravity_status_fresh(now),
+            acceptance_fresh=receipt_is_fresh(self.node.last_acceptance_status_receipt, now, 1.0),
+        )
+        if not ready or self.hardware_mode == "position":
+            return
+        target = self.node.latest_acceptance_status["position"].get("expected_target_vector_rad")
+        if not isinstance(target, list) or len(target) != 6 or not all(
+            type(x) in {int, float} and math.isfinite(x) for x in target
+        ):
+            return
+        self.candidate_targets = list(target)
+        self.targets = list(target)
+        self.candidate_joint_mask = [
+            abs(value - locked) > TARGET_SELECTION_DEADBAND_RAD
+            for value, locked in zip(target, self.command_targets)
+        ]
+        self.workflow_contract = self.workflow_contract.change_plan_target(target)
+        self._clear_candidate_approval()
+        self._show_targets_on_virtual()
+        self._set_workflow_state("pending", "已载入本阶段验收目标；请点击 2. 预演轨迹", 0)
 
     def _set_workflow_state(
         self, state: str, text: str, progress: Optional[int] = None,
@@ -3757,6 +3883,7 @@ class MainWindow(QMainWindow):
             or not self.preview_animation_complete
             or not self.preview_collision_safe
             or self.workflow_contract.q_plan_trajectory is None
+            or self.workflow_contract.current_plan_token is not None
         ):
             return
         checks = self._current_preview_checks(checked_at)
@@ -3764,8 +3891,8 @@ class MainWindow(QMainWindow):
             failed = [name for name, passed in checks.as_dict().items() if not passed]
             self.workflow_contract = self.workflow_contract.invalidate_preview()
             self._set_workflow_state(
-                "blocked",
-                "预演完成但现实下发被阻止：" + "、".join(failed),
+                "waiting_checks",
+                "预演已完成，等待下发前校验：" + "、".join(failed),
                 100,
             )
             return
@@ -5385,7 +5512,8 @@ class MainWindow(QMainWindow):
         state_map = {
             "idle": "空闲", "pending": "正在检查限位",
             "planning": "正在解算轨迹",
-            "previewing": "正在计算重力", "solving": "正在检查碰撞",
+            "previewing": "正在预演轨迹", "solving": "正在检查碰撞",
+            "waiting_checks": "等待异步校验",
             "waiting_hardware": "读取现实状态", "safe": "等待用户下发",
             "execute_proof": "正在下发", "blocked": "安全门禁阻止",
             "unsafe": "已取消", "stale": "状态已过期",
@@ -5861,6 +5989,8 @@ class MainWindow(QMainWindow):
         self._update_preview_animation(now)
         self._update_planned_execution_pose(time.monotonic_ns())
         self._consume_collision_guard_result()
+        self._try_finalize_preview(now)
+        self._refresh_gravity_preparation(now)
         self._expire_collision_request(now)
         if not self.node.control_streams_fresh(now):
             self._suspend_for_stale_feedback()

@@ -94,9 +94,9 @@ def run(binding):
                     return
         raise RuntimeError("stopped or timed out: " + label)
 
-    def comparison(condition):
+    def comparison(condition, target_j2_rad):
         send("START_J2_COMPARISON", condition=condition,
-             target_j2_rad=latest["hardware"]["position_rad"][1])
+             target_j2_rad=target_j2_rad)
         start = time.monotonic()
         wait(lambda: time.monotonic() - start >= 1.2, 3, condition)
         send("STOP_J2_COMPARISON")
@@ -108,7 +108,8 @@ def run(binding):
         wait(lambda: gui_hold_ready(latest["hardware"], latest["router"]),
              max(0.0, binding.expires_at_utc.timestamp() - time.time()), "GUI HOLD")
         engaged = True
-        comparison("WITHOUT_FF")
+        comparison_target_j2_rad = latest["hardware"]["position_rad"][1]
+        comparison("WITHOUT_FF", comparison_target_j2_rad)
         send("START_GRAVITY_LADDER")
         for index, level in enumerate((0.0, 0.25, 0.5, 0.75, 1.0)):
             target = level
@@ -130,8 +131,11 @@ def run(binding):
                  12, "gravity rung")
             print(f"GRAVITY_LEVEL_{int(level * 100)}=PASS", flush=True)
         wait(lambda: latest["runner"]["gravity_ladder"]["complete"], 2, "runner ladder")
-        comparison("WITH_FF")
+        comparison("WITH_FF", comparison_target_j2_rad)
         send("START_POSITION")
+        wait(lambda: latest["runner"].get("position", {}).get("started") is True
+             and latest["runner"]["position"].get("awaiting_gui_command") is True,
+             4, "runner position ready")
         print("GUI_PREVIEW_READY=YES; J1_ONLY_FIRST", flush=True)
         while not stopping:
             wait(lambda: False, 3600, "operator session")

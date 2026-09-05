@@ -1179,8 +1179,9 @@ def test_control_panel_exposes_hold_and_the_four_v15_31a_workflow_actions():
         "3. 下发到现实",
         "恢复初始化姿态",
         "停止并制动",
+        "载入当前验收目标",
     ]
-    assert [button.shortcut for button in window.buttons] == [
+    assert [button.shortcut for button in window.buttons[:5]] == [
         "Alt+H", "Alt+P", "Alt+E", "Alt+R", "Alt+B",
     ]
     hold = window.buttons[0]
@@ -1189,6 +1190,101 @@ def test_control_panel_exposes_hold_and_the_four_v15_31a_workflow_actions():
     submit = window.buttons[2]
     assert not submit.enabled
     assert "预演" in submit.tooltip
+
+
+def gravity_display_fixture():
+    hardware = {"session_id": "session", "state_instance_id": "instance"}
+    gravity = {**hardware, "gravity_scale": 0.0, "empirical_validation": {
+        "envelope_sha256": "a" * 64, "stage_index": 0, "stage_level": 0.0,
+        "stage_complete": False, "position_validation_authorized": False,
+        "blocker": "EMPIRICAL_ZERO_CURRENT_POSITION_HOLD_PENDING",
+    }}
+    acceptance = {"binding": {**hardware, "envelope_sha256": "a" * 64},
+        "failure": None, "gravity_ladder": {"complete": False},
+        "comparison": {"complete_conditions": []}, "position": {}}
+    return hardware, gravity, acceptance
+
+
+def test_gravity_banner_distinguishes_100_percent_from_pass_and_failure():
+    view = load_function("gravity_preparation_status")
+    h, g, a = gravity_display_fixture()
+    def status():
+        return view(h, g, a, gravity_fresh=True, acceptance_fresh=True)
+    assert "1. 保持当前位置" in status()[0]
+    g["gravity_scale"] = 0.25
+    g["empirical_validation"].update(stage_index=1, stage_level=0.25, blocker="EMPIRICAL_STAGE_HOLDING")
+    assert status()[1:3] == (25, False)
+    g["gravity_scale"] = 1.0
+    g["empirical_validation"].update(stage_index=4, stage_level=1.0, stage_complete=True,
+                                      position_validation_authorized=True, blocker=None)
+    a["gravity_ladder"]["complete"] = True
+    assert status()[2] is False
+    a["comparison"]["complete_conditions"] = ["WITHOUT_FF", "WITH_FF"]
+    a["position"].update(started=True, awaiting_gui_command=True, expected_joint="J1", expected_target_deg=5.0)
+    assert status()[2] is True
+    assert "J1 +5.00°" in status()[0]
+    assert view(h, g, a, gravity_fresh=True, acceptance_fresh=False)[2] is False
+    a["failure"] = {"reason": "COMPARISON_WITH_FF_TARGET_DIFFERS_FROM_WITHOUT_FF"}
+    assert "两次对照目标不一致" in status()[0]
+    assert status()[2:] == (False, "critical")
+    a["binding"]["envelope_sha256"] = "b" * 64
+    assert "中止" not in status()[0]
+
+
+def test_loading_acceptance_target_preserves_precision_and_only_changes_virtual_target():
+    h, g, a = gravity_display_fixture()
+    g["gravity_scale"] = 1.0
+    g["empirical_validation"]["position_validation_authorized"] = True
+    a["gravity_ladder"]["complete"] = True
+    a["comparison"]["complete_conditions"] = ["WITHOUT_FF", "WITH_FF"]
+    exact = [math.radians(5.0037), 0.000001, 0, 0, 0, 0]
+    a["position"] = {"started": True, "awaiting_gui_command": True,
+                     "expected_target_vector_rad": exact}
+    changed = []
+    node = SimpleNamespace(latest_hardware=h, latest_gravity_status=g, latest_acceptance_status=a,
+        gravity_status_fresh=lambda _: True, last_acceptance_status_receipt=10)
+    window = SimpleNamespace(node=node, hardware_mode="hold", command_targets=[0.0] * 6,
+        workflow_contract=SimpleNamespace(change_plan_target=lambda t: changed.append(t)),
+        _clear_candidate_approval=lambda: None, _show_targets_on_virtual=lambda: None,
+        _set_workflow_state=lambda *_: None)
+    method = load_main_window_method("_load_acceptance_target", {
+        "gravity_preparation_status": load_function("gravity_preparation_status"),
+        "receipt_is_fresh": lambda *_: True})
+    method(window)
+    assert window.candidate_targets == exact == changed[0]
+    assert window.command_targets == [0.0] * 6
+    assert window.hardware_mode == "hold"
+
+
+def test_late_preview_proof_is_rechecked_and_token_is_issued_only_once():
+    class Contract:
+        q_plan_trajectory = object()
+        current_plan_token = None
+        issued = 0
+        def invalidate_preview(self):
+            return self
+        def accept_successful_preview(self, *_args, **_kwargs):
+            self.issued += 1
+            self.current_plan_token = object()
+            return self
+    contract = Contract()
+    checks = SimpleNamespace(complete_success=False, as_dict=lambda: {"planned_load": False})
+    states = []
+    window = SimpleNamespace(preview_requested_by_operator=True, preview_animation_complete=True,
+        preview_collision_safe=True, workflow_contract=contract,
+        _current_preview_checks=lambda _: checks, _set_workflow_state=lambda *v: states.append(v))
+    method = load_main_window_method("_try_finalize_preview", {
+        "secrets": SimpleNamespace(token_hex=lambda _: "token"),
+        "PLAN_ACTUAL_DRIFT_TOLERANCE_RAD": 0.01})
+    method(window)
+    assert contract.current_plan_token is None
+    assert contract.q_plan_trajectory is not None
+    assert states[-1][0] == "waiting_checks"
+    checks.complete_success = True
+    method(window)
+    method(window)
+    assert contract.issued == 1
+    assert states[-1][0] == "safe"
 
 
 def test_visible_hold_requires_all_six_axes_before_capturing_current_pose():
