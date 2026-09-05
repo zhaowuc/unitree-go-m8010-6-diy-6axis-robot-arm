@@ -275,6 +275,10 @@ def test_default_is_validate_only_and_builds_exact_bounded_ladder(
         for stage in ladder["stages"][1:]
     )
     position = envelope["position_validation"]
+    assert position["precision_contract_id"] == "go-m8010-position-accuracy/0.1deg-v1"
+    assert position["endpoint_error_limit_deg"] == 0.1
+    assert position["nominal_command_displacement_deg"] == 5.0
+    assert position["minimum_actual_displacement_deg"] == 4.8
     assert position[tool.POSITION_BUDGET_FIELD] == 600.0
     assert position[
         "wall_clock_hold_observation_counts_against_budget"

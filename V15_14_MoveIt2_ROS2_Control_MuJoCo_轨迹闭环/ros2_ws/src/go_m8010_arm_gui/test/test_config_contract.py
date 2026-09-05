@@ -44,7 +44,7 @@ def test_control_defaults_and_fixed_hold_gain_envelope_are_frozen():
     # established 15 deg/s^2 guard.  This keeps preview/router/GO execution
     # compatible without weakening any worker-side protection.
     assert config["控制"]["最大加速度_度每二次方秒"] == 15.0
-    assert config["控制"]["到位容差_度"] == 0.5
+    assert config["控制"]["到位容差_度"] == 0.1
     assert config["控制"]["J6到位容差_度"] == 0.08
     assert [config["关节"][f"J{index}"]["Kp"] for index in range(1, 6)] == [
         1.50, 3.00, 2.00, 2.00, 1.50,

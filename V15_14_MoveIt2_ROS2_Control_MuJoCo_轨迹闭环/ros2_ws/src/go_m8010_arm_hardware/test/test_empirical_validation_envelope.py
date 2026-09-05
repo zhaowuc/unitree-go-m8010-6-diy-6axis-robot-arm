@@ -57,6 +57,21 @@ def _envelope_file(tmp_path: Path, now: datetime) -> tuple[Path, str]:
     return path, hashlib.sha256(data).hexdigest()
 
 
+@pytest.mark.parametrize("field,value", (("precision_contract_id", None),
+    ("endpoint_error_limit_deg", 0.5), ("minimum_actual_displacement_deg", 5.0),
+    ("nominal_command_displacement_deg", 4.8)))
+def test_runtime_rejects_legacy_or_mixed_precision_contract(tmp_path, field, value):
+    now = datetime.now(timezone.utc)
+    path, _ = _envelope_file(tmp_path, now)
+    document = json.loads(path.read_text(encoding="utf-8"))
+    document["position_validation"][field] = value
+    data = json_bytes(document)
+    path.write_bytes(data)
+    with pytest.raises(EmpiricalEnvelopeError, match="POSITION_VALIDATION_BOUNDS_INVALID"):
+        EmpiricalValidationEnvelope.from_path(path, hashlib.sha256(data).hexdigest(),
+            now_utc=now, now_monotonic_ns=1_000_000_000)
+
+
 def _hardware(now_ns: int, *, mode: str = "hold") -> dict:
     return {
         "schema": "go-m8010-hardware-state/1.1",

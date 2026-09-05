@@ -125,8 +125,13 @@ MAXIMUM_STABLE_THERMAL_SLOPE_C_PER_MIN = 0.5
 MINIMUM_THERMAL_SLOPE_IMPROVEMENT_C_PER_MIN = 0.05
 MINIMUM_EARLY_FUNDAMENTAL_SLOPE_C_PER_MIN = 0.25
 MINIMUM_EARLY_FUNDAMENTAL_RISE_C = 1.0
-ENDPOINT_ERROR_DEG = 0.5
+ENDPOINT_ERROR_DEG = 0.1
+# Diagnostic comparison and terminal support-drift windows are not servo accuracy.
+COMPARISON_POSE_WINDOW_DEG = 0.5
+FINAL_BRAKE_POSE_WINDOW_DEG = 0.5
 POSITION_DISPLACEMENT_DEG = 5.0
+POSITION_PRECISION_CONTRACT_ID = "go-m8010-position-accuracy/0.1deg-v1"
+POSITION_MINIMUM_ACTUAL_DISPLACEMENT_DEG = POSITION_DISPLACEMENT_DEG - 2 * ENDPOINT_ERROR_DEG
 J2_SYNC_WARNING_DEG = 0.25
 J2_SYNC_HARD_DEG = 0.5
 HARD_THERMAL_STOP_C = 60.0
@@ -154,6 +159,7 @@ POSITION_FIELDS = (
     "gui_command_source_monotonic_ns",
     "actual_center_start_deg", "actual_displacement_from_center_deg",
     "minimum_required_actual_displacement_deg",
+    "precision_contract_id", "endpoint_error_limit_deg", "nominal_command_displacement_deg",
 )
 J2_COMPARISON_FIELDS = (
     "timestamp_utc", "monotonic_ns", "receipt_monotonic_ns",
@@ -718,6 +724,9 @@ class EvidenceBinding:
             0.0 < maximum_position <= 600.0
             and 0.0 < maximum_segment <= 15.0
             and maximum_displacement == 5.0
+            and position.get("precision_contract_id") == POSITION_PRECISION_CONTRACT_ID
+            and position.get("nominal_command_displacement_deg") == POSITION_DISPLACEMENT_DEG
+            and position.get("minimum_actual_displacement_deg") == POSITION_MINIMUM_ACTUAL_DISPLACEMENT_DEG
             and _finite(position.get("endpoint_error_limit_deg"), "POSITION_ENDPOINT_ERROR_INVALID")
             == ENDPOINT_ERROR_DEG
             and _finite(position.get("endpoint_dwell_seconds"), "POSITION_ENDPOINT_DWELL_INVALID")
@@ -1906,6 +1915,10 @@ class ActiveAcceptanceRunner:
             )
             trajectory_start = _finite_vector(trajectory.get("start_rad"), 6, "POSITION_TRAJECTORY_START_INVALID")
             trajectory_target = _finite_vector(trajectory.get("target_rad"), 6, "POSITION_TRAJECTORY_TARGET_INVALID")
+            expected_start = list(self.center_rad)
+            expected_start[joint_index] += math.radians(PHASE_OFFSET_DEG[self.position_phase_index - 1])
+            _require(all(abs(actual - expected) <= 1.0e-6 for actual, expected in zip(trajectory_start, expected_start)),
+                     "POSITION_TRAJECTORY_START_SEQUENCE_MISMATCH")
             _require(
                 all(abs(actual - expected) <= 1.0e-9 for actual, expected in zip(trajectory_target, targets)),
                 "POSITION_TRAJECTORY_TARGET_COMMAND_MISMATCH",
@@ -1916,6 +1929,8 @@ class ActiveAcceptanceRunner:
             ]
             _require(changed == [joint_index], "TRAJECTORY_MOVES_MORE_THAN_ONE_JOINT")
             displacement_deg = abs(_rad_to_deg(trajectory_target[joint_index] - trajectory_start[joint_index]))
+            _require(math.isclose(displacement_deg, POSITION_DISPLACEMENT_DEG, rel_tol=0.0, abs_tol=1.0e-6),
+                     "POSITION_COMMAND_DISPLACEMENT_NOT_NOMINAL_5_DEG")
             _require(
                 displacement_deg <= self.binding.maximum_segment_displacement_deg + 1.0e-6,
                 "POSITION_SEGMENT_EXCEEDS_5_DEG",
@@ -2462,7 +2477,7 @@ class ActiveAcceptanceRunner:
                 ]
                 _require(
                     max(final_brake_position_error_deg)
-                    <= ENDPOINT_ERROR_DEG,
+                    <= FINAL_BRAKE_POSE_WINDOW_DEG,
                     "FINAL_BRAKE_RESTORED_POSITION_DRIFT_EXCEEDED_0_5_DEG",
                 )
                 raw_is_fresh_disabled = bool(
@@ -2617,7 +2632,7 @@ class ActiveAcceptanceRunner:
         )
         _require(
             all(
-                abs(_rad_to_deg(actual - center)) <= ENDPOINT_ERROR_DEG
+                abs(_rad_to_deg(actual - center)) <= FINAL_BRAKE_POSE_WINDOW_DEG
                 for actual, center in zip(state["position_rad"], self.center_rad)
             ),
             "RESTORE_GUARD_POSITION_DRIFT_EXCEEDED_0_5_DEG",
@@ -2767,7 +2782,7 @@ class ActiveAcceptanceRunner:
         _require(joint in self.position_actual_center_start_rad, "POSITION_ACTUAL_CENTER_START_MISSING")
         displacement_deg = _rad_to_deg(actual_rad - self.position_actual_center_start_rad[joint])
         direction = 1.0 if phase == "PLUS_5" else -1.0
-        return direction * displacement_deg >= POSITION_DISPLACEMENT_DEG - 1.0e-6
+        return direction * displacement_deg >= POSITION_MINIMUM_ACTUAL_DISPLACEMENT_DEG - 1.0e-6
 
     def _advance_position(self, state: Mapping[str, Any], now_ns: int) -> None:
         _require(self.position_started_ns is not None, "POSITION_NOT_STARTED")
@@ -2855,8 +2870,11 @@ class ActiveAcceptanceRunner:
                 "CENTER_DWELL_NOT_WHOLE_ARM_CONTINUOUS_HOLD",
             )
         velocities = state["velocity_rad_s"]
+        expected_targets = list(self.center_rad)
+        expected_targets[joint_index] = target_rad
         stable = (
-            abs(error_deg) <= ENDPOINT_ERROR_DEG
+            all(abs(_rad_to_deg(target - actual)) <= ENDPOINT_ERROR_DEG + 1.0e-9
+                for target, actual in zip(expected_targets, state["position_rad"]))
             and abs(_rad_to_deg(velocities[joint_index])) <= 0.25
             and self._position_displacement_reached(joint, phase, actual_rad)
         )
@@ -2981,9 +2999,11 @@ class ActiveAcceptanceRunner:
         if phase in {"PLUS_5", "MINUS_5"}:
             _require(
                 self._position_displacement_reached(joint, phase, actual_rad),
-                "POSITION_PLUS_ACTUAL_MOTION_BELOW_5_DEG" if phase == "PLUS_5"
-                else "POSITION_MINUS_ACTUAL_MOTION_BELOW_5_DEG",
+                "POSITION_PLUS_ACTUAL_MOTION_BELOW_4_8_DEG" if phase == "PLUS_5"
+                else "POSITION_MINUS_ACTUAL_MOTION_BELOW_4_8_DEG",
             )
+        _require(abs(_rad_to_deg(target_rad - actual_rad)) <= ENDPOINT_ERROR_DEG + 1.0e-9,
+                 "POSITION_ENDPOINT_ERROR_EXCEEDS_0_1_DEG")
         motors = MOTOR_BY_JOINT[joint]
         temperature = max(
             float(state["per_motor"][motor]["temperature_c"]) for motor in motors
@@ -3076,9 +3096,12 @@ class ActiveAcceptanceRunner:
                 signed_displacement_deg
             ),
             "minimum_required_actual_displacement_deg": (
-                POSITION_DISPLACEMENT_DEG
+                POSITION_MINIMUM_ACTUAL_DISPLACEMENT_DEG
                 if phase in {"PLUS_5", "MINUS_5"} else 0.0
             ),
+            "precision_contract_id": POSITION_PRECISION_CONTRACT_ID,
+            "endpoint_error_limit_deg": ENDPOINT_ERROR_DEG,
+            "nominal_command_displacement_deg": 0.0 if phase == "CENTER_START" else POSITION_DISPLACEMENT_DEG,
             "endpoint_dwell_trace_json": json.dumps(
                 dwell_trace_document,
                 ensure_ascii=False,
@@ -3504,7 +3527,7 @@ class ActiveAcceptanceRunner:
             _require(
                 abs(_rad_to_deg(
                     target_value - self.latest_hardware["position_rad"][1]
-                )) <= ENDPOINT_ERROR_DEG,
+                )) <= COMPARISON_POSE_WINDOW_DEG,
                 "COMPARISON_WITHOUT_FF_TARGET_NOT_AT_CURRENT_POSE",
             )
             frozen = list(self.latest_hardware["position_rad"])
@@ -3525,7 +3548,7 @@ class ActiveAcceptanceRunner:
             _require(
                 all(
                     abs(_rad_to_deg(actual - target))
-                    <= ENDPOINT_ERROR_DEG
+                    <= COMPARISON_POSE_WINDOW_DEG
                     for actual, target in zip(
                         self.latest_hardware["position_rad"],
                         self.comparison_frozen_pose_rad,
@@ -3624,7 +3647,7 @@ class ActiveAcceptanceRunner:
             )
         ]
         _require(
-            max(pose_errors) <= ENDPOINT_ERROR_DEG,
+            max(pose_errors) <= COMPARISON_POSE_WINDOW_DEG,
             "COMPARISON_ACTUAL_POSE_LEFT_FROZEN_0_5_DEG_WINDOW",
         )
         a = state["per_motor"]["J2A"]
@@ -3761,7 +3784,7 @@ class ActiveAcceptanceRunner:
             abs(_rad_to_deg(
                 self.thermal_target_j2_rad - state["position_rad"][1]
             )) <= ENDPOINT_ERROR_DEG,
-            "THERMAL_REPRESENTATIVE_POSE_ERROR_EXCEEDED_0_5_DEG",
+            "THERMAL_REPRESENTATIVE_POSE_ERROR_EXCEEDED_0_1_DEG",
         )
         if (
             self.thermal_last_sample_ns is not None
@@ -5089,6 +5112,10 @@ class ActiveAcceptanceRunner:
                     self.position_trajectory_budget_ns / 1.0e9
                 ),
                 "maximum_segment_seconds": self.binding.maximum_segment_seconds,
+                "precision_contract_id": POSITION_PRECISION_CONTRACT_ID,
+                "endpoint_error_limit_deg": ENDPOINT_ERROR_DEG,
+                "nominal_command_displacement_deg": POSITION_DISPLACEMENT_DEG,
+                "minimum_actual_displacement_deg": POSITION_MINIMUM_ACTUAL_DISPLACEMENT_DEG,
             },
             "comparison": {
                 "active_condition": self.comparison_condition,
@@ -5421,7 +5448,10 @@ def dry_run_plan() -> dict[str, Any]:
         "maximum_segment_displacement_deg": 5.0,
         "maximum_segment_seconds": 15.0,
         POSITION_BUDGET_FIELD: 600.0,
-        "endpoint_error_deg": 0.5,
+        "endpoint_error_deg": ENDPOINT_ERROR_DEG,
+        "precision_contract_id": POSITION_PRECISION_CONTRACT_ID,
+        "nominal_command_displacement_deg": POSITION_DISPLACEMENT_DEG,
+        "minimum_actual_displacement_deg": POSITION_MINIMUM_ACTUAL_DISPLACEMENT_DEG,
         "endpoint_dwell_seconds": 0.5,
         "operator_confirmation_maximum_age_seconds": 30.0,
         "recommended_confirmation_period_seconds": 10.0,

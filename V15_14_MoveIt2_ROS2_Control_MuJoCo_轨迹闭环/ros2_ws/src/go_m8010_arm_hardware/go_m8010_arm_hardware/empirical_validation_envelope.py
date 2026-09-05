@@ -54,6 +54,9 @@ J2_SYNC_WARNING_DEG = 0.25
 J2_SYNC_HARD_DEG = 0.50
 MAXIMUM_HOLD_VELOCITY_RAD_S = math.radians(5.0)
 MAXIMUM_SCHEDULER_TRANSITION_SLACK_SECONDS = 1.0
+POSITION_PRECISION_CONTRACT_ID = "go-m8010-position-accuracy/0.1deg-v1"
+POSITION_ENDPOINT_ERROR_DEG = 0.1
+POSITION_MINIMUM_ACTUAL_DISPLACEMENT_DEG = 5.0 - 2 * POSITION_ENDPOINT_ERROR_DEG
 
 
 class EmpiricalEnvelopeError(ValueError):
@@ -381,11 +384,13 @@ class EmpiricalValidationEnvelope:
             "POSITION_MAXIMUM_CUMULATIVE_TRAJECTORY_SECONDS",
         )
         _require(
-            position.get("required_endpoint_displacement_deg") == 5.0
+            position.get("precision_contract_id") == POSITION_PRECISION_CONTRACT_ID
+            and position.get("nominal_command_displacement_deg") == 5.0
+            and position.get("minimum_actual_displacement_deg") == POSITION_MINIMUM_ACTUAL_DISPLACEMENT_DEG
             and position_displacement == 5.0
             and position_segment_seconds == 15.0
             and 0.0 < position_total_seconds <= 600.0
-            and position.get("endpoint_error_limit_deg") == 0.5
+            and position.get("endpoint_error_limit_deg") == POSITION_ENDPOINT_ERROR_DEG
             and position.get("endpoint_dwell_seconds") == 0.5,
             "POSITION_VALIDATION_BOUNDS_INVALID",
         )

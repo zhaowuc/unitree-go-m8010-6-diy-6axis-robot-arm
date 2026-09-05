@@ -6,7 +6,7 @@
   # Leave tracking headroom below the independent 5 deg/s measured-speed stop.
   最大速度_度每秒: 3.0
   最大加速度_度每二次方秒: 15.0
-  到位容差_度: 0.5
+  到位容差_度: 0.1
   J6到位容差_度: 0.08
   到位持续_秒: 0.5
   目标超时_秒: 90.0

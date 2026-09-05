@@ -134,7 +134,9 @@ POSITION_BUDGET_FIELD = (
     "maximum_cumulative_accepted_trajectory_seconds"
 )
 POSITION_VALIDATION_DISPLACEMENT_DEG = 5.0
-POSITION_ENDPOINT_ERROR_DEG = 0.5
+POSITION_ENDPOINT_ERROR_DEG = 0.1
+POSITION_PRECISION_CONTRACT_ID = "go-m8010-position-accuracy/0.1deg-v1"
+POSITION_MINIMUM_ACTUAL_DISPLACEMENT_DEG = 5.0 - 2 * POSITION_ENDPOINT_ERROR_DEG
 POSITION_ENDPOINT_DWELL_SECONDS = 0.5
 J2_SYNC_WARNING_DEG = 0.25
 J2_SYNC_HARD_DEG = 0.50
@@ -809,9 +811,11 @@ def build_envelope(
             "allowed_after_scale": 1.0,
             "single_joint_first_required": True,
             "maximum_moving_joints_before_single_joint_pass": 1,
-            "required_endpoint_displacement_deg": (
+            "precision_contract_id": POSITION_PRECISION_CONTRACT_ID,
+            "nominal_command_displacement_deg": (
                 POSITION_VALIDATION_DISPLACEMENT_DEG
             ),
+            "minimum_actual_displacement_deg": POSITION_MINIMUM_ACTUAL_DISPLACEMENT_DEG,
             "maximum_abs_segment_displacement_deg": (
                 POSITION_VALIDATION_DISPLACEMENT_DEG
             ),

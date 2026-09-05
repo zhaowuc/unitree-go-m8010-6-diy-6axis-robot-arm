@@ -837,7 +837,10 @@ def test_binding_loader_rejects_non_authoritative_contract_and_accepts_exact():
             runner_mod.POSITION_BUDGET_FIELD: 600.0,
             "maximum_segment_seconds": 15.0,
             "maximum_abs_segment_displacement_deg": 5.0,
-            "endpoint_error_limit_deg": 0.5,
+            "endpoint_error_limit_deg": 0.1,
+            "precision_contract_id": runner_mod.POSITION_PRECISION_CONTRACT_ID,
+            "nominal_command_displacement_deg": 5.0,
+            "minimum_actual_displacement_deg": 4.8,
             "endpoint_dwell_seconds": 0.5,
         },
         "live_gates": {
@@ -871,10 +874,60 @@ def test_binding_loader_rejects_non_authoritative_contract_and_accepts_exact():
         },
     }
     loaded = runner_mod.EvidenceBinding.from_documents(envelope, anchor, "a" * 64)
+    for field, legacy in (("precision_contract_id", None), ("endpoint_error_limit_deg", 0.5),
+                          ("minimum_actual_displacement_deg", 5.0), ("nominal_command_displacement_deg", 4.8)):
+        original = envelope["position_validation"][field]
+        envelope["position_validation"][field] = legacy
+        with pytest.raises(runner_mod.AcceptanceError, match="POSITION_VALIDATION_BOUNDS_MISMATCH"):
+            runner_mod.EvidenceBinding.from_documents(envelope, anchor, "a" * 64)
+        envelope["position_validation"][field] = original
     assert loaded == bound
     envelope["position_validation"]["maximum_segment_seconds"] = 16.0
     with pytest.raises(runner_mod.AcceptanceError):
         runner_mod.EvidenceBinding.from_documents(envelope, anchor, "a" * 64)
+
+
+def test_diagnostic_pose_window_is_not_the_active_precision_requirement():
+    run = runner_mod.ActiveAcceptanceRunner(binding())
+    now = 18_000_000_000
+    run.observe_confirmation(confirmation(run.binding, now, target=0.0), now_ns=now)
+    refresh_gravity(run, now, scale=0.0)
+    run.observe_hardware_state(state(run.binding, now, 1,
+        positions=[0.0, math.radians(0.3), 0.0, 0.0, 0.0, 0.0], gravity_scale=0.0), now_ns=now)
+    run.start_comparison("WITHOUT_FF", 0.0, now_ns=now)
+    for sequence, error in ((2, 0.3), (3, 0.51)):
+        now += 100_000_000
+        refresh_gravity(run, now, scale=0.0)
+        run.observe_hardware_state(state(run.binding, now, sequence,
+            positions=[0.0, math.radians(error), 0.0, 0.0, 0.0, 0.0], gravity_scale=0.0), now_ns=now)
+        if error == 0.3:
+            assert run.failure is None
+            assert abs(run.comparison_rows[-1]["position_error_deg"]) > runner_mod.ENDPOINT_ERROR_DEG
+        else:
+            assert run.failure.reason == "COMPARISON_ACTUAL_POSE_LEFT_FROZEN_0_5_DEG_WINDOW"
+
+
+@pytest.mark.parametrize("drift", (0.3, 0.51))
+def test_terminal_support_drift_window_remains_independent_of_precision(drift):
+    run = runner_mod.ActiveAcceptanceRunner(binding())
+    now = 18_000_000_000
+    run.center_rad = (0.0,) * 6
+    run.completed_post_order = ["RESTORE_INITIAL"]
+    run.observe_confirmation(confirmation(run.binding, now), now_ns=now)
+    refresh_gravity(run, now)
+    sample = state(run.binding, now, 1, positions=[math.radians(drift)] + [0.0] * 5)
+    if drift < 0.5:
+        run._guard_restored_pose(sample, now)
+    else:
+        with pytest.raises(runner_mod.AcceptanceError, match="RESTORE_GUARD_POSITION_DRIFT_EXCEEDED_0_5_DEG"):
+            run._guard_restored_pose(sample, now)
+    run.final_brake_requested = True
+    sample["controller_mode_by_motor"] = dict.fromkeys(runner_mod.MOTOR_NAMES, "brake")
+    run.observe_hardware_state(sample, now_ns=now)
+    if drift < 0.5:
+        assert run.failure is None
+    else:
+        assert run.failure.reason == "FINAL_BRAKE_RESTORED_POSITION_DRIFT_EXCEEDED_0_5_DEG"
 
 
 def test_comparison_gravity_ladder_position_order_is_enforced():
@@ -1043,7 +1096,7 @@ def test_wrong_joint_or_long_segment_fails_closed_and_requests_router_brake():
     assert brakes[0].brake_scope == "ALL_DOMAINS_FAIL_CLOSED_SUPERSET"
 
 
-def _position_transition_fixture():
+def _position_transition_fixture(center_offset_deg=0.0):
     run = runner_mod.ActiveAcceptanceRunner(binding())
     now = 35_000_000_000
     run.observe_confirmation(confirmation(run.binding, now), now_ns=now)
@@ -1055,16 +1108,18 @@ def _position_transition_fixture():
     for sequence in range(2, 8):
         now += 100_000_000
         refresh_gravity(run, now)
-        run.observe_hardware_state(state(run.binding, now, sequence), now_ns=now)
+        run.observe_hardware_state(state(run.binding, now, sequence,
+            positions=[math.radians(center_offset_deg)] + [0.0] * 5), now_ns=now)
     assert run.expected_phase == "PLUS_5" and run.awaiting_position_command
     return run, now, sequence
 
 
-def _complete_scheduled_position(run, now, sequence, command_sequence):
+def _complete_scheduled_position(run, now, sequence, command_sequence, actual_endpoint_offset_deg=0.0):
     """Real-time lead, sampled quintic motion, COMPLETE, then endpoint dwell."""
     now += 1
+    actual_start = list(run.latest_hardware["position_rad"])
     command, target, sha, token = position_command(
-        run.binding, run, now, command_sequence, run.latest_hardware["position_rad"]
+        run.binding, run, now, command_sequence, run.status(now_ns=now)["position"]["expected_start_vector_rad"]
     )
     refresh_gravity(run, now, command["plan_manifest"]["recipe_sha256"])
     run.observe_gui_command(command, now_ns=now)
@@ -1072,15 +1127,17 @@ def _complete_scheduled_position(run, now, sequence, command_sequence):
     run.observe_router_status({"schema": runner_mod.ROUTER_STATUS_SCHEMA,
         "last_mode": "position", "last_moving_joint_mask": command["moving_joint_mask"],
         "last_command_age_ms": 1.0}, now_ns=now)
-    start = command["trajectory"]["start_rad"]
+    start = actual_start
     joint = run.expected_joint
     index = runner_mod.JOINT_NAMES.index(joint)
+    actual_target = list(target)
+    actual_target[index] += math.radians(actual_endpoint_offset_deg)
     for step, elapsed_ms in enumerate(range(50, 3300, 50), 1):
         sample_now = now + elapsed_ms * 1_000_000
         fraction = min(1.0, max(0.0, (elapsed_ms - 250) / 2000))
         progress = 10 * fraction ** 3 - 15 * fraction ** 4 + 6 * fraction ** 5
-        positions = [a + (b - a) * progress for a, b in zip(start, target)]
-        velocity = (target[index] - start[index]) * 30 * fraction ** 2 * (1 - fraction) ** 2 / 2
+        positions = [a + (b - a) * progress for a, b in zip(start, actual_target)]
+        velocity = (actual_target[index] - start[index]) * 30 * fraction ** 2 * (1 - fraction) ** 2 / 2
         modes = dict.fromkeys(runner_mod.MOTOR_NAMES, "hold")
         if elapsed_ms >= 100:
             for motor in runner_mod.MOTOR_BY_JOINT[joint]:
@@ -1105,6 +1162,33 @@ def _complete_scheduled_position(run, now, sequence, command_sequence):
             assert run.status(now_ns=sample_now)["position"]["last_completed_trajectory_sha256"] == sha
             return sample_now, sequence + step, command, target
     raise AssertionError("completed quintic did not finish endpoint dwell")
+
+
+@pytest.mark.parametrize("direction", (-1.0, 1.0))
+def test_runner_accepts_nominal_five_degrees_with_two_0_1_endpoint_errors(direction):
+    run, now, sequence = _position_transition_fixture(direction * 0.1)
+    run.position_phase_index = 1 if direction > 0 else 3
+    now, _, command, _ = _complete_scheduled_position(run, now, sequence, 1000, -direction * 0.1)
+    row = run.position_rows[-1]
+    assert row["actual_center_start_deg"] == pytest.approx(direction * 0.1)
+    assert row["actual_deg"] == pytest.approx(direction * 4.9)
+    assert row["actual_displacement_from_center_deg"] == pytest.approx(direction * 4.8)
+    assert row["minimum_required_actual_displacement_deg"] == 4.8
+    assert row["nominal_command_displacement_deg"] == 5.0
+    assert abs(math.degrees(command["trajectory"]["target_rad"][0]
+        - command["trajectory"]["start_rad"][0])) == pytest.approx(5.0)
+    assert run.status(now_ns=now)["position"]["precision_contract_id"] == runner_mod.POSITION_PRECISION_CONTRACT_ID
+
+
+def test_nominal_five_degree_contract_rejects_shortened_command_start():
+    run, now, _ = _position_transition_fixture()
+    now += 1
+    command, _, _, _ = position_command(run.binding, run, now, 1000, [0.0] * 6)
+    command["trajectory"]["start_rad"][0] = math.radians(0.02)
+    refresh_gravity(run, now, command["plan_manifest"]["recipe_sha256"])
+    run.observe_gui_command(command, now_ns=now)
+    assert run.failure.reason == "POSITION_TRAJECTORY_START_SEQUENCE_MISMATCH"
+    assert run.position_trajectory_budget_ns == 0
 
 
 @pytest.mark.parametrize("mutation", (None, "activation_epoch", "source_instance_id", "expired"))
@@ -1467,25 +1551,28 @@ def test_endpoint_waits_for_full_actual_displacement_then_dwell_or_deadline(
         assert len(run.position_rows) == center_rows
         assert run.endpoint_dwell_started_ns is None
         assert run.status(now_ns=now)["position"]["last_completed_trajectory_sha256"] is None
-    reason = "POSITION_PLUS_ACTUAL_MOTION_BELOW_5_DEG" if direction > 0 else "POSITION_MINUS_ACTUAL_MOTION_BELOW_5_DEG"
+    reason = "POSITION_PLUS_ACTUAL_MOTION_BELOW_4_8_DEG" if direction > 0 else "POSITION_MINUS_ACTUAL_MOTION_BELOW_4_8_DEG"
     with pytest.raises(runner_mod.AcceptanceError, match=reason):
         run._record_position_endpoint(run.latest_hardware, now, runner_mod.ENDPOINT_DWELL_NS)
     assert len(run.position_rows) == center_rows
 
     if eventually_reaches:
         for step in range(1, 6):
-            observe(4.73 + 0.27 * step / 5, 0.54)
+            observe(4.73 + 0.22 * step / 5, 0.44)
             assert run.failure is None and len(run.position_rows) == center_rows
         for _ in range(5):
-            observe(5.0)
+            observe(4.95)
             assert run.failure is None and len(run.position_rows) == center_rows
-        observe(5.0)
+        observe(4.95)
         assert run.failure is None
         assert len(run.position_rows) == center_rows + 1
         row = run.position_rows[-1]
         assert row["phase"] == phase and row["endpoint_dwell_s"] >= 0.5
         assert row["actual_center_start_deg"] == pytest.approx(actual_center_deg)
-        assert row["actual_displacement_from_center_deg"] == pytest.approx(direction * 5.0)
+        assert row["actual_displacement_from_center_deg"] == pytest.approx(direction * 4.95)
+        assert row["nominal_command_displacement_deg"] == 5.0
+        assert row["minimum_required_actual_displacement_deg"] == 4.8
+        assert row["precision_contract_id"] == runner_mod.POSITION_PRECISION_CONTRACT_ID
     else:
         while now - accepted_at <= runner_mod.MAXIMUM_SEGMENT_NS:
             observe(4.73)

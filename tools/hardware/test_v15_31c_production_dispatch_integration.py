@@ -155,6 +155,8 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
     sequence = 0
     command_sequence = 0
     envelope = None
+    precision_records = []
+    checked_position_rows = 0
     node = SimpleNamespace(
         command_source_instance_id="3" * 32,
         command_publisher=RecordingPublisher(), target_publisher=RecordingPublisher(),
@@ -163,6 +165,16 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
         publish_collision_request=lambda request: None,
         thermal_limits=SimpleNamespace(thermal_stop_c=thermal["thermal_stop_c"]),
     )
+
+    def record_accuracy(kind, actual, target, source_ns):
+        errors = [abs(math.degrees(observed - wanted)) for observed, wanted in zip(actual, target)]
+        assert len(errors) == 6 and max(errors) <= feedback.runner_mod.ENDPOINT_ERROR_DEG + 1e-9
+        precision_records.append({
+            "source": "SIMULATED_FEEDBACK_NOT_PHYSICAL_VALIDATION", "kind": kind,
+            "source_monotonic_ns": source_ns, "actual_rad": list(actual),
+            "target_rad": list(target), "absolute_error_deg_by_joint": errors,
+            "precision_contract_id": feedback.runner_mod.POSITION_PRECISION_CONTRACT_ID,
+        })
 
     def check_j6(normalized, segment=None):
         parsed = j6.parse_command(router.payload_for_domain(normalized, "J6"), clock[0])
@@ -207,7 +219,7 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
             assert sampled["dq_rad_s"] == pytest.approx(reference.dq_rad_s, abs=1e-12)
 
     def observe(positions, *, stage=4, position_authorized=True, moving_joint=None, command=None, segment=None, actual_velocity_rad_s=None):
-        nonlocal sequence, last_worker_feedforward
+        nonlocal sequence, last_worker_feedforward, checked_position_rows
         sequence += 1
         now = clock[0]
         modes = dict.fromkeys(gm.MOTOR_NAMES, "hold")
@@ -311,6 +323,20 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
         run.observe_gravity_status(status, now_ns=now)
         run.observe_hardware_state(state, now_ns=now)
         assert run.failure is None, run.failure
+        for row in run.position_rows[checked_position_rows:]:
+            assert row["status"] == "PASS"
+            assert row["precision_contract_id"] == feedback.runner_mod.POSITION_PRECISION_CONTRACT_ID
+            assert row["endpoint_error_limit_deg"] == feedback.runner_mod.ENDPOINT_ERROR_DEG
+            expected = list(run.center_rad)
+            expected[feedback.runner_mod.JOINT_NAMES.index(row["joint"])] = math.radians(row["target_deg"])
+            samples = json.loads(row["endpoint_dwell_trace_json"])["samples"]
+            assert samples
+            for sample in samples:
+                assert max(abs(math.degrees(actual - wanted)) for actual, wanted in zip(
+                    sample["position_rad"], expected)) <= feedback.runner_mod.ENDPOINT_ERROR_DEG + 1e-9
+            record_accuracy("PASS", samples[-1]["position_rad"], expected,
+                samples[-1]["hardware_state_source_monotonic_ns"])
+        checked_position_rows = len(run.position_rows)
         return state, proof
 
     def publish_bootstrap_hold():
@@ -358,9 +384,13 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
         joint_index = feedback.runner_mod.JOINT_NAMES.index(joint)
         moving_mask = [index == joint_index for index in range(6)]
         position = run.status(now_ns=clock[0])["position"]
+        assert position["precision_contract_id"] == feedback.runner_mod.POSITION_PRECISION_CONTRACT_ID
+        assert position["endpoint_error_limit_deg"] == 0.1
+        assert position["nominal_command_displacement_deg"] == 5.0
+        assert position["minimum_actual_displacement_deg"] == 4.8
         start = position["expected_start_vector_rad"]
         target = position["expected_target_vector_rad"]
-        actual = [value + (index + 1) * 1e-5 for index, value in enumerate(start)]
+        actual = [value + (index + 1) * 1e-5 for index, value in enumerate(node.latest_hardware["position_rad"])]
         clock[0] += 50_000_000
         observe(actual)
         workflow = WorkflowState.initialize(actual, limits, gui.PRODUCTION_MODEL_SHA256,
@@ -437,17 +467,21 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
             "last_command_age_ms": 0.0}, now_ns=clock[0])
         delayed_endpoint = joint == "J1" and phase == "PLUS_5"
         plateau_checked = False
-        strict_endpoint_seen_ns = None
+        precision_dwell_started_ns = None
         if delayed_endpoint:
             # Synthetic measurement history, not a claim about physical I-loop
             # convergence: 0.2688 deg following error, a 0.6 s static plateau,
-            # then a continuous <=1 deg/s correction to the unchanged endpoint.
+            # then a continuous <=1 deg/s correction inside the accuracy window.
+            # Deliberately retain nonzero error: accepted accuracy does not mean
+            # the plant must exactly hit or overshoot the unchanged command.
             residual = math.radians(0.2688)
             displacement = segment.target_rad[joint_index] - segment.start_rad[joint_index]
             following_ratio = 1.0 - residual / displacement
             lagged_target = list(segment.target_rad)
             lagged_target[joint_index] -= residual
-            tail = generate_quintic_trajectory(lagged_target, segment.target_rad, limits,
+            settled_actual = list(segment.target_rad)
+            settled_actual[joint_index] -= math.radians(feedback.runner_mod.ENDPOINT_ERROR_DEG * 0.75)
+            tail = generate_quintic_trajectory(lagged_target, settled_actual, limits,
                 duration_s=0.6, maximum_sample_period_s=0.01)
             assert max(abs(sample.dq_rad_s[joint_index]) for sample in tail.samples) <= math.radians(1.0)
             profile_end_ns = command["trajectory"]["execute_at_monotonic_ns"] + command["trajectory"]["duration_ns"]
@@ -470,24 +504,35 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
                         interval_count=tail.profile.interval_count)
                     actual_position = list(tail.samples[tail_index].q_rad)
                     actual_velocity = list(tail.samples[tail_index].dq_rad_s)
-                    if tail_index == tail.profile.interval_count and strict_endpoint_seen_ns is None:
-                        strict_endpoint_seen_ns = clock[0]
+                eligible_for_dwell = (
+                    index == descriptor["interval_count"]
+                    and max(abs(math.degrees(actual - wanted)) for actual, wanted in zip(
+                        actual_position, segment.target_rad)) <= feedback.runner_mod.ENDPOINT_ERROR_DEG + 1e-9
+                    and abs(math.degrees(actual_velocity[joint_index])) <= 0.25
+                    and run._position_displacement_reached(joint, phase, actual_position[joint_index])
+                )
+                precision_dwell_started_ns = (
+                    (clock[0] if precision_dwell_started_ns is None else precision_dwell_started_ns)
+                    if eligible_for_dwell else None
+                )
             command_sequence += 1
             run.observe_gui_command({**command, "sequence": command_sequence,
                 "source_monotonic_ns": clock[0]}, now_ns=clock[0])
             observe(actual_position, moving_joint=joint, command=command, segment=segment,
                 actual_velocity_rad_s=actual_velocity)
             if delayed_endpoint and profile_end_ns + 500_000_000 <= clock[0] < tail_start_ns:
-                assert run.active_segment is not None, "a stable sub-5-degree endpoint must wait, not ACK or fail"
+                assert run.active_segment is not None, "a stable 0.2688-degree error is outside the accuracy contract"
                 assert run.failure is None
                 plateau_checked = True
             if run.active_segment is None:
                 if delayed_endpoint:
-                    assert plateau_checked and strict_endpoint_seen_ns is not None
-                    assert clock[0] - strict_endpoint_seen_ns >= feedback.runner_mod.ENDPOINT_DWELL_NS
+                    assert plateau_checked and precision_dwell_started_ns is not None
+                    assert clock[0] - precision_dwell_started_ns >= feedback.runner_mod.ENDPOINT_DWELL_NS
+                    assert 0.0 < math.degrees(segment.target_rad[joint_index] - actual_position[joint_index]) <= feedback.runner_mod.ENDPOINT_ERROR_DEG
                 break
         assert run.active_segment is None, "runner did not acknowledge sampled trajectory and endpoint dwell"
         assert run.status(now_ns=clock[0])["position"]["last_completed_trajectory_sha256"] == segment.sha256
+        held_actual = list(node.latest_hardware["position_rad"])
         clock[0] += 50_000_000
         # The real GUI's arrival transition retains the endpoint and epoch;
         # never turn an observed noisy encoder value into the new HOLD target.
@@ -507,13 +552,17 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
         check_j6(normalized)
         check_go(normalized, go_domain)
         run.observe_gui_command(hold, now_ns=clock[0])
-        observe(list(target))
+        hold_feedback, _ = observe(held_actual)
+        record_accuracy("HOLD", hold_feedback["position_rad"], hold["targets_rad"],
+            hold_feedback["source_monotonic_ns"])
         if phase == feedback.runner_mod.POSITION_PHASES[-1] and not run.position_complete:
             for _ in range(12):
                 clock[0] += 50_000_000
                 observe(list(target))
     assert run.failure is None
     assert run.position_complete
+    assert len([record for record in precision_records if record["kind"] == "PASS"]) == len(run.position_rows) == 30
+    assert len([record for record in precision_records if record["kind"] == "HOLD"]) == 24
     assert sum(json.loads(message.data)["mode"] == "position"
                for message in node.command_publisher.messages) == len(feedback.runner_mod.POSITION_ORDER) * (len(feedback.runner_mod.POSITION_PHASES) - 1)
 

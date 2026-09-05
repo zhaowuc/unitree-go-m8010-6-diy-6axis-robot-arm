@@ -536,7 +536,7 @@ def _gravity_scale_row(
     }
 
 
-def _position_rows() -> list[dict[str, Any]]:
+def _position_rows(*, actual_center_deg=0.0, endpoint_error_deg=0.0) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     targets = (0.0, 5.0, 0.0, -5.0, 0.0)
     row_index = 0
@@ -557,6 +557,11 @@ def _position_rows() -> list[dict[str, Any]]:
                 sequence_start=sequence_start,
                 center_observation=center_observation,
             )
+            actual = actual_center_deg if target == 0.0 else target - math.copysign(endpoint_error_deg, target)
+            for sample in dwell_samples:
+                sample["actual_rad"] = math.radians(actual)
+                sample["position_rad"][validator.JOINT_NAMES.index(joint)] = math.radians(actual)
+                sample["error_deg"] = target - actual
             dwell_document = {
                 "schema": "V15.31B-endpoint-dwell-trace-v1",
                 "samples": dwell_samples,
@@ -576,8 +581,8 @@ def _position_rows() -> list[dict[str, Any]]:
                 "revision": "BASELINE",
                 "phase": phase,
                 "target_deg": target,
-                "actual_deg": target,
-                "error_deg": 0.0,
+                "actual_deg": actual,
+                "error_deg": target - actual,
                 "endpoint_dwell_s": 0.5,
                 "j2_e_sync_deg": 0.1,
                 "temperature_c": 32.0,
@@ -636,11 +641,14 @@ def _position_rows() -> list[dict[str, Any]]:
                     "CENTER_OBSERVATION"
                     if center_observation else source_start_ns - 1_000_000
                 ),
-                "actual_center_start_deg": 0.0,
-                "actual_displacement_from_center_deg": target,
+                "actual_center_start_deg": actual_center_deg,
+                "actual_displacement_from_center_deg": actual - actual_center_deg,
                 "minimum_required_actual_displacement_deg": (
-                    5.0 if phase in {"PLUS_5", "MINUS_5"} else 0.0
+                    4.8 if phase in {"PLUS_5", "MINUS_5"} else 0.0
                 ),
+                "precision_contract_id": validator.POSITION_PRECISION_CONTRACT_ID,
+                "endpoint_error_limit_deg": 0.1,
+                "nominal_command_displacement_deg": 0.0 if center_observation else 5.0,
             })
     return rows
 
@@ -1516,11 +1524,83 @@ def test_hardware_counterbalance_terminal_requires_nonthermal_passes(
     )
 
 
+@pytest.mark.parametrize("drift", (0.3, 0.51))
+def test_validator_terminal_support_window_is_not_active_endpoint_precision(drift):
+    document = _final_brake_document()
+    document["maximum_position_error_from_session_center_deg"] = drift
+    for sample in document["paired_trace"]:
+        sample["position_rad"][0] = math.radians(drift)
+        sample["position_error_from_session_center_deg"][0] = drift
+    document["paired_trace_sha256"] = _document_sha256({
+        "schema": document["paired_trace_schema"], "samples": document["paired_trace"]})
+    args = (document, _binding_document(), dict.fromkeys(validator.JOINT_NAMES, 0.0))
+    if drift < 0.5:
+        assert validator._validate_final_brake(*args, after_sequence=0, after_source_ns=0)
+    else:
+        with pytest.raises(validator.EvidenceValidationError, match="restored pose drift evidence invalid"):
+            validator._validate_final_brake(*args, after_sequence=0, after_source_ns=0)
+
+
+@pytest.mark.parametrize("actual_center_deg", (-0.1, 0.1))
+def test_precision_contract_accepts_two_endpoint_error_budget_without_overshoot(tmp_path, actual_center_deg):
+    rows = _position_rows(actual_center_deg=actual_center_deg, endpoint_error_deg=0.1)
+    path = tmp_path / "position_validation.csv"
+    _write_csv(path, validator.POSITION_FIELDS, rows)
+    result, metrics = validator._validate_position(path, _binding_document())
+    assert result == "PASS"
+    assert max(metrics["maximum_error_deg"].values()) == pytest.approx(0.1)
+    boundary_phase = "PLUS_5" if actual_center_deg > 0 else "MINUS_5"
+    boundary = next(row for row in rows if row["joint"] == "J1" and row["phase"] == boundary_phase)
+    assert abs(boundary["actual_displacement_from_center_deg"]) == pytest.approx(4.8)
+    assert abs(boundary["actual_deg"]) == pytest.approx(4.9)
+    assert boundary["nominal_command_displacement_deg"] == 5.0
+
+
+@pytest.mark.parametrize("field,value", (("precision_contract_id", ""),
+    ("endpoint_error_limit_deg", 0.5), ("nominal_command_displacement_deg", 4.8),
+    ("minimum_required_actual_displacement_deg", 5.0)))
+def test_validator_rejects_old_or_mixed_precision_evidence(tmp_path, field, value):
+    rows = _position_rows()
+    row = next(item for item in rows if item["joint"] == "J1" and item["phase"] == "PLUS_5")
+    row[field] = value
+    path = tmp_path / "position_validation.csv"
+    _write_csv(path, validator.POSITION_FIELDS, rows)
+    with pytest.raises(validator.EvidenceValidationError):
+        validator._validate_position(path, _binding_document())
+
+
+def test_validator_rejects_unversioned_legacy_position_csv_header(tmp_path):
+    precision_fields = {"precision_contract_id", "endpoint_error_limit_deg", "nominal_command_displacement_deg"}
+    legacy_fields = tuple(field for field in validator.POSITION_FIELDS if field not in precision_fields)
+    rows = [{field: row[field] for field in legacy_fields} for row in _position_rows()]
+    path = tmp_path / "position_validation.csv"
+    _write_csv(path, legacy_fields, rows)
+    with pytest.raises(validator.EvidenceValidationError, match="CSV fields/order"):
+        validator._validate_position(path, _binding_document())
+
+
+@pytest.mark.parametrize("held_joint", (False, True))
+def test_validator_rejects_0_1001_degree_error_on_moving_or_held_joint(tmp_path, held_joint):
+    rows = _position_rows(endpoint_error_deg=0.0 if held_joint else 0.1001)
+    if held_joint:
+        row = next(item for item in rows if item["joint"] == "J1" and item["phase"] == "PLUS_5")
+        for prefix in ("endpoint_dwell_trace", "segment_execution_trace"):
+            document = json.loads(row[prefix + "_json"])
+            for sample in document["samples"]:
+                sample["position_rad"][1] = math.radians(0.1001)
+            row[prefix + "_json"] = json.dumps(document)
+            row[prefix + "_sha256"] = _document_sha256(document)
+    path = tmp_path / "position_validation.csv"
+    _write_csv(path, validator.POSITION_FIELDS, rows)
+    with pytest.raises(validator.EvidenceValidationError):
+        validator._validate_position(path, _binding_document())
+
+
 @pytest.mark.parametrize(
     ("updates", "message"),
     [
         ({"target_deg": "4.99", "actual_deg": "4.89", "error_deg": "0.10"}, "target/actual/error is not self-consistent"),
-        ({"actual_deg": "4.49", "error_deg": "0.51"}, "endpoint error exceeds 0.5 degree"),
+        ({"actual_deg": "4.89", "error_deg": "0.11"}, "endpoint error exceeds 0.1 degree"),
         ({"endpoint_dwell_s": "0.49"}, "endpoint_dwell_s disagrees with source trace"),
     ],
 )

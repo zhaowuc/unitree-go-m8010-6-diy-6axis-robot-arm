@@ -130,6 +130,12 @@ POSITION_PHASES = (
     "CENTER_FINAL",
 )
 REVISION_ORDER = {"BASELINE": 0, "REVISION_1": 1, "REVISION_2": 2}
+POSITION_PRECISION_CONTRACT_ID = "go-m8010-position-accuracy/0.1deg-v1"
+ENDPOINT_ERROR_DEG = 0.1
+COMPARISON_POSE_WINDOW_DEG = 0.5
+FINAL_BRAKE_POSE_WINDOW_DEG = 0.5
+POSITION_DISPLACEMENT_DEG = 5.0
+POSITION_MINIMUM_ACTUAL_DISPLACEMENT_DEG = POSITION_DISPLACEMENT_DEG - 2 * ENDPOINT_ERROR_DEG
 GRAVITY_LEVELS = (0.0, 0.25, 0.50, 0.75, 1.0)
 READ_ONLY_MINIMUM_DURATION_NS = 10_000_000_000
 READ_ONLY_MINIMUM_SAMPLES = 100
@@ -1622,7 +1628,7 @@ def _validate_motion_trace(
         )
         if require_dwell:
             _require(
-                abs(error_deg) <= 0.5 + 1.0e-9
+                abs(error_deg) <= ENDPOINT_ERROR_DEG + 1.0e-9
                 and abs(velocity_deg_s) <= 0.25 + 1.0e-9,
                 f"{location}: endpoint dwell is outside error/velocity limits",
             )
@@ -1722,7 +1728,7 @@ def _validate_final_dwell_trace(
                     expected_error,
                     abs_tol=1.0e-6,
                 )
-                and expected_error <= 0.5 + 1.0e-9,
+                and expected_error <= ENDPOINT_ERROR_DEG + 1.0e-9,
                 f"{location}.{joint}: final dwell error invalid",
             )
         _require(
@@ -1774,6 +1780,7 @@ POSITION_FIELDS = (
     "gui_command_source_monotonic_ns",
     "actual_center_start_deg", "actual_displacement_from_center_deg",
     "minimum_required_actual_displacement_deg",
+    "precision_contract_id", "endpoint_error_limit_deg", "nominal_command_displacement_deg",
 )
 
 
@@ -1795,6 +1802,7 @@ def _validate_position(
     trajectories: dict[str, tuple[int, int]] = {}
     trajectory_duration_total_ns = 0
     confirmation_requirements: list[tuple[int, float | None]] = []
+    endpoint_traces = []
     for index, row in enumerate(rows, start=2):
         location = f"{path.name}:{index}"
         _require(
@@ -1840,6 +1848,13 @@ def _validate_position(
         phase = row["phase"].strip().upper()
         _require(phase in POSITION_PHASES, f"{location}: invalid phase")
         _require(
+            row["precision_contract_id"] == POSITION_PRECISION_CONTRACT_ID
+            and _row_number(row, "endpoint_error_limit_deg", location) == ENDPOINT_ERROR_DEG
+            and _row_number(row, "nominal_command_displacement_deg", location)
+            == (0.0 if phase == "CENTER_START" else POSITION_DISPLACEMENT_DEG),
+            f"{location}: position precision contract mismatch",
+        )
+        _require(
             row["related_domain"].strip() == DOMAIN_BY_JOINT[joint],
             f"{location}: related domain mismatch",
         )
@@ -1859,6 +1874,7 @@ def _validate_position(
             trajectory_sha256=trajectory_sha,
             require_dwell=True,
         )
+        endpoint_traces.append((row, dwell_samples))
         _require(
             int(dwell_samples[-1]["hardware_state_sequence"]) == state_sequence
             and int(dwell_samples[-1]["hardware_state_source_monotonic_ns"])
@@ -2006,13 +2022,20 @@ def _validate_position(
         actual_center = _row_number(
             final_rows[0], "actual_center_start_deg", f"{joint}.actual_center"
         )
+        _require(
+            math.isclose(actual_center, _row_number(final_rows[0], "actual_deg", joint), abs_tol=1.0e-6)
+            and abs(actual_center - center) <= ENDPOINT_ERROR_DEG + 1.0e-9,
+            f"{joint}: actual center must be observed within 0.1 degree",
+        )
         for row, phase in zip(final_rows, POSITION_PHASES):
             location = f"{joint}.{final_revision}.{phase}"
             target = _row_number(row, "target_deg", location)
             actual = _row_number(row, "actual_deg", location)
             error = _row_number(row, "error_deg", location)
             _require(math.isclose(error, target - actual, abs_tol=1.0e-6), f"{location}: error does not equal target-actual")
-            _require(abs(error) <= 0.5 + 1.0e-9, f"{location}: endpoint error exceeds 0.5 degree")
+            _require(abs(error) <= ENDPOINT_ERROR_DEG + 1.0e-9, f"{location}: endpoint error exceeds 0.1 degree")
+            if phase in {"CENTER_AFTER_PLUS", "CENTER_FINAL"}:
+                _require(math.isclose(target, center, abs_tol=1.0e-6), f"{location}: return target differs from center")
             _require(_row_number(row, "endpoint_dwell_s", location) >= 0.5, f"{location}: dwell below 0.5 second")
             _require(_row_number(row, "temperature_c", location) < 60.0, f"{location}: hard thermal stop reached")
             _require(_row_integer(row, "merror", location) == 0, f"{location}: nonzero merror")
@@ -2031,15 +2054,15 @@ def _validate_position(
             )
             if phase == "PLUS_5":
                 _require(
-                    math.isclose(minimum_displacement, 5.0, abs_tol=1.0e-12)
-                    and displacement >= 5.0 - 1.0e-6,
-                    f"{location}: measured positive displacement is below +5 degrees",
+                    math.isclose(minimum_displacement, POSITION_MINIMUM_ACTUAL_DISPLACEMENT_DEG, abs_tol=1.0e-12)
+                    and displacement >= POSITION_MINIMUM_ACTUAL_DISPLACEMENT_DEG - 1.0e-6,
+                    f"{location}: measured positive displacement is below +4.8 degrees",
                 )
             elif phase == "MINUS_5":
                 _require(
-                    math.isclose(minimum_displacement, 5.0, abs_tol=1.0e-12)
-                    and displacement <= -5.0 + 1.0e-6,
-                    f"{location}: measured negative displacement is above -5 degrees",
+                    math.isclose(minimum_displacement, POSITION_MINIMUM_ACTUAL_DISPLACEMENT_DEG, abs_tol=1.0e-12)
+                    and displacement <= -POSITION_MINIMUM_ACTUAL_DISPLACEMENT_DEG + 1.0e-6,
+                    f"{location}: measured negative displacement is above -4.8 degrees",
                 )
             else:
                 _require(
@@ -2054,6 +2077,12 @@ def _validate_position(
                 if joint == "J2":
                     _require(sync <= 0.25, f"{location}: J2 warning sync threshold exceeded")
         results[joint] = max(abs(float(row["error_deg"])) for row in final_rows)
+    for row, samples in endpoint_traces:
+        targets = [center_targets[joint] for joint in JOINT_NAMES]
+        targets[JOINT_NAMES.index(row["joint"])] = float(row["target_deg"])
+        _require(all(abs(math.degrees(actual) - target) <= ENDPOINT_ERROR_DEG + 1.0e-9
+                     for sample in samples for actual, target in zip(sample["position_rad"], targets)),
+                 "position endpoint dwell exceeds 0.1 degree on a held or moving joint")
     return "PASS", {
         "maximum_error_deg": results,
         "maximum_j2_sync_deg": maximum_sync,
@@ -2200,7 +2229,7 @@ def _validate_j2_comparison(
         ]
         maximum_pose_error = _row_number(row, "maximum_pose_error_deg", location)
         _require(
-            max(pose_errors) <= 0.5 + 1.0e-9
+            max(pose_errors) <= COMPARISON_POSE_WINDOW_DEG + 1.0e-9
             and math.isclose(maximum_pose_error, max(pose_errors), abs_tol=1.0e-6)
             and math.isclose(
                 _row_number(row, "position_error_deg", location),
@@ -2424,7 +2453,7 @@ def _validate_post_segments(
                 math.degrees(target_rad - actual_rad),
                 abs_tol=1.0e-6,
             )
-            and abs(endpoint_error) <= 0.5 + 1.0e-9,
+            and abs(endpoint_error) <= ENDPOINT_ERROR_DEG + 1.0e-9,
             f"{location}: endpoint target/actual/error invalid",
         )
         execution_document = {
@@ -2696,7 +2725,7 @@ def _validate_multi_joint(
     maximum = 0.0
     for joint in JOINT_NAMES:
         value = abs(_number(errors[joint], f"multi_joint.max_error_deg_by_joint.{joint}"))
-        _require(value <= 0.5 + 1.0e-9, f"multi_joint {joint} error exceeds 0.5 degree")
+        _require(value <= ENDPOINT_ERROR_DEG + 1.0e-9, f"multi_joint {joint} error exceeds 0.1 degree")
         maximum = max(maximum, value)
     dwell_s = (
         int(final_trace[-1]["hardware_state_source_monotonic_ns"])
@@ -3107,8 +3136,8 @@ def _validate_thermal_csv(
         maximum_temperature = max(maximum_temperature, a_temp, b_temp)
         _require(max(a_temp, b_temp) < 60.0, f"{location}: PASS data reaches hard thermal stop")
         _require(
-            abs(_row_number(row, "position_error_deg", location)) <= 0.5,
-            f"{location}: J2 position error exceeds 0.5 degree",
+            abs(_row_number(row, "position_error_deg", location)) <= ENDPOINT_ERROR_DEG,
+            f"{location}: J2 position error exceeds 0.1 degree",
         )
         _require(abs(_row_number(row, "j2_e_sync_deg", location)) <= 0.25, f"{location}: J2 sync warning threshold exceeded")
         saturation_count += int(_row_bool(row, "saturation_observed", location))
@@ -4289,7 +4318,7 @@ def _validate_final_brake(
                 math.isclose(actual, expected, abs_tol=1.0e-6)
                 for actual, expected in zip(errors, recomputed)
             )
-            and max(recomputed) <= 0.5 + 1.0e-9,
+            and max(recomputed) <= FINAL_BRAKE_POSE_WINDOW_DEG + 1.0e-9,
             f"{field}: restored pose drift evidence invalid",
         )
         maximum_position_error = max(maximum_position_error, max(recomputed))
