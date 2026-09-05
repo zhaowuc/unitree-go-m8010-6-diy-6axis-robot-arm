@@ -105,7 +105,8 @@ def run(binding):
 
     try:
         print("GUI_OWNS_HOLD=YES; WAITING_FOR_GUI_HOLD", flush=True)
-        wait(lambda: gui_hold_ready(latest["hardware"], latest["router"]), 120, "GUI HOLD")
+        wait(lambda: gui_hold_ready(latest["hardware"], latest["router"]),
+             max(0.0, binding.expires_at_utc.timestamp() - time.time()), "GUI HOLD")
         engaged = True
         comparison("WITHOUT_FF")
         send("START_GRAVITY_LADDER")

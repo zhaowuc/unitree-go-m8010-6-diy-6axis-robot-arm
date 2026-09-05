@@ -4557,6 +4557,49 @@ def test_close_holds_when_fresh_and_sends_nothing_for_unconfirmed_active_hold():
     assert "Closing the window is not permission to recapture a HOLD" in close
 
 
+def test_joint_temperature_labels_keep_both_j2_motors_and_reject_stale_data():
+    label = load_function("joint_temperature_text")
+    hardware = {"per_motor": {
+        motor: {"temperature_c": value, "fresh": True, "communication_ok": True}
+        for motor, value in (("J2A", 31), ("J2B", 34), ("J5", 32))
+    }}
+    assert label(hardware, 1, True) == "J2A: 31°C / J2B: 34°C"
+    assert label(hardware, 4, True) == "32°C"
+    assert label(hardware, 4, False) == "无实时反馈"
+    hardware["per_motor"]["J5"]["fresh"] = False
+    assert label(hardware, 4, True) == "无实时反馈"
+
+
+def test_completed_render_progresses_while_newer_pose_is_pending():
+    class Image:
+        pass
+
+    apply = load_class_method("EmbeddedMujocoPreview", "_apply_render_result", {"QImage": Image})
+    shown = []
+    preview = SimpleNamespace(
+        _renderer_closed=False, _last_applied_render_sequence=0,
+        _latest_requested_sequence=2, camera_state={"azimuth": 90},
+        last_image=None, _update_pixmap=lambda: shown.append(True),
+    )
+    frame = {"sequence": 1, "image": Image(), "requested_camera": {"azimuth": 90},
+             "camera": {"azimuth": 90, "distance": 2}}
+    apply(preview, frame)
+    assert preview.last_image is frame["image"]
+    assert preview.camera_state == frame["camera"]
+    # Continuous input must not starve the display; each completed frame advances.
+    preview._latest_requested_sequence = 3
+    preview.camera_state = {"azimuth": 45}
+    frame2 = {**frame, "sequence": 2, "image": Image()}
+    apply(preview, frame2)
+    assert preview.last_image is frame2["image"]
+    assert preview.camera_state == {"azimuth": 45}
+    apply(preview, frame)
+    apply(preview, {**frame, "sequence": 4})
+    preview._renderer_closed = True
+    apply(preview, {**frame, "sequence": 3})
+    assert len(shown) == 2
+
+
 def test_both_mujoco_twins_render_off_qt_thread_and_close_their_contexts():
     source = SOURCE.read_text(encoding="utf-8")
     preview_start = source.index("class EmbeddedMujocoPreview(QGroupBox):")

@@ -1854,6 +1854,7 @@ class EmbeddedMujocoPreview(QGroupBox):
         self._pending_render = None
         self._render_sequence = 0
         self._latest_requested_sequence = 0
+        self._last_applied_render_sequence = 0
         self._renderer_closed = False
         self.render_completed.connect(self._apply_render_result)
         self.render_failed.connect(self._show_render_error)
@@ -1937,6 +1938,7 @@ class EmbeddedMujocoPreview(QGroupBox):
         return {
             "sequence": request["sequence"],
             "image": image,
+            "requested_camera": request["camera"],
             "camera": {
                 "lookat": tuple(float(item) for item in self.camera.lookat),
                 "distance": float(self.camera.distance),
@@ -1971,12 +1973,17 @@ class EmbeddedMujocoPreview(QGroupBox):
         camera = result.get("camera")
         if (
             type(sequence) is not int
-            or sequence != self._latest_requested_sequence
+            or self._renderer_closed
+            or not self._last_applied_render_sequence < sequence <= self._latest_requested_sequence
             or not isinstance(image, QImage)
             or not isinstance(camera, dict)
         ):
             return
-        self.camera_state = camera
+        self._last_applied_render_sequence = sequence
+        # Pose updates may outpace rendering. Display completed frames in order,
+        # but never let an older render overwrite a newer mouse/camera choice.
+        if result.get("requested_camera") == self.camera_state:
+            self.camera_state = camera
         self.last_image = image
         self._update_pixmap()
 
@@ -2291,6 +2298,22 @@ class RealWidgets:
     target: QLabel
     error: QLabel
     state: QLabel
+    temperature: Optional[QLabel] = None
+
+
+def joint_temperature_text(hardware: dict, index: int, fresh: bool) -> str:
+    values = []
+    for motor in MOTOR_GROUPS[index]:
+        sample = hardware.get("per_motor", {}).get(motor, {})
+        value = sample.get("temperature_c")
+        valid = (
+            fresh and sample.get("fresh") is True
+            and sample.get("communication_ok") is True
+            and type(value) in {int, float} and math.isfinite(value)
+        )
+        text = f"{value:.0f}°C" if valid else "无实时反馈"
+        values.append(f"{motor}: {text}" if index == 1 else text)
+    return " / ".join(values)
 
 
 class ArmGuiNode(Node):
@@ -2926,13 +2949,14 @@ class MainWindow(QMainWindow):
     def _real_panel(self) -> QGroupBox:
         box = QGroupBox("现实机械臂（编码器反馈）")
         layout = QGridLayout(box)
-        for column, text in enumerate(("关节", "实际角度", "硬件命令", "位置误差", "状态")):
+        for column, text in enumerate(("关节", "实际角度", "硬件命令", "位置误差", "状态", "实时温度")):
             layout.addWidget(QLabel(text), 0, column)
         for index, label_text in enumerate(JOINT_LABELS):
-            widgets = RealWidgets(None, QLabel("+0.00°"), QLabel("+0.00°"), QLabel("+0.00°"), QLabel("未连接"))
+            widgets = RealWidgets(None, QLabel("+0.00°"), QLabel("+0.00°"), QLabel("+0.00°"), QLabel("未连接"), QLabel("无实时反馈"))
+            widgets.temperature.setStyleSheet("font-weight: bold; font-size: 14px;")
             row = index + 1
             layout.addWidget(QLabel(label_text), row, 0)
-            for column, widget in enumerate((widgets.actual, widgets.target, widgets.error, widgets.state), 1):
+            for column, widget in enumerate((widgets.actual, widgets.target, widgets.error, widgets.state, widgets.temperature), 1):
                 layout.addWidget(widget, row, column)
             self.real_widgets.append(widgets)
         return box
@@ -5878,6 +5902,14 @@ class MainWindow(QMainWindow):
                 )
         if self.actual_mujoco_preview is not None:
             try:
+                missing = [
+                    f"J{index + 1}" for index, connected in enumerate(self.connected)
+                    if not connected
+                ]
+                self.actual_mujoco_preview.setTitle(
+                    "现实机械臂数字孪生（仅编码器）" if not missing else
+                    "现实数字孪生：反馈缺失 " + "/".join(missing) + "（保留最后姿态）"
+                )
                 self.actual_mujoco_preview.set_relative_pose(self.actual)
             except Exception as exc:
                 self.actual_mujoco_preview.image.setText(
@@ -6217,6 +6249,11 @@ class MainWindow(QMainWindow):
             set_widget_text_if_changed(real.target, f"{target_deg:+.2f}°")
             set_widget_text_if_changed(real.error, f"{error_deg:+.2f}°")
             set_widget_text_if_changed(real.state, states[index])
+            if getattr(real, "temperature", None) is not None:
+                set_widget_text_if_changed(
+                    real.temperature,
+                    joint_temperature_text(hardware, index, self.node.control_streams_fresh(now)),
+                )
         if (
             self.direction is ArmMode.REAL_TO_SIM
             and self.hardware_mode in {"brake", "drag"}
