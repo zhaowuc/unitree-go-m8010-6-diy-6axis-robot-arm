@@ -1768,7 +1768,24 @@ class ActiveAcceptanceRunner:
         ):
             segment.router_accepted = True
 
-    def _planned_proof_for_trajectory(self, trajectory_sha256: str) -> Mapping[str, Any]:
+    def _planned_proof_for_trajectory(
+        self, trajectory: Mapping[str, Any], manifest: Mapping[str, Any],
+    ) -> Mapping[str, Any]:
+        segment_shas = manifest.get("segment_sha256")
+        segment_index = trajectory.get("segment_index")
+        _require(
+            manifest.get("schema") == "go-m8010-plan-manifest/1.0"
+            and _valid_sha256(manifest.get("recipe_sha256"))
+            and isinstance(segment_shas, list)
+            and bool(segment_shas)
+            and all(_valid_sha256(item) for item in segment_shas)
+            and type(segment_index) is int
+            and 0 <= segment_index < len(segment_shas)
+            and type(trajectory.get("segment_count")) is int
+            and trajectory["segment_count"] == len(segment_shas)
+            and segment_shas[segment_index] == trajectory.get("trajectory_sha256"),
+            "POSITION_PLAN_MANIFEST_SEGMENT_MISMATCH",
+        )
         _require(self.latest_gravity is not None, "PLANNED_PATH_PROOF_STATUS_MISSING")
         proof = self.latest_gravity.get("planned_trajectory_feasibility")
         _require(isinstance(proof, Mapping), "PLANNED_PATH_PROOF_MISSING")
@@ -1778,7 +1795,7 @@ class ActiveAcceptanceRunner:
             and proof.get("result") == "PASS"
             and proof.get("load_feasibility") == "PASS"
             and proof.get("thermal_feasibility") == "PASS"
-            and proof.get("trajectory_sha256") == trajectory_sha256
+            and proof.get("trajectory_sha256") == manifest["recipe_sha256"]
             and proof.get("session_id") == self.binding.session_id
             and proof.get("state_instance_id") == self.binding.state_instance_id
             and proof.get("model_sha256") == PRODUCTION_MODEL_SHA256
@@ -1936,7 +1953,7 @@ class ActiveAcceptanceRunner:
                 and proof.get("model_sha256") == PRODUCTION_MODEL_SHA256,
                 "POSITION_COLLISION_PROOF_INVALID",
             )
-            self._planned_proof_for_trajectory(trajectory_sha)
+            self._planned_proof_for_trajectory(trajectory, manifest)
             next_budget = self.position_trajectory_budget_ns + duration_ns
             _require(
                 next_budget
@@ -2203,7 +2220,7 @@ class ActiveAcceptanceRunner:
             and proof.get("model_sha256") == PRODUCTION_MODEL_SHA256,
             "POST_POSITION_COLLISION_PROOF_INVALID",
         )
-        self._planned_proof_for_trajectory(trajectory_sha)
+        self._planned_proof_for_trajectory(trajectory, manifest)
         next_budget = self.position_trajectory_budget_ns + duration_ns
         _require(
             next_budget

@@ -97,7 +97,7 @@ def gravity(
     stage_index: int | None = None,
     stage_complete: bool = True,
     empirical_phase: str | None = None,
-    trajectory_sha=None,
+    recipe_sha=None,
     hardware_sequence: int | None = None,
     hardware_source_ns: int | None = None,
 ):
@@ -108,13 +108,13 @@ def gravity(
         if stage_index is None else stage_index
     )
     proof = None
-    if trajectory_sha is not None:
+    if recipe_sha is not None:
         proof = {
             "schema": "go-m8010-empirical-planned-load-thermal-feasibility/1.0",
             "result": "PASS",
             "load_feasibility": "PASS",
             "thermal_feasibility": "PASS",
-            "trajectory_sha256": trajectory_sha,
+            "trajectory_sha256": recipe_sha,
             "session_id": bound.session_id,
             "state_instance_id": bound.state_instance_id,
             "model_sha256": runner_mod.PRODUCTION_MODEL_SHA256,
@@ -383,8 +383,8 @@ def post_command(
             "duration_ns": 2_000_000_000,
             "interval_count": 200,
             "execute_at_monotonic_ns": now_ns + 250_000_000,
-            "segment_index": moving_index,
-            "segment_count": 6,
+            "segment_index": list(manifest_shas).index(trajectory_sha),
+            "segment_count": len(manifest_shas),
         },
         "plan_manifest": {
             "schema": "go-m8010-plan-manifest/1.0",
@@ -416,7 +416,7 @@ def execute_post_position(run, kind, target, now, seq, positions):
         command, next_positions, sha, token = post_command(
             bound, run, now, counter, positions, index, manifest_shas
         )
-        refresh_gravity(run, now, sha)
+        refresh_gravity(run, now, command["plan_manifest"]["recipe_sha256"])
         run.observe_gui_command(command, now_ns=now)
         run.observe_router_status({
             "schema": runner_mod.ROUTER_STATUS_SCHEMA,
@@ -432,7 +432,7 @@ def execute_post_position(run, kind, target, now, seq, positions):
         for _ in range(6):
             now += 100_000_000
             seq += 1
-            refresh_gravity(run, now, sha)
+            refresh_gravity(run, now, command["plan_manifest"]["recipe_sha256"])
             run.observe_hardware_state(state(
                 bound, now, seq, positions=positions, modes=modes,
                 trajectory_joint=joint, trajectory_sha=sha, plan_token=token,
@@ -451,7 +451,7 @@ def execute_post_position(run, kind, target, now, seq, positions):
     return now, seq, positions
 
 
-def refresh_gravity(run, now_ns: int, trajectory_sha=None, scale=1.0):
+def refresh_gravity(run, now_ns: int, recipe_sha=None, scale=1.0):
     previous = run.gravity_worker_echo_source_last
     sequence = 1 if previous is None else previous[0] + 1
     source_ns = (
@@ -464,7 +464,7 @@ def refresh_gravity(run, now_ns: int, trajectory_sha=None, scale=1.0):
         run.binding,
         now_ns,
         scale=scale,
-        trajectory_sha=trajectory_sha,
+        recipe_sha=recipe_sha,
     )
     value["sequence"] = sequence
     value["source_monotonic_ns"] = source_ns
@@ -936,7 +936,7 @@ def execute_full_position(run):
         command, target, trajectory_sha, plan_token = position_command(
             bound, run, now, command_counter, positions
         )
-        refresh_gravity(run, now, trajectory_sha)
+        refresh_gravity(run, now, command["plan_manifest"]["recipe_sha256"])
         run.observe_gui_command(command, now_ns=now)
         run.observe_router_status({
             "schema": runner_mod.ROUTER_STATUS_SCHEMA,
@@ -951,7 +951,7 @@ def execute_full_position(run):
         for _ in range(6):
             now += 100_000_000
             seq += 1
-            refresh_gravity(run, now, trajectory_sha)
+            refresh_gravity(run, now, command["plan_manifest"]["recipe_sha256"])
             run.observe_hardware_state(state(
                 bound, now, seq, positions=positions, modes=moving_modes,
                 trajectory_joint=run.expected_joint,
@@ -1036,7 +1036,7 @@ def test_wrong_joint_or_long_segment_fails_closed_and_requests_router_brake():
         run.observe_hardware_state(state(bound, now, seq), now_ns=now)
     command, _target, sha, _token = position_command(bound, run, now + 1, 1, [0.0] * 6)
     command["trajectory"]["duration_ns"] = 15_000_000_001
-    refresh_gravity(run, now + 1, sha)
+    refresh_gravity(run, now + 1, command["plan_manifest"]["recipe_sha256"])
     run.observe_gui_command(command, now_ns=now + 1)
     assert run.failure.reason == "POSITION_SEGMENT_EXCEEDS_15_SECONDS"
     assert brakes and brakes[0].related_domains == ("J1",)
@@ -1066,7 +1066,7 @@ def _complete_scheduled_position(run, now, sequence, command_sequence):
     command, target, sha, token = position_command(
         run.binding, run, now, command_sequence, run.latest_hardware["position_rad"]
     )
-    refresh_gravity(run, now, sha)
+    refresh_gravity(run, now, command["plan_manifest"]["recipe_sha256"])
     run.observe_gui_command(command, now_ns=now)
     assert run.failure is None
     run.observe_router_status({"schema": runner_mod.ROUTER_STATUS_SCHEMA,
@@ -1094,7 +1094,7 @@ def _complete_scheduled_position(run, now, sequence, command_sequence):
                 "INACTIVE" if elapsed_ms < 100 else "PREPARED" if elapsed_ms < 250
                 else "RUNNING" if elapsed_ms < 2250 else "COMPLETE"
             )
-        refresh_gravity(run, sample_now, sha)
+        refresh_gravity(run, sample_now, command["plan_manifest"]["recipe_sha256"])
         run.observe_gui_command({**command, "sequence": command_sequence + step,
             "source_monotonic_ns": sample_now}, now_ns=sample_now)
         run.observe_hardware_state(sample, now_ns=sample_now)
@@ -1119,7 +1119,7 @@ def test_scheduled_position_and_bounded_immutable_completion_refresh(mutation):
         refresh["activation_epoch"] += 1
     elif mutation == "source_instance_id":
         refresh["source_instance_id"] = "4" * 32
-    refresh_gravity(run, now + delay, command["trajectory"]["trajectory_sha256"])
+    refresh_gravity(run, now + delay, command["plan_manifest"]["recipe_sha256"])
     run.observe_gui_command(refresh, now_ns=now + delay)
     assert (run.failure is None) == (mutation is None)
     assert run.position_trajectory_budget_ns == budget and len(run.position_rows) == rows
@@ -1137,7 +1137,7 @@ def test_startup_hold_has_finite_window_and_never_recovers_after_execution_echo(
         run, now, sequence = _position_transition_fixture()
         now += 1
         command, _, sha, token = position_command(run.binding, run, now, 1000, [0.0] * 6)
-        refresh_gravity(run, now, sha)
+        refresh_gravity(run, now, command["plan_manifest"]["recipe_sha256"])
         run.observe_gui_command(command, now_ns=now)
         for step in range(1, 7):
             sample_now = now + step * 100_000_000
@@ -1148,7 +1148,7 @@ def test_startup_hold_has_finite_window_and_never_recovers_after_execution_echo(
                 trajectory_joint="J1" if echoed and step == 3 else None,
                 trajectory_sha=sha, plan_token=token)
             sample["per_motor"]["J1"]["trajectory_state"] = "RUNNING" if echoed and step == 3 else "INACTIVE"
-            refresh_gravity(run, sample_now, sha)
+            refresh_gravity(run, sample_now, command["plan_manifest"]["recipe_sha256"])
             run.observe_hardware_state(sample, now_ns=sample_now)
             if run.failure:
                 assert step == (4 if echoed else 6)
@@ -1181,6 +1181,92 @@ def test_center_after_completed_joint_waits_only_briefly_for_fixed_hold_feedback
             assert run.failure is None and run.endpoint_dwell_started_ns is None
         else:
             assert run.failure.reason == "CENTER_DWELL_NOT_WHOLE_ARM_CONTINUOUS_HOLD"
+
+
+@pytest.mark.parametrize("segment_count", (1, 2))
+@pytest.mark.parametrize("mutation", (None, "proof_uses_segment_hash", "wrong_recipe", "foreign_segment", "wrong_index", "wrong_count", "wrong_session"))
+def test_real_recipe_proof_binds_manifest_and_exact_segment(monkeypatch, segment_count, mutation):
+    ros_src = SCRIPT.parents[2] / "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环" / "ros2_ws" / "src"
+    monkeypatch.syspath_prepend(str(ros_src / "go_m8010_arm_gui"))
+    monkeypatch.syspath_prepend(str(ros_src / "go_m8010_arm_hardware"))
+    from go_m8010_arm_gui.workflow_contract import (
+        generate_segmented_quintic_recipe, planned_trajectory_feasibility_request,
+        trajectory_command_descriptor, trajectory_plan_manifest,
+    )
+    from go_m8010_arm_hardware.planned_path_feasibility import (
+        PathLoadEnvelope, build_planned_path_proof, parse_planned_path_request,
+    )
+    run, now, _ = _position_transition_fixture()
+    now += 1
+    target = [math.radians(5.0), 0.0, 0.0, 0.0, 0.0, 0.0]
+    if segment_count == 2:
+        target[3] = math.radians(5.0)
+    recipe = generate_segmented_quintic_recipe(
+        [0.0] * 6, target, [(-math.pi, math.pi)] * 6,
+        maximum_velocity_rad_s=0.1, maximum_acceleration_rad_s2=0.1,
+        maximum_segment_delta_rad=math.radians(5.0),
+    )
+    assert len(recipe.segments) == segment_count
+    manifest = trajectory_plan_manifest(recipe)
+    descriptor = trajectory_command_descriptor(recipe.segments[-1], plan_token_id="c" * 64,
+        execute_at_monotonic_ns=now + 250_000_000,
+        segment_index=segment_count - 1, segment_count=segment_count)
+    trajectory = descriptor["trajectory"]
+    request = planned_trajectory_feasibility_request(recipe,
+        source_instance_id="3" * 32, sequence=1, source_monotonic_ns=now,
+        session_id=run.binding.session_id, state_instance_id=run.binding.state_instance_id,
+        model_sha256=runner_mod.PRODUCTION_MODEL_SHA256,
+        gravity_config_sha256=runner_mod.GRAVITY_CONFIG_SHA256,
+        thermal_config_sha256=runner_mod.THERMAL_CONFIG_SHA256)
+    parsed = parse_planned_path_request(request, now_monotonic_ns=now)
+    # Synthetic loads isolate identity binding; the production parser and proof
+    # builder still reproduce the actual GUI recipe/segment hashes and schema.
+    rotor_loads = dict.fromkeys(runner_mod.MOTOR_NAMES, 0.0)
+    rotor_loads["J6"] = None
+    envelope = PathLoadEnvelope(parsed, parsed.sample_count,
+        dict.fromkeys(runner_mod.JOINT_NAMES, 0.0), rotor_loads, rotor_loads)
+    proof = build_planned_path_proof(envelope,
+        source_instance_id="2" * 32, sequence=1, source_monotonic_ns=now,
+        model_sha256=runner_mod.PRODUCTION_MODEL_SHA256,
+        gravity_config_sha256=runner_mod.GRAVITY_CONFIG_SHA256,
+        thermal_config_sha256=runner_mod.THERMAL_CONFIG_SHA256,
+        continuous_config_authoritative=False, continuous_hardware_authoritative=False,
+        continuous_rotor_limits_nm=None, short_peak_rotor_limits_nm=None,
+        temperature_limits_authoritative=True, minimum_thermal_margin_c=5.0,
+        empirical_validation_authoritative=True,
+        empirical_rotor_limits_nm=dict.fromkeys(runner_mod.MOTOR_NAMES, 1.0),
+        empirical_envelope_id=run.binding.envelope_id,
+        empirical_envelope_sha256=run.binding.envelope_sha256)
+    assert proof["result"] == "PASS"
+    assert proof["trajectory_sha256"] == manifest["recipe_sha256"] == recipe.sha256
+    assert proof["trajectory_sha256"] != trajectory["trajectory_sha256"]
+    run.latest_gravity["planned_trajectory_feasibility"] = proof
+    if mutation == "proof_uses_segment_hash":
+        proof["trajectory_sha256"] = trajectory["trajectory_sha256"]
+    elif mutation == "wrong_recipe":
+        manifest["recipe_sha256"] = "d" * 64
+    elif mutation == "foreign_segment":
+        trajectory["trajectory_sha256"] = "e" * 64
+    elif mutation == "wrong_index":
+        trajectory["segment_index"] = 0 if segment_count == 2 else -1
+    elif mutation == "wrong_count":
+        trajectory["segment_count"] += 1
+    elif mutation == "wrong_session":
+        proof["session_id"] = "different-session"
+    if mutation:
+        with pytest.raises(runner_mod.AcceptanceError):
+            run._planned_proof_for_trajectory(trajectory, manifest)
+        assert run.position_trajectory_budget_ns == 0
+    else:
+        assert run._planned_proof_for_trajectory(trajectory, manifest) is proof
+        if segment_count == 1:
+            command, _, _, _ = position_command(run.binding, run, now, 1, [0.0] * 6)
+            command.update(descriptor)
+            command["plan_manifest"] = manifest
+            run.observe_gui_command(command, now_ns=now)
+            assert run.failure is None
+            assert run.active_segment.trajectory_sha256 == recipe.segments[0].sha256
+            assert run.position_trajectory_budget_ns == trajectory["duration_ns"]
 
 
 def test_confirmation_expiry_aborts_an_active_run():
@@ -1238,7 +1324,7 @@ def test_position_budget_counts_repeated_sha_as_a_different_new_segment():
     )
     command["trajectory"]["trajectory_sha256"] = repeated_sha
     command["plan_manifest"]["segment_sha256"] = [repeated_sha]
-    refresh_gravity(run, now + 1, repeated_sha)
+    refresh_gravity(run, now + 1, command["plan_manifest"]["recipe_sha256"])
     run.observe_gui_command(command, now_ns=now + 1)
     assert run.failure.reason == "POSITION_TRAJECTORY_BUDGET_EXCEEDED_600_SECONDS"
 
@@ -1346,7 +1432,7 @@ def test_position_rejects_endpoint_that_did_not_actually_move_five_degrees():
     command, target, trajectory_sha, plan_token = position_command(
         bound, run, now, 1, positions
     )
-    refresh_gravity(run, now, trajectory_sha)
+    refresh_gravity(run, now, command["plan_manifest"]["recipe_sha256"])
     run.observe_gui_command(command, now_ns=now)
     run.observe_router_status({
         "schema": runner_mod.ROUTER_STATUS_SCHEMA,
@@ -1360,7 +1446,7 @@ def test_position_rejects_endpoint_that_did_not_actually_move_five_degrees():
     for _ in range(6):
         now += 100_000_000
         sequence += 1
-        refresh_gravity(run, now, trajectory_sha)
+        refresh_gravity(run, now, command["plan_manifest"]["recipe_sha256"])
         run.observe_hardware_state(state(
             bound,
             now,
@@ -1974,7 +2060,7 @@ def test_exact_gui_refresh_is_allowed_but_mutated_refresh_brakes():
     command, _target, sha, _token = position_command(
         bound, run, now, 1, [0.0] * 6
     )
-    refresh_gravity(run, now, sha)
+    refresh_gravity(run, now, command["plan_manifest"]["recipe_sha256"])
     run.observe_gui_command(command, now_ns=now)
     assert run.failure is None
     refresh = {**command, "sequence": 2, "source_monotonic_ns": now + 1}
