@@ -3007,6 +3007,7 @@ class MainWindow(QMainWindow):
     def _virtual_panel(self) -> QGroupBox:
         box = QGroupBox("计划目标（唯一可编辑滑条组）")
         layout = QGridLayout(box)
+        layout.setVerticalSpacing(2)
         layout.setColumnStretch(1, 1)
         layout.addWidget(QLabel("关节"), 0, 0)
         layout.addWidget(QLabel("计划目标滑条"), 0, 1)
@@ -3048,6 +3049,7 @@ class MainWindow(QMainWindow):
     def _real_panel(self) -> QGroupBox:
         box = QGroupBox("现实机械臂（编码器反馈）")
         layout = QGridLayout(box)
+        layout.setVerticalSpacing(2)
         for column, text in enumerate(("关节", "实际角度", "硬件命令", "位置误差", "状态", "实时温度")):
             layout.addWidget(QLabel(text), 0, column)
         for index, label_text in enumerate(JOINT_LABELS):
