@@ -37,7 +37,9 @@ def test_joint_limits_are_the_full_historical_model_ranges_at_the_vertical_ancho
 def test_control_defaults_and_fixed_hold_gain_envelope_are_frozen():
     config = yaml.safe_load((CONFIG_DIRECTORY / "arm_gui.yaml").read_text(encoding="utf-8"))
     assert config["控制"]["控制频率_赫兹"] == 100
-    assert config["控制"]["最大速度_度每秒"] == 5.0
+    # The requested profile must not ride the independent 5 deg/s hard stop:
+    # the attended J1 run measured 5.085 deg/s while following a 5 deg/s plan.
+    assert config["控制"]["最大速度_度每秒"] == 3.0
     # The shared default is the most restrictive active joint limit: J2's
     # established 15 deg/s^2 guard.  This keeps preview/router/GO execution
     # compatible without weakening any worker-side protection.

@@ -5,15 +5,17 @@ Ubuntu arm-gui venv after sourcing ROS Humble:
     tools/hardware/test_v15_31c_production_dispatch_integration.py -q
 
 No ROS node, publisher, socket, worker or serial device is constructed. Only
-clock/encoder/temperature feedback, completed ladder prerequisites and message
-transport are simulated. Planning, collision, load/thermal proof, serialization,
-router gates and acceptance progression use the production implementations.
+clock/encoder/temperature feedback, comparison prerequisites and message
+transport are simulated. The empirical stage gate, ramp/slew controller,
+planning, collision, load/thermal proof, serialization, router gates and
+acceptance progression use the production implementations.
 """
 
 from __future__ import annotations
 
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
+import hashlib
 import json
 import math
 import os
@@ -48,11 +50,12 @@ from go_m8010_arm_hardware import gravity_model as gm
 from go_m8010_arm_hardware import mujoco_mirror_node as mirror
 from go_m8010_arm_hardware import planned_path_feasibility as path
 from go_m8010_arm_hardware.empirical_validation_envelope import (
-    SOFTWARE_GRAVITY_ROTOR_LIMIT_NM,
+    EmpiricalStageGate, EmpiricalValidationEnvelope, SOFTWARE_GRAVITY_ROTOR_LIMIT_NM,
 )
 
 import test_v15_31b_active_acceptance_runner as feedback
 import v15_30a_gui_j6_controller as j6
+from v15_31b_create_empirical_validation_envelope import build_envelope, json_bytes
 
 
 class RecordingPublisher:
@@ -63,7 +66,25 @@ class RecordingPublisher:
         self.messages.append(message)
 
 
-def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monkeypatch):
+def make_empirical_envelope(tmp_path, bound, now_ns, now_utc, predicted):
+    thermal = yaml.safe_load((WORKSPACE / "src/go_m8010_arm_hardware/config/thermal_limits.yaml").read_text(encoding="utf-8"))
+    document = build_envelope(
+        session_id=bound.session_id, state_instance_id=bound.state_instance_id,
+        anchor_sha256=bound.anchor_sha256,
+        # Synthetic prerequisite documents, not physical acceptance evidence.
+        evidence_hashes={"power_on_readonly.json": "1" * 64,
+            "model_session_anchor_validation.json": "2" * 64,
+            "gravity_readonly_validation.json": "3" * 64},
+        maximum_predicted_rotor_nm=predicted, thermal_policy=thermal,
+        hold_seconds=7.0, lifetime_seconds=3600, created_at=now_utc)
+    encoded = json_bytes(document)
+    target = tmp_path / "empirical_envelope.json"
+    target.write_bytes(encoded)
+    return EmpiricalValidationEnvelope.from_path(target, hashlib.sha256(encoded).hexdigest(),
+        now_utc=now_utc, now_monotonic_ns=now_ns)
+
+
+def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monkeypatch, tmp_path):
     def reject_transport(*args, **kwargs):
         raise AssertionError("production dispatch integration must never open a socket")
 
@@ -71,6 +92,8 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
     packet_binary = os.environ.get("M8010_PACKET_AUDIT_BINARY", "")
     assert Path(packet_binary).is_file(), "set M8010_PACKET_AUDIT_BINARY to the compiled offline production packet probe"
     clock = [time.monotonic_ns()]
+    origin_ns = clock[0]
+    origin_utc = datetime.now(timezone.utc)
     monkeypatch.setattr(time, "monotonic_ns", lambda: clock[0])
     bound = replace(
         feedback.binding(),
@@ -78,12 +101,6 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
         state_instance_id="2" * 32,
         expires_at_utc=datetime.now(timezone.utc) + timedelta(minutes=60),
     )
-    run = feedback.runner_mod.ActiveAcceptanceRunner(bound)
-    monkeypatch.setattr(j6, "EXPECTED_GRAVITY_AUTHORITY_BINDING",
-        j6.ExpectedGravityAuthorityBinding("EMPIRICAL_VALIDATION_ENVELOPE",
-            bound.envelope_id, bound.envelope_sha256, bound.anchor_sha256,
-            bound.session_id, bound.state_instance_id))
-    j6_replay = j6.make_command_source_replay_state()
     model_path = WORKSPACE.parent / "mujoco_v15_14/go_m8010_arm_v15_14_kinematic.xml"
     pose_deg = [0.0, 90.0, -14.40, 13.49, 47.94, 0.0]
     pose = [math.radians(value) for value in pose_deg]
@@ -101,6 +118,22 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
         "model_absolute_joint_rad": pose,
     })
     evaluator = gm.StaticGravityEvaluator(model_path)
+    empirical = make_empirical_envelope(tmp_path, bound, origin_ns, origin_utc,
+        {name: abs(value) for name, value in gm.gravity_joint_to_rotor_commands(
+            evaluator.evaluate(pose), gravity_scale=1.0).items()})
+    bound = replace(bound, envelope_id=empirical.envelope_id, envelope_sha256=empirical.sha256,
+        expires_at_utc=empirical.expires_at_utc)
+    empirical_gate = EmpiricalStageGate(empirical)
+    feedforward_controller = gm.GravityFeedforwardController(
+        ramp_seconds=empirical.ramp_seconds, maximum_slew_nm_per_s=1.0)
+    feedforward_controller.configure_fixed_stage_transition_ramp(empirical.ramp_seconds)
+    last_worker_feedforward = dict.fromkeys(gm.MOTOR_NAMES[:-1], 0.0)
+    run = feedback.runner_mod.ActiveAcceptanceRunner(bound)
+    monkeypatch.setattr(j6, "EXPECTED_GRAVITY_AUTHORITY_BINDING",
+        j6.ExpectedGravityAuthorityBinding("EMPIRICAL_VALIDATION_ENVELOPE",
+            bound.envelope_id, bound.envelope_sha256, bound.anchor_sha256,
+            bound.session_id, bound.state_instance_id))
+    j6_replay = j6.make_command_source_replay_state()
     model = mujoco.MjModel.from_xml_path(str(model_path))
     model.opt.disableflags |= int(mujoco.mjtDisableBit.mjDSBL_FILTERPARENT)
     guard, guard_sha, contract_sha = mirror.load_verified_kinematic_guard(
@@ -113,6 +146,7 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
         guard_sha256=guard_sha, contract_sha256=contract_sha,
     )
     config = yaml.safe_load((WORKSPACE / "src/go_m8010_arm_gui/config/arm_gui.yaml").read_text(encoding="utf-8"))
+    thermal = yaml.safe_load((WORKSPACE / "src/go_m8010_arm_hardware/config/thermal_limits.yaml").read_text(encoding="utf-8"))
     limits = tuple(zip(router.MODEL_COMMAND_LOWER_RAD, router.MODEL_COMMAND_UPPER_RAD))
     gravity_gate = router.GravityAuthorityGate()
     collision_gate = router.CollisionGuardProofGate()
@@ -127,7 +161,7 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
         control_streams_fresh=lambda *args: True,
         gravity_status_fresh=lambda *args: True,
         publish_collision_request=lambda request: None,
-        thermal_limits=SimpleNamespace(thermal_stop_c=60.0),
+        thermal_limits=SimpleNamespace(thermal_stop_c=thermal["thermal_stop_c"]),
     )
 
     def check_j6(normalized, segment=None):
@@ -173,7 +207,7 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
             assert sampled["dq_rad_s"] == pytest.approx(reference.dq_rad_s, abs=1e-12)
 
     def observe(positions, *, stage=4, position_authorized=True, moving_joint=None, command=None, segment=None):
-        nonlocal sequence
+        nonlocal sequence, last_worker_feedforward
         sequence += 1
         now = clock[0]
         modes = dict.fromkeys(gm.MOTOR_NAMES, "hold")
@@ -188,17 +222,17 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
             "controller_fault_by_motor": dict.fromkeys(gm.MOTOR_NAMES, False),
             "lease_safe_hold_by_motor": dict.fromkeys(gm.MOTOR_NAMES, False),
         })
-        scale = stage * 0.25
+        requested_scale = stage * 0.25
+        previous_scale = feedforward_controller.scale.current_scale
         gravity = evaluator.evaluate(anchor.model_q_from_actual(positions))
-        raw_ff = gm.gravity_joint_to_rotor_commands(gravity, gravity_scale=scale)
-        logical_ff = gm.gravity_joint_to_logical_rotor_feedforward(gravity, gravity_scale=scale)
         for name, motor in state["per_motor"].items():
             motor.update({
                 "reference_captured": True,
+                "age_ms": 0.0,
                 "thermal_config_sha256": path.THERMAL_CONFIG_SHA256,
                 "feedback_receipt_monotonic_ns": now,
                 "last_valid_feedback_monotonic_ns": now,
-                "gravity_feedforward_rotor_nm": raw_ff[name] if name != "J6" else None,
+                "gravity_feedforward_rotor_nm": last_worker_feedforward.get(name),
             })
         if command is not None and moving_joint is not None:
             descriptor = command["trajectory"]
@@ -216,9 +250,28 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
                     "trajectory_sample_index": index,
                     "trajectory_interval_count": descriptor["interval_count"],
                 })
+        if stage > empirical_gate.stage_index or (
+            stage == 4 and empirical_gate.stage_complete and position_authorized
+        ):
+            assert empirical_gate.observe_confirmation(
+                feedback.confirmation(bound, now, sequence, target=requested_scale),
+                now_monotonic_ns=now)
+        ready = empirical_gate.step(requested_scale=requested_scale, applied_scale=previous_scale,
+            hardware_state=state, session_id=bound.session_id, state_instance_id=bound.state_instance_id,
+            anchor_sha256=bound.anchor_sha256, hardware_enable_requested=True,
+            now_monotonic_ns=now, now_utc=origin_utc + timedelta(seconds=(now - origin_ns) / 1e9))
+        assert ready, empirical_gate.status()
+        empirical_status = empirical_gate.status()
+        # Match WholeArmGravityNode._tick: the gate sees the previous applied
+        # scale, then the real ramp/slew controller produces this publication.
+        scale, logical_ff, raw_ff = feedforward_controller.step(gravity,
+            enabled=ready, target_scale=requested_scale, now_s=now / 1e9)
+        last_worker_feedforward = feedback.runner_mod._expected_go_worker_feedforward(tuple(logical_ff))
+        for name, expected in last_worker_feedforward.items():
+            assert expected == pytest.approx(raw_ff[name], abs=1e-12), f"{name} sign applied more than once"
         temperature_ok, margin, continuous, blocker = path.temperature_observation(
             state, session_id=bound.session_id, state_instance_id=bound.state_instance_id,
-            derating_start_c=40.0,
+            derating_start_c=thermal["derating_start_c"],
         )
         proof = path.build_planned_path_proof(envelope,
             source_instance_id="6" * 32, sequence=sequence, source_monotonic_ns=now,
@@ -227,13 +280,12 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
             continuous_config_authoritative=False, continuous_hardware_authoritative=continuous,
             continuous_rotor_limits_nm=None, short_peak_rotor_limits_nm=None,
             temperature_limits_authoritative=temperature_ok, minimum_thermal_margin_c=margin,
-            temperature_blocker=blocker, empirical_validation_authoritative=stage == 4 and position_authorized,
+            temperature_blocker=blocker, empirical_validation_authoritative=empirical_status["position_validation_authorized"],
             empirical_rotor_limits_nm=SOFTWARE_GRAVITY_ROTOR_LIMIT_NM,
             empirical_envelope_id=bound.envelope_id, empirical_envelope_sha256=bound.envelope_sha256)
-        # Simulated empirical ladder/feedback metadata; the PASS proof above is
-        # generated only by the real model, full sample evaluator and thermal check.
-        status = feedback.gravity(bound, now, scale=scale, hardware_sequence=sequence, hardware_source_ns=now,
-            empirical_phase=None if position_authorized else "GRAVITY_LADDER")
+        # Feedback is simulated; stage authority and proofs are production outputs.
+        status = feedback.gravity(bound, now, scale=scale, target=requested_scale,
+            stage_index=empirical_gate.stage_index, hardware_sequence=sequence, hardware_source_ns=now)
         status.update({
             "source": "whole_arm_gravity_node", "source_instance_id": "6" * 32,
             "sequence": sequence, "production_model_hash_match": True,
@@ -241,26 +293,27 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
             "gravity_joint_nm": list(gravity), "feedforward_nm": list(logical_ff),
             "pose_feasibility": "PASS" if all(abs(raw_ff[name]) <= SOFTWARE_GRAVITY_ROTOR_LIMIT_NM[name] for name in gm.MOTOR_NAMES) else "FAIL",
             "blocker": None, "hardware_enable_requested": True,
+            "hardware_tff_enabled": bool(ready and requested_scale > 0.0),
             "torque_authority_class": "EMPIRICAL_VALIDATION_ENVELOPE",
             "actuation_interface_present": True, "planned_trajectory_feasibility": proof,
         })
-        status["empirical_validation"].update({
-            "maximum_position_segment_seconds": 15.0, "maximum_abs_position_segment_deg": 5.0,
-            "maximum_cumulative_position_trajectory_seconds": 600.0,
-        })
-        assert gravity_gate.observe_status(status, now_ns=now)
+        status["empirical_validation"] = empirical_status
+        assert gravity_gate.observe_status(status, now_ns=now), {
+            "requested_scale": requested_scale, "applied_scale": scale,
+            "previous_scale": previous_scale, "empirical": empirical_status,
+            "hardware_tff_enabled": status["hardware_tff_enabled"],
+            "pose_feasibility": status["pose_feasibility"], "feedforward_nm": logical_ff,
+            "source_ns": status["source_monotonic_ns"], "sequence": sequence,
+        }
         node.latest_hardware, node.latest_gravity_status = state, status
-        assert run.observe_confirmation(feedback.confirmation(bound, now, sequence, target=scale), now_ns=now)
+        assert run.observe_confirmation(feedback.confirmation(bound, now, sequence, target=requested_scale), now_ns=now)
         run.observe_gravity_status(status, now_ns=now)
         run.observe_hardware_state(state, now_ns=now)
         assert run.failure is None, run.failure
         return state, proof
 
-    # The 100% HOLD remains unarmed until a separate same-stage POSITION
-    # confirmation, exactly as the production coordinator/ladder publishes it.
-    for stage, authorized in [(stage, False) for stage in range(5)] + [(4, True)]:
-        clock[0] += 50_000_000
-        observe([0.0] * 6, stage=stage, position_authorized=authorized)
+    def publish_bootstrap_hold():
+        nonlocal command_sequence
         command_sequence += 1
         gui.ArmGuiNode.publish_command(node, command_sequence, "hold", [0.0] * 6, [0.0] * 6,
             [True] * 6, [False] * 6, 1, config)
@@ -273,8 +326,23 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
         replay_gate.commit(normalized, now_ns=clock[0])
         check_j6(normalized)
         run.observe_gui_command(command, now_ns=clock[0])
-    # This integration starts after successful physical ladder/comparison;
-    # it deliberately does not pretend simulated feedback proves either one.
+
+    for stage in range(5):
+        ramp_seconds = 0.0 if stage == 0 else empirical.ramp_seconds
+        for _ in range(math.ceil((ramp_seconds + empirical.configured_hold_seconds) / 0.05) + 5):
+            clock[0] += 50_000_000
+            observe([0.0] * 6, stage=stage, position_authorized=False)
+            publish_bootstrap_hold()
+            if empirical_gate.stage_complete:
+                break
+        assert empirical_gate.stage_complete
+    assert not empirical_gate.status()["position_validation_authorized"]
+    clock[0] += 50_000_000
+    observe([0.0] * 6)
+    publish_bootstrap_hold()
+    assert empirical_gate.status()["position_validation_authorized"]
+    # Runner comparison measurements remain an explicit simulated prerequisite;
+    # neither this test nor simulated ladder feedback is physical acceptance.
     run.gravity_ladder_complete = True
     run.comparison_complete = {"WITHOUT_FF", "WITH_FF"}
     run.start_position(now_ns=clock[0])
@@ -408,3 +476,60 @@ def test_real_model_proofs_accept_all_axis_out_and_back_with_encoder_noise(monke
     assert run.position_complete
     assert sum(json.loads(message.data)["mode"] == "position"
                for message in node.command_publisher.messages) == len(feedback.runner_mod.POSITION_ORDER) * (len(feedback.runner_mod.POSITION_PHASES) - 1)
+
+
+def test_recorded_j1_velocity_exceedance_revokes_real_position_stage(tmp_path):
+    """Replay the measured speed, not pretend this is an archived full frame.
+
+    The 2026-09-05 capture's first crossing was source ns 3072133166649780,
+    J1=5.085087766677406 deg/s. Other axes, temperatures, modes, clocks and
+    health fields below are explicitly synthetic safe context for that value.
+    """
+    now = time.monotonic_ns()
+    origin_ns, origin_utc = now, datetime.now(timezone.utc)
+    bound = feedback.binding()
+    empirical = make_empirical_envelope(tmp_path, bound, now, origin_utc,
+        dict.fromkeys(gm.MOTOR_NAMES, 0.0))
+    bound = replace(bound, envelope_id=empirical.envelope_id, envelope_sha256=empirical.sha256,
+        expires_at_utc=empirical.expires_at_utc)
+    gate = EmpiricalStageGate(empirical)
+    sequence = 0
+
+    def step(requested, applied, speed_deg_s=0.0):
+        nonlocal sequence
+        sequence += 1
+        hardware = feedback.state(bound, now, sequence)
+        hardware["velocity_rad_s"][0] = math.radians(speed_deg_s)
+        hardware["per_motor"]["J1"]["dq_joint_rad_s"] = math.radians(speed_deg_s)
+        hardware["controller_mode_by_motor"]["J1"] = "position" if gate.position_started_ns is not None else "hold"
+        for motor in hardware["per_motor"].values():
+            motor["age_ms"] = 0.0
+        return gate.step(requested_scale=requested, applied_scale=applied,
+            hardware_state=hardware, session_id=bound.session_id, state_instance_id=bound.state_instance_id,
+            anchor_sha256=bound.anchor_sha256, hardware_enable_requested=True,
+            now_monotonic_ns=now, now_utc=origin_utc + timedelta(seconds=(now - origin_ns) / 1e9))
+
+    assert step(0.0, 0.0)
+    now += int(empirical.configured_hold_seconds * 1e9)
+    assert step(0.0, 0.0) and gate.stage_complete
+    for target in (0.25, 0.50, 0.75, 1.0):
+        now += 1_000_000
+        assert gate.observe_confirmation(feedback.confirmation(bound, now, sequence + 1, target=target),
+            now_monotonic_ns=now)
+        assert step(target, target - 0.25)
+        now += int(empirical.ramp_seconds * 1e9)
+        assert step(target, target)
+        now += int(empirical.configured_hold_seconds * 1e9)
+        assert step(target, target) and gate.stage_complete
+    now += 1_000_000
+    assert gate.observe_confirmation(feedback.confirmation(bound, now, sequence + 1, target=1.0),
+        now_monotonic_ns=now)
+    assert step(1.0, 1.0) and gate.status()["position_validation_authorized"]
+    now += 20_000_000
+    assert step(1.0, 1.0, 4.9676)
+    now += 20_000_000
+    assert not step(1.0, 1.0, 5.085087766677406)
+    assert gate.blocker == "EMPIRICAL_ABNORMAL_VELOCITY"
+    assert gate.invalidated and not gate.status()["position_validation_authorized"]
+    now += 20_000_000
+    assert not step(1.0, 1.0, 0.0), "slowing down must not silently revive the spent permit"

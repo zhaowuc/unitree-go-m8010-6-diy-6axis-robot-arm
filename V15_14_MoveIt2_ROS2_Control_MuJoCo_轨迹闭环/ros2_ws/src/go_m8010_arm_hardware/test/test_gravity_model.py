@@ -161,6 +161,30 @@ def test_feedforward_controller_defaults_zero_and_ramps_two_layers():
     )[1] == (0.0,) * 6
 
 
+@pytest.mark.parametrize("j4_direction", (-1.0, 1.0))
+def test_production_feedforward_controller_applies_j4_direction_once_after_slew(j4_direction):
+    controller = GravityFeedforwardController(ramp_seconds=2.0, maximum_slew_nm_per_s=0.25)
+    gravity = [GO_GEAR_RATIO, 2 * GO_GEAR_RATIO, -GO_GEAR_RATIO,
+               j4_direction * GO_GEAR_RATIO, 0.5 * GO_GEAR_RATIO, 100.0]
+    previous, previous_time = 0.0, 0.0
+    slew_was_active = False
+    for now in (0.0, 0.1, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0):
+        scale, logical, physical = controller.step(
+            gravity, enabled=True, target_scale=1.0, now_s=now)
+        assert -logical[3] == physical["J4"]
+        assert physical["J4"] * j4_direction <= 0.0
+        assert abs(physical["J4"] - previous) <= 0.25 * (now - previous_time) + 1e-12
+        assert physical["J2A"] == -physical["J2B"]
+        assert logical[5] == physical["J6"] == 0.0
+        unslewed = gravity_joint_to_logical_rotor_feedforward(gravity, gravity_scale=scale)
+        slew_was_active |= abs(logical[3] - unslewed[3]) > 1e-12
+        previous, previous_time = physical["J4"], now
+    assert slew_was_active
+    assert scale == 1.0
+    assert logical == pytest.approx(gravity_joint_to_logical_rotor_feedforward(gravity, gravity_scale=1.0))
+    assert physical == pytest.approx(gravity_joint_to_rotor_commands(gravity, gravity_scale=1.0))
+
+
 def test_static_evaluator_owns_data_and_reads_qfrc_bias(tmp_path, monkeypatch):
     model_path = tmp_path / "model.xml"
     model_path.write_text("<mujoco/>", encoding="utf-8")

@@ -596,7 +596,7 @@ class GravityFeedforwardController:
             physical["J1"],
             physical["J2B"],
             physical["J3"],
-            physical["J4"],
+            -physical["J4"],
             physical["J5"],
             0.0,
         )

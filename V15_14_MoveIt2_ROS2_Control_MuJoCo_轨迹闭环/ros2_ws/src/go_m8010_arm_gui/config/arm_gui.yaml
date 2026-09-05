@@ -3,7 +3,8 @@
   日志频率_赫兹: 10
 控制:
   控制频率_赫兹: 100
-  最大速度_度每秒: 5.0
+  # Leave tracking headroom below the independent 5 deg/s measured-speed stop.
+  最大速度_度每秒: 3.0
   最大加速度_度每二次方秒: 15.0
   到位容差_度: 0.5
   J6到位容差_度: 0.08
