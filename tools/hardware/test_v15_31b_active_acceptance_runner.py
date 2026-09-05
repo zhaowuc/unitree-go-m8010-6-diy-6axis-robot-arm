@@ -245,7 +245,7 @@ def state(
             item.update({
                 "trajectory_plan_token_id": plan_token,
                 "trajectory_sha256": trajectory_sha,
-                "trajectory_state": "ACTIVE",
+                "trajectory_state": "COMPLETE",
             })
         per_motor[motor] = item
     return {
@@ -320,6 +320,7 @@ def position_command(bound, run, now_ns: int, counter: int, positions):
         "targets_rad": target,
         "active_joint_mask": [True] * 6,
         "moving_joint_mask": moving,
+        "activation_epoch": counter + 10000,
         "plan_token_id": plan_token,
         "trajectory": {
             "schema": "go-m8010-quintic-command/1.0",
@@ -1042,6 +1043,146 @@ def test_wrong_joint_or_long_segment_fails_closed_and_requests_router_brake():
     assert brakes[0].brake_scope == "ALL_DOMAINS_FAIL_CLOSED_SUPERSET"
 
 
+def _position_transition_fixture():
+    run = runner_mod.ActiveAcceptanceRunner(binding())
+    now = 35_000_000_000
+    run.observe_confirmation(confirmation(run.binding, now), now_ns=now)
+    refresh_gravity(run, now)
+    run.observe_hardware_state(state(run.binding, now, 1), now_ns=now)
+    run.gravity_ladder_complete = True
+    run.comparison_complete = {"WITHOUT_FF", "WITH_FF"}
+    run.start_position(now_ns=now)
+    for sequence in range(2, 8):
+        now += 100_000_000
+        refresh_gravity(run, now)
+        run.observe_hardware_state(state(run.binding, now, sequence), now_ns=now)
+    assert run.expected_phase == "PLUS_5" and run.awaiting_position_command
+    return run, now, sequence
+
+
+def _complete_scheduled_position(run, now, sequence, command_sequence):
+    """Real-time lead, sampled quintic motion, COMPLETE, then endpoint dwell."""
+    now += 1
+    command, target, sha, token = position_command(
+        run.binding, run, now, command_sequence, run.latest_hardware["position_rad"]
+    )
+    refresh_gravity(run, now, sha)
+    run.observe_gui_command(command, now_ns=now)
+    assert run.failure is None
+    run.observe_router_status({"schema": runner_mod.ROUTER_STATUS_SCHEMA,
+        "last_mode": "position", "last_moving_joint_mask": command["moving_joint_mask"],
+        "last_command_age_ms": 1.0}, now_ns=now)
+    start = command["trajectory"]["start_rad"]
+    joint = run.expected_joint
+    index = runner_mod.JOINT_NAMES.index(joint)
+    for step, elapsed_ms in enumerate(range(50, 3300, 50), 1):
+        sample_now = now + elapsed_ms * 1_000_000
+        fraction = min(1.0, max(0.0, (elapsed_ms - 250) / 2000))
+        progress = 10 * fraction ** 3 - 15 * fraction ** 4 + 6 * fraction ** 5
+        positions = [a + (b - a) * progress for a, b in zip(start, target)]
+        velocity = (target[index] - start[index]) * 30 * fraction ** 2 * (1 - fraction) ** 2 / 2
+        modes = dict.fromkeys(runner_mod.MOTOR_NAMES, "hold")
+        if elapsed_ms >= 100:
+            for motor in runner_mod.MOTOR_BY_JOINT[joint]:
+                modes[motor] = "position"
+        sample = state(run.binding, sample_now, sequence + step, positions=positions,
+            modes=modes, trajectory_joint=joint if elapsed_ms >= 100 else None,
+            trajectory_sha=sha, plan_token=token)
+        sample["velocity_rad_s"][index] = velocity
+        for motor in runner_mod.MOTOR_BY_JOINT[joint]:
+            sample["per_motor"][motor]["trajectory_state"] = (
+                "INACTIVE" if elapsed_ms < 100 else "PREPARED" if elapsed_ms < 250
+                else "RUNNING" if elapsed_ms < 2250 else "COMPLETE"
+            )
+        refresh_gravity(run, sample_now, sha)
+        run.observe_gui_command({**command, "sequence": command_sequence + step,
+            "source_monotonic_ns": sample_now}, now_ns=sample_now)
+        run.observe_hardware_state(sample, now_ns=sample_now)
+        assert run.failure is None
+        if elapsed_ms < 2250:
+            assert run.active_segment is not None
+        if run.active_segment is None:
+            assert run.status(now_ns=sample_now)["position"]["last_completed_trajectory_sha256"] == sha
+            return sample_now, sequence + step, command, target
+    raise AssertionError("completed quintic did not finish endpoint dwell")
+
+
+@pytest.mark.parametrize("mutation", (None, "activation_epoch", "source_instance_id", "expired"))
+def test_scheduled_position_and_bounded_immutable_completion_refresh(mutation):
+    run, now, sequence = _position_transition_fixture()
+    now, sequence, command, target = _complete_scheduled_position(run, now, sequence, 1000)
+    assert run.expected_phase == "CENTER_AFTER_PLUS"
+    budget, rows = run.position_trajectory_budget_ns, len(run.position_rows)
+    delay = runner_mod.MAXIMUM_STATE_AGE_NS + 1 if mutation == "expired" else 50_000_000
+    refresh = {**command, "sequence": 2000, "source_monotonic_ns": now + delay}
+    if mutation == "activation_epoch":
+        refresh["activation_epoch"] += 1
+    elif mutation == "source_instance_id":
+        refresh["source_instance_id"] = "4" * 32
+    refresh_gravity(run, now + delay, command["trajectory"]["trajectory_sha256"])
+    run.observe_gui_command(refresh, now_ns=now + delay)
+    assert (run.failure is None) == (mutation is None)
+    assert run.position_trajectory_budget_ns == budget and len(run.position_rows) == rows
+    if mutation is None:
+        # GUI has the exact completion ACK before it sends fixed-target HOLD.
+        run.observe_gui_command({**refresh, "mode": "hold", "targets_rad": target,
+            "moving_joint_mask": [False] * 6}, now_ns=now + delay)
+        run.observe_hardware_state(state(run.binding, now + delay, sequence + 1,
+            positions=target), now_ns=now + delay)
+        assert run.failure is None
+
+
+def test_startup_hold_has_finite_window_and_never_recovers_after_execution_echo():
+    for echoed in (False, True):
+        run, now, sequence = _position_transition_fixture()
+        now += 1
+        command, _, sha, token = position_command(run.binding, run, now, 1000, [0.0] * 6)
+        refresh_gravity(run, now, sha)
+        run.observe_gui_command(command, now_ns=now)
+        for step in range(1, 7):
+            sample_now = now + step * 100_000_000
+            modes = dict.fromkeys(runner_mod.MOTOR_NAMES, "hold")
+            if echoed and step == 3:
+                modes["J1"] = "position"
+            sample = state(run.binding, sample_now, sequence + step, modes=modes,
+                trajectory_joint="J1" if echoed and step == 3 else None,
+                trajectory_sha=sha, plan_token=token)
+            sample["per_motor"]["J1"]["trajectory_state"] = "RUNNING" if echoed and step == 3 else "INACTIVE"
+            refresh_gravity(run, sample_now, sha)
+            run.observe_hardware_state(sample, now_ns=sample_now)
+            if run.failure:
+                assert step == (4 if echoed else 6)
+                assert run.failure.reason == "MOVING_DOMAIN_NOT_POSITION_ACTIVE"
+                break
+        assert run.failure is not None
+
+
+def test_center_after_completed_joint_waits_only_briefly_for_fixed_hold_feedback():
+    run, now, sequence = _position_transition_fixture()
+    for phase in range(1, 5):
+        now, sequence, command, target = _complete_scheduled_position(run, now, sequence, phase * 1000)
+        if phase < 4:
+            now += 50_000_000
+            sequence += 1
+            refresh_gravity(run, now)
+            run.observe_hardware_state(state(run.binding, now, sequence, positions=target), now_ns=now)
+            assert run.failure is None
+    assert run.expected_joint == "J6" and run.expected_phase == "CENTER_START"
+    for step in range(1, 4):
+        sample_now = now + step * 100_000_000
+        modes = dict.fromkeys(runner_mod.MOTOR_NAMES, "hold")
+        modes["J1"] = "position"
+        sample = state(run.binding, sample_now, sequence + step, positions=target, modes=modes,
+            trajectory_joint="J1", trajectory_sha=command["trajectory"]["trajectory_sha256"],
+            plan_token=command["plan_token_id"])
+        refresh_gravity(run, sample_now)
+        run.observe_hardware_state(sample, now_ns=sample_now)
+        if step < 3:
+            assert run.failure is None and run.endpoint_dwell_started_ns is None
+        else:
+            assert run.failure.reason == "CENTER_DWELL_NOT_WHOLE_ARM_CONTINUOUS_HOLD"
+
+
 def test_confirmation_expiry_aborts_an_active_run():
     brakes = []
     run = runner_mod.ActiveAcceptanceRunner(binding(), brake_callback=brakes.append)
@@ -1128,6 +1269,45 @@ def test_endpoint_dwell_resets_across_a_telemetry_gap_over_100ms():
         refresh_gravity(run, now)
         run.observe_hardware_state(state(bound, now, seq), now_ns=now)
     assert len(run.position_rows) == 1
+
+
+@pytest.mark.parametrize("joint_order_index", range(6))
+@pytest.mark.parametrize("phase_index", (1, 2, 3, 4))
+def test_position_status_exposes_exact_prior_phase_start(joint_order_index, phase_index):
+    run = runner_mod.ActiveAcceptanceRunner(binding())
+    run.center_rad = (0.000269, -0.00022, 0.000083, -0.000761, 0.000572, 0.011425)
+    run.position_started_ns = 1
+    run.position_joint_index = joint_order_index
+    run.position_phase_index = phase_index
+    run.awaiting_position_command = True
+    # Later encoder noise must not alter the immutable acceptance segment.
+    run.latest_hardware = {"position_rad": [value + 0.00002 for value in run.center_rad]}
+    position = run.status(now_ns=2)["position"]
+    joint = runner_mod.JOINT_NAMES.index(runner_mod.POSITION_ORDER[joint_order_index])
+    expected_start = list(run.center_rad)
+    expected_start[joint] += math.radians(runner_mod.PHASE_OFFSET_DEG[phase_index - 1])
+    expected_target = list(run.center_rad)
+    expected_target[joint] += math.radians(runner_mod.PHASE_OFFSET_DEG[phase_index])
+    assert position["expected_start_vector_rad"] == expected_start
+    assert position["expected_target_vector_rad"] == expected_target
+    assert [i for i, pair in enumerate(zip(expected_start, expected_target)) if pair[0] != pair[1]] == [joint]
+
+
+def test_position_status_has_no_start_when_not_commandable():
+    run = runner_mod.ActiveAcceptanceRunner(binding())
+    assert run.status(now_ns=1)["position"]["expected_start_vector_rad"] is None
+    run.position_started_ns = 1
+    run.center_rad = (0.0,) * 6
+    run.awaiting_position_command = True
+    assert run.status(now_ns=2)["position"]["expected_start_vector_rad"] is None
+    run.position_phase_index = 1
+    for field, value in (("awaiting_position_command", False), ("position_complete", True), ("final_brake_requested", True)):
+        previous = getattr(run, field)
+        setattr(run, field, value)
+        assert run.status(now_ns=2)["position"]["expected_start_vector_rad"] is None
+        setattr(run, field, previous)
+    run.fail("TEST_ABORT", ("J1",), 2)
+    assert run.status(now_ns=2)["position"]["expected_start_vector_rad"] is None
 
 
 def test_position_rejects_endpoint_that_did_not_actually_move_five_degrees():

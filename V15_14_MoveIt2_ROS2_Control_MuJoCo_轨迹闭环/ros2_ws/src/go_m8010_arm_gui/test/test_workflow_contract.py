@@ -504,6 +504,11 @@ def test_preview_acceptance_allows_only_bounded_actual_drift_from_plan_start():
     state = WorkflowState.initialize(ACTUAL, LIMITS, MODEL_HASH).change_plan_target(TARGET)
     trajectory = plan()
     drifted = state.update_actual(tuple(value + 0.001 for value in ACTUAL))
+    with pytest.raises(ContractViolation, match="q_actual"):
+        drifted.set_plan_trajectory(trajectory)
+    planned = drifted.set_plan_trajectory(trajectory, actual_tolerance_rad=0.002)
+    assert planned.q_actual == drifted.q_actual
+    assert planned.current_plan_token is None and planned.q_hardware_command is None
     approved = drifted.accept_successful_preview(
         trajectory,
         PreviewChecks.successful(),

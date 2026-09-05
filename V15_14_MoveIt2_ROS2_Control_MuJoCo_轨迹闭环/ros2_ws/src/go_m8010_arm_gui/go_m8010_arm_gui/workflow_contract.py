@@ -1172,13 +1172,18 @@ class WorkflowState:
         )
 
     def set_plan_trajectory(
-        self, trajectory: TrajectoryAuthority
+        self, trajectory: TrajectoryAuthority, *, actual_tolerance_rad: float = 0.0
     ) -> "WorkflowState":
         """Attach the exact trajectory to animate/check, without issuing a token."""
 
         if not isinstance(trajectory, (TrajectoryPlan, TrajectoryRecipe)):
             raise ContractViolation("trajectory type is unsupported")
-        if trajectory.start_rad != self.q_actual:
+        tolerance = _strict_finite_float(actual_tolerance_rad, "actual_tolerance_rad")
+        if tolerance < 0.0:
+            raise ContractViolation("actual_tolerance_rad must be non-negative")
+        if any(abs(source - actual) > tolerance for source, actual in zip(
+            trajectory.start_rad, self.q_actual
+        )):
             raise ContractViolation("trajectory source does not match q_actual")
         if trajectory.target_rad != self.q_plan_target:
             raise ContractViolation("trajectory target does not match q_plan_target")

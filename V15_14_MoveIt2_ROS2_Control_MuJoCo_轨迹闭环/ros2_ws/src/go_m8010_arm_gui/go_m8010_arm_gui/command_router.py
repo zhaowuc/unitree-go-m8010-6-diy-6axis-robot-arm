@@ -252,6 +252,17 @@ KNOWN_REJECTION_REASONS = frozenset({
     "关节增益格式不正确",
     "关节增益超过冻结上限",
     "速度或加速度必须为正的有限数",
+    "GUI不得直接提供重力前馈authority",
+    "重力authority不存在或已过期",
+    "重力authority与碰撞证明session不匹配",
+    "整轨负载/热证明与计划manifest不匹配",
+    "empirical gravity ladder has not unlocked POSITION",
+    "empirical POSITION segment exceeds bounded scope",
+    "同一激活纪元的重力policy发生变化",
+    "重力session冻结表已满",
+    "empirical POSITION segment duration changed",
+    "empirical POSITION budget table is full",
+    "empirical cumulative POSITION trajectory budget exceeded",
 })
 
 

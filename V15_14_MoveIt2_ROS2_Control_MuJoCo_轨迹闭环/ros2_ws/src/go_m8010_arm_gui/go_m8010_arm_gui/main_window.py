@@ -163,7 +163,7 @@ def build_virtual_preview_plan(snapshot: dict) -> dict:
     """
 
     required = {
-        "generation", "workflow", "actual_rad", "target_rad", "limits_rad",
+        "generation", "workflow", "actual_rad", "start_rad", "target_rad", "limits_rad",
         "maximum_velocity_rad_s", "maximum_acceleration_rad_s2",
         "maximum_segment_delta_rad", "maximum_sample_period_s",
         "source_instance_id", "request_sequence", "session_id",
@@ -184,7 +184,7 @@ def build_virtual_preview_plan(snapshot: dict) -> dict:
     workflow = workflow.update_actual(snapshot["actual_rad"])
     workflow = workflow.change_plan_target(snapshot["target_rad"])
     trajectory = generate_segmented_quintic_recipe(
-        workflow.q_actual,
+        snapshot["start_rad"],
         workflow.q_plan_target,
         workflow.joint_limits_rad,
         maximum_velocity_rad_s=snapshot["maximum_velocity_rad_s"],
@@ -192,7 +192,9 @@ def build_virtual_preview_plan(snapshot: dict) -> dict:
         maximum_segment_delta_rad=snapshot["maximum_segment_delta_rad"],
         maximum_sample_period_s=snapshot["maximum_sample_period_s"],
     )
-    workflow = workflow.set_plan_trajectory(trajectory)
+    workflow = workflow.set_plan_trajectory(
+        trajectory, actual_tolerance_rad=PLAN_ACTUAL_DRIFT_TOLERANCE_RAD
+    )
     source_monotonic_ns = time.monotonic_ns()
     payload = planned_trajectory_feasibility_request(
         trajectory,
@@ -215,6 +217,7 @@ def build_virtual_preview_plan(snapshot: dict) -> dict:
         "generation": snapshot["generation"],
         "base_candidate_revision": snapshot["base_candidate_revision"],
         "actual_rad": tuple(snapshot["actual_rad"]),
+        "start_rad": tuple(snapshot["start_rad"]),
         "target_rad": tuple(snapshot["target_rad"]),
         "session_id": snapshot["session_id"],
         "state_instance_id": snapshot["state_instance_id"],
@@ -3274,6 +3277,53 @@ class MainWindow(QMainWindow):
                 bar.setFormat(f"%p% — {text}")
         self._refresh_execute_target_enabled()
 
+    def _acceptance_preview_start(self, now: float) -> Optional[tuple]:
+        """Use the fixed acceptance waypoint, never encoder jitter, as start."""
+
+        acceptance = self.node.latest_acceptance_status
+        position = acceptance.get("position", {})
+        if position.get("started") is not True or position.get("complete") is True:
+            return None
+        text, _, ready, _ = gravity_preparation_status(
+            self.node.latest_hardware, self.node.latest_gravity_status, acceptance,
+            gravity_fresh=self.node.gravity_status_fresh(now),
+            acceptance_fresh=receipt_is_fresh(self.node.last_acceptance_status_receipt, now, 1.0),
+        )
+        if not ready:
+            raise ContractViolation(text)
+        if position.get("expected_target_vector_rad") != list(self.candidate_targets):
+            raise ContractViolation("当前候选不属于本验收阶段，请重新载入当前验收目标")
+        start = position.get("expected_start_vector_rad")
+        if not isinstance(start, list) or len(start) != 6 or not all(
+            type(value) in {int, float} and math.isfinite(value) for value in start
+        ):
+            raise ContractViolation("验收阶段缺少有效的固定起点")
+        if self.hardware_mode != "hold" or not collision_motion_state_ready(
+            self.node.latest_hardware, start, self.connected, "hold"
+        ) or any(abs(actual - source) > PLAN_ACTUAL_DRIFT_TOLERANCE_RAD
+                 for actual, source in zip(self.actual, start)):
+            raise ContractViolation("验收起点与当前静止HOLD不一致，未授权预演或下发")
+        return tuple(start)
+
+    def _acceptance_endpoint_hold_ready(self, now: float) -> bool:
+        """Keep POSITION until the bound runner acknowledges this endpoint."""
+
+        acceptance = self.node.latest_acceptance_status
+        position = acceptance.get("position", {})
+        if position.get("started") is not True or position.get("complete") is True:
+            return True
+        binding = acceptance.get("binding", {})
+        descriptor = self.active_trajectory_descriptor or {}
+        trajectory_sha = descriptor.get("trajectory", {}).get("trajectory_sha256")
+        return bool(
+            receipt_is_fresh(self.node.last_acceptance_status_receipt, now, 1.0)
+            and acceptance.get("failure") is None
+            and binding.get("session_id") == self.session_id
+            and binding.get("state_instance_id") == self.state_instance_id
+            and isinstance(trajectory_sha, str)
+            and position.get("last_completed_trajectory_sha256") == trajectory_sha
+        )
+
     def _invalidate_preview_plan_build(self) -> int:
         """Invalidate the running/queued planner and return the new generation."""
 
@@ -3374,8 +3424,10 @@ class MainWindow(QMainWindow):
             )
             current_actual = tuple(float(value) for value in self.actual)
             result_actual = tuple(result["actual_rad"])
+            result_start = tuple(result["start_rad"])
             result_target = tuple(result["target_rad"])
-        except (KeyError, TypeError, ValueError):
+            acceptance_start = self._acceptance_preview_start(now)
+        except (ContractViolation, KeyError, TypeError, ValueError):
             self._apply_preview_plan_failure({
                 "generation": generation,
                 "detail": "当前配置或位姿无法重新验证",
@@ -3391,10 +3443,11 @@ class MainWindow(QMainWindow):
             and type(source_ns) is int
             and source_ns > 0
             and len(result_actual) == 6
+            and len(result_start) == 6
             and len(result_target) == 6
             and all(
                 type(value) in {int, float} and math.isfinite(float(value))
-                for value in result_actual + result_target
+                for value in result_actual + result_start + result_target
             )
         )
         identity_fresh = bool(
@@ -3403,6 +3456,8 @@ class MainWindow(QMainWindow):
             and result.get("state_instance_id") == self.state_instance_id
             and result_target == tuple(self.candidate_targets)
             and result_target == self.workflow_contract.q_plan_target
+            and result_start == trajectory.start_rad
+            and (acceptance_start is None or result_start == acceptance_start)
             and result.get("base_candidate_revision")
             == self.workflow_contract.candidate_revision
             and result.get("limits_rad") == current_limits
@@ -3420,6 +3475,8 @@ class MainWindow(QMainWindow):
                 and abs(current - source) <= PLAN_ACTUAL_DRIFT_TOLERANCE_RAD
                 for current, source in zip(current_actual, result_actual)
             )
+            and all(abs(current - source) <= PLAN_ACTUAL_DRIFT_TOLERANCE_RAD
+                    for current, source in zip(current_actual, result_start))
             and 0 <= now_ns - source_ns
             <= PLANNED_REQUEST_PUBLISH_MAX_AGE_NS
         )
@@ -3697,6 +3754,7 @@ class MainWindow(QMainWindow):
             control = self.config["控制"]
             actual_rad = tuple(float(value) for value in self.actual)
             target_rad = tuple(float(value) for value in self.candidate_targets)
+            start_rad = self._acceptance_preview_start(time.monotonic()) or actual_rad
             request_sequence = (
                 self.node.reserve_planned_path_request_sequence()
             )
@@ -3704,6 +3762,7 @@ class MainWindow(QMainWindow):
                 "generation": generation,
                 "workflow": self.workflow_contract,
                 "actual_rad": actual_rad,
+                "start_rad": start_rad,
                 "target_rad": target_rad,
                 "limits_rad": limits_rad,
                 "maximum_velocity_rad_s": (
@@ -5000,6 +5059,15 @@ class MainWindow(QMainWindow):
         if token is None or not isinstance(trajectory, TrajectoryRecipe):
             self._notify("PLAN_TOKEN已失效，必须重新预演。", "warning")
             return
+        if getattr(self.node, "latest_acceptance_status", {}).get("position", {}).get("started"):
+            try:
+                acceptance_start = self._acceptance_preview_start(time.monotonic())
+                if acceptance_start is not None and trajectory.start_rad != acceptance_start:
+                    raise ContractViolation("验收阶段起点已变化，请重新载入目标并预演")
+            except ContractViolation as exc:
+                self._clear_candidate_approval()
+                self._notify(f"现实下发已拒绝：{exc}", "warning")
+                return
         if self.direction is not ArmMode.SIM_TO_REAL:
             self._notify("请先选择“虚拟驱动现实”。")
             return
@@ -6312,6 +6380,7 @@ class MainWindow(QMainWindow):
                     and confirmed_modes[index] == "position"
                     for index in moving_indices
                 )
+                and self._acceptance_endpoint_hold_ready(now)
             ):
                 sequence_joint = self.active_sequence_joint
                 completed_segment_index = self.active_trajectory_segment_index

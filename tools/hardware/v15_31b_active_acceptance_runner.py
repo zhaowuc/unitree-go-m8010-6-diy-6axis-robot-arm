@@ -543,6 +543,13 @@ def _document_sha256(value: object) -> str:
     return hashlib.sha256(_canonical_json_bytes(value)).hexdigest()
 
 
+def _command_identity_sha256(value: Mapping[str, Any]) -> str:
+    return _document_sha256({
+        key: item for key, item in value.items()
+        if key not in {"sequence", "source_monotonic_ns"}
+    })
+
+
 def _file_sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -823,9 +830,18 @@ class ActiveSegment:
     gui_command_sequence: int
     gui_command_source_instance_id: str
     gui_command_source_monotonic_ns: int
+    command_identity_sha256: Optional[str] = None
     echo_observed: bool = False
     router_accepted: bool = False
     execution_trace: Optional[list[dict[str, Any]]] = None
+
+    def worker_echo_matches(self, state: Mapping[str, Any], states: set[str]) -> bool:
+        return all(
+            state["per_motor"][motor].get("trajectory_plan_token_id") == self.plan_token_id
+            and state["per_motor"][motor].get("trajectory_sha256") == self.trajectory_sha256
+            and state["per_motor"][motor].get("trajectory_state") in states
+            for motor in MOTOR_BY_JOINT[self.joint]
+        )
 
 
 @dataclass
@@ -941,6 +957,8 @@ class ActiveAcceptanceRunner:
         self.endpoint_last_stable_sample_ns: Optional[int] = None
         self.endpoint_dwell_trace: list[dict[str, Any]] = []
         self.active_segment: Optional[ActiveSegment] = None
+        self.last_completed_position_segment: Optional[ActiveSegment] = None
+        self.last_completed_position_ns: Optional[int] = None
         self.awaiting_position_command = False
         self.position_rows: list[dict[str, Any]] = []
         self.post_execution: Optional[PostPositionExecution] = None
@@ -1807,6 +1825,17 @@ class ActiveAcceptanceRunner:
             return
         try:
             _require(self.position_started_ns is not None, "POSITION_COMMAND_BEFORE_RUNNER_START")
+            completed = self.last_completed_position_segment
+            if (
+                self.active_segment is None
+                and completed is not None
+                and self.last_completed_position_ns is not None
+                and 0 <= now_ns - self.last_completed_position_ns <= MAXIMUM_STATE_AGE_NS
+                and isinstance(value.get("trajectory"), Mapping)
+                and value["trajectory"].get("trajectory_sha256") == completed.trajectory_sha256
+            ):
+                self._validate_exact_active_refresh(value, now_ns, segment=completed)
+                return
             if self.position_complete:
                 self._observe_post_position_command(value, now_ns)
                 return
@@ -1933,6 +1962,7 @@ class ActiveAcceptanceRunner:
                 gui_command_sequence=value["sequence"],
                 gui_command_source_instance_id=value["source_instance_id"],
                 gui_command_source_monotonic_ns=source_ns,
+                command_identity_sha256=_command_identity_sha256(value),
             )
             self.awaiting_position_command = False
             self.endpoint_dwell_started_ns = None
@@ -1943,15 +1973,19 @@ class ActiveAcceptanceRunner:
 
     def _validate_exact_active_refresh(
         self, value: Mapping[str, Any], now_ns: int,
+        *, segment: Optional[ActiveSegment] = None,
     ) -> None:
         """Permit only the Router's immutable refresh of the current segment."""
 
-        segment = self.active_segment
+        segment = self.active_segment if segment is None else segment
         assert segment is not None
         source_ns = value.get("source_monotonic_ns")
         _require(
             value.get("schema") == GUI_COMMAND_SCHEMA
             and _valid_source_id(value.get("source_instance_id"))
+            and value.get("source_instance_id") == segment.gui_command_source_instance_id
+            and type(value.get("sequence")) is int
+            and value["sequence"] > segment.gui_command_sequence
             and type(source_ns) is int
             and 0 < source_ns <= now_ns
             and now_ns - source_ns <= 250_000_000,
@@ -1965,6 +1999,7 @@ class ActiveAcceptanceRunner:
         expected_mask[joint_index] = True
         _require(
             value.get("moving_joint_mask") == expected_mask
+            and _command_identity_sha256(value) == segment.command_identity_sha256
             and value.get("active_joint_mask") == [True] * 6
             and tuple(_finite_vector(value.get("targets_rad"), 6, "POSITION_REFRESH_TARGET_INVALID"))
             == segment.target_rad
@@ -2748,18 +2783,24 @@ class ActiveAcceptanceRunner:
                 ),
                 "NONMOVING_DOMAIN_LEFT_CONTINUOUS_HOLD",
             )
+            # A GUI publication can precede both Router acceptance and fresh
+            # worker feedback.  Only the old HOLD may bridge this bounded lead.
+            preparation_deadline = min(
+                segment.execute_at_monotonic_ns,
+                segment.accepted_monotonic_ns + MAXIMUM_STATE_AGE_NS,
+            ) + MAXIMUM_STATE_AGE_NS
+            if (
+                not segment.echo_observed
+                and now_ns <= preparation_deadline
+                and all(modes[motor] == "hold" for motor in moving_motors)
+            ):
+                return
             _require(
                 all(modes[motor] == "position" for motor in moving_motors),
                 "MOVING_DOMAIN_NOT_POSITION_ACTIVE",
             )
-            for motor in moving_motors:
-                item = state["per_motor"][motor]
-                if (
-                    item.get("trajectory_plan_token_id") == segment.plan_token_id
-                    and item.get("trajectory_sha256") == segment.trajectory_sha256
-                    and item.get("trajectory_state") in {"ACTIVE", "COMPLETE"}
-                ):
-                    segment.echo_observed = True
+            if segment.worker_echo_matches(state, {"ACTIVE", "RUNNING", "COMPLETE"}):
+                segment.echo_observed = True
             if not segment.router_accepted and self.latest_router is not None:
                 self.observe_router_status(self.latest_router, now_ns=now_ns)
             if segment.execution_trace is None:
@@ -2770,6 +2811,20 @@ class ActiveAcceptanceRunner:
                 )
             )
         else:
+            completed = self.last_completed_position_segment
+            if (
+                completed is not None
+                and self.last_completed_position_ns is not None
+                and 0 <= now_ns - self.last_completed_position_ns <= MAXIMUM_STATE_AGE_NS
+                and completed.worker_echo_matches(state, {"COMPLETE"})
+                and all(
+                    modes[motor] == (
+                        "position" if motor in MOTOR_BY_JOINT[completed.joint] else "hold"
+                    )
+                    for motor in MOTOR_NAMES
+                )
+            ):
+                return
             _require(
                 all(modes[motor] == "hold" for motor in MOTOR_NAMES),
                 "CENTER_DWELL_NOT_WHOLE_ARM_CONTINUOUS_HOLD",
@@ -2809,11 +2864,16 @@ class ActiveAcceptanceRunner:
         if segment is not None:
             _require(segment.echo_observed, "TRAJECTORY_SHA_NOT_ECHOED_BY_WORKER")
             _require(segment.router_accepted, "ROUTER_ACCEPTANCE_NOT_OBSERVED")
+            if not segment.worker_echo_matches(state, {"COMPLETE"}):
+                return
         _require(
             len(self.endpoint_dwell_trace) >= MINIMUM_HALF_SECOND_SAMPLE_COUNT,
             "ENDPOINT_DWELL_TRACE_SAMPLE_COUNT_INSUFFICIENT",
         )
         self._record_position_endpoint(state, now_ns, dwell_ns)
+        if segment is not None:
+            self.last_completed_position_segment = segment
+            self.last_completed_position_ns = now_ns
         self.endpoint_dwell_started_ns = None
         self.endpoint_last_stable_sample_ns = None
         self.endpoint_dwell_trace = []
@@ -4935,6 +4995,7 @@ class ActiveAcceptanceRunner:
         expected_phase = self.expected_phase
         expected_target_rad: Optional[float] = None
         expected_target_vector_rad: Optional[list[float]] = None
+        expected_start_vector_rad: Optional[list[float]] = None
         if (
             expected_joint is not None
             and expected_phase is not None
@@ -4946,6 +5007,16 @@ class ActiveAcceptanceRunner:
                 PHASE_OFFSET_DEG[self.position_phase_index]
             )
             expected_target_rad = expected_target_vector_rad[joint_index]
+            if (
+                self.awaiting_position_command
+                and self.failure is None
+                and not self.final_brake_requested
+                and self.position_phase_index > 0
+            ):
+                expected_start_vector_rad = list(self.center_rad)
+                expected_start_vector_rad[joint_index] += math.radians(
+                    PHASE_OFFSET_DEG[self.position_phase_index - 1]
+                )
         return {
             "schema": STATUS_SCHEMA,
             "source_monotonic_ns": checked,
@@ -4986,7 +5057,12 @@ class ActiveAcceptanceRunner:
                     else _rad_to_deg(expected_target_rad)
                 ),
                 "expected_target_vector_rad": expected_target_vector_rad,
+                "expected_start_vector_rad": expected_start_vector_rad,
                 "awaiting_gui_command": self.awaiting_position_command,
+                "last_completed_trajectory_sha256": (
+                    None if self.last_completed_position_segment is None
+                    else self.last_completed_position_segment.trajectory_sha256
+                ),
                 "rows": len(self.position_rows),
                 POSITION_BUDGET_FIELD: self.binding.maximum_position_seconds,
                 "consumed_accepted_segment_seconds": (

@@ -252,13 +252,12 @@ def load_class_method(class_name, name, extra_namespace=None):
     return namespace[name]
 
 
-def _preview_plan_worker_fixture():
+def _preview_plan_worker_fixture(*, actual=(0.0,) * 6, start=None,
+                                 target=(0.02, 0.0, 0.0, 0.0, 0.0, 0.0)):
     limits = tuple(
         ((-180.0 * math.pi / 180.0), (180.0 * math.pi / 180.0))
         for _ in range(6)
     )
-    actual = (0.0,) * 6
-    target = (0.02, 0.0, 0.0, 0.0, 0.0, 0.0)
     workflow = WorkflowState.initialize(
         actual,
         limits,
@@ -271,6 +270,7 @@ def _preview_plan_worker_fixture():
         "generation": 7,
         "workflow": workflow,
         "actual_rad": actual,
+        "start_rad": actual if start is None else start,
         "target_rad": target,
         "limits_rad": limits,
         "maximum_velocity_rad_s": math.radians(5.0),
@@ -287,6 +287,7 @@ def _preview_plan_worker_fixture():
         "build_virtual_preview_plan",
         {
             "WorkflowState": WorkflowState,
+            "PLAN_ACTUAL_DRIFT_TOLERANCE_RAD": math.radians(0.25),
             "generate_segmented_quintic_recipe": (
                 generate_segmented_quintic_recipe
             ),
@@ -311,6 +312,29 @@ def test_virtual_preview_worker_builds_and_serializes_after_generation():
     assert payload["source_monotonic_ns"] == result["request_source_monotonic_ns"]
     assert payload["trajectory_sha256"] == result["trajectory"].sha256
     assert payload["thermal_config_sha256"] == THERMAL_CONFIG_SHA256
+
+
+@pytest.mark.parametrize("joint", range(6))
+@pytest.mark.parametrize("offsets", ((0, 5), (5, 0), (0, -5), (-5, 0)))
+def test_acceptance_recipe_keeps_one_exact_axis_despite_encoder_noise(joint, offsets):
+    center = [0.000268991904464989, -0.0002205249095816819,
+              8.279249101240817e-05, -0.0007606397964532702,
+              0.0005723697194992054, 0.011425192645151405]
+    start, target = list(center), list(center)
+    start[joint] += math.radians(offsets[0])
+    target[joint] += math.radians(offsets[1])
+    actual = tuple(value + (0.0003 if index % 2 else -0.0002)
+                   for index, value in enumerate(start))
+    _, result, _, _ = _preview_plan_worker_fixture(actual=actual, start=start, target=target)
+    recipe = result["trajectory"]
+    assert len(recipe.segments) == 1
+    assert recipe.start_rad == tuple(start)
+    assert recipe.target_rad == tuple(target)
+    assert result["workflow"].q_actual == actual
+    assert [i for i, (a, b) in enumerate(zip(recipe.start_rad, recipe.target_rad)) if a != b] == [joint]
+    with pytest.raises(ContractViolation, match="q_actual"):
+        _preview_plan_worker_fixture(actual=tuple(value + math.radians(0.26) for value in start),
+                                     start=start, target=target)
 
 
 def test_virtual_preview_qt_callback_contains_no_trajectory_generation_or_json_dump():
@@ -460,6 +484,9 @@ def test_preview_plan_apply_drops_stale_identity_feedback_and_config():
 
         def _apply_preview_plan_failure(self, event):
             self.failures.append(event)
+
+        def _acceptance_preview_start(self, now):
+            return None
 
         def _set_workflow_state(self, *args):
             self.states.append(args)
@@ -1256,6 +1283,40 @@ def test_loading_acceptance_target_preserves_precision_and_only_changes_virtual_
     assert window.hardware_mode == "hold"
 
 
+def test_acceptance_preview_start_requires_fresh_stage_exact_target_and_bounded_hold():
+    h, g, a = gravity_display_fixture()
+    g["gravity_scale"] = 1.0
+    g["empirical_validation"]["position_validation_authorized"] = True
+    a["gravity_ladder"]["complete"] = True
+    a["comparison"]["complete_conditions"] = ["WITHOUT_FF", "WITH_FF"]
+    target, start = [math.radians(5), 0, 0, 0, 0, 0], [0.0] * 6
+    a["position"] = {"started": True, "awaiting_gui_command": True,
+                     "expected_target_vector_rad": target, "expected_start_vector_rad": start}
+    node = SimpleNamespace(latest_hardware=h, latest_gravity_status=g, latest_acceptance_status=a,
+        gravity_status_fresh=lambda _: True, last_acceptance_status_receipt=10)
+    window = SimpleNamespace(node=node, candidate_targets=list(target), actual=[0.0001] * 6,
+                             connected=[True] * 6, hardware_mode="hold")
+    method = load_main_window_method("_acceptance_preview_start", {
+        "gravity_preparation_status": load_function("gravity_preparation_status"),
+        "receipt_is_fresh": lambda *_: True, "collision_motion_state_ready": lambda *_: True,
+        "PLAN_ACTUAL_DRIFT_TOLERANCE_RAD": math.radians(0.25)})
+    assert method(window, 10) == tuple(start)
+    assert window.actual == [0.0001] * 6
+    window.candidate_targets[0] += 0.00001
+    with pytest.raises(ContractViolation, match="重新载入"):
+        method(window, 10)
+    window.candidate_targets = list(target)
+    window.actual[2] = math.radians(0.26)
+    with pytest.raises(ContractViolation, match="HOLD"):
+        method(window, 10)
+    window.actual = [0.0] * 6
+    a["position"]["awaiting_gui_command"] = False
+    with pytest.raises(ContractViolation):
+        method(window, 10)
+    a["position"]["started"] = False
+    assert method(window, 10) is None
+
+
 def test_late_preview_proof_is_rechecked_and_token_is_issued_only_once():
     class Contract:
         q_plan_trajectory = object()
@@ -1285,6 +1346,27 @@ def test_late_preview_proof_is_rechecked_and_token_is_issued_only_once():
     method(window)
     assert contract.issued == 1
     assert states[-1][0] == "safe"
+
+
+def test_position_hold_waits_for_exact_fresh_acceptance_endpoint_ack():
+    acceptance = {"binding": {"session_id": "session", "state_instance_id": "b" * 32},
+                  "position": {"started": True}}
+    node = SimpleNamespace(latest_acceptance_status=acceptance, last_acceptance_status_receipt=10)
+    window = SimpleNamespace(node=node, session_id="session", state_instance_id="b" * 32,
+        active_trajectory_descriptor={"trajectory": {"trajectory_sha256": "a" * 64}})
+    method = load_main_window_method("_acceptance_endpoint_hold_ready", {
+        "receipt_is_fresh": load_function("receipt_is_fresh")})
+    assert not method(window, 10)
+    acceptance["position"]["last_completed_trajectory_sha256"] = "c" * 64
+    assert not method(window, 10)
+    acceptance["position"]["last_completed_trajectory_sha256"] = "a" * 64
+    assert method(window, 10)
+    assert not method(window, 12)
+    acceptance["binding"]["state_instance_id"] = "c" * 32
+    assert not method(window, 10)
+    acceptance["binding"]["state_instance_id"] = "b" * 32
+    acceptance["failure"] = {"reason": "TEST"}
+    assert not method(window, 10)
 
 
 def test_visible_hold_requires_all_six_axes_before_capturing_current_pose():
@@ -3495,6 +3577,7 @@ def test_queued_segment_arrival_forces_exact_target_hold_and_waits_for_all_hold(
         def __init__(self):
             self.hardware_mode = "position"
             self.command_targets = [0.40, 0.0, 0.0, 0.0, 0.0, 0.0]
+            self._acceptance_endpoint_hold_ready = lambda _: True
             # Simulate an external-force offset after reaching the endpoint;
             # the HOLD transition must not capture this measured value.
             self.actual = [0.65, 0.0, 0.0, 0.0, 0.0, 0.0]

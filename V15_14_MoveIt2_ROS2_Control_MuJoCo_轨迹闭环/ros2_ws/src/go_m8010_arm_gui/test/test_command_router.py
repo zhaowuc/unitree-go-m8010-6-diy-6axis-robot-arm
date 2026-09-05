@@ -2517,6 +2517,26 @@ def test_rejection_tracker_counts_exactly_and_aggregates_by_reason():
     assert tracker.by_reason["关节增益超过冻结上限"] == 1
 
 
+def test_rejection_tracker_preserves_gravity_gate_failures_not_arbitrary_values():
+    now_ns = 10_000_000_000
+    gate = GravityAuthorityGate()
+    tracker = RejectionTracker()
+    for expected_reason in (
+        "重力authority不存在或已过期",
+        "整轨负载/热证明与计划manifest不匹配",
+    ):
+        with pytest.raises(ValueError, match=expected_reason) as caught:
+            gate.authorize(command_v13(now_ns=now_ns), now_ns=now_ns + 1)
+        report = tracker.record(caught.value, now_ns=now_ns)
+        assert report[0]["reason"] == expected_reason
+        gate._latest = _empirical_latest(
+            now_ns, deadline_ns=now_ns + 1_000_000_000
+        )
+        gate._latest["planned_trajectory_feasibility"] = None
+    report = tracker.record(ValueError("unexpected value 123"), now_ns=now_ns)
+    assert report[0]["reason"] == "命令字段类型或数值无效"
+
+
 @pytest.mark.parametrize("field,value", [
     ("maximum_velocity_rad_s", float("nan")),
     ("maximum_velocity_rad_s", float("inf")),
