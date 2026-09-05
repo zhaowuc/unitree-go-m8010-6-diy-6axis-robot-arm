@@ -1193,7 +1193,7 @@ def test_control_panel_exposes_hold_and_the_four_v15_31a_workflow_actions():
 
 
 def gravity_display_fixture():
-    hardware = {"session_id": "session", "state_instance_id": "instance"}
+    hardware = {"session_id": "session", "state_instance_id": "instance", "healthy": True}
     gravity = {**hardware, "gravity_scale": 0.0, "empirical_validation": {
         "envelope_sha256": "a" * 64, "stage_index": 0, "stage_level": 0.0,
         "stage_complete": False, "position_validation_authorized": False,
@@ -1681,9 +1681,13 @@ def test_window_fits_available_screen_and_keeps_large_content_scrollable():
     assert "screen.availableGeometry()" in source
     assert "fitted_window_size(available.width(), available.height())" in source
     assert "self.resize(1920, 980)" not in source
-    assert source.index("outer.addWidget(self._control_panel())") < source.index(
-        "outer.addLayout(twins, 1)"
+    assert source.index("outer.addLayout(twins, 1)") < source.index(
+        "outer.addWidget(self._control_panel())"
     )
+    assert 'self._button("状态与日志", self._show_runtime_details)' in source
+    assert "self.runtime_details.setModal(False)" in source
+    assert "details.addWidget(self._task_status_panel())" in source
+    assert "outer.addWidget(self._task_status_panel())" not in source
     assert "虚拟驱动现实（默认，无需寻找单独按钮）" in source
     assert "self.workflow_progress.setMinimumHeight(32)" in source
 

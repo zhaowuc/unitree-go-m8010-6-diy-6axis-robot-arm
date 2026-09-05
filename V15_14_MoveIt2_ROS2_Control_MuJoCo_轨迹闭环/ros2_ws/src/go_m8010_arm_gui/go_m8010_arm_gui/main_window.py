@@ -34,7 +34,7 @@ from PySide6.QtGui import QCloseEvent, QColor, QFont, QImage, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QAbstractScrollArea, QApplication, QDoubleSpinBox, QGridLayout, QGroupBox,
     QHBoxLayout, QLabel, QMainWindow, QMessageBox, QProgressBar, QPushButton,
-    QScrollArea, QTableWidget, QTableWidgetItem,
+    QDialog, QScrollArea, QTableWidget, QTableWidgetItem,
     QSizePolicy, QSlider, QVBoxLayout, QWidget,
 )
 
@@ -1783,9 +1783,9 @@ class EmbeddedMujocoPreview(QGroupBox):
         layout = QVBoxLayout(self)
         self.image = QLabel("正在初始化MuJoCo内嵌渲染…")
         self.image.setAlignment(Qt.AlignCenter)
-        self.image.setMinimumSize(420, 360)
+        self.image.setMinimumSize(420, 260)
         self.image.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.image.setStyleSheet("background: #111820; color: #cfd8dc;")
+        self.image.setStyleSheet("background: #111820; color: #cfd8dc; min-height: 260px;")
         self.image.setMouseTracking(True)
         self.image.installEventFilter(self)
         self.camera_help = QLabel(
@@ -2349,6 +2349,8 @@ def gravity_preparation_status(hardware, gravity, acceptance, *, gravity_fresh, 
         return ("验证已中止：" + meanings.get(reason, reason) + " [" + reason + "]", percent, False, "critical")
     if empirical.get("invalidated") is True:
         return ("重力授权已失效：" + str(empirical.get("blocker")), percent, False, "critical")
+    if hardware.get("healthy") is not True:
+        return ("电机反馈未全部就绪；暂不可下发，请查看关节状态", percent, False, "warning")
     if not acceptance_current:
         return ("重力 " + str(percent) + "%；等待本会话验收状态（不可下发）", percent, False, "warning")
     ladder = acceptance.get("gravity_ladder", {})
@@ -2880,19 +2882,16 @@ class MainWindow(QMainWindow):
     def _build_ui(self) -> None:
         root = QWidget()
         outer = QVBoxLayout(root)
+        outer.setContentsMargins(8, 4, 8, 4)
+        outer.setSpacing(4)
         title = QLabel("六自由度机械臂控制系统")
         title.setAlignment(Qt.AlignCenter)
-        title.setFont(QFont("Sans Serif", 18, QFont.Bold))
-        subtitle = QLabel("当前为会话相对角度　｜　计算机辅助设计零位：待定　｜　机器人系统零位：待定")
-        subtitle.setAlignment(Qt.AlignCenter)
-        outer.addWidget(title)
-        outer.addWidget(subtitle)
-
-        columns = QHBoxLayout()
-        columns.addWidget(self._virtual_panel(), 2)
-        columns.addWidget(self._real_panel(), 3)
-        outer.addLayout(columns)
-        outer.addWidget(self._control_panel())
+        title.setFont(QFont("Sans Serif", 14, QFont.Bold))
+        header = QHBoxLayout()
+        header.addWidget(title, 1)
+        self.diagnostics_button = self._button("状态与日志", self._show_runtime_details)
+        header.addWidget(self.diagnostics_button)
+        outer.addLayout(header)
 
         # Two independent renderers deliberately own different MjData objects.
         # The planned side consumes only q_plan_target/q_plan_trajectory; the
@@ -2920,8 +2919,22 @@ class MainWindow(QMainWindow):
                 twins.addWidget(unavailable, 1)
         self.mujoco_preview = self.planned_mujoco_preview
         outer.addLayout(twins, 1)
-        outer.addWidget(self._task_status_panel())
-        outer.addWidget(self._motor_status_panel())
+        columns = QHBoxLayout()
+        columns.addWidget(self._virtual_panel(), 2)
+        columns.addWidget(self._real_panel(), 3)
+        outer.addLayout(columns)
+        outer.addWidget(self._control_panel())
+
+        self.runtime_details = QDialog(self)
+        self.runtime_details.setWindowTitle("任务状态与日志")
+        self.runtime_details.setModal(False)
+        self.runtime_details.resize(1000, 620)
+        details_root = QWidget()
+        details = QVBoxLayout(details_root)
+        details.addWidget(self.mode_label)
+        details.addWidget(self.servo_notice)
+        details.addWidget(self._task_status_panel())
+        details.addWidget(self._motor_status_panel())
 
         self.safety_notice = QLabel(
             "安全状态：等待控制状态流与命令路由确认；控制请求不代表硬件已执行"
@@ -2938,12 +2951,20 @@ class MainWindow(QMainWindow):
         self.summary.setAlignment(Qt.AlignCenter)
         self.summary.setMinimumHeight(58)
         self.summary.setStyleSheet("padding: 8px; background: #263238; color: white;")
-        outer.addWidget(self.summary)
+        details.addWidget(self.summary)
+        log_path = QLabel("本会话日志：" + str(self.node.log_directory))
+        log_path.setWordWrap(True)
+        log_path.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        details.addWidget(log_path)
+        details_scroll = QScrollArea()
+        details_scroll.setWidgetResizable(True)
+        details_scroll.setWidget(details_root)
+        QVBoxLayout(self.runtime_details).addWidget(details_scroll)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setSizeAdjustPolicy(QAbstractScrollArea.AdjustIgnored)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        # A permanent vertical gutter prevents the summary's word wrapping
+        # A permanent vertical gutter prevents status word wrapping
         # from making the scrollbar appear/disappear and recursively changing
         # the viewport width (perceived as whole-window flashing).
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
@@ -2955,6 +2976,11 @@ class MainWindow(QMainWindow):
             "QLabel { min-height: 20px; }"
         )
         self._set_virtual_editable(True)
+
+    def _show_runtime_details(self) -> None:
+        self.runtime_details.show()
+        self.runtime_details.raise_()
+        self.runtime_details.activateWindow()
 
     def _fit_window_to_available_screen(self) -> None:
         """Keep the GUI inside the usable desktop without shortening sliders."""
@@ -3146,39 +3172,37 @@ class MainWindow(QMainWindow):
         self.mode_label.setStyleSheet(
             "padding: 7px; background: #0d47a1; color: white; font-weight: bold;"
         )
-        layout.addWidget(self.mode_label, 1, 0, 1, 5)
         self.gravity_stage_status = QLabel("等待重力和验收状态")
         self.gravity_stage_status.setWordWrap(True)
-        layout.addWidget(self.gravity_stage_status, 2, 0, 1, 4)
+        layout.addWidget(self.gravity_stage_status, 1, 0, 1, 4)
         self.acceptance_target_button = self._button("载入当前验收目标", self._load_acceptance_target)
         self.acceptance_target_button.setEnabled(False)
         self.acceptance_target_button.setToolTip("仅载入本阶段完整精度的虚拟目标；仍需预演通过和点击下发")
-        layout.addWidget(self.acceptance_target_button, 2, 4)
+        layout.addWidget(self.acceptance_target_button, 1, 4)
         self.gravity_stage_progress = QProgressBar()
         self.gravity_stage_progress.setRange(0, 100)
         self.gravity_stage_progress.setValue(0)
         self.gravity_stage_progress.setFormat("重力阶梯：0%")
-        layout.addWidget(self.gravity_stage_progress, 3, 0, 1, 5)
-        servo_notice = QLabel(
+        layout.addWidget(self.gravity_stage_progress, 2, 0, 1, 5)
+        self.servo_notice = QLabel(
             "说明：调整计划滑条只改变虚拟目标，不会发布真实运动。"
             "停止并制动会撤销位置伺服和承重保持，重载关节必须有可靠机械支撑。"
         )
-        servo_notice.setWordWrap(True)
-        layout.addWidget(servo_notice, 4, 0, 1, 5)
+        self.servo_notice.setWordWrap(True)
         self.workflow_status = QLabel(
             "工作流：等待设置虚拟候选姿态；未授权现实运动"
         )
         self.workflow_status.setWordWrap(True)
         self.workflow_status.setAlignment(Qt.AlignCenter)
         self.workflow_status.setStyleSheet("font-weight: bold; font-size: 14px;")
-        layout.addWidget(self.workflow_status, 5, 0, 1, 5)
+        layout.addWidget(self.workflow_status, 3, 0, 1, 5)
         self.workflow_progress = QProgressBar()
         self.workflow_progress.setRange(0, 100)
         self.workflow_progress.setValue(0)
         self.workflow_progress.setFormat("虚拟预演未开始")
         self.workflow_progress.setMinimumHeight(32)
         self.workflow_progress.setStyleSheet("font-weight: bold; font-size: 14px;")
-        layout.addWidget(self.workflow_progress, 6, 0, 1, 5)
+        layout.addWidget(self.workflow_progress, 4, 0, 1, 5)
         return box
 
     def _refresh_gravity_preparation(self, now: float) -> None:
@@ -3722,6 +3746,8 @@ class MainWindow(QMainWindow):
             "正在后台生成精确分段五次轨迹；Qt界面保持响应",
             None,
         )
+        if self.planned_mujoco_preview is not None:
+            self.centralWidget().ensureWidgetVisible(self.planned_mujoco_preview)
         try:
             future = self._preview_plan_executor.submit(
                 build_virtual_preview_plan, snapshot
