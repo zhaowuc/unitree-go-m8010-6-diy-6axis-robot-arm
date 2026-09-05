@@ -1884,7 +1884,7 @@ std::vector<MotorRuntime> make_motors(const std::string& bus) {
       {"J2A", 0, 1, -1, 3.00, 0.30}, {"J2B", 1, 1, +1, 3.00, 0.30}};
   return {
       {"J3", 3, 2, +1, 2.00, 0.15},
-      {"J4", 4, 3, +1, 2.00, 0.15},
+      {"J4", 4, 3, -1, 2.00, 0.15},
       {"J5", 5, 4, +1, 1.50, 0.12}};
 }
 
@@ -2506,7 +2506,7 @@ J2LaunchPermit apply_go_aux_launch_permit_document(
   const bool signs_valid = options.bus == "j1"
       ? signs.is_object() && signs.size() == 1U && signs.at("J1").get<int>() == 1
       : signs.is_object() && signs.size() == 3U &&
-          signs.at("J3").get<int>() == 1 && signs.at("J4").get<int>() == 1 &&
+          signs.at("J3").get<int>() == 1 && signs.at("J4").get<int>() == -1 &&
           signs.at("J5").get<int>() == 1;
   if (serial.at("stable_by_id").get<std::string>() != definition.port ||
       serial.at("bus").get<std::string>() != options.bus ||

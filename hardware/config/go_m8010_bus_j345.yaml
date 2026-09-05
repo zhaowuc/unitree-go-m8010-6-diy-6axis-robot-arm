@@ -41,10 +41,10 @@ motors:
     gear_ratio: 6.3299999237060547
     mode: normal
     factory_mode_exit: PASS
-    sign: +1
-    raw_to_ros_sign: +1
+    sign: -1
+    raw_to_ros_sign: -1
     sign_authority:
-      - V15_22B_OPERATOR_PHYSICAL_CONFIRMATION
+      - V15_31C_OPERATOR_J4_VIRTUAL_REAL_REVERSAL_20260905
       - URDF_MUJOCO_J4_AXIS_REVIEW
     cad_zero: PENDING
     ros_zero: PENDING

@@ -32,7 +32,7 @@ def anchor_document():
         "gear_ratio": GO_GEAR_RATIO,
         "motor_direction_sign": {
             "J1": 1, "J2A": -1, "J2B": 1, "J3": 1,
-            "J4": 1, "J5": 1, "J6": -1,
+            "J4": -1, "J5": 1, "J6": -1,
         },
         "motor_raw_reference_rad": {
             name: float(index) for index, name in enumerate(
@@ -90,6 +90,22 @@ def test_gravity_mapping_splits_j2_and_leaves_j6_posvel():
         "J5": 0.25,
         "J6": 0.0,
     })
+
+
+def test_j4_feedback_command_and_torque_share_one_direction():
+    from go_m8010_arm_hardware.state_model import MOTOR_SPECS
+
+    spec = MOTOR_SPECS["J4"]
+    assert spec.sign == -1
+    raw_delta = -spec.gear_ratio * math.radians(5)
+    logical_delta = spec.sign * raw_delta / spec.gear_ratio
+    assert logical_delta == pytest.approx(math.radians(5))
+    assert spec.sign * spec.gear_ratio * logical_delta == pytest.approx(raw_delta)
+    joint_torque = [0, 0, 0, 6.33, 0, 0]
+    rotor = gravity_joint_to_rotor_commands(joint_torque, gravity_scale=1, gear_ratio=6.33)
+    logical = gravity_joint_to_logical_rotor_feedforward(joint_torque, gravity_scale=1, gear_ratio=6.33)
+    assert logical[3] == 1
+    assert rotor["J4"] == spec.sign * logical[3] == -1
 
 
 def test_gravity_mapping_rejects_nonfinite_or_out_of_range_scale():

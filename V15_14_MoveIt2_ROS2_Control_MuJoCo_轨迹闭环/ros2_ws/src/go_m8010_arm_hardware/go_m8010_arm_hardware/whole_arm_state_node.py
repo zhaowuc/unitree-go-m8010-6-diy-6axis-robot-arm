@@ -520,7 +520,7 @@ def load_go_aux_session_reference(
         )
     ):
         raise ValueError("GO-AUX session reference scope is invalid")
-    expected_signs = {"J1": +1, "J3": +1, "J4": +1, "J5": +1}
+    expected_signs = {"J1": +1, "J3": +1, "J4": -1, "J5": +1}
     motors = document.get("motors")
     if not isinstance(motors, dict) or set(motors) != set(expected_signs):
         raise ValueError("GO-AUX session reference motor set mismatch")

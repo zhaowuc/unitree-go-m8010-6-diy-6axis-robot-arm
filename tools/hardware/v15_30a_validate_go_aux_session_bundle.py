@@ -18,7 +18,7 @@ from typing import Any
 ANCHOR_SCHEMA = "go-m8010-go-aux-power-session-reference/1.0"
 PERMIT_SCHEMA = "go-m8010-go-aux-power-session-launch-permit/1.0"
 CAPTURE_SCHEMA = "go-m8010-go-aux-brake-raw-capture-statistics/1.0"
-MOTOR_SIGNS = {"J1": 1, "J3": 1, "J4": 1, "J5": 1}
+MOTOR_SIGNS = {"J1": 1, "J3": 1, "J4": -1, "J5": 1}
 BUS_MOTORS = {"j1": ("J1",), "j345": ("J3", "J4", "J5")}
 BUS_SERIAL = {
     "j1": "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTASQA6F-if03-port0",

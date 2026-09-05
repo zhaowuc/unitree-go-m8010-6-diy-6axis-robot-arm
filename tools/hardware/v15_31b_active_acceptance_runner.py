@@ -443,7 +443,7 @@ def _expected_go_worker_feedforward(
         "J2A": -node_feedforward[1],
         "J2B": node_feedforward[1],
         "J3": node_feedforward[2],
-        "J4": node_feedforward[3],
+        "J4": -node_feedforward[3],
         "J5": node_feedforward[4],
     }
 

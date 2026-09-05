@@ -101,7 +101,7 @@ class GoAuxVerticalSessionPhaseAnchorTest(unittest.TestCase):
                     "gear_ratio": MODULE.base.GEAR_RATIO,
                     "signs": {
                         "J1": 1, "J2A": -1, "J2B": 1,
-                        "J3": 1, "J4": 1, "J5": 1, "J6": -1,
+                        "J3": 1, "J4": -1, "J5": 1, "J6": -1,
                     },
                 },
                 "writes": {

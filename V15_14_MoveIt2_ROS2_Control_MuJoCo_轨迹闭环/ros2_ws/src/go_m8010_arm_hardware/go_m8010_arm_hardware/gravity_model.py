@@ -45,7 +45,7 @@ FROZEN_MOTOR_SIGNS = {
     "J2A": -1,
     "J2B": +1,
     "J3": +1,
-    "J4": +1,
+    "J4": -1,
     "J5": +1,
     "J6": -1,
 }
@@ -278,7 +278,7 @@ def gravity_joint_to_rotor_commands(
             scale * joint[2], direction_sign=+1, gear_ratio=gear_ratio,
         ),
         "J4": joint_torque_to_rotor_torque(
-            scale * joint[3], direction_sign=+1, gear_ratio=gear_ratio,
+            scale * joint[3], direction_sign=-1, gear_ratio=gear_ratio,
         ),
         "J5": joint_torque_to_rotor_torque(
             scale * joint[4], direction_sign=+1, gear_ratio=gear_ratio,
@@ -301,6 +301,9 @@ def gravity_joint_to_logical_rotor_feedforward(
     It therefore contains *half* of the logical J2 joint torque divided by
     the gear ratio.  J6 remains zero because it uses DM POS_VEL rather than a
     GO torque field.
+
+    The vector stays in logical coordinates. J4's negative motor sign is
+    applied once by the worker, not by both this function and the worker.
     """
 
     rotor = gravity_joint_to_rotor_commands(
@@ -314,7 +317,7 @@ def gravity_joint_to_logical_rotor_feedforward(
         rotor["J1"],
         rotor["J2B"],
         rotor["J3"],
-        rotor["J4"],
+        -rotor["J4"],
         rotor["J5"],
         0.0,
     )

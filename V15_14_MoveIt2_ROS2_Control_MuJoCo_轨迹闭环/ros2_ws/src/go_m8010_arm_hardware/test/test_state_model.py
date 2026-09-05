@@ -136,7 +136,7 @@ class ControllerFeedbackMetadataTest(unittest.TestCase):
             "J2A": -logical_feedforward[1],
             "J2B": logical_feedforward[1],
             "J3": logical_feedforward[2],
-            "J4": logical_feedforward[3],
+            "J4": -logical_feedforward[3],
             "J5": logical_feedforward[4],
         }
         return {
@@ -550,7 +550,7 @@ class StateModelTest(unittest.TestCase):
         model = MirrorSessionReferenceV1(capture_samples=3)
         base = {name: float(index + 1) for index, name in enumerate(MOTOR_NAMES)}
         self.capture(model, base, now)
-        deltas = {"J1": 0.1, "J2A": -0.2, "J2B": 0.2, "J3": 0.3, "J4": 0.4, "J5": 0.5, "J6": -0.6}
+        deltas = {"J1": 0.1, "J2A": -0.2, "J2B": 0.2, "J3": 0.3, "J4": -0.4, "J5": 0.5, "J6": -0.6}
         # Feed realistic incremental frames; a single rotor jump over pi is
         # directionally ambiguous by definition.
         for step in range(1, 11):
@@ -644,7 +644,7 @@ class StateModelTest(unittest.TestCase):
             "J4": -0.56,
             "J5": 0.14,
         }
-        signs = {"J1": 1, "J2A": -1, "J2B": 1, "J3": 1, "J4": 1, "J5": 1}
+        signs = {"J1": 1, "J2A": -1, "J2B": 1, "J3": 1, "J4": -1, "J5": 1}
         model = MirrorSessionReferenceV1(
             capture_samples=3,
             persistent_references=zero,

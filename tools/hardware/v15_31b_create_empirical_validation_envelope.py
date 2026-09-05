@@ -96,7 +96,7 @@ FROZEN_MOTOR_SIGNS = {
     "J2A": -1,
     "J2B": +1,
     "J3": +1,
-    "J4": +1,
+    "J4": -1,
     "J5": +1,
     "J6": -1,
 }
@@ -585,7 +585,7 @@ def validate_gravity_readonly(
             "J2A": -gravity[1] / (2.0 * GO_GEAR_RATIO),
             "J2B": +gravity[1] / (2.0 * GO_GEAR_RATIO),
             "J3": gravity[2] / GO_GEAR_RATIO,
-            "J4": gravity[3] / GO_GEAR_RATIO,
+            "J4": -gravity[3] / GO_GEAR_RATIO,
             "J5": gravity[4] / GO_GEAR_RATIO,
         }
         for name in GO_MOTOR_NAMES:

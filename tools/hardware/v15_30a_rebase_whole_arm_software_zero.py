@@ -67,7 +67,7 @@ J6_PHYSICAL_GATE = (
 )
 EXPECTED_MOTORS = ("J1", "J2A", "J2B", "J3", "J4", "J5", "J6")
 GO_HINT_MOTORS = ("J1", "J2A", "J2B", "J3", "J4", "J5")
-GO_SIGNS = {"J1": 1, "J2A": -1, "J2B": 1, "J3": 1, "J4": 1, "J5": 1}
+GO_SIGNS = {"J1": 1, "J2A": -1, "J2B": 1, "J3": 1, "J4": -1, "J5": 1}
 ALL_SIGNS = {**GO_SIGNS, "J6": -1}
 GEAR_RATIO = 6.329999923706055
 MIN_SAMPLE_COUNT = 500

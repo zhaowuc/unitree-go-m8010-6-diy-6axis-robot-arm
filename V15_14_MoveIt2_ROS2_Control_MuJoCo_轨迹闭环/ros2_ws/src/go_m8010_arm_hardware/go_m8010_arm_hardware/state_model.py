@@ -253,7 +253,7 @@ MOTOR_SPECS: Mapping[str, MotorSpec] = {
     "J2A": MotorSpec("joint2", -1, GEAR_RATIO),
     "J2B": MotorSpec("joint2", +1, GEAR_RATIO),
     "J3": MotorSpec("joint3", +1, GEAR_RATIO),
-    "J4": MotorSpec("joint4", +1, GEAR_RATIO),
+    "J4": MotorSpec("joint4", -1, GEAR_RATIO),
     "J5": MotorSpec("joint5", +1, GEAR_RATIO),
     "J6": MotorSpec("joint6", -1, 1.0, wrapped=False),
 }
