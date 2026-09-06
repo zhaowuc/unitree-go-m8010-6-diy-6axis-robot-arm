@@ -118,14 +118,35 @@ g++ -std=c++17 -O2 -Wall -Wextra -Werror -pthread -I/home/car/vendor/unitree_act
 
 ## UDP 原始反馈向 ROS 观察者发布
 
-主调试流程在 `.runtime/v15_31d_hold_20260906` 已通过 GUI 请求实机 HOLD，保存的真实 state 流有 991 帧、19.820182557 秒七电机均为 HOLD 的记录；六轴最大目标误差依次为 `[0.0242984, 0.0208283, 0.0052068, 0.0277696, 0.0104147, 0.0437139]°`，最大速度均小于 0.164°/s。这是当前位置、独立支撑条件下的短时保持观测，不能推为 ±5° 定位、完整动作路线、满载或长期热验收。随后 root 受控停止 active supervisor，原始终态记录 GO 三域 `FINAL_BRAKE=PASS`、J6 `J6_FINAL_DISABLED=PASS`。
+主调试流程在 `.runtime/v15_31d_hold_20260906` 已通过 GUI 请求实机 HOLD，保存的真实 state 流有 991 条观察记录（628 个独立 source 时间戳）、19.820182557 秒七电机均为 HOLD 的记录；六轴最大目标误差依次为 `[0.0242984, 0.0208283, 0.0052068, 0.0277696, 0.0104147, 0.0437139]°`，最大速度均小于 0.164°/s。这是当前位置、独立支撑条件下的短时保持观测，不能推为 ±5° 定位、完整动作路线、满载或长期热验收。随后 root 受控停止 active supervisor，原始终态记录 GO 三域 `FINAL_BRAKE=PASS`、J6 `J6_FINAL_DISABLED=PASS`。
 
 此次独立 probe 的 J6 drive-state 始终为 null。只读 ROS 图与源码核对发现 `/whole_arm/motor_feedback_raw` 为 0 个 publisher；state 节点直接处理工作进程的 UDP 包，却从未向该 ROS 话题发布。安装的 Humble `create_subscription` 没有 `ignore_local_publications` 参数，Executor 丢弃 MessageInfo，Publisher 也未暴露 GID，不能假设可用本地发布者过滤 API。
 
-原始 `.runtime/v15_31d_hold_20260906/evidence/current_pose_hold_probe.json` 仍为 **FAIL**：J6 原始话题无发布者导致 `drive_state` 恒为 null，probe 等待 20 秒后超时；该报告不得改写为 PASS。上述真实 state 保持观测与随后 primitive 终态证据是分别保存的事实，不能替代首轮 probe 缺失的独立闭环。raw 发布修复仍需在第二个独立目录完整复测。
+原始 `.runtime/v15_31d_hold_20260906/evidence/current_pose_hold_probe.json` 仍为 **FAIL**：J6 原始话题无发布者导致 `drive_state` 恒为 null，probe 等待 20 秒后超时；该报告不得改写为 PASS。上述真实 state 保持观测与随后 primitive 终态证据是分别保存的事实，不能替代首轮 probe 缺失的独立闭环。raw 发布修复后的第二轮完整复测另存于独立目录，见下节。
 
 修复保持 UDP 的原始 source/replay 检查及即时原子入库，成功后才将**原文** String 发布到既有 raw 话题（depth 100），不修改 source、sequence、时间戳或电机值。对本进程已发布原文保留最多 512 个一次性回声标记；自订阅只消耗一次精确匹配，额外重放仍由原验证器拒绝。原 ROS/mock 输入方式保留，控制反馈路径没有增加 DDS 跳转。无效 UDP 不转发，发布异常不会撤销已接收的数据。
 
 相关 state-node 测试 12 项通过，覆盖先入库后发布、原文字节保留、自回声不重入、再次重放仍拒绝、外部 ROS 输入和无效 UDP。隔离真实 rclpy 验证使用 domain 179 和临时 UDP 端口，不接入生产 domain 30 或电机：400 个含 16 KB 附加测试数据的合成包以 400 Hz 发送，400 包入库、400 包原文送达观察者，invalid-payload 计数 0、待消费回声 0；UDP 入库 P95 1.9915 ms，观察端 P95 2.3439 ms、最大 2.7220 ms。这是消息链路测试，不能写作实机运动通过。
 
-该修复的 `whole_arm_state_node.py` SHA256 为 `6cfcac48537164d2941db9464ff48c80b39227d56cbce15c977b9b7e8d414bdb`，验证副本位于 `/tmp/go-m8010-v15-31d-raw-observer-20260906/go_m8010_arm_hardware/whole_arm_state_node.py`。主调试流程将在独立的新目录保存再次实机验证结果，原 HOLD 尝试及其缺失观察证据完整保留。
+该修复的 `whole_arm_state_node.py` SHA256 为 `6cfcac48537164d2941db9464ff48c80b39227d56cbce15c977b9b7e8d414bdb`，验证副本位于 `/tmp/go-m8010-v15-31d-raw-observer-20260906/go_m8010_arm_hardware/whole_arm_state_node.py`。主调试流程随后在独立新目录完成第二轮实机验证，结果如下；原 HOLD 尝试及其缺失观察证据完整保留。
+
+## 第二轮实机当前位置 HOLD：PASS
+
+独立第二轮报告位于远端 `.runtime/v15_31d_hold_retry_20260906/evidence/current_pose_hold_probe.json`，原始状态为 **PASS**。完整报告已按字节保存到本地 `.codex-tmp/hold_evidence_20260906/attempt2_hold_probe.json`，SHA256 为 `ff98aa34c87519f4878ffbfc3759e7cf26975a438273f16dcd11705bab0fc3bd`。紧凑、可追溯的交付结果见 `hardware/v15_31d_recovery_20260906/hold_validation_summary.json`，包含完整报告和终态证据的远端/本地路径及 SHA。
+
+按原报告的正式 HOLD 阶段独立重算：502 条观察记录对应 **500 个独立 source 样本，覆盖 10.019448704 秒**，最大 source 间隔 39.247807 ms。所有正式样本反馈新鲜、健康、七电机均 HOLD、J6 原始反馈配对为 ENABLED，冻结目标和会话身份未变，路由拒绝数为 0。演示门槛保持为误差 0.25°、速度 0.25°/s；未改严格 ±0.1° 验收契约。
+
+| 关节 | 最大目标误差 ° | 峰峰漂移 ° | 首末漂移 ° | 最大速度 °/s |
+|---|---:|---:|---:|---:|
+| J1 | 0.015621 | 0.006942 | +0.003471 | 0.034689 |
+| J2 | 0.009545 | 0.010414 | -0.006943 | 0.017354 |
+| J3 | 0.006942 | 0.006942 | 0.000000 | 0.017356 |
+| J4 | 0.024300 | 0.006942 | -0.003470 | 0.060648 |
+| J5 | 0.010415 | 0.006940 | +0.001735 | 0.021684 |
+| J6 | 0.043714 | 0.065571 | -0.021857 | 0.156178 |
+
+整个 probe 的最高温度：J1 31°C、J2A 32°C、J2B 32°C、J3 31°C、J4 31°C、J5 31°C、J6 37°C；最大 J2 同步误差 0.172536°。probe 结束有 4 条配对终态观察，对应 J6 独立序号 9495、9497、9499，确认七电机制动且 J6 DISABLED。随后 root 受控停止 active supervisor 和 gravity-active，三域 GO 的 primitive `FINAL_BRAKE=PASS` 与 J6 `J6_FINAL_DISABLED=PASS` 均保存在 `evidence/worker_terminal_result.json`，该终态汇总 SHA 为 `86c1524f00f52b11c3dc8e23f7e698df1cca8b1f1ccf9030ceb6ad44eff01370`，含四份原始日志路径和 SHA。
+
+本次模型 anchor 的 `model_absolute_joint_rad - logical_joint_reference_rad` 与固定模型偏移 `[0, 90, -14.40, 13.49, 47.94, 0]°` 并非完全相同。独立算得各轴残差约 `[+0.001736141, +0.000867531, -0.001735602, 0, +7.1e-15, -0.021856939]°`；最大差在 J6，为 0.021856939°。这些小采样差值原样保存，未修改模型、固定偏移、原始参考映射或校准来消除差异。
+
+此次 PASS 仅覆盖**已有可靠独立支撑、当前位置、约 10 秒固定保持以及观察到的停止终态**。它没有验证 ±5° 双向设角、全范围定位、无支撑/满载悬停、长期热稳定或完整六轴零重力。第一轮原报告仍为 FAIL，SHA 为 `8b6f088476cbe008e6d0fb202de204698548c222d8321a24afe6a5afb9a9fd1b`；其独立 19.82 秒 state 观察与本次完整 probe PASS 分别记录。

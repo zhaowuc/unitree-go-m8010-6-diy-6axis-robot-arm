@@ -1,0 +1,198 @@
+{
+  "schema": "go-m8010-current-pose-hold-validation-summary/1.0",
+  "generated_at_utc": "2026-09-06T09:05:29.105655+00:00",
+  "status": "PASS",
+  "scope": "CURRENT_POSE_10_SECOND_HOLD_ONLY_NOT_PRECISION_OR_LONG_TERM_LOAD_QUALIFICATION",
+  "conditions": {
+    "hardware": "SIX_JOINTS_SEVEN_MOTORS_J2_DUAL_J6_DM_G6220",
+    "pose": "CURRENT_MEASURED_POSE_ONLY",
+    "support": "USER_CONFIRMED_RELIABLE_INDEPENDENT_SUPPORT",
+    "command_path": "EXISTING_GUI_CURRENT_POSE_HOLD_THEN_BRAKE",
+    "gravity_feedforward_target_scale": 0.0
+  },
+  "not_qualified": [
+    "BIDIRECTIONAL_PLUS_MINUS_5_DEG_POSITIONING",
+    "FULL_RANGE_POSITIONING",
+    "UNSUPPORTED_OR_FULL_PAYLOAD_HOLD",
+    "LONG_TERM_THERMAL_HOLD",
+    "COMPLETE_SIX_AXIS_ZERO_GRAVITY_MODE"
+  ],
+  "strict_0_1_degree_qualification": "NOT_RUN_OR_MODIFIED",
+  "demo_limits": {
+    "max_error_deg": 0.25,
+    "max_velocity_deg_s": 0.25,
+    "minimum_source_coverage_s": 10.0
+  },
+  "session_id": "persistent:4a74e16f9e3ad6e1:j2session:fb174bb9555c2376:goauxsession:4ab4d558b36f04c8",
+  "state_instance_id": "a202ce5a5117df0db16a1043b912358e",
+  "target_deg_by_joint": {
+    "J1": 0.26272635797867555,
+    "J2": 0.04694408989473511,
+    "J3": -0.02258865222368551,
+    "J4": 0.005723415266570604,
+    "J5": -1.5676237409869975,
+    "J6": 3.2555910423718553
+  },
+  "hold": {
+    "source_coverage_s": 10.019448704,
+    "observation_row_count": 502,
+    "distinct_source_sample_count": 500,
+    "maximum_source_gap_ms": 39.247807,
+    "max_abs_error_deg_by_joint": {
+      "J1": 0.01562095573555438,
+      "J2": 0.009545000651841808,
+      "J3": 0.00694240721161543,
+      "J4": 0.024299504259493235,
+      "J5": 0.010414689836262401,
+      "J6": 0.04371387770902229
+    },
+    "peak_to_peak_drift_deg_by_joint": {
+      "J1": 0.006942407211615436,
+      "J2": 0.010413610817423148,
+      "J3": 0.00694240721161543,
+      "J4": 0.00694240721161543,
+      "J5": 0.006940249173936941,
+      "J6": 0.06557081656348256
+    },
+    "start_to_end_drift_deg_by_joint": {
+      "J1": 0.0034712036058076935,
+      "J2": -0.006943486230454658,
+      "J3": 0.0,
+      "J4": -0.003470124586968483,
+      "J5": 0.0017350622934841856,
+      "J6": -0.021856938854562035
+    },
+    "maximum_velocity_deg_s_by_joint": {
+      "J1": 0.03468850970374718,
+      "J2": 0.017354495440094236,
+      "J3": 0.01735585262776303,
+      "J4": 0.060648020801035624,
+      "J5": 0.02168436214306328,
+      "J6": 0.15617812623862587
+    },
+    "all_samples_fresh_healthy_seven_hold_with_paired_j6_enabled": true,
+    "independently_recomputed_from_full_report": true
+  },
+  "maximum_temperature_c": {
+    "J1": 31.0,
+    "J2A": 32.0,
+    "J2B": 32.0,
+    "J3": 31.0,
+    "J4": 31.0,
+    "J5": 31.0,
+    "J6": 37.0
+  },
+  "temperature_scope": "ALL_PROBE_SAMPLES_INCLUDING_READINESS_AND_TERMINAL",
+  "maximum_j2_sync_error_deg": 0.17253649353723138,
+  "j2_sync_scope": "ALL_PROBE_SAMPLES",
+  "probe_terminal": {
+    "brake_and_paired_j6_disabled_confirmed": true,
+    "paired_observation_rows": 4,
+    "distinct_j6_disabled_sequences": [
+      9495,
+      9497,
+      9499
+    ]
+  },
+  "controlled_worker_shutdown": {
+    "status": "PASS",
+    "domains": {
+      "j1": {
+        "terminal": "FINAL_BRAKE=PASS",
+        "log_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_hold_retry_20260906/run/j1_controller.log",
+        "sha256": "6fa523a443e846f089917e34e6aa99f142aed8849e2ef6da6fbe02b939fc6150"
+      },
+      "j2": {
+        "terminal": "FINAL_BRAKE=PASS",
+        "log_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_hold_retry_20260906/run/j2_controller.log",
+        "sha256": "9247605dd6558530148f3f88ac51a60c0660088ff64ea23c74c0681810bb8bc0"
+      },
+      "j345": {
+        "terminal": "FINAL_BRAKE=PASS",
+        "log_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_hold_retry_20260906/run/j345_controller.log",
+        "sha256": "2013f21135ea85147c36d285f1449af44785f22f4ee9882fbdf8bc0f6325ad6d"
+      },
+      "j6": {
+        "terminal": "J6_FINAL_DISABLED=PASS",
+        "log_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_hold_retry_20260906/run/j6_controller.log",
+        "sha256": "3b19f5317d55926ae83253ee113afcd4c8e360bd62098a63cb75b95a61be3dc5"
+      }
+    },
+    "evidence": {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_hold_retry_20260906/evidence/worker_terminal_result.json",
+      "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\attempt2_worker_terminal_result.json",
+      "sha256": "86c1524f00f52b11c3dc8e23f7e698df1cca8b1f1ccf9030ceb6ad44eff01370"
+    }
+  },
+  "model_anchor_offset_check": {
+    "formula": "degrees(model_absolute_joint_rad - logical_joint_reference_rad) - fixed_offset_deg",
+    "fixed_offset_source": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/config/gui_joint_limits.yaml:2",
+    "fixed_offset_deg_by_joint": {
+      "J1": 0.0,
+      "J2": 90.0,
+      "J3": -14.4,
+      "J4": 13.49,
+      "J5": 47.94,
+      "J6": 0.0
+    },
+    "observed_offset_deg_by_joint": {
+      "J1": 0.0017361413123235076,
+      "J2": 90.00086753114675,
+      "J3": -14.401735601802908,
+      "J4": 13.49,
+      "J5": 47.940000000000005,
+      "J6": -0.021856938854562035
+    },
+    "residual_deg_by_joint": {
+      "J1": 0.0017361413123235076,
+      "J2": 0.0008675311467527536,
+      "J3": -0.0017356018029079934,
+      "J4": 0.0,
+      "J5": 7.105427357601002e-15,
+      "J6": -0.021856938854562035
+    },
+    "maximum_abs_residual_deg": 0.021856938854562035,
+    "exactly_equal": false,
+    "interpretation": "SMALL_NONZERO_SAMPLING_RESIDUALS_RECORDED_WITHOUT_CHANGING_MAPPING_OR_CALIBRATION",
+    "anchor_evidence": {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_hold_retry_20260906/model_session_anchor.json",
+      "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\attempt2_model_session_anchor.json",
+      "sha256": "62f9f066e0aa21428b87782ecbbe816172f27f18839c53963a793465bb2f3bda"
+    },
+    "validation_evidence": {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_hold_retry_20260906/evidence/model_session_anchor_validation.json",
+      "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\attempt2_model_session_anchor_validation.json",
+      "sha256": "1c8f257d510146304084ff450c9c98542c8c0f03410f56be3ebcdfe175df1a88"
+    }
+  },
+  "full_report": {
+    "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_hold_retry_20260906/evidence/current_pose_hold_probe.json",
+    "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\attempt2_hold_probe.json",
+    "sha256": "ff98aa34c87519f4878ffbfc3759e7cf26975a438273f16dcd11705bab0fc3bd"
+  },
+  "first_attempt": {
+    "reported_status": "FAIL",
+    "reported_failure": "20-second readiness/HOLD engagement timeout; terminal BRAKE/J6 DISABLED unconfirmed",
+    "report_not_rewritten": true,
+    "full_report": {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_hold_20260906/evidence/current_pose_hold_probe.json",
+      "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\attempt1_hold_probe.json",
+      "sha256": "8b6f088476cbe008e6d0fb202de204698548c222d8321a24afe6a5afb9a9fd1b"
+    },
+    "separate_state_observation": {
+      "seven_hold_observation_rows": 991,
+      "distinct_source_samples": 628,
+      "source_coverage_s": 19.820182557,
+      "max_abs_error_deg_by_joint": {
+        "J1": 0.02429842524065405,
+        "J2": 0.02082830065368553,
+        "J3": 0.005206805408711571,
+        "J4": 0.027769628846461725,
+        "J5": 0.010414689836262401,
+        "J6": 0.04371387770902229
+      },
+      "paired_j6_drive_state_observed": false,
+      "does_not_replace_failed_probe_result": true
+    }
+  }
+}
