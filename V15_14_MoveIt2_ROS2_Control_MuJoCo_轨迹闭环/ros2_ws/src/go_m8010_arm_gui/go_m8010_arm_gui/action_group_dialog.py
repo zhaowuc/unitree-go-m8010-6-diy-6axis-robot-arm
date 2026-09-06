@@ -132,7 +132,7 @@ class ActionGroupDialog(QDialog):
                   "" if step.opening_percent is None else step.opening_percent,
                   step.gripper_wait_s]
         for column, value in enumerate(values):
-            text = format(value, ".15g") if isinstance(value, float) else str(value)
+            text = str(value)
             self.table.setItem(row, column, QTableWidgetItem(text))
 
     def group(self) -> ActionGroup:

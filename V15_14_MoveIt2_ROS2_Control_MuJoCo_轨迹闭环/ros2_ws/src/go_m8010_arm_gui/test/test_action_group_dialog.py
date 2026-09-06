@@ -94,6 +94,9 @@ def test_capture_model_angles_and_reject_pwm_group_before_hardware(tmp_path):
     dialog = window.action_group_dialog
     dialog.capture(False)
     assert dialog.group().steps[0].target_deg == tuple(window.session_pose_deg)
+    precise = ActionStep((0.12345678901234566, *window.session_pose_deg[1:]))
+    dialog.append_step(precise)
+    assert dialog.group().steps[-1] == precise
     dialog.table.item(0, 8).setText("close")
     dialog.start()
     assert dialog.runner is None

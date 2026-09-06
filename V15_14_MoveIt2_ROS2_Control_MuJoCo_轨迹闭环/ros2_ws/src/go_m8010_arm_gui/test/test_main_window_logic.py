@@ -1369,6 +1369,20 @@ def test_position_hold_waits_for_exact_fresh_acceptance_endpoint_ack():
     assert not method(window, 10)
 
 
+def test_absent_acceptance_runner_does_not_block_preview_or_hold_but_live_runner_still_gates():
+    preview = load_main_window_method("_acceptance_preview_start")
+    hold = load_main_window_method("_acceptance_endpoint_hold_ready", {
+        "receipt_is_fresh": load_function("receipt_is_fresh")})
+    node = SimpleNamespace(latest_acceptance_status=None, last_acceptance_status_receipt=10)
+    window = SimpleNamespace(node=node, session_id="session", state_instance_id="b" * 32,
+                             active_trajectory_descriptor={})
+    assert preview(window, 10) is None
+    assert hold(window, 10)
+    node.latest_acceptance_status = {"position": {"started": True},
+                                   "binding": {"session_id": "session", "state_instance_id": "b" * 32}}
+    assert not hold(window, 10)
+
+
 def test_visible_hold_requires_all_six_axes_before_capturing_current_pose():
     method = load_main_window_method("_hold_current")
     calls = []

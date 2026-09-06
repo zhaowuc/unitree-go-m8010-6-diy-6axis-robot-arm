@@ -1,0 +1,147 @@
+"""Run without ROS or hardware: python tools/hardware/test_v15_31d_gui_j1_demo.py."""
+from contextlib import redirect_stdout
+from io import StringIO
+import math
+from pathlib import Path
+import sys
+from types import SimpleNamespace
+
+from v15_31d_gui_j1_demo import J1Demo, LEVELS, MOTORS, check_recipe, main
+from v15_31b_acceptance_signal import SignalPayloadSequence
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] /
+    "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware"))
+from go_m8010_arm_hardware.empirical_validation_envelope import validate_stage_confirmation
+
+
+def harness():
+    clock, commands, state = [0.0], [], {"index": 0, "entered": 0.0, "confirmed": -1.0}
+    override = {}
+    binding = SimpleNamespace(envelope_id="envelope", envelope_sha256="a" * 64, sha256="a" * 64,
+                              session_id="session", state_instance_id="state")
+    sequence = SignalPayloadSequence(binding, source_instance_id="c" * 32,
+                                     monotonic_ns=lambda: int(clock[0] * 1e9))
+    window = SimpleNamespace(actual=[0.0] * 6, command_targets=[0.0] * 6,
+                             session_pose_deg=[0.0] * 6, hardware_mode="brake", command_stream_suspended=True)
+    window._tick = lambda: None
+    def hold():
+        commands.append("hold")
+        window.command_targets = window.actual[:]
+        window.hardware_mode, window.command_stream_suspended = "hold", False
+    def brake(*, support_confirmed):
+        assert support_confirmed is True
+        commands.append("brake")
+        window.hardware_mode = "brake"
+    window._hold_current, window._emergency_brake = hold, brake
+    def observe():
+        complete = clock[0] - state["entered"] >= 0.5
+        return {"source_monotonic_ns": int(clock[0] * 1e9), "healthy": True,
+                "thermal_ready": True, "authority": True, "zero_ff_authority": state["index"] == 0,
+                "identity": ("session", "state", "gravity", "anchor", "envelope"),
+                "router_ready": True, "router_rejected_commands": 0,
+                "router_hold_fresh": window.hardware_mode == "hold",
+                "stationary_hold_ready": window.hardware_mode == "hold",
+                "modes": dict.fromkeys(MOTORS, window.hardware_mode),
+                "j6_drive_state": 0 if window.hardware_mode == "brake" else 1,
+                "j6_raw_sequence": int(clock[0] * 1000), "feedback_fresh": True,
+                "actual_rad": window.actual[:], "velocity_rad_s": [0.0] * 6,
+                "stage_index": state["index"], "stage_level": LEVELS[state["index"]],
+                "stage_complete": complete,
+                "position_authorized": state["index"] == 4 and complete and state["confirmed"] >= state["entered"] + 0.5,
+                **override}
+    def confirm(level):
+        # Use the production validator: a current-rung confirmation would fail
+        # here even if the simulated status/RPC callbacks otherwise looked green.
+        validate_stage_confirmation(sequence.confirmation(level), envelope=binding,
+            target_scale=LEVELS[min(state["index"] + 1, 4)], now_monotonic_ns=int(clock[0] * 1e9))
+        commands.append(("confirm", level))
+        if level == 1.0:
+            state["confirmed"] = clock[0]
+    def scale(level):
+        assert ("confirm", level) in commands
+        commands.append(("scale", level))
+        state["index"], state["entered"] = int(level * 4), clock[0]
+        return SimpleNamespace(done=lambda: True,
+                               result=lambda: SimpleNamespace(results=[SimpleNamespace(successful=True)]))
+    def start_group(origin):
+        assert observe()["position_authorized"]
+        commands.append("action_group")
+        return SimpleNamespace(runner=SimpleNamespace(state="moving", detail="waiting", events=[]))
+    demo = J1Demo(window, observe, confirm, scale, start_group, now=lambda: clock[0])
+    def tick(seconds=0.1):
+        clock[0] = round(clock[0] + seconds, 6)
+        demo.tick()
+    return demo, commands, override, tick
+
+
+def test_bounded_j1_action_group():
+    for displacement, final_drift in ((1.0, False), (0.02, False), (1.0, True)):
+        demo, commands, _, tick = harness()
+        for _ in range(120):
+            tick()
+            if demo.stage == "action_group":
+                break
+        assert [item[1] for item in commands if isinstance(item, tuple) and item[0] == "scale"] == list(LEVELS[1:])
+        assert commands.count("hold") == commands.count("action_group") == 1
+        demo.dialog.runner.events = [
+            {"event": "measured_arrival", "index": 0, "actual_model_deg": [displacement] + [0.0] * 5},
+            {"event": "measured_arrival", "index": 1, "actual_model_deg": [0.0] * 6},
+        ]
+        demo.dialog.runner.state = "complete"
+        if final_drift:
+            demo.window.actual[0] = math.radians(0.3)
+        for _ in range(5):
+            tick()
+        assert demo.done and demo.terminal.terminal_confirmed
+        assert demo.result()["status"] == ("PASS" if displacement == 1.0 and not final_drift else "FAIL")
+        assert commands.count("brake") == 1
+
+    for fault in ("authority", "healthy", "thermal_ready"):
+        demo, commands, override, tick = harness()
+        tick()
+        tick()
+        override[fault] = False
+        for _ in range(5):
+            tick()
+        assert demo.result()["status"] == "FAIL" and "action_group" not in commands
+        assert commands.count("brake") == 1
+
+    demo, commands, override, tick = harness()
+    tick()
+    override["j6_drive_state"] = None
+    tick()
+    assert demo.stage == "engaging" and not demo.done
+    override.clear()
+    tick()
+    assert demo.stage == "ladder"
+    demo.stop("end offline scenario")
+
+    demo, commands, override, tick = harness()
+    tick()
+    tick()
+    override["stage_complete"] = False
+    tick(175.0)
+    tick(2.0)
+    tick(3.0)
+    assert demo.done and demo.result()["status"] == "FAIL"
+    assert "action_group" not in commands and commands.count("brake") == 1
+
+    original = (0.0,) * 6
+    recipe = SimpleNamespace(segments=[SimpleNamespace(start_rad=original,
+        target_rad=(math.radians(1), math.radians(0.02), 0, 0, 0, 0), sha256="test")])
+    assert check_recipe(recipe, original)[0]["moving_joints"] == ["J1", "J2"]
+    recipe.segments[0].target_rad = (math.radians(1), math.radians(0.26), 0, 0, 0, 0)
+    try:
+        check_recipe(recipe, original)
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("accepted an oversized secondary correction")
+    with redirect_stdout(StringIO()) as output:
+        assert main([]) == 0
+    assert "OFFLINE_DESCRIPTION_ONLY" in output.getvalue()
+
+
+if __name__ == "__main__":
+    test_bounded_j1_action_group()
+    print("GUI_J1_DEMO_OFFLINE=PASS")

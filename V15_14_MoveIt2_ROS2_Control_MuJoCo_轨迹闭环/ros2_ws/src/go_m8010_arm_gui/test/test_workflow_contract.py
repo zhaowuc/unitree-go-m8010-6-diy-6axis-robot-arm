@@ -1,4 +1,5 @@
 from dataclasses import FrozenInstanceError, replace
+import ast
 import math
 from pathlib import Path
 
@@ -33,6 +34,38 @@ SECOND_MODEL_HASH = "b" * 64
 LIMITS = tuple((-2.0, 2.0) for _ in range(6))
 ACTUAL = (0.0, 0.1, -0.2, 0.3, -0.4, 0.5)
 TARGET = (0.2, -0.1, 0.0, 0.1, -0.2, 0.3)
+
+
+def test_model_degree_roundtrip_keeps_exact_recipe_and_router_descriptors():
+    source = (.123, .456, .003, .789, .001, .333)
+    offsets = (0, 90, -14.4, 13.49, 47.94, 0)
+    target = tuple(math.radians(math.degrees(value) + anchor + (1 if i == 0 else 0) - anchor)
+                   for i, (value, anchor) in enumerate(zip(source, offsets)))
+    assert any(0 < abs(a - b) < 1e-15 for a, b in zip(source[1:], target[1:]))
+    recipe = generate_segmented_quintic_recipe(source, target, LIMITS,
+        maximum_velocity_rad_s=math.radians(1), maximum_acceleration_rad_s2=math.radians(15),
+        maximum_segment_delta_rad=math.radians(30))
+    assert recipe.target_rad == target
+    router_path = Path(__file__).parents[1] / "go_m8010_arm_gui" / "command_router.py"
+    functions = {"_valid_sha256", "_finite_six", "_validated_quintic_descriptor",
+                 "_validated_plan_manifest", "_validated_v13_position_authority"}
+    nodes = [node for node in ast.parse(router_path.read_text(encoding="utf-8")).body
+             if (isinstance(node, ast.FunctionDef) and node.name in functions)
+             or (isinstance(node, ast.Assign) and all(isinstance(name, ast.Name) and name.id.isupper()
+                                                     for name in node.targets))]
+    namespace = {"math": math}
+    exec(compile(ast.Module(body=nodes, type_ignores=[]), str(router_path), "exec"), namespace)
+    for index, segment in enumerate(recipe.segments):
+        descriptor = trajectory_command_descriptor(segment, plan_token_id="b" * 64,
+            execute_at_monotonic_ns=1_000_000_000, segment_index=index, segment_count=len(recipe.segments))
+        moving = [a != b for a, b in zip(segment.start_rad, segment.target_rad)]
+        assert sum(moving) == 1 and descriptor["trajectory"]["interval_count"] >= 2
+        namespace["_validated_v13_position_authority"](
+            {**descriptor, "plan_manifest": trajectory_plan_manifest(recipe)},
+            targets=list(segment.target_rad), moving_joint_mask=moving,
+            collision_guard_proof={"start_relative_rad": list(segment.start_rad),
+                "target_relative_rad": list(segment.target_rad), "moving_joint_mask": moving},
+            maximum_velocity_rad_s=math.radians(1), maximum_acceleration_rad_s2=math.radians(15))
 
 
 def plan(start=ACTUAL, target=TARGET, limits=LIMITS):

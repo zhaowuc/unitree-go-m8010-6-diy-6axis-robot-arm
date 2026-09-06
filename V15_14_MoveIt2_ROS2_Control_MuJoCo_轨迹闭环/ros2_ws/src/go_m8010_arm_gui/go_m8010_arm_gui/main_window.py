@@ -3038,7 +3038,7 @@ class MainWindow(QMainWindow):
         if (severity == "critical" or type(rejected) is not int
                 or (rejected_commands is not None and rejected != rejected_commands)):
             raise RuntimeError("动作组停止：命令路由异常；" + router_text)
-        acceptance = self.node.latest_acceptance_status or {}
+        acceptance = getattr(self.node, "latest_acceptance_status", None) or {}
         position = acceptance.get("position", {})
         acceptance_fresh = receipt_is_fresh(
             self.node.last_acceptance_status_receipt, now, 1.0,
@@ -3290,7 +3290,7 @@ class MainWindow(QMainWindow):
     def _refresh_gravity_preparation(self, now: float) -> None:
         text, percent, ready, level = gravity_preparation_status(
             self.node.latest_hardware, self.node.latest_gravity_status,
-            self.node.latest_acceptance_status,
+            getattr(self.node, "latest_acceptance_status", None) or {},
             gravity_fresh=self.node.gravity_status_fresh(now),
             acceptance_fresh=receipt_is_fresh(self.node.last_acceptance_status_receipt, now, 1.0),
         )
@@ -3311,13 +3311,14 @@ class MainWindow(QMainWindow):
             return
         now = time.monotonic()
         _, _, ready, _ = gravity_preparation_status(
-            self.node.latest_hardware, self.node.latest_gravity_status, self.node.latest_acceptance_status,
+            self.node.latest_hardware, self.node.latest_gravity_status,
+            getattr(self.node, "latest_acceptance_status", None) or {},
             gravity_fresh=self.node.gravity_status_fresh(now),
             acceptance_fresh=receipt_is_fresh(self.node.last_acceptance_status_receipt, now, 1.0),
         )
         if not ready or self.hardware_mode == "position":
             return
-        target = self.node.latest_acceptance_status["position"].get("expected_target_vector_rad")
+        target = (getattr(self.node, "latest_acceptance_status", None) or {})["position"].get("expected_target_vector_rad")
         if not isinstance(target, list) or len(target) != 6 or not all(
             type(x) in {int, float} and math.isfinite(x) for x in target
         ):
@@ -3366,7 +3367,7 @@ class MainWindow(QMainWindow):
                 and not receipt_is_fresh(self.node.last_acceptance_status_receipt, now, 1.0)):
             return None
 
-        acceptance = self.node.latest_acceptance_status
+        acceptance = getattr(self.node, "latest_acceptance_status", None) or {}
         position = acceptance.get("position", {})
         if position.get("started") is not True or position.get("complete") is True:
             return None
@@ -3398,7 +3399,7 @@ class MainWindow(QMainWindow):
                 and not receipt_is_fresh(self.node.last_acceptance_status_receipt, now, 1.0)):
             return True
 
-        acceptance = self.node.latest_acceptance_status
+        acceptance = getattr(self.node, "latest_acceptance_status", None) or {}
         position = acceptance.get("position", {})
         if position.get("started") is not True or position.get("complete") is True:
             return True
@@ -5175,7 +5176,7 @@ class MainWindow(QMainWindow):
         if token is None or not isinstance(trajectory, TrajectoryRecipe):
             self._notify("PLAN_TOKEN已失效，必须重新预演。", "warning")
             return
-        if getattr(self.node, "latest_acceptance_status", {}).get("position", {}).get("started"):
+        if (getattr(self.node, "latest_acceptance_status", None) or {}).get("position", {}).get("started"):
             try:
                 acceptance_start = self._acceptance_preview_start(time.monotonic())
                 if acceptance_start is not None and trajectory.start_rad != acceptance_start:

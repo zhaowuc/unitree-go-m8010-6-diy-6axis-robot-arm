@@ -609,7 +609,9 @@ def generate_segmented_quintic_recipe(
     current = list(start)
     segments = []
     for joint, final_target in enumerate(target):
-        while abs(final_target - current[joint]) > 1.0e-15:
+        # The recipe and downstream descriptors require an exact endpoint.
+        # A model-degrees round trip can leave a nonzero sub-epsilon delta.
+        while final_target != current[joint]:
             remaining = final_target - current[joint]
             step = math.copysign(min(abs(remaining), maximum_delta), remaining)
             segment_start = finite_joint_vector(current, "segment_start")
