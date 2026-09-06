@@ -8,6 +8,20 @@ inventory="$repo/.runtime/v15_30a_gui/j6_posvel_commissioning_state.json"
 output_dir="$scripts/j6_posvel_commissioning"
 mkdir -m 700 "$output_dir"
 cd "$repo"
+# A consumed mode-write session must not be recommissioned without a new power
+# cycle. Normal repeats reuse its configuration; the J6 worker still reads RID10
+# and requires live POS_VEL before it can enable the drive.
+if [[ "${1:-false}" != true ]]; then
+  "$j6_py" - "$inventory" <<'PY'
+import json,pathlib,sys
+d=json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+mode=d.get("ctrl_mode_after_write",d.get("ctrl_mode_readonly_verification",{}).get("after_disabled_baseline"))
+assert d.get("status")=="COMPLETED" and mode==2, "No completed POS_VEL configuration; after a real power cycle use --power-cycled"
+assert d.get("final_disable",{}).get("confirmed") is True
+print("J6_CONFIGURATION_REUSED=YES; LIVE_RID10_CHECK_REQUIRED_BY_WORKER=YES; NO_MODE_WRITE=YES")
+PY
+  exit 0
+fi
 j6_lib=$("$j6_py" -c 'import pathlib,sys,sysconfig
 for value in (sysconfig.get_config_var("LIBDIR"), pathlib.Path(sys.prefix)/"lib"):
  p=pathlib.Path(value)
