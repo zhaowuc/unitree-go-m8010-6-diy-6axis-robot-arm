@@ -34,12 +34,13 @@
     "terminal_disabled_confirmed": true,
     "channel_closed": true,
     "physical_power_off_required_reported": false,
-    "cause_of_observed_motion": "UNRESOLVED_NO_OPERATOR_OR_AUTONOMOUS_CAUSE_ASSUMED",
+    "cause_of_observed_motion": "USER_CONFIRMED_MANUAL_ADJUSTMENT_IN_SUBSEQUENT_CLARIFICATION",
     "evidence": {
       "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T110327-11adc7/j6_disabled_raw.json",
       "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\repeat_blocked_20260906T110327-11adc7_j6_raw.json",
       "sha256": "c62dc67b63239a7aef1501200b362165c9ae2bfa06b29fb5aa49f3b13d8ee7f8"
-    }
+    },
+    "original_cause_classification": "UNRESOLVED_NO_OPERATOR_OR_AUTONOMOUS_CAUSE_ASSUMED"
   },
   "go_brake_worker_terminal": {
     "J1": {
@@ -96,5 +97,26 @@
     "does_not_count_as_three_cycle_pass": true
   },
   "original_evidence_rewritten": false,
-  "scope_note": "THREE_CYCLE_REQUEST_STOPPED_BEFORE_ACTION_GROUP_EXECUTION; PREVIOUS_SINGLE_CYCLE_PASS_REMAINS_SEPARATE"
+  "scope_note": "THREE_CYCLE_REQUEST_STOPPED_BEFORE_ACTION_GROUP_EXECUTION; PREVIOUS_SINGLE_CYCLE_PASS_REMAINS_SEPARATE",
+  "subsequent_clarifications": {
+    "operator_confirmation": {
+      "source": "USER_FOLLOWUP_REPORTED_BY_ROOT",
+      "previous_j6_movement": "MANUAL_ADJUSTMENT",
+      "current_reported_state": "STATIONARY",
+      "does_not_change_capture_time_stationarity_failure": true
+    },
+    "dm_usb_diagnosis": {
+      "source": "ROOT_READONLY_LSUSB_OBSERVATION",
+      "product": "DaMiao-Tech DM-USB2FDCAN",
+      "usb_vid": "34b7",
+      "usb_pid": "6877",
+      "bus": "003",
+      "device": "011",
+      "adapter_present_in_lsusb": true,
+      "control_transport": "NATIVE_USB_CAN_SDK",
+      "serial_by_id_absence_does_not_prove_disconnect": true,
+      "earlier_serial_only_disconnect_inference": "CORRECTED"
+    },
+    "original_fail_and_zero_completed_cycles_preserved": true
+  }
 }

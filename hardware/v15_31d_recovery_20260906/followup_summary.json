@@ -1,0 +1,110 @@
+{
+  "schema": "go-m8010-followup-readonly-summary/1.0",
+  "status": "BLOCKED_BEFORE_ACTION_GROUP",
+  "session_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T111227-959c37",
+  "requested_cycles": 3,
+  "completed_cycles": 0,
+  "action_group_execution_started": false,
+  "go_readonly": {
+    "status": "PASS",
+    "motor_names": [
+      "J1",
+      "J2A",
+      "J2B",
+      "J3",
+      "J4",
+      "J5"
+    ],
+    "packets_per_domain": {
+      "J1": 500,
+      "J2": 500,
+      "J345": 500
+    },
+    "source_coverage_s": {
+      "J1": 4.989523079,
+      "J2": 4.990508694,
+      "J345": 4.987388185
+    },
+    "final_brake": {
+      "J1": "PASS",
+      "J345": "PASS",
+      "J2": "PASS"
+    },
+    "foc_serial_send_call_count": 0,
+    "scope": "SEPARATE_BRAKE_ONLY_CAPTURE_DOMAINS_NOT_ACTIVE_MULTI_AXIS_EXECUTION"
+  },
+  "j6_stationary_followup": {
+    "status": "PASS",
+    "packet_count": 500,
+    "source_coverage_s": 50.03279296588153,
+    "raw_span_rad": 0.0011444266422522276,
+    "raw_span_deg": 0.06557081656338078,
+    "observed_state_names": [
+      "DISABLED"
+    ],
+    "final_disabled_frames": 5,
+    "final_disabled_confirmed": true,
+    "channel_closed": true,
+    "active_command_count": 0
+  },
+  "startup_mapping_blocker": {
+    "issuer_status": "BLOCKED",
+    "reason": "power-session reference startup mismatch",
+    "diagnostic_estimated_deg": {
+      "J2A": 1.9691632627982145,
+      "J2B": 2.211498256620966
+    },
+    "diagnostic_mean_deg": 2.09033075970959,
+    "diagnostic_pair_difference_deg": 0.24233499382275148,
+    "nearest_rotor_turns_relative_to_original_reference": {
+      "J2A": 2,
+      "J2B": -2
+    },
+    "existing_nearby_window_deg": 2.0,
+    "outside_window_motor": "J2B",
+    "alternate_rotor_turn_delta_deg": 56.87203860015675,
+    "accepted_as_authorized_coordinates": false,
+    "interpretation": "STABLE_COMMON_OFFSET_CANDIDATE_ONLY; MECHANICAL_MOVEMENT_OR_POWER_CYCLE_NOT_ESTABLISHED",
+    "cause": "AWAITING_USER_J2_MOVEMENT_OR_PHASE_CONTINUITY_CLARIFICATION",
+    "thresholds_or_calibration_modified": false
+  },
+  "clarifications": {
+    "prior_j6_motion": "USER_CONFIRMED_MANUAL_ADJUSTMENT",
+    "dm_usb_adapter": "ROOT_OBSERVED_LSUSB_34B7_6877_BUS003_DEVICE011",
+    "serial_by_id_absence_is_not_disconnect_evidence": true
+  },
+  "original_failed_reports_preserved": true,
+  "previous_single_cycle_pass_remains_separate": true,
+  "evidence": {
+    "go_aux_brake_raw.json": {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T111227-959c37/go_aux_brake_raw.json",
+      "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\followup_20260906T111227-959c37\\go_aux_brake_raw.json",
+      "sha256": "14e40c74470c65ef3ca443470028d420f8d9f8853abecc8c7b8901d052551502"
+    },
+    "j2_brake_raw.json": {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T111227-959c37/j2_brake_raw.json",
+      "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\followup_20260906T111227-959c37\\j2_brake_raw.json",
+      "sha256": "39854cfafbe287b738553edfcf89ae97cc53cd24ddc06517af0d4c65b1a3266b"
+    },
+    "j6_stationary_followup.json": {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T111227-959c37/j6_stationary_followup.json",
+      "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\followup_20260906T111227-959c37\\j6_stationary_followup.json",
+      "sha256": "699701d222458bebe20e2883005c2bf3be141f2d1f0f2be6ada24fb99e74d9a2"
+    },
+    "j2_anchor_apply.json": {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T111227-959c37/j2_anchor_apply.json",
+      "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\followup_20260906T111227-959c37\\j2_anchor_apply.json",
+      "sha256": "3e3926fae38ccbb859c7818eb95b4cdbc5173a2c09f79d5be955ff14843daec6"
+    },
+    "session_result.json": {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T111227-959c37_scripts/session_result.json",
+      "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\followup_20260906T111227-959c37\\session_result.json",
+      "sha256": "df922529623267ca4e20e015f5ab2c144d842ffcdda3269fa29a3e2d20c3628a"
+    },
+    "j2_power_session_reference_v1_20260905T100720Z_781a6fe88c63848a.json": {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31b_ft/current/j2_anchors/j2_power_session_reference_v1_20260905T100720Z_781a6fe88c63848a.json",
+      "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\followup_20260906T111227-959c37\\j2_power_session_reference_v1_20260905T100720Z_781a6fe88c63848a.json",
+      "sha256": "ed9948b2de6c470496a92209d8f5b6650df0e06b97118251bd0cc6b3a6f1fd0b"
+    }
+  }
+}
