@@ -1,0 +1,48 @@
+{
+  "schema": "go-m8010-action-group/1.0",
+  "name": "仅软件演示：小幅逐轴动作与模拟夹爪；非实机抓放处方",
+  "coordinate_frame": "model_absolute_deg",
+  "model_sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9",
+  "steps": [
+    {
+      "target_deg": [0, 90, -14.4, 13.49, 47.94, 0],
+      "speed_deg_s": 1,
+      "dwell_s": 0.25,
+      "gripper": "open",
+      "opening_percent": null,
+      "gripper_wait_s": 0.5
+    },
+    {
+      "target_deg": [1, 91, -13.4, 14.49, 48.94, 1],
+      "speed_deg_s": 1,
+      "dwell_s": 0.25,
+      "gripper": "set",
+      "opening_percent": 60,
+      "gripper_wait_s": 0.5
+    },
+    {
+      "target_deg": [1, 90, -12.4, 14.49, 48.94, 1],
+      "speed_deg_s": 1,
+      "dwell_s": 0.25,
+      "gripper": "close",
+      "opening_percent": null,
+      "gripper_wait_s": 0.5
+    },
+    {
+      "target_deg": [2, 91, -13.4, 13.49, 47.94, 0],
+      "speed_deg_s": 1,
+      "dwell_s": 0.25,
+      "gripper": "open",
+      "opening_percent": null,
+      "gripper_wait_s": 0.5
+    },
+    {
+      "target_deg": [0, 90, -14.4, 13.49, 47.94, 0],
+      "speed_deg_s": 1,
+      "dwell_s": 0.25,
+      "gripper": "none",
+      "opening_percent": null,
+      "gripper_wait_s": 0
+    }
+  ]
+}

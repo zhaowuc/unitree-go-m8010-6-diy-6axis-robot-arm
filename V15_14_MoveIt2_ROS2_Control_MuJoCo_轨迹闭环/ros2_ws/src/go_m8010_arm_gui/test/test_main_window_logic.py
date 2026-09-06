@@ -4350,7 +4350,8 @@ def test_fixed_hold_policy_from_brake_or_drag_requires_feedback_then_enters_hold
         assert ("editor", True) in allowed.events
 
 
-def test_emergency_brake_confirms_once_and_bypasses_feedback_gate():
+@pytest.mark.parametrize("support_confirmed", (False, True))
+def test_emergency_brake_confirms_once_and_bypasses_feedback_gate(support_confirmed):
     cancel_queue = load_main_window_method("_cancel_queued_pose")
     consume = load_main_window_method(
         "_consume_collision_guard_result",
@@ -4370,6 +4371,7 @@ def test_emergency_brake_confirms_once_and_bypasses_feedback_gate():
             RejectRole = "reject"
 
         def __init__(self, _parent):
+            assert not support_confirmed, "already confirmed support must not reopen a dialog"
             self.confirm = None
 
         def setWindowTitle(self, _title):
@@ -4463,7 +4465,7 @@ def test_emergency_brake_confirms_once_and_bypasses_feedback_gate():
 
     for mode in ("brake", "drag", "hold", "position"):
         window = FakeWindow(mode)
-        method(window)
+        method(window, support_confirmed=support_confirmed)
         assert not window.feedback_checked
         assert window.machine.stop_count == 1
         assert window.hardware_mode == "brake"
@@ -4711,7 +4713,7 @@ def test_gui_subscribes_to_and_displays_router_acknowledgement_state():
 def test_stop_and_brake_is_the_single_feedback_independent_stop_action():
     source = SOURCE.read_text(encoding="utf-8")
     assert '("停止并制动", self._emergency_brake)' in source
-    stop_start = source.index("    def _emergency_brake(self) -> None:")
+    stop_start = source.index("    def _emergency_brake(self, *, support_confirmed: bool = False) -> None:")
     stop_end = source.index("    def _hold_current", stop_start)
     stop = source[stop_start:stop_end]
     assert "control_feedback_ready(" not in stop

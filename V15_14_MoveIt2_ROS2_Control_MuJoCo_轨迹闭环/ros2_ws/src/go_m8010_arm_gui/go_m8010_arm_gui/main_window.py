@@ -2831,6 +2831,7 @@ class MainWindow(QMainWindow):
         self.operator_notice_level = "info"
         self.operator_notice_until = 0.0
         self.current_notice_level = ""
+        self.action_group_dialog = None
         self.arrival = ArrivalTracker(
             tolerance_rad=float(control["到位容差_度"]) * RAD,
             dwell_s=float(control["到位持续_秒"]),
@@ -2892,6 +2893,7 @@ class MainWindow(QMainWindow):
         title.setFont(QFont("Sans Serif", 14, QFont.Bold))
         header = QHBoxLayout()
         header.addWidget(title, 1)
+        header.addWidget(self._button("动作组", self._show_action_groups))
         self.diagnostics_button = self._button("状态与日志", self._show_runtime_details)
         header.addWidget(self.diagnostics_button)
         outer.addLayout(header)
@@ -2984,6 +2986,77 @@ class MainWindow(QMainWindow):
         self.runtime_details.show()
         self.runtime_details.raise_()
         self.runtime_details.activateWindow()
+
+    def _show_action_groups(self) -> None:
+        from .action_group_dialog import ActionGroupDialog
+
+        if self.action_group_dialog is None:
+            self.action_group_dialog = ActionGroupDialog(self)
+        self.action_group_dialog.show()
+        self.action_group_dialog.raise_()
+        self.action_group_dialog.activateWindow()
+
+    def _action_group_health(self, binding=None, rejected_commands=None) -> dict:
+        """Check current hardware facts; never grant preview or drive authority."""
+        now = time.monotonic()
+        hardware = self.node.latest_hardware
+        if (
+            not self.have_first_state or not self.node.control_streams_fresh(now)
+            or not hardware_state_contract_valid(hardware)
+            or not hardware_state_source_is_fresh(hardware, time.monotonic_ns())
+        ):
+            raise RuntimeError("动作组停止：六轴反馈缺失、过期或合同无效")
+        connected, faulted, uncertain = classify_logical_joint_observations(hardware)
+        if not all(connected) or any(faulted) or any(uncertain):
+            raise RuntimeError("动作组停止：七电机反馈不完整或存在故障")
+        current_binding = (
+            hardware["session_id"], hardware["state_instance_id"],
+            hardware["persistent_zero_sha256"], hardware["reference"],
+            self.session_pose_sha256,
+        )
+        if binding is not None and tuple(binding) != current_binding:
+            raise RuntimeError("动作组停止：会话、状态进程或软件零位已变化")
+        if (hardware["session_id"] != self.session_id
+                or hardware["state_instance_id"] != self.state_instance_id):
+            raise RuntimeError("动作组停止：GUI 与硬件会话绑定不一致")
+        if (self.command_stream_suspended or self.hardware_mode not in {"hold", "position"}
+                or not all(self.requested_active_joint_mask)
+                or any(hardware["lease_safe_hold_by_motor"].values())
+                or any(mode not in {"hold", "position"}
+                       for mode in hardware["controller_mode_by_motor"].values())):
+            raise RuntimeError("动作组需要 GUI 已接管的六轴 HOLD；控制权已撤销或租约保持中")
+        checks = self._current_preview_checks(now)
+        if not (checks.feedback_fresh and checks.communication_pass
+                and checks.thermal_pass and checks.gravity_pass):
+            raise RuntimeError("动作组停止：通信、热状态或重力 authority 不再有效")
+        router = self.node.latest_control_status or {}
+        router_text, severity = command_router_status_text(
+            router, self.node.control_status_fresh(now),
+            float(self.config["控制"]["命令租约_秒"]) * 1000.0, self.hardware_mode,
+        )
+        rejected = router.get("rejected_commands")
+        if (severity == "critical" or type(rejected) is not int
+                or (rejected_commands is not None and rejected != rejected_commands)):
+            raise RuntimeError("动作组停止：命令路由异常；" + router_text)
+        acceptance = self.node.latest_acceptance_status or {}
+        position = acceptance.get("position", {})
+        acceptance_fresh = receipt_is_fresh(
+            self.node.last_acceptance_status_receipt, now, 1.0,
+        )
+        phase = str(position.get("expected_phase") or "idle").lower()
+        if acceptance_fresh and (
+            acceptance.get("result") in {"RUNNING", "FINALIZING"}
+            or acceptance.get("gravity_ladder", {}).get("active") is True
+            or (acceptance.get("result") != "COMPLETE" and phase not in {"idle", "end"})
+        ):
+            raise RuntimeError("独立验收控制器仍在发布活动状态，不能与动作组同时接管")
+        return {"binding": current_binding, "rejected_commands": rejected}
+
+    def _action_group_hold_ready(self, target_rad) -> bool:
+        return collision_motion_state_ready(
+            self.node.latest_hardware, list(target_rad),
+            self.requested_active_joint_mask, self.hardware_mode,
+        )
 
     def _fit_window_to_available_screen(self) -> None:
         """Keep the GUI inside the usable desktop without shortening sliders."""
@@ -3134,6 +3207,7 @@ class MainWindow(QMainWindow):
     def _control_panel(self) -> QGroupBox:
         box = QGroupBox("固定位置模式：虚拟先行，明确确认后才可下发现实")
         layout = QGridLayout(box)
+        self.action_group_manual_buttons = []
         buttons = [
             ("保持当前位置", self._hold_current),
             ("预演轨迹", self._start_virtual_preview),
@@ -3168,6 +3242,8 @@ class MainWindow(QMainWindow):
                 button.setStyleSheet(
                     "background: #4a0000; color: #ffeb3b; font-weight: bold; min-height: 46px;"
                 )
+            else:
+                self.action_group_manual_buttons.append(button)
             layout.addWidget(button, 0, index)
         self.mode_label = QLabel(
             "当前方向：虚拟驱动现实（默认，无需寻找单独按钮）　｜　"
@@ -3182,6 +3258,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.gravity_stage_status, 1, 0, 1, 4)
         self.acceptance_target_button = self._button("载入当前验收目标", self._load_acceptance_target)
         self.acceptance_target_button.setEnabled(False)
+        self.action_group_manual_buttons.append(self.acceptance_target_button)
         self.acceptance_target_button.setToolTip("仅载入本阶段完整精度的虚拟目标；仍需预演通过和点击下发")
         layout.addWidget(self.acceptance_target_button, 1, 4)
         self.gravity_stage_progress = QProgressBar()
@@ -3224,9 +3301,14 @@ class MainWindow(QMainWindow):
         )
         self.gravity_stage_progress.setValue(percent)
         self.gravity_stage_progress.setFormat(f"重力 {percent}% — " + ("验证通过" if ready else "请看上方阶段状态"))
-        set_widget_enabled_if_changed(self.acceptance_target_button, ready and self.hardware_mode != "position")
+        group_active = bool(getattr(self, "action_group_dialog", None) is not None
+                            and self.action_group_dialog.active)
+        set_widget_enabled_if_changed(self.acceptance_target_button,
+                                      ready and self.hardware_mode != "position" and not group_active)
 
     def _load_acceptance_target(self) -> None:
+        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+            return
         now = time.monotonic()
         _, _, ready, _ = gravity_preparation_status(
             self.node.latest_hardware, self.node.latest_gravity_status, self.node.latest_acceptance_status,
@@ -3280,6 +3362,10 @@ class MainWindow(QMainWindow):
     def _acceptance_preview_start(self, now: float) -> Optional[tuple]:
         """Use the fixed acceptance waypoint, never encoder jitter, as start."""
 
+        if (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.active
+                and not receipt_is_fresh(self.node.last_acceptance_status_receipt, now, 1.0)):
+            return None
+
         acceptance = self.node.latest_acceptance_status
         position = acceptance.get("position", {})
         if position.get("started") is not True or position.get("complete") is True:
@@ -3307,6 +3393,10 @@ class MainWindow(QMainWindow):
 
     def _acceptance_endpoint_hold_ready(self, now: float) -> bool:
         """Keep POSITION until the bound runner acknowledges this endpoint."""
+
+        if (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.active
+                and not receipt_is_fresh(self.node.last_acceptance_status_receipt, now, 1.0)):
+            return True
 
         acceptance = self.node.latest_acceptance_status
         position = acceptance.get("position", {})
@@ -3605,6 +3695,7 @@ class MainWindow(QMainWindow):
         approved = self._preview_approval_matches_candidate()
         blocked = bool(
             self.hardware_mode == "position"
+            or (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.active)
             or any(self.moving_joint_mask)
             or self.pending_collision_execute_sequence is not None
             or self.queued_pose_target is not None
@@ -3633,6 +3724,7 @@ class MainWindow(QMainWindow):
         # _new_collision_request("execute"), and again at commit time.
         edit_blocked = bool(
             self.hardware_mode == "position"
+            or (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.active)
             or self.pending_collision_execute_sequence is not None
             or self.queued_pose_target is not None
         )
@@ -3669,6 +3761,9 @@ class MainWindow(QMainWindow):
 
     def _record_virtual_target(self, index: int, target_rad: float) -> None:
         """Record a virtual-first target without granting hardware authority."""
+
+        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+            return
 
         self.candidate_targets[index] = target_rad
         self.targets[index] = target_rad
@@ -3732,6 +3827,9 @@ class MainWindow(QMainWindow):
 
     def _start_virtual_preview(self) -> None:
         """Queue the exact recipe without blocking the Qt event thread."""
+
+        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+            return
 
         if not self._require_control_feedback(
             "轨迹预演需要六轴新鲜编码器和硬件状态。", require_all=True
@@ -4736,6 +4834,8 @@ class MainWindow(QMainWindow):
         )
 
     def _real_to_sim(self) -> None:
+        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+            return
         self._cancel_queued_pose(restore_command_target=True)
         was_positioning = self.hardware_mode == "position"
         self.direction = ArmMode.REAL_TO_SIM
@@ -4765,6 +4865,8 @@ class MainWindow(QMainWindow):
         self._update_mode_label("方向切换不会撤销当前承重保持")
 
     def _sim_to_real(self) -> None:
+        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+            return
         self._cancel_queued_pose(restore_command_target=True)
         was_positioning = self.hardware_mode == "position"
         self.direction = ArmMode.SIM_TO_REAL
@@ -4794,6 +4896,8 @@ class MainWindow(QMainWindow):
         self._update_mode_label("方向切换不会撤销当前承重保持")
 
     def _position_mode(self) -> None:
+        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+            return
         if not self._require_control_feedback(
             "进入现实位置模式要求六个关节均有新鲜、健康反馈。",
             require_all=True,
@@ -4851,6 +4955,8 @@ class MainWindow(QMainWindow):
         ):
             return
 
+        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+            return
         self.machine.set_fixed_hold_after_arrival(enabled)
         self.direction = ArmMode.SIM_TO_REAL
         if entering_position_servo:
@@ -4900,6 +5006,8 @@ class MainWindow(QMainWindow):
         return True
 
     def _drag_mode(self) -> None:
+        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+            return
         dialog = QMessageBox(self)
         dialog.setWindowTitle("可拖动模式安全提示")
         dialog.setText(
@@ -4916,21 +5024,25 @@ class MainWindow(QMainWindow):
                 "已请求可拖动模式；等待硬件确认，请持续可靠支撑机械臂"
             )
 
-    def _emergency_brake(self) -> None:
+    def _emergency_brake(self, *, support_confirmed: bool = False) -> None:
         """Explicitly withdraw drive authority without any feedback gate."""
 
-        dialog = QMessageBox(self)
-        dialog.setWindowTitle("紧急制动／撤销驱动确认")
-        dialog.setText(
-            "此操作将从任何当前状态立即发送真实BRAKE／DISABLE，\n"
-            "撤销位置伺服和承重保持。重载关节可能因自重下落。\n"
-            "只有在机械臂已可靠支撑时才可确认。"
-        )
-        confirm = dialog.addButton("已可靠支撑，立即制动", QMessageBox.ButtonRole.AcceptRole)
-        dialog.addButton("取消", QMessageBox.ButtonRole.RejectRole)
-        dialog.exec()
-        if dialog.clickedButton() is not confirm:
-            return
+        if getattr(self, "action_group_dialog", None) is not None:
+            self.action_group_dialog.stop()
+
+        if support_confirmed is not True:
+            dialog = QMessageBox(self)
+            dialog.setWindowTitle("紧急制动／撤销驱动确认")
+            dialog.setText(
+                "此操作将从任何当前状态立即发送真实BRAKE／DISABLE，\n"
+                "撤销位置伺服和承重保持。重载关节可能因自重下落。\n"
+                "只有在机械臂已可靠支撑时才可确认。"
+            )
+            confirm = dialog.addButton("已可靠支撑，立即制动", QMessageBox.ButtonRole.AcceptRole)
+            dialog.addButton("取消", QMessageBox.ButtonRole.RejectRole)
+            dialog.exec()
+            if dialog.clickedButton() is not confirm:
+                return
 
         self._cancel_queued_pose(restore_command_target=True)
         # BRAKE is the one command that deliberately bypasses state freshness,
@@ -4955,6 +5067,8 @@ class MainWindow(QMainWindow):
         self._publish_command()
 
     def _hold_current(self) -> None:
+        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+            return
         if not self._require_control_feedback(
             "建立当前姿态HOLD需要六个关节均有新鲜、健康反馈。",
             require_all=True,
@@ -5035,6 +5149,8 @@ class MainWindow(QMainWindow):
         self.arrival.start(time.monotonic())
 
     def _execute_target(self) -> None:
+        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+            return
         if not self._preview_approval_matches_candidate():
             self._notify(
                 "现实下发已拒绝：必须先由“预演轨迹”完成当前候选的完整预演并取得PLAN_TOKEN。",
@@ -5321,6 +5437,9 @@ class MainWindow(QMainWindow):
         return True
 
     def _stop(self) -> None:
+        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+            self.action_group_dialog.stop()
+            return
         # Stop always aborts any not-yet-authorized virtual segments.  It does
         # not itself withdraw the current servo authority.
         self._cancel_queued_pose(restore_command_target=True)
@@ -5395,6 +5514,8 @@ class MainWindow(QMainWindow):
         self._publish_command()
 
     def _save_initial_pose(self) -> None:
+        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+            return
         if self.node.initial_pose_read_only:
             self._notify("生产初始化姿态受只读保护，GUI拒绝覆盖。", "warning")
             return
@@ -5427,6 +5548,8 @@ class MainWindow(QMainWindow):
         self._notify("初始化姿态已保存。", "info")
 
     def _return_initial_pose(self) -> None:
+        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+            return
         if self.queued_pose_target is not None or self.hardware_mode == "position":
             self._notify(
                 "已有位置分段正在执行；请先停止轨迹并确认六轴HOLD。",
@@ -6081,6 +6204,8 @@ class MainWindow(QMainWindow):
                 self.have_first_state = True
         self._update_connected(now)
         self._sync_workflow_contract(now)
+        if getattr(self, "action_group_dialog", None) is not None:
+            self.action_group_dialog.check_health()
         self._update_preview_plan_build_heartbeat(now)
         self._update_preview_animation(now)
         self._update_planned_execution_pose(time.monotonic_ns())
@@ -6111,6 +6236,8 @@ class MainWindow(QMainWindow):
         # observes all seven motors actually reporting HOLD and stationary;
         # only then may this advance to a freshly checked next segment.
         self._continue_queued_sequence_if_ready()
+        if getattr(self, "action_group_dialog", None) is not None:
+            self.action_group_dialog.tick()
         if self.planned_mujoco_preview is not None:
             try:
                 self.planned_mujoco_preview.set_relative_pose(
@@ -6789,6 +6916,8 @@ class MainWindow(QMainWindow):
         self.log_stream.flush()
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        if getattr(self, "action_group_dialog", None) is not None:
+            self.action_group_dialog.stop()
         self._shutdown_preview_plan_executor()
         self._cancel_queued_pose(restore_command_target=True)
         now = time.monotonic()
