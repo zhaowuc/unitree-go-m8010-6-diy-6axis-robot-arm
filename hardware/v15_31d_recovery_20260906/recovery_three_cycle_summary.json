@@ -1,0 +1,765 @@
+{
+  "schema": "go-m8010-recovery-three-cycle-summary/1.0",
+  "status": "PASS",
+  "source_commit": "8923ed3",
+  "session_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T123027-4eb06d",
+  "elapsed_s": 200.8001585872844,
+  "recovery": {
+    "status": "PASS",
+    "initial_pose_file": {
+      "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_30a_gui/initial_pose.json",
+      "sha256": "8d646ab48022bd0dc97fb7ae79013fd6e4b89598fe0494604ca6164fb4c3f7f8"
+    },
+    "initial_hold_target_rad_before_recovery": [
+      0.028637242121661993,
+      -0.0011345169960005697,
+      -0.0009092097762830247,
+      0.03602614524199642,
+      -0.027148142534688616,
+      0.011425192645151405
+    ],
+    "target_rad": [
+      0.0,
+      0.0,
+      0.0,
+      -0.0,
+      0.0,
+      0.0
+    ],
+    "actual_rad_after_recovery": [
+      0.003555513135717615,
+      -0.0008012771217469744,
+      -0.0007274579804976927,
+      -0.00035449646481848176,
+      0.00032671767593932385,
+      -1.907377737087046e-05
+    ],
+    "error_deg_target_minus_actual": [
+      -0.2037158966799444,
+      0.04590979729649186,
+      0.041680272055627944,
+      0.020311151286406877,
+      -0.018719543923646182,
+      0.001092846942723013
+    ],
+    "max_abs_error_after_recovery_deg": 0.2037158966799444,
+    "elapsed_action_s": 34.23883197410032,
+    "recipes": [
+      {
+        "plan_token_id": "7e822a7d2171b447a69ea41a9467a59249299c45caa68ba4459bd4d5f33702ed",
+        "step": 0,
+        "segments": [
+          {
+            "moving_joints": [
+              "J1"
+            ],
+            "trajectory_sha256": "336aa3230d8a3891fb8bac41ad56d920c9ce45703998deaffa8f596ef6358873",
+            "commanded_delta_deg_by_joint": {
+              "J1": -1.652942862595246
+            }
+          },
+          {
+            "moving_joints": [
+              "J2"
+            ],
+            "trajectory_sha256": "80d191449619ceea2760666838d1f868764e69a4d0149821152ced8a3ac12d69",
+            "commanded_delta_deg_by_joint": {
+              "J2": 0.06413334647227256
+            }
+          },
+          {
+            "moving_joints": [
+              "J3"
+            ],
+            "trajectory_sha256": "c6129dd1683895e02e30063c513e9b8f979541d0e28848ecdd1502f3ee6fc6c3",
+            "commanded_delta_deg_by_joint": {
+              "J3": 0.048622679267243375
+            }
+          },
+          {
+            "moving_joints": [
+              "J4"
+            ],
+            "trajectory_sha256": "47a00d3f47b2e0fa20bcb0be9ea73ec35897aff90d1d28a2c42490b68605d455",
+            "commanded_delta_deg_by_joint": {
+              "J4": -2.046788977443829
+            }
+          },
+          {
+            "moving_joints": [
+              "J5"
+            ],
+            "trajectory_sha256": "42546a2728a3b0d1ceb9d0924fd73d0f14d51830095533b70b2b94adf0b02826",
+            "commanded_delta_deg_by_joint": {
+              "J5": 1.5485294236079568
+            }
+          },
+          {
+            "moving_joints": [
+              "J6"
+            ],
+            "trajectory_sha256": "3e7ba4bfc76f7b5f27de44862b0f81b3cdfaab28594a504d20848a8099cf1acd",
+            "commanded_delta_deg_by_joint": {
+              "J6": -0.6546153186910847
+            }
+          }
+        ]
+      }
+    ],
+    "jsonl": {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T123027-4eb06d/run/action_group_20260906_123417_906089.jsonl",
+      "local_archive_path": "D:/AI_GOM8010_6/go-m8010-robot-arm-v15-31a-ft/.codex-tmp/hold_evidence_20260906/recovery_three_cycle_20260906T123027-4eb06d/action_group_20260906_123417_906089.jsonl",
+      "sha256": "b47d6c981a6333fd7afd4302667a678344d3b990f449043b3f98e8d2f76c35ab",
+      "bytes": 1900
+    }
+  },
+  "action_group_origin_rad_after_recovery": [
+    0.003555513135717615,
+    -0.0008012771217469744,
+    -0.0007274579804976927,
+    -0.00035449646481848176,
+    0.00032671767593932385,
+    -1.907377737087046e-05
+  ],
+  "requested_cycles": 3,
+  "completed_cycles": 3,
+  "cycle_results": [
+    {
+      "cycle": 1,
+      "status": "PASS",
+      "out_deg_relative_to_action_group_origin": 1.1767369433499761,
+      "return_error_deg_relative_to_action_group_origin": 0.08678009014519286,
+      "saved_group_matches_executed_group": true,
+      "arrivals": [
+        {
+          "event": "measured_arrival",
+          "at_monotonic_s": 3168896.245007509,
+          "index": 0,
+          "actual_model_deg": [
+            1.3804528400299205,
+            89.94801640565747,
+            -14.445151475661437,
+            13.462746441501977,
+            47.96218966851062,
+            -0.001092846942723013
+          ],
+          "error_deg": [
+            -0.17673694334997622,
+            0.006073797046037581,
+            0.003471203605808358,
+            0.00694240721161538,
+            -0.003470124586969943,
+            0.0
+          ]
+        },
+        {
+          "event": "measured_arrival",
+          "at_monotonic_s": 3168915.805136328,
+          "index": 1,
+          "actual_model_deg": [
+            0.2904959868251373,
+            89.9480142476198,
+            -14.443415873858532,
+            13.450596689372231,
+            47.960454606217134,
+            -0.001092846942723013
+          ],
+          "error_deg": [
+            -0.08678009014519285,
+            0.0060759550837160385,
+            0.001735601802904505,
+            0.019092159341362002,
+            -0.0017350622934857013,
+            0.0
+          ]
+        }
+      ],
+      "recipes": [
+        {
+          "plan_token_id": "8eeaa20a8bfbc978e85b46d3c78be1af2498a633b1f875377651464926769d38",
+          "step": 0,
+          "segments": [
+            {
+              "moving_joints": [
+                "J1"
+              ],
+              "trajectory_sha256": "bc3eba414e61eb42e6aeb46da6fa0e11b5312bbfbada8bfdfefde8731bfce612",
+              "commanded_delta_deg_by_joint": {
+                "J1": 0.9600806190237917
+              }
+            },
+            {
+              "moving_joints": [
+                "J2"
+              ],
+              "trajectory_sha256": "415822132e02bf3efacd654e4d3f6af31bb97260f8542cae143138a3e1c87a74",
+              "commanded_delta_deg_by_joint": {
+                "J2": 0.005206265899295457
+              }
+            },
+            {
+              "moving_joints": [
+                "J3"
+              ],
+              "trajectory_sha256": "dbab26a04667f228ffb5f7772f6c5f55684b6572da8c1d166f7c161eeff80248",
+              "commanded_delta_deg_by_joint": {
+                "J3": 0.001735601802904505
+              }
+            },
+            {
+              "moving_joints": [
+                "J4"
+              ],
+              "trajectory_sha256": "5c4078f36eaf82b26c8c173c836e3e2ebd78cf12d6cde2162252f0f72709ce6d",
+              "commanded_delta_deg_by_joint": {
+                "J4": 0.00694240721161538
+              }
+            },
+            {
+              "moving_joints": [
+                "J5"
+              ],
+              "trajectory_sha256": "5c202421aea6cfbb265111e6f7eb27e4a95364c93fed69f0f853a6c188a39d52",
+              "commanded_delta_deg_by_joint": {
+                "J5": -0.0017350622934857013
+              }
+            }
+          ]
+        },
+        {
+          "plan_token_id": "5f1124054d1ba6c5e8f17da17e66ae88aed8e3daff4214271403e840923466ed",
+          "step": 1,
+          "segments": [
+            {
+              "moving_joints": [
+                "J1"
+              ],
+              "trajectory_sha256": "985bad5c414581754575ddee9c0ca0d077be22a3d5b2a2aa5e3d386e07eab1da",
+              "commanded_delta_deg_by_joint": {
+                "J1": -1.1784730846622997
+              }
+            },
+            {
+              "moving_joints": [
+                "J2"
+              ],
+              "trajectory_sha256": "f981511e665331ad1d3735078099964f1e15748eb053d318cff78efa3e4936e6",
+              "commanded_delta_deg_by_joint": {
+                "J2": 0.0069434862304581626
+              }
+            },
+            {
+              "moving_joints": [
+                "J3"
+              ],
+              "trajectory_sha256": "c9792812c8dfa41b279bfce024f45a560ac5d4890693a1bc2415dcfad0200946",
+              "commanded_delta_deg_by_joint": {
+                "J3": 0.001735601802904505
+              }
+            },
+            {
+              "moving_joints": [
+                "J4"
+              ],
+              "trajectory_sha256": "44637a7ec1388f5b6963fb3be446c6c08f66016f576b615ec5a3b4790ded9363",
+              "commanded_delta_deg_by_joint": {
+                "J4": 0.010412531798583867
+              }
+            },
+            {
+              "moving_joints": [
+                "J5"
+              ],
+              "trajectory_sha256": "17de1da69b06cce6c3423b90d30304dbe9430c0f87acbdfc3390000011a8b1f0",
+              "commanded_delta_deg_by_joint": {
+                "J5": -0.003470124586969943
+              }
+            },
+            {
+              "moving_joints": [
+                "J6"
+              ],
+              "trajectory_sha256": "dfcdb3dd90885dd0e49fa325a2fb3c30bf6054a57374aa6b00a85cd7e1583af7",
+              "commanded_delta_deg_by_joint": {
+                "J6": -0.02185693885446026
+              }
+            }
+          ]
+        }
+      ],
+      "jsonl": {
+        "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T123027-4eb06d/run/action_group_20260906_123452_556144.jsonl",
+        "local_archive_path": "D:/AI_GOM8010_6/go-m8010-robot-arm-v15-31a-ft/.codex-tmp/hold_evidence_20260906/recovery_three_cycle_20260906T123027-4eb06d/action_group_20260906_123452_556144.jsonl",
+        "sha256": "ac2ac34c1865f1fa058a45b50173a60c5d004e632c34cefbd6f5904e78270af6",
+        "bytes": 3067
+      }
+    },
+    {
+      "cycle": 2,
+      "status": "PASS",
+      "out_deg_relative_to_action_group_origin": 1.175001881056492,
+      "return_error_deg_relative_to_action_group_origin": 0.08851515243867711,
+      "saved_group_matches_executed_group": true,
+      "arrivals": [
+        {
+          "event": "measured_arrival",
+          "at_monotonic_s": 3168932.365051987,
+          "index": 0,
+          "actual_model_deg": [
+            1.3787177777364363,
+            89.9506189990977,
+            -14.44688707746434,
+            13.441919219867131,
+            47.965659793097586,
+            -0.001092846942723013
+          ],
+          "error_deg": [
+            -0.17500188105649203,
+            0.0034712036058112093,
+            0.005206805408712217,
+            0.027769628846461673,
+            -0.006940249173938426,
+            0.0
+          ]
+        },
+        {
+          "event": "measured_arrival",
+          "at_monotonic_s": 3168952.245513392,
+          "index": 1,
+          "actual_model_deg": [
+            0.2922310491186215,
+            89.94975146795096,
+            -14.443415873858532,
+            13.443654282160615,
+            47.9639247308041,
+            -0.001092846942723013
+          ],
+          "error_deg": [
+            -0.0885151524386771,
+            0.004338734752553339,
+            0.001735601802904505,
+            0.026034566552977433,
+            -0.005205186880454185,
+            0.0
+          ]
+        }
+      ],
+      "recipes": [
+        {
+          "plan_token_id": "08fac5981c01ea191a012a17f4b30929b09a1a6413128d5ae0caafd33538b70b",
+          "step": 0,
+          "segments": [
+            {
+              "moving_joints": [
+                "J1"
+              ],
+              "trajectory_sha256": "7d2bf33ee69441b38e565d110452bc7e7c4dea76c2102b87568cee32111b485b",
+              "commanded_delta_deg_by_joint": {
+                "J1": 0.9149560511671306
+              }
+            },
+            {
+              "moving_joints": [
+                "J2"
+              ],
+              "trajectory_sha256": "fdf1199bf5707c4b08d908a210704d48ecd29d5b2c3c4eabe8a09f887db0fd7b",
+              "commanded_delta_deg_by_joint": {
+                "J2": 0.0060759550837160385
+              }
+            },
+            {
+              "moving_joints": [
+                "J3"
+              ],
+              "trajectory_sha256": "3c9622f6041f05ff30a0e9b347a93d0082c4c30dbc98ab3de774857c6049c872",
+              "commanded_delta_deg_by_joint": {
+                "J3": 0.001735601802904505
+              }
+            },
+            {
+              "moving_joints": [
+                "J4"
+              ],
+              "trajectory_sha256": "55a2c3bdc620ba46e0c88e878cdfc08ab2b01fea8746ab95859c748d69df7c42",
+              "commanded_delta_deg_by_joint": {
+                "J4": 0.020827221634846245
+              }
+            },
+            {
+              "moving_joints": [
+                "J5"
+              ],
+              "trajectory_sha256": "eaeddecda9d37c504fa797a34ec9ad9577507cec14c28f7799d9c547e15ab97f",
+              "commanded_delta_deg_by_joint": {
+                "J5": -0.003470124586969943
+              }
+            }
+          ]
+        },
+        {
+          "plan_token_id": "1111bacde0b9e61846e0ad6fecc357de3627548bd7cf78d23c2b754fc56aa21b",
+          "step": 1,
+          "segments": [
+            {
+              "moving_joints": [
+                "J1"
+              ],
+              "trajectory_sha256": "152561881cafb1927af0046068148e77b76142a226baa6a335978ed88ee3953c",
+              "commanded_delta_deg_by_joint": {
+                "J1": -1.1784730846622997
+              }
+            },
+            {
+              "moving_joints": [
+                "J2"
+              ],
+              "trajectory_sha256": "568937af8450f0ebd33fd5c8fcd43eff3a314f4fc2836b8b858120888ec5b0f2",
+              "commanded_delta_deg_by_joint": {
+                "J2": 0.004338734752553339
+              }
+            },
+            {
+              "moving_joints": [
+                "J3"
+              ],
+              "trajectory_sha256": "010109377e207dd7da81dde7ad5ca7e11039f0aea42594280968d5189ee90d18",
+              "commanded_delta_deg_by_joint": {
+                "J3": 0.001735601802904505
+              }
+            },
+            {
+              "moving_joints": [
+                "J4"
+              ],
+              "trajectory_sha256": "bda9cf3992b9b76a8cf87a91dc652b60925ea456517b462a6668104b796497f1",
+              "commanded_delta_deg_by_joint": {
+                "J4": 0.024297346221814727
+              }
+            },
+            {
+              "moving_joints": [
+                "J5"
+              ],
+              "trajectory_sha256": "51cf5e42023435b7e0f3a66c42eaa271fcc802dbb80c1243dfb09071edbb3e36",
+              "commanded_delta_deg_by_joint": {
+                "J5": -0.005205186880454185
+              }
+            },
+            {
+              "moving_joints": [
+                "J6"
+              ],
+              "trajectory_sha256": "f9f97bf3c650442b5c3c8a0425221b19fbf49b524ec69b18286001770e04ac98",
+              "commanded_delta_deg_by_joint": {
+                "J6": 0.02185693885446026
+              }
+            }
+          ]
+        }
+      ],
+      "jsonl": {
+        "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T123027-4eb06d/run/action_group_20260906_123529_078644.jsonl",
+        "local_archive_path": "D:/AI_GOM8010_6/go-m8010-robot-arm-v15-31a-ft/.codex-tmp/hold_evidence_20260906/recovery_three_cycle_20260906T123027-4eb06d/action_group_20260906_123529_078644.jsonl",
+        "sha256": "4e407a06aeef515793d18f810e86f310c34003600943d6994d50d9efae30af5e",
+        "bytes": 3064
+      }
+    },
+    {
+      "cycle": 3,
+      "status": "PASS",
+      "out_deg_relative_to_action_group_origin": 1.1767369433499761,
+      "return_error_deg_relative_to_action_group_origin": 0.09025129375100058,
+      "saved_group_matches_executed_group": true,
+      "arrivals": [
+        {
+          "event": "measured_arrival",
+          "at_monotonic_s": 3168968.96533378,
+          "index": 0,
+          "actual_model_deg": [
+            1.3804528400299205,
+            89.94975146795096,
+            -14.443415873858532,
+            13.440184157573647,
+            47.9639247308041,
+            -0.001092846942723013
+          ],
+          "error_deg": [
+            -0.17673694334997622,
+            0.004338734752553333,
+            0.001735601802904505,
+            0.02950469113994592,
+            -0.005205186880454185,
+            0.0
+          ]
+        },
+        {
+          "event": "measured_arrival",
+          "at_monotonic_s": 3168985.806927685,
+          "index": 1,
+          "actual_model_deg": [
+            0.293967190430945,
+            89.94888393680422,
+            -14.44688707746434,
+            13.434976812655517,
+            47.96218966851062,
+            0.020764091911737243
+          ],
+          "error_deg": [
+            -0.09025129375100055,
+            0.005206265899295457,
+            0.005206805408712217,
+            0.03471203605807711,
+            -0.003470124586969943,
+            -0.02185693885446026
+          ]
+        }
+      ],
+      "recipes": [
+        {
+          "plan_token_id": "1c22cb921487890eba864a16aebc59db18223925821c6f338380bd52251138f5",
+          "step": 0,
+          "segments": [
+            {
+              "moving_joints": [
+                "J1"
+              ],
+              "trajectory_sha256": "4cfc63eb51884c049cd276e28822d3f4dd75933646c8e964ae15f6076bc98c09",
+              "commanded_delta_deg_by_joint": {
+                "J1": 0.9097487062489994
+              }
+            },
+            {
+              "moving_joints": [
+                "J2"
+              ],
+              "trajectory_sha256": "4fdee36002bd71ab0254ec2eb942fccf46c8071b731c8643d65b02a6dfc2741f",
+              "commanded_delta_deg_by_joint": {
+                "J2": 0.004338734752553333
+              }
+            },
+            {
+              "moving_joints": [
+                "J3"
+              ],
+              "trajectory_sha256": "8d3cf43d45319fc06d43c0f6a43bcb1ebb0d1b10ab07161a6d4ade562d5d68f9",
+              "commanded_delta_deg_by_joint": {
+                "J3": 0.001735601802904505
+              }
+            },
+            {
+              "moving_joints": [
+                "J4"
+              ],
+              "trajectory_sha256": "efa0f918edfa047203b37d9315efa35e57fde315ccf524d90717376bc2b2ac45",
+              "commanded_delta_deg_by_joint": {
+                "J4": 0.026034566552977433
+              }
+            },
+            {
+              "moving_joints": [
+                "J5"
+              ],
+              "trajectory_sha256": "b393194e91a77494f818822568715d65a167919c22c70648bb0b1eceac458cb7",
+              "commanded_delta_deg_by_joint": {
+                "J5": -0.005205186880454185
+              }
+            }
+          ]
+        },
+        {
+          "plan_token_id": "237addc781bea7ba8829989681807cf1776ff02143d08522b6f4ab3efa3fc439",
+          "step": 1,
+          "segments": [
+            {
+              "moving_joints": [
+                "J1"
+              ],
+              "trajectory_sha256": "b3093a187d9cbd273e1db8e8de885a66ce0fc754869796752aed4f69e63538c2",
+              "commanded_delta_deg_by_joint": {
+                "J1": -1.1767369433499761
+              }
+            },
+            {
+              "moving_joints": [
+                "J2"
+              ],
+              "trajectory_sha256": "a6413431ce61f811a83775c6ddfe0f22a0d8bda8e226e67938be97ae5808d0b7",
+              "commanded_delta_deg_by_joint": {
+                "J2": 0.006073797046037581
+              }
+            },
+            {
+              "moving_joints": [
+                "J3"
+              ],
+              "trajectory_sha256": "9b0400686be3e82e0ba1e7d6b4a94661f0163cf3ee2d10d4b09a3604a3fa812f",
+              "commanded_delta_deg_by_joint": {
+                "J3": 0.001735601802904505
+              }
+            },
+            {
+              "moving_joints": [
+                "J4"
+              ],
+              "trajectory_sha256": "448547b4f08d1b9788d6f4c0adcc388c494b381edc537b1a19026ecc2f7481ab",
+              "commanded_delta_deg_by_joint": {
+                "J4": 0.02950469113994592
+              }
+            },
+            {
+              "moving_joints": [
+                "J5"
+              ],
+              "trajectory_sha256": "507afb4e9d85346f814dd0ab6fee5e9427172e31d3dce19f5d73bbd37a92b0e1",
+              "commanded_delta_deg_by_joint": {
+                "J5": -0.006940249173938426
+              }
+            }
+          ]
+        }
+      ],
+      "jsonl": {
+        "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T123027-4eb06d/run/action_group_20260906_123605_522844.jsonl",
+        "local_archive_path": "D:/AI_GOM8010_6/go-m8010-robot-arm-v15-31a-ft/.codex-tmp/hold_evidence_20260906/recovery_three_cycle_20260906T123027-4eb06d/action_group_20260906_123605_522844.jsonl",
+        "sha256": "e075015b76360db49dd3f165cb3c12a7374cdaea93bb48f1f010d03697292f2a",
+        "bytes": 3077
+      }
+    }
+  ],
+  "unique_plan_token_count": 7,
+  "saved_action_group": {
+    "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T123027-4eb06d/run/j1_demo_action_group.json",
+    "local_archive_path": "D:/AI_GOM8010_6/go-m8010-robot-arm-v15-31a-ft/.codex-tmp/hold_evidence_20260906/recovery_three_cycle_20260906T123027-4eb06d/j1_demo_action_group.json",
+    "sha256": "ed110ef941fe5fb7270828949ad88d30165ee305b0c6ef466c2a42496ea70a6c",
+    "bytes": 922
+  },
+  "same_saved_group_used_for_all_three_cycles": true,
+  "gripper_actions": [
+    "none",
+    "none"
+  ],
+  "maximum_temperature_c_by_motor": {
+    "J1": 30.0,
+    "J2A": 30.0,
+    "J2B": 30.0,
+    "J3": 29.0,
+    "J4": 30.0,
+    "J5": 31.0,
+    "J6": 36.0
+  },
+  "maximum_temperature_c": 36.0,
+  "maximum_j2_sync_error_deg": 0.11352926929501789,
+  "active_gui_source_age_ms_reported_by_root": {
+    "median": 20.709,
+    "p95": 25.343,
+    "maximum": 32.03
+  },
+  "third_cycle_return_actual_model_deg": [
+    0.293967190430945,
+    89.94888393680422,
+    -14.44688707746434,
+    13.434976812655517,
+    47.96218966851062,
+    0.020764091911737243
+  ],
+  "last_observed_actual_rad": [
+    0.0050701114339287146,
+    -0.0011950820954975782,
+    -0.0008789178103188027,
+    -0.000505946878423874,
+    -3.6823580494211385e-05,
+    0.0034142061493858122
+  ],
+  "last_observed_actual_logical_deg": [
+    0.2904959868251373,
+    -0.06847316024366164,
+    -0.05035828107014723,
+    -0.02898862079150655,
+    -0.0021098357488785746,
+    0.1956196027474193
+  ],
+  "last_observed_error_from_original_initial_deg_target_minus_actual": [
+    -0.2904959868251373,
+    0.06847316024366164,
+    0.05035828107014723,
+    0.02898862079150655,
+    0.0021098357488785746,
+    -0.1956196027474193
+  ],
+  "last_observed_source_monotonic_ns": 3168986612457571,
+  "last_observed_controller_modes": {
+    "J1": "brake",
+    "J2A": "brake",
+    "J2B": "brake",
+    "J3": "brake",
+    "J4": "brake",
+    "J5": "brake",
+    "J6": "brake"
+  },
+  "paired_j6_terminal_confirmed": true,
+  "final_controller_terminals": {
+    "j1": {
+      "terminal": "FINAL_BRAKE=PASS",
+      "evidence": {
+        "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T123027-4eb06d/run/j1_controller.log",
+        "local_archive_path": "D:/AI_GOM8010_6/go-m8010-robot-arm-v15-31a-ft/.codex-tmp/hold_evidence_20260906/recovery_three_cycle_20260906T123027-4eb06d/j1_controller.log",
+        "sha256": "2c3dd43d2534cf66d2783d0ef1b2bc57fe6cf32a9636f6a9ad8342d55715d0d8",
+        "bytes": 1396
+      }
+    },
+    "j2": {
+      "terminal": "FINAL_BRAKE=PASS",
+      "evidence": {
+        "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T123027-4eb06d/run/j2_controller.log",
+        "local_archive_path": "D:/AI_GOM8010_6/go-m8010-robot-arm-v15-31a-ft/.codex-tmp/hold_evidence_20260906/recovery_three_cycle_20260906T123027-4eb06d/j2_controller.log",
+        "sha256": "514e9e29ac2f1616d85e1e2f901cc1c73f8eebb1449c81b9f3c1c2146dc536ec",
+        "bytes": 1578
+      }
+    },
+    "j345": {
+      "terminal": "FINAL_BRAKE=PASS",
+      "evidence": {
+        "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T123027-4eb06d/run/j345_controller.log",
+        "local_archive_path": "D:/AI_GOM8010_6/go-m8010-robot-arm-v15-31a-ft/.codex-tmp/hold_evidence_20260906/recovery_three_cycle_20260906T123027-4eb06d/j345_controller.log",
+        "sha256": "efb1b408719e242d8e76d2f14dc2e4b42365eff7f63107e239e6b547fa4ac575",
+        "bytes": 1783
+      }
+    },
+    "j6": {
+      "terminal": "J6_FINAL_DISABLED=PASS",
+      "evidence": {
+        "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T123027-4eb06d/run/j6_controller.log",
+        "local_archive_path": "D:/AI_GOM8010_6/go-m8010-robot-arm-v15-31a-ft/.codex-tmp/hold_evidence_20260906/recovery_three_cycle_20260906T123027-4eb06d/j6_controller.log",
+        "sha256": "3f827de93e42f67914faeb781ba416c921353889773ace4693cc5a8a2ba9f112",
+        "bytes": 333
+      }
+    }
+  },
+  "launcher": {
+    "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T123027-4eb06d_scripts/session_result.json",
+    "local_archive_path": "D:/AI_GOM8010_6/go-m8010-robot-arm-v15-31a-ft/.codex-tmp/hold_evidence_20260906/recovery_three_cycle_20260906T123027-4eb06d/session_result.json",
+    "sha256": "69edf9e4aa231527995976da5850c8718cf3161296df7b71fb7f65a626df025b",
+    "bytes": 1155
+  },
+  "full_report": {
+    "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T123027-4eb06d/evidence/j1_action_group_demo.json",
+    "local_archive_path": "D:/AI_GOM8010_6/go-m8010-robot-arm-v15-31a-ft/.codex-tmp/hold_evidence_20260906/recovery_three_cycle_20260906T123027-4eb06d/j1_action_group_demo.json",
+    "sha256": "16f7396dab9dd1e0a5a6a64a399f4fd2daa3118681a9dc1074ae2e15d0c176fb",
+    "bytes": 22200233
+  },
+  "local_archive_note": "Original-byte transfer requested; remote files and SHA are authoritative, no large CSV copied.",
+  "gui_singleton": {
+    "ordinary_launch_start_gui_default": true,
+    "demo_background_core_start_gui": false,
+    "controlling_gui_instances": 1
+  },
+  "scope": "THIS_SUPPORTED_NEAR_VERTICAL_RECOVERY_AND_THREE_SMALL_OUT_BACK_CYCLES_WITH_RECORDED_SECONDARY_CORRECTIONS",
+  "strict_0_1_degree_qualification": "NOT_RUN_OR_MODIFIED",
+  "not_qualified": [
+    "STRICT_0_1_DEG_FULL_QUALIFICATION",
+    "FULL_PAYLOAD_OR_LONG_TERM_THERMAL_HOLD",
+    "PHYSICAL_GRIPPER_LINKAGE",
+    "COMPLETE_SIX_AXIS_ZERO_GRAVITY"
+  ],
+  "previous_failed_attempts_and_single_cycle_evidence_preserved": true
+}
