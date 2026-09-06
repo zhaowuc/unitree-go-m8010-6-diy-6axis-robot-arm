@@ -222,6 +222,14 @@ def main(argv=None):
     os.environ.setdefault("DBUS_SESSION_BUS_ADDRESS", f"unix:path={runtime}/bus")
     if not runtime.is_dir() or not (runtime / "bus").is_socket():
         parser.error(f"existing user runtime/D-Bus socket required: {runtime / 'bus'}")
+    # Match the existing user-service GUI environment when launched over SSH.
+    # GLFW still needs Xwayland even though the Qt window uses Wayland.
+    desktop_environment = subprocess.check_output(
+        ["systemctl", "--user", "show-environment"], text=True)
+    for entry in shlex.split(desktop_environment):
+        key, _, value = entry.partition("=")
+        if key in {"DISPLAY", "XAUTHORITY"} and value:
+            os.environ.setdefault(key, value)
     import fcntl
     lock_path = ROOT / ".runtime/v15_31d_demo_session.lock"
     with lock_path.open("a", encoding="utf-8") as launcher_lock:
