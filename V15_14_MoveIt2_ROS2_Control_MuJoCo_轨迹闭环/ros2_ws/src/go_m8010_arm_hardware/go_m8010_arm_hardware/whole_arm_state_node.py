@@ -2,8 +2,8 @@
 
 The node deliberately exposes no command subscriber, trajectory action,
 controller API, serial port, CAN transport, HOLD, FOC, or BRAKE operation.
-The process which already owns each hardware bus publishes the raw feedback
-contract on ``/whole_arm/motor_feedback_raw``.
+The bus owners send raw feedback over UDP. Accepted packets are published
+unchanged on ``/whole_arm/motor_feedback_raw`` for independent observers.
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ import stat
 import statistics
 import threading
 import time
+from collections import deque
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -733,6 +734,10 @@ class WholeArmStateNode(Node):
              *[f"{name}_velocity_rad_s" for name in JOINT_NAMES]],
         )
         feedback_topic = str(self.get_parameter("feedback_topic").value)
+        self.raw_feedback_publisher = self.create_publisher(String, feedback_topic, 100)
+        # ponytail: bound exact, one-use self echoes to 512 packets; replace
+        # with publisher-GID filtering when the installed rclpy exposes it.
+        self.pending_raw_echoes = deque(maxlen=512)
         self.subscription = self.create_subscription(String, feedback_topic, self.on_feedback, 50)
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_socket.setblocking(False)
@@ -836,6 +841,9 @@ class WholeArmStateNode(Node):
         return status
 
     def on_feedback(self, message: String) -> None:
+        if message.data in self.pending_raw_echoes:
+            self.pending_raw_echoes.remove(message.data)
+            return
         self.accept_payload(message.data, time.monotonic_ns())
 
     def poll_udp(self) -> None:
@@ -849,9 +857,17 @@ class WholeArmStateNode(Node):
             except UnicodeDecodeError as exc:
                 self.record_invalid_payload(exc)
                 continue
-            self.accept_payload(text, time.monotonic_ns())
+            if self.accept_payload(text, time.monotonic_ns()):
+                message = String()
+                message.data = text
+                self.pending_raw_echoes.append(text)
+                try:
+                    self.raw_feedback_publisher.publish(message)
+                except Exception as exc:
+                    self.pending_raw_echoes.remove(text)
+                    self.warn_rate_limited("raw_feedback_publish_failed", str(exc))
 
-    def accept_payload(self, text: str, receipt_ns: int) -> None:
+    def accept_payload(self, text: str, receipt_ns: int) -> bool:
         try:
             payload = json.loads(text)
             if not isinstance(payload, dict):
@@ -901,8 +917,10 @@ class WholeArmStateNode(Node):
             self.controller_lease_safe_hold = next_lease_holds
             self.controller_thermal = next_thermal
             self.j6_feedback_identity = next_j6_feedback_identity
+            return True
         except Exception as exc:
             self.record_invalid_payload(exc)
+            return False
 
     def publish_state(self) -> None:
         now_monotonic_ns = time.monotonic_ns()

@@ -115,3 +115,17 @@ g++ -std=c++17 -O2 -Wall -Wextra -Werror -pthread -I/home/car/vendor/unitree_act
 机端保留的 9 月 5 日两份真实原始 anchor 和原 raw 文件也经新 Python helper 与生产 C++ 离线消费者正向复核通过：J2 原 raw SHA `7879504b05750ee8612297ff63cd6456d386f62be16a7039294392b1ffd64aff`，GO-AUX 原 raw SHA `40b83d69485a02d55a65e2b9cf66c55d6d4de1e621d5b5f0fe64c7f67902ad3c`。没有打开串口，也没有把旧原始样本当作当前新会话采样。
 
 新阶段隔离产物目录：`/tmp/go-m8010-v15-31d-preserve-reference-20260906`；最终生产二进制 SHA256 `9ca71f71d09dd91470d5e5297e957dafdfec986952867b99df4fe73e1cc40562`，对应 C++ 源码 SHA256 `62116e061dbe5141108602f7ad7f92cbbfa02e004c2abe964c03475140ef03e2`。该目录与前一阶段 brake-only 实机候选分开，未覆盖原产物。本节记录的是完成并可复现的离线恢复参考验证，实机新会话和动作/保持结果仍需主调试流程另存证据。
+
+## UDP 原始反馈向 ROS 观察者发布
+
+主调试流程在 `.runtime/v15_31d_hold_20260906` 已通过 GUI 请求实机 HOLD，保存的真实 state 流有 991 帧、19.820182557 秒七电机均为 HOLD 的记录；六轴最大目标误差依次为 `[0.0242984, 0.0208283, 0.0052068, 0.0277696, 0.0104147, 0.0437139]°`，最大速度均小于 0.164°/s。这是当前位置、独立支撑条件下的短时保持观测，不能推为 ±5° 定位、完整动作路线、满载或长期热验收。随后 root 受控停止 active supervisor，原始终态记录 GO 三域 `FINAL_BRAKE=PASS`、J6 `J6_FINAL_DISABLED=PASS`。
+
+此次独立 probe 的 J6 drive-state 始终为 null。只读 ROS 图与源码核对发现 `/whole_arm/motor_feedback_raw` 为 0 个 publisher；state 节点直接处理工作进程的 UDP 包，却从未向该 ROS 话题发布。安装的 Humble `create_subscription` 没有 `ignore_local_publications` 参数，Executor 丢弃 MessageInfo，Publisher 也未暴露 GID，不能假设可用本地发布者过滤 API。
+
+原始 `.runtime/v15_31d_hold_20260906/evidence/current_pose_hold_probe.json` 仍为 **FAIL**：J6 原始话题无发布者导致 `drive_state` 恒为 null，probe 等待 20 秒后超时；该报告不得改写为 PASS。上述真实 state 保持观测与随后 primitive 终态证据是分别保存的事实，不能替代首轮 probe 缺失的独立闭环。raw 发布修复仍需在第二个独立目录完整复测。
+
+修复保持 UDP 的原始 source/replay 检查及即时原子入库，成功后才将**原文** String 发布到既有 raw 话题（depth 100），不修改 source、sequence、时间戳或电机值。对本进程已发布原文保留最多 512 个一次性回声标记；自订阅只消耗一次精确匹配，额外重放仍由原验证器拒绝。原 ROS/mock 输入方式保留，控制反馈路径没有增加 DDS 跳转。无效 UDP 不转发，发布异常不会撤销已接收的数据。
+
+相关 state-node 测试 12 项通过，覆盖先入库后发布、原文字节保留、自回声不重入、再次重放仍拒绝、外部 ROS 输入和无效 UDP。隔离真实 rclpy 验证使用 domain 179 和临时 UDP 端口，不接入生产 domain 30 或电机：400 个含 16 KB 附加测试数据的合成包以 400 Hz 发送，400 包入库、400 包原文送达观察者，invalid-payload 计数 0、待消费回声 0；UDP 入库 P95 1.9915 ms，观察端 P95 2.3439 ms、最大 2.7220 ms。这是消息链路测试，不能写作实机运动通过。
+
+该修复的 `whole_arm_state_node.py` SHA256 为 `6cfcac48537164d2941db9464ff48c80b39227d56cbce15c977b9b7e8d414bdb`，验证副本位于 `/tmp/go-m8010-v15-31d-raw-observer-20260906/go_m8010_arm_hardware/whole_arm_state_node.py`。主调试流程将在独立的新目录保存再次实机验证结果，原 HOLD 尝试及其缺失观察证据完整保留。

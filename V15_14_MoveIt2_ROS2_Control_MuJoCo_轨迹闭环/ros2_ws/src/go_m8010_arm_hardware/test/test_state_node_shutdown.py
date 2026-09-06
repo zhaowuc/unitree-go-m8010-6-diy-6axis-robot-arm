@@ -40,6 +40,7 @@ def load_with_ros_stubs(events, ros_state):
         lambda _payload, _receipt, **kwargs: kwargs.get("previous")
     )
     state_model.validate_worker_supervisor_status = lambda value, _now, _age: value
+    state_model.validate_preserved_session_reference = lambda _value: {}
     thermal_manager = ModuleType(f"{package_name}.thermal_manager")
 
     def thermal_state(
@@ -335,6 +336,47 @@ def test_feedback_metadata_swaps_with_accepted_model_sample(monkeypatch):
     assert node.controller_modes["J1"] == "brake"
     assert node.controller_faults["J1"] is False
     assert node.controller_lease_safe_hold["J1"] is False
+
+
+def test_udp_raw_observer_gets_original_packet_without_reingestion(monkeypatch):
+    module, _ = load_with_ros_stubs([], {"ok": False, "on_spin": lambda: None})
+    events, seen = [], set()
+    monkeypatch.setattr(module, "parse_feedback_payload", lambda payload, _receipt: (
+        SimpleNamespace(motor="J1", sequence=payload["sequence"]),))
+
+    class Model:
+        def update_batch(self, samples):
+            sequence = samples[0].sequence
+            if sequence in seen:
+                raise ValueError("replayed or out-of-order motor feedback")
+            seen.add(sequence)
+            events.append("ingest")
+
+    node = _bare_state_node(module, model=Model())
+    node.pending_raw_echoes = module.deque(maxlen=512)
+    published = []
+    node.raw_feedback_publisher = SimpleNamespace(publish=lambda message: (
+        events.append("publish"), published.append(message.data)))
+    packet = '{"schema":"go-m8010-motor-feedback/1.0","sequence":1}'
+    node.udp_socket = SimpleNamespace(recvfrom=mock.Mock(side_effect=[
+        (packet.encode(), ("127.0.0.1", 1234)), BlockingIOError(),
+    ]))
+    node.poll_udp()
+    assert events == ["ingest", "publish"]
+    assert published == [packet]
+    node.on_feedback(SimpleNamespace(data=packet))  # One self echo only.
+    assert events == ["ingest", "publish"]
+    assert node.invalid_payload_count == 0
+    node.on_feedback(SimpleNamespace(data=packet))  # A further replay still fails.
+    assert node.invalid_payload_count == 1
+    external = packet.replace('"sequence":1', '"sequence":2')
+    node.on_feedback(SimpleNamespace(data=external))
+    assert seen == {1, 2} and published == [packet]
+    node.udp_socket.recvfrom = mock.Mock(side_effect=[
+        (b"invalid JSON", ("127.0.0.1", 1234)), BlockingIOError(),
+    ])
+    node.poll_udp()
+    assert node.invalid_payload_count == 2 and published == [packet]
 
 
 def test_stale_or_unpaired_controller_metadata_is_explicitly_unknown():

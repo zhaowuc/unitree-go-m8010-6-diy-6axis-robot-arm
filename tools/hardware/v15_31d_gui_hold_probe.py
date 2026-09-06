@@ -347,7 +347,10 @@ def run_live(ros_args, binding):
         nonlocal next_confirmation_s, confirmation_count
         try:
             if gui.rclpy.ok(context=node.context):
-                gui.pump_ros_callbacks(node, gui.rclpy.spin_once)
+                # Four domains add about 400 Hz of raw diagnostic feedback.
+                # Drain at most 32 nonblocking callbacks; keep the GUI budget unchanged.
+                for _ in range(4):
+                    gui.pump_ros_callbacks(node, gui.rclpy.spin_once)
             if not probe.done and probe.stage != "terminal":
                 binding.ensure_not_expired()
                 hardware = node.latest_hardware
