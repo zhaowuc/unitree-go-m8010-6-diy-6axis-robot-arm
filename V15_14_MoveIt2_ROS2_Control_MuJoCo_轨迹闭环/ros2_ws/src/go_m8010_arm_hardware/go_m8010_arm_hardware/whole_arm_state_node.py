@@ -42,6 +42,7 @@ from .state_model import (
     unavailable_worker_control_status,
     validate_j6_feedback_identity,
     validate_worker_supervisor_status,
+    validate_preserved_session_reference,
 )
 from .thermal_manager import (
     THERMAL_CONFIG_SHA256,
@@ -369,6 +370,7 @@ def load_j2_session_reference(
 ) -> tuple[dict[str, float], dict[str, float], str]:
     data = path.read_bytes()
     document = json.loads(data)
+    validate_preserved_session_reference(document)
     if document.get("schema") != "go-m8010-j2-power-session-reference/1.0":
         raise ValueError("J2 session reference schema mismatch")
     if document.get("reference_name") != "PERSISTENT_SOFTWARE_ZERO_V1":
@@ -462,6 +464,7 @@ def load_go_aux_session_reference(
 ) -> tuple[dict[str, float], dict[str, float], str]:
     data = path.read_bytes()
     document = json.loads(data)
+    validate_preserved_session_reference(document)
     if document.get("schema") != "go-m8010-go-aux-power-session-reference/1.0":
         raise ValueError("GO-AUX session reference schema mismatch")
     if document.get("reference_name") != "PERSISTENT_SOFTWARE_ZERO_V1":

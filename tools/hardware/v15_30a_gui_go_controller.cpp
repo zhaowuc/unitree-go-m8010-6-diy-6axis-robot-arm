@@ -1026,6 +1026,8 @@ struct MotorRuntime {
   bool session_reference_configured = false;
   double session_reference = 0.0;
   double session_logical_position = 0.0;
+  double session_capture_raw_position = 0.0;
+  double session_startup_logical_position = 0.0;
   bool valid = false;
   // Transport/mode health for the most recent transaction only.  `valid`
   // remains the five-frame hard-fault latch input so a single bad frame does
@@ -1054,6 +1056,8 @@ struct MotorRuntime {
   int slow_speed_count = 0;
   bool velocity_degraded = false;
 };
+
+double reference_for_j2_session(double unwrapped, const MotorRuntime& motor);
 
 struct J2GovernedReference {
   bool feasible = false;
@@ -1937,6 +1941,152 @@ std::string load_recovery_hints(const std::string& path,
   return source.sha256;
 }
 
+bool validate_preserved_session_geometry(const nlohmann::json& document) {
+  if (!document.contains("preserved_reference")) return false;
+  const auto& proof = document.at("preserved_reference");
+  if (proof.at("schema") != "go-m8010-preserved-session-reference/1.0")
+    throw std::runtime_error("PRESERVED_REFERENCE_SCHEMA_MISMATCH");
+  const auto source_file = read_secure_owned_file(
+      proof.at("source_path").get<std::string>(), 4194304U,
+      "PRESERVED_REFERENCE_OPEN_FAILED", "PRESERVED_REFERENCE_FILE_UNSAFE",
+      "PRESERVED_REFERENCE_READ_FAILED");
+  if (source_file.sha256 != proof.at("source_sha256").get<std::string>())
+    throw std::runtime_error("PRESERVED_REFERENCE_SHA256_MISMATCH");
+  const auto source = parse_json_bytes(source_file.data, "PRESERVED_REFERENCE_JSON_INVALID");
+  if (source.contains("preserved_reference") || source.at("anchor_version") != 1)
+    throw std::runtime_error("PRESERVED_REFERENCE_REQUIRES_ORIGINAL_GEOMETRY");
+  const auto& evidence = source.at("source_evidence");
+  const auto evidence_file = read_secure_owned_file(
+      evidence.at("path").get<std::string>(), 4194304U,
+      "PRESERVED_RAW_EVIDENCE_OPEN_FAILED", "PRESERVED_RAW_EVIDENCE_FILE_UNSAFE",
+      "PRESERVED_RAW_EVIDENCE_READ_FAILED");
+  const auto& embedded = source.at("raw_capture");
+  if (evidence_file.sha256 != evidence.at("sha256").get<std::string>() ||
+      embedded.at("source_file_sha256") != evidence.at("sha256"))
+    throw std::runtime_error("PRESERVED_RAW_EVIDENCE_SHA256_MISMATCH");
+  const auto capture = parse_json_bytes(evidence_file.data, "PRESERVED_RAW_EVIDENCE_JSON_INVALID");
+  if (capture.at("schema") != embedded.at("source_schema") ||
+      capture.at("status") != "PASS" || capture.at("physical_power_state_during_capture") != "24V_ON")
+    throw std::runtime_error("PRESERVED_RAW_EVIDENCE_STATUS_INVALID");
+  for (const char* field : {"capture_id", "power_session_id", "host_boot_id", "recorded_boottime_ns"})
+    if (capture.at(field) != embedded.at(field))
+      throw std::runtime_error("PRESERVED_RAW_EVIDENCE_IDENTITY_MISMATCH");
+  const auto utc_text = [](std::string value) {
+    if (!value.empty() && value.back() == 'Z') value.replace(value.size() - 1, 1, "+00:00");
+    return value;
+  };
+  if (utc_text(capture.at("recorded_at_utc").get<std::string>()) !=
+      utc_text(embedded.at("recorded_at_utc").get<std::string>()))
+    throw std::runtime_error("PRESERVED_RAW_EVIDENCE_TIMESTAMP_MISMATCH");
+  const auto& confirmation = source.at("operator_confirmation");
+  for (const char* field : {"vertical_initialization_pose", "support_reliable", "arm_not_moved", "not_at_mechanical_limit"})
+    if (!confirmation.at(field).get<bool>())
+      throw std::runtime_error("PRESERVED_REFERENCE_CONFIRMATION_MISSING");
+  const bool source_j2 = source.at("motors").contains("J2A");
+  const std::string expected_gate = std::string(source_j2 ? "J2_VERTICAL" : "WHOLE_ARM_VERTICAL") +
+      "=YES;SUPPORT_RELIABLE=YES;ARM_STATIONARY=YES;NOT_AT_MECHANICAL_LIMIT=YES";
+  if (confirmation.at("confirmation_gate") != expected_gate ||
+      confirmation.at("power_session_id") != capture.at("power_session_id") ||
+      confirmation.at("evidence_id").get<std::string>().empty() ||
+      confirmation.at("confirmed_at_utc").get<std::string>().empty())
+    throw std::runtime_error("PRESERVED_REFERENCE_CONFIRMATION_SCOPE_MISMATCH");
+  const auto& safety = capture.at("safety");
+  if (safety.at("execution_policy") != "BRAKE_ONLY" ||
+      safety.at("all_controller_modes") != nlohmann::json::array({"brake"}) ||
+      safety.at("command_rx_enabled").get<bool>())
+    throw std::runtime_error("PRESERVED_RAW_EVIDENCE_NOT_BRAKE_ONLY");
+  for (const char* field : {"foc_tx_attempt_count", "active_or_hold_commands_sent", "communication_failure_packets", "merror_nonzero_packets"})
+    if (!safety.at(field).is_number_integer() || safety.at(field).get<int>() != 0)
+      throw std::runtime_error("PRESERVED_RAW_EVIDENCE_FAULT_OR_ACTIVE_COMMAND");
+  for (const char* field : {"motor_internal_zero_modified", "rid_written", "flash_or_eeprom_written"})
+    if (safety.at(field).get<bool>())
+      throw std::runtime_error("PRESERVED_RAW_EVIDENCE_FORBIDDEN_WRITE");
+  if (capture.at("motors").size() != embedded.at("motors").size())
+    throw std::runtime_error("PRESERVED_RAW_EVIDENCE_MOTOR_SET_MISMATCH");
+  for (auto item = capture.at("motors").begin(); item != capture.at("motors").end(); ++item) {
+    for (const char* field : {"sample_count", "unwrapped_raw_position_rad"})
+      if (item.value().at(field) != embedded.at("motors").at(item.key()).at(field))
+        throw std::runtime_error("PRESERVED_RAW_EVIDENCE_STATISTICS_MISMATCH");
+    const auto& domain = source_j2 ? capture : capture.at("domains").at(item.key() == "J1" ? "j1" : "j345");
+    const auto& stats = item.value().at("unwrapped_raw_position_rad");
+    const double coverage = domain.at("source_coverage_s").get<double>();
+    const int count = domain.at("packet_count").get<int>();
+    const double minimum = stats.at("minimum").get<double>(), maximum = stats.at("maximum").get<double>();
+    const double mean = stats.at("mean").get<double>(), span = stats.at("span").get<double>();
+    const double deviation = stats.at("standard_deviation").get<double>();
+    if (!domain.at("packet_count").is_number_integer() || count < (source_j2 ? 450 : 500) ||
+        !std::isfinite(coverage) || coverage < 4.0 || item.value().at("sample_count") != count ||
+        source.at("motors").at(item.key()).at("sample_count") != count ||
+        !std::isfinite(minimum) || !std::isfinite(maximum) || !std::isfinite(mean) ||
+        !std::isfinite(span) || !std::isfinite(deviation) || minimum > mean || mean > maximum ||
+        span < 0.0 || span > kGear * kBrakeStationaritySpan ||
+        deviation < 0.0 || deviation > span + 1e-12 || std::abs(maximum - minimum - span) > 1e-12 + span * 1e-9 ||
+        source.at("motors").at(item.key()).at("sample_span_raw_rad") != span)
+      throw std::runtime_error("PRESERVED_RAW_EVIDENCE_COVERAGE_OR_STATIONARITY_INVALID");
+  }
+  if (source_j2) {
+    const auto& summary = capture.at("raw_safety_summary");
+    for (const char* field : {"startup_brake_prime", "phase_tx_accounting"})
+      if (embedded.at(field) != summary.at(field))
+        throw std::runtime_error("PRESERVED_RAW_EVIDENCE_J2_PROOF_MISMATCH");
+    for (const char* field : {"path", "sha256", "terminal_proof"})
+      if (embedded.at("worker").at(field) != summary.at("worker").at(field))
+        throw std::runtime_error("PRESERVED_RAW_EVIDENCE_WORKER_MISMATCH");
+    for (const char* field : {"packet_count", "source_coverage_s"})
+      if (embedded.at(field) != capture.at(field))
+        throw std::runtime_error("PRESERVED_RAW_EVIDENCE_COVERAGE_MISMATCH");
+  } else {
+    if (embedded.at("worker") != capture.at("worker") ||
+        embedded.at("domains").size() != capture.at("domains").size())
+      throw std::runtime_error("PRESERVED_RAW_EVIDENCE_GO_AUX_PROOF_MISMATCH");
+    for (auto domain = capture.at("domains").begin(); domain != capture.at("domains").end(); ++domain)
+      for (const char* field : {"packet_count", "source_coverage_s", "motor_names"})
+        if (domain.value().at(field) != embedded.at("domains").at(domain.key()).at(field))
+          throw std::runtime_error("PRESERVED_RAW_EVIDENCE_GO_AUX_PROOF_MISMATCH");
+  }
+  for (const char* field : {"schema", "reference_name", "parent_persistent_zero_sha256"})
+    if (source.at(field) != document.at(field))
+      throw std::runtime_error("PRESERVED_REFERENCE_PARENT_MISMATCH");
+  for (const char* field : {"recovery_branch_hints_sha256", "initial_pose_sha256"})
+    if (source.at("preserved_inputs").at(field) != document.at("preserved_inputs").at(field))
+      throw std::runtime_error("PRESERVED_REFERENCE_INPUT_MISMATCH");
+  for (const char* field : {"is_software_zero", "authorizes_active_control", "authorizes_motor_internal_write"})
+    if (source.at("control_authority").at(field).get<bool>())
+      throw std::runtime_error("PRESERVED_REFERENCE_SCOPE_INVALID");
+  for (const char* field : {"motor_internal_zero_modified", "rid_written", "flash_or_eeprom_written"})
+    if (source.at("writes").at(field).get<bool>())
+      throw std::runtime_error("PRESERVED_REFERENCE_WRITE_INVALID");
+  if (source.at("motors").size() != document.at("motors").size())
+    throw std::runtime_error("PRESERVED_REFERENCE_MOTOR_SET_MISMATCH");
+  for (auto item = document.at("motors").begin(); item != document.at("motors").end(); ++item) {
+    for (const char* field : {"session_reference_raw_rad", "logical_position_rad", "sign", "gear_ratio"})
+      if (item.value().at(field) != source.at("motors").at(item.key()).at(field))
+        throw std::runtime_error("PRESERVED_REFERENCE_GEOMETRY_CHANGED");
+    if (std::abs(source.at("motors").at(item.key()).at("session_reference_raw_rad").get<double>() -
+        source.at("raw_capture").at("motors").at(item.key()).at("unwrapped_raw_position_rad").at("mean").get<double>()) > 1e-12)
+      throw std::runtime_error("PRESERVED_REFERENCE_ORIGINAL_CAPTURE_MISMATCH");
+  }
+  return true;
+}
+
+void apply_session_capture_reference(
+    MotorRuntime& motor, const nlohmann::json& value,
+    const nlohmann::json& statistics, bool preserved) {
+  motor.session_capture_raw_position = statistics.at("mean").get<double>();
+  motor.session_startup_logical_position = motor.sign *
+      (motor.session_capture_raw_position -
+       reference_for_j2_session(motor.session_capture_raw_position, motor)) / kGear;
+  if (preserved) {
+    (void)reference_for_j2_session(statistics.at("minimum").get<double>(), motor);
+    (void)reference_for_j2_session(statistics.at("maximum").get<double>(), motor);
+    const double claimed = value.at("startup_logical_position_rad").get<double>();
+    if (!std::isfinite(claimed) ||
+        std::abs(claimed - motor.session_startup_logical_position) > 1e-12 ||
+        !within_mechanical_feedback_envelope(motor.joint_index, claimed))
+      throw std::runtime_error("PRESERVED_REFERENCE_STARTUP_POSITION_MISMATCH");
+  }
+}
+
 void apply_j2_session_reference_document(
     const nlohmann::json& document,
     const std::string& expected_zero_sha256,
@@ -1944,6 +2094,7 @@ void apply_j2_session_reference_document(
     const std::string& expected_power_session_id,
     const std::string& expected_host_boot_id,
     std::vector<MotorRuntime>& motors) {
+  const bool preserved_geometry = validate_preserved_session_geometry(document);
   if (!valid_sha256(expected_zero_sha256))
     throw std::runtime_error("J2_SESSION_PARENT_SHA256_INVALID");
   if (!valid_sha256(actual_recovery_hint_sha256))
@@ -2033,8 +2184,8 @@ void apply_j2_session_reference_document(
         sign != motor.sign || !std::isfinite(gear) ||
         std::abs(gear - kGear) > 1e-6 || std::abs(logical) > 1e-9 ||
         raw_value.at("sample_count").get<int>() != samples ||
-        std::abs(raw_statistics.at("mean").get<double>() - reference) >
-            1e-12 ||
+        (!preserved_geometry &&
+         std::abs(raw_statistics.at("mean").get<double>() - reference) > 1e-12) ||
         std::abs(raw_statistics.at("span").get<double>() - span) > 1e-12)
       throw std::runtime_error("J2_SESSION_REFERENCE_MOTOR_VALUE_INVALID");
     if (!motor.recovery_hint_configured ||
@@ -2043,12 +2194,16 @@ void apply_j2_session_reference_document(
     motor.session_reference = reference;
     motor.session_logical_position = logical;
     motor.session_reference_configured = true;
+    apply_session_capture_reference(motor, value, raw_statistics, preserved_geometry);
   }
   if (motors.size() != 2U ||
       !std::all_of(motors.begin(), motors.end(), [](const MotorRuntime& motor) {
         return motor.session_reference_configured;
       }))
     throw std::runtime_error("J2_SESSION_REFERENCE_INCOMPLETE");
+  if (preserved_geometry && std::abs(motors[0].session_startup_logical_position -
+          motors[1].session_startup_logical_position) > kJ2SyncLimit)
+    throw std::runtime_error("PRESERVED_REFERENCE_J2_SYNC_EXCEEDED");
 }
 
 std::string canonical_existing_path(const std::string& path,
@@ -2092,6 +2247,7 @@ void apply_go_aux_session_reference_document(
     const std::string& expected_power_session_id,
     const std::string& expected_host_boot_id,
     std::vector<MotorRuntime>& motors) {
+  const bool preserved_geometry = validate_preserved_session_geometry(document);
   if (!valid_sha256(expected_zero_sha256) ||
       !valid_sha256(actual_recovery_hint_sha256) ||
       !valid_power_session_id(expected_power_session_id) ||
@@ -2175,12 +2331,14 @@ void apply_go_aux_session_reference_document(
         sign != motor.sign || !std::isfinite(gear) ||
         std::abs(gear - kGear) > 1e-6 ||
         raw_value.at("sample_count").get<int>() != samples ||
-        std::abs(statistics.at("mean").get<double>() - reference) > 1e-12 ||
+        (!preserved_geometry &&
+         std::abs(statistics.at("mean").get<double>() - reference) > 1e-12) ||
         std::abs(statistics.at("span").get<double>() - span) > 1e-12)
       throw std::runtime_error("GO_AUX_SESSION_REFERENCE_MOTOR_VALUE_INVALID");
     motor.session_reference = reference;
     motor.session_logical_position = logical;
     motor.session_reference_configured = true;
+    apply_session_capture_reference(motor, value, statistics, preserved_geometry);
   }
   if (!std::all_of(motors.begin(), motors.end(), [](const MotorRuntime& motor) {
         return motor.session_reference_configured;
@@ -7081,6 +7239,7 @@ bool recover_go_transport_in_brake(
   std::vector<std::deque<double>> stable_windows(motors.size());
   std::chrono::milliseconds reopen_delay(100);
   std::uint64_t reopen_attempt = 0U;
+  int invalid_transport_cycles = 0;
 
   while (!g_stop.load()) {
     if (!serial) {
@@ -7090,7 +7249,6 @@ bool recover_go_transport_in_brake(
             definition.port, 16, 4000000, 20000, BlockYN::NO,
             bytesize_t::eightbits, parity_t::parity_none,
             stopbits_t::stopbits_one, flowcontrol_t::flowcontrol_none);
-        reopen_delay = std::chrono::milliseconds(100);
         std::cerr << "COMMUNICATION_TRANSPORT_REOPENED"
                   << " bus=" << bus
                   << " episode=" << episode
@@ -7111,6 +7269,7 @@ bool recover_go_transport_in_brake(
     }
 
     bool cycle_safe = true;
+    bool transport_valid = true;
     for (std::size_t index = 0; index < motors.size(); ++index) {
       auto& motor = motors[index];
       motor.last_tau_cmd_rotor_nm = 0.0;
@@ -7120,6 +7279,7 @@ bool recover_go_transport_in_brake(
           *serial, brake, motor.id, kBrakeMode, audit);
       if (!feedback.continuity_valid) {
         cycle_safe = false;
+        transport_valid = false;
         stable_windows[index].clear();
         continue;
       }
@@ -7134,15 +7294,18 @@ bool recover_go_transport_in_brake(
       const double logical =
           motor.sign * (motor.unwrapped - motor.reference) / kGear;
       const double phase_reference = motor.session_reference_configured
-          ? motor.session_reference : motor.reference;
+          ? motor.session_capture_raw_position : motor.reference;
       const double phase_delta = std::abs(std::remainder(
           motor.unwrapped - phase_reference, 2.0 * kPi));
       const bool sample_safe = feedback.data.merror == 0 &&
           feedback.data.temp >= 0 &&
           feedback.data.temp < g_thermal_policy.thermal_stop_c &&
-          std::isfinite(logical) &&
-          within_mechanical_feedback_envelope(motor.joint_index, logical) &&
-          phase_delta <= maximum_phase_delta_rad + 1e-12;
+          // Raw BRAKE-only acquisition has no active-session pose authority.
+          // Preserve its diagnostic reference; never select a new zero here.
+          (audit.brake_only ||
+           (std::isfinite(logical) &&
+            within_mechanical_feedback_envelope(motor.joint_index, logical) &&
+            phase_delta <= maximum_phase_delta_rad + 1e-12));
       if (!sample_safe) {
         cycle_safe = false;
         stable_windows[index].clear();
@@ -7153,7 +7316,7 @@ bool recover_go_transport_in_brake(
       while (window.size() > 5U) window.pop_front();
     }
 
-    if (cycle_safe && bus == "j2" && motors.size() == 2U) {
+    if (cycle_safe && !audit.brake_only && bus == "j2" && motors.size() == 2U) {
       const double q_a =
           -1.0 * (motors[0].unwrapped - motors[0].reference) / kGear;
       const double q_b =
@@ -7193,6 +7356,19 @@ bool recover_go_transport_in_brake(
                 << " repreview_required=YES"
                 << std::endl;
       return true;
+    }
+    if (transport_valid) {
+      invalid_transport_cycles = 0;
+      reopen_delay = std::chrono::milliseconds(100);
+    } else if (++invalid_transport_cycles >= invalid_feedback_limit_for_bus(bus)) {
+      // An adapter can disappear again while recovery is waiting for frames.
+      // Resolve the stable by-id path again instead of retaining its old fd.
+      serial.reset();
+      invalid_transport_cycles = 0;
+      for (auto& window : stable_windows) window.clear();
+      std::this_thread::sleep_for(reopen_delay);
+      reopen_delay = std::min(
+          reopen_delay * 2, std::chrono::milliseconds(2000));
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
@@ -8470,7 +8646,7 @@ int run(const Options& options) {
       const bool sustained_invalid = observe_feedback_frame_validity(
           motor, feedback.continuity_valid,
           invalid_feedback_limit_for_bus(options.bus));
-      if (active_power_session && sustained_invalid)
+      if (sustained_invalid)
         j2_power_continuity_lost = true;
       if (options.bus == "j2" && sustained_invalid) j2_pair_ready = false;
       if (feedback.identity_ok) {
@@ -8675,7 +8851,7 @@ int run(const Options& options) {
                 << std::endl;
     }
 
-    if (active_power_session && j2_power_continuity_lost) {
+    if (j2_power_continuity_lost) {
       if (command_socket >= 0) {
         ::close(command_socket);
         command_socket = -1;
@@ -8711,13 +8887,15 @@ int run(const Options& options) {
       }
       j2_power_continuity_lost = false;
       j2_pair_ready = options.bus != "j2" || motors.size() == 2U;
-      command_socket = open_command_socket(definition);
-      std::cerr << "COMMUNICATION_COMMAND_RECEIVER_REOPENED"
-                << " bus=" << options.bus
-                << " command_port=" << definition.command_port
-                << " minimum_activation_epoch="
-                << command_safety.minimum_activation_epoch
-                << std::endl;
+      if (!options.brake_only) {
+        command_socket = open_command_socket(definition);
+        std::cerr << "COMMUNICATION_COMMAND_RECEIVER_REOPENED"
+                  << " bus=" << options.bus
+                  << " command_port=" << definition.command_port
+                  << " minimum_activation_epoch="
+                  << command_safety.minimum_activation_epoch
+                  << std::endl;
+      }
       continue;
     }
     if (active_power_session && !j2_startup_verified) {
@@ -8735,7 +8913,7 @@ int run(const Options& options) {
               motor.j2_startup_brake_history.end());
           const double phase_center = median(motor.j2_startup_brake_history);
           const double phase_delta = std::abs(std::remainder(
-              phase_center - motor.session_reference, 2.0 * kPi));
+              phase_center - motor.session_capture_raw_position, 2.0 * kPi));
           const double span = *minmax.second - *minmax.first;
           const double logical =
               motor.sign * (motor.unwrapped - motor.reference) / kGear;
@@ -8745,7 +8923,7 @@ int run(const Options& options) {
               phase_delta <=
                   j2_launch_permit.maximum_raw_phase_delta_rad + 1e-12 &&
               span <= j2_launch_permit.maximum_raw_span_rad + 1e-12 &&
-              std::abs(logical - motor.session_logical_position) <=
+              std::abs(logical - motor.session_startup_logical_position) <=
                   0.25 * kPi / 180.0 + 1e-12;
         }
         if (j2_active_session) {
@@ -8788,7 +8966,7 @@ int run(const Options& options) {
       const bool sustained_invalid = observe_feedback_frame_validity(
           motor, brake_feedback.continuity_valid,
           invalid_feedback_limit_for_bus(options.bus));
-      if (active_power_session && sustained_invalid)
+      if (sustained_invalid)
         j2_power_continuity_lost = true;
       if (brake_feedback.identity_ok) {
         motor.temperature = brake_feedback.data.temp;

@@ -342,9 +342,10 @@ class J2SessionPermitContractTest(unittest.TestCase):
             self.assertIn(evidence, self.controller)
         # One malformed reply is published as communication_ok=false but does
         # not unload the pair. Sustained loss closes the command socket and
-        # recovers in BRAKE before reopening it with a higher epoch required.
+        # recovers in BRAKE. Raw BRAKE-only workers recover too, but never
+        # open a command socket; active workers still require a higher epoch.
         invalid_mark = self.controller.index(
-            "if (active_power_session && sustained_invalid)"
+            "if (sustained_invalid)"
         )
         recover = self.controller.index(
             "recover_go_transport_in_brake(", invalid_mark
@@ -354,6 +355,7 @@ class J2SessionPermitContractTest(unittest.TestCase):
         )
         self.assertLess(invalid_mark, recover)
         self.assertLess(recover, reopen)
+        self.assertIn("if (!options.brake_only)", self.controller[recover:reopen])
 
     def test_issuer_and_consumer_share_lifecycle_and_time_bounds(self) -> None:
         for source in (self.controller, self.issuer):

@@ -1,0 +1,65 @@
+{
+  "status": "COMPLETED",
+  "ctrl_mode_after_write": 2,
+  "runtime_mode_write": {
+    "operator_gate": "PASS",
+    "rid": 10,
+    "from": 1,
+    "to": 2,
+    "rid10_write_attempt_count": 1,
+    "rid10_write_count": 1,
+    "flash_eeprom_save_used": false,
+    "automatic_mit_rollback_used": false,
+    "rid10_write_intent_durable": true,
+    "write_sent_at_utc": "2026-09-06T07:49:20.373614+00:00"
+  },
+  "final_disable": {
+    "fd_send_attempts": 3,
+    "fd_send_successes": 3,
+    "required_fd_sends": 3,
+    "feedback_frames": 5,
+    "required_disabled_frames": 5,
+    "states": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "confirmed": true,
+    "errors": []
+  },
+  "posvel_disabled_baseline": {
+    "valid_frames": 100,
+    "total_required": 100,
+    "q_median_rad": -2.148661020828566,
+    "q_mean_rad": -2.1485351338979175,
+    "q_std_rad": 0.00026459667557655897,
+    "q_min_rad": -2.1490424963759835,
+    "q_max_rad": -2.1478980697337295,
+    "velocity_min_rad_s": -0.0769230769230802,
+    "velocity_max_rad_s": 0.0329670329670364,
+    "mos_temperature_min_c": 36,
+    "mos_temperature_max_c": 36,
+    "coil_temperature_min_c": 33,
+    "coil_temperature_max_c": 33,
+    "states": [
+      "DISABLED"
+    ],
+    "status": "PASS",
+    "q_before_switch_median_rad": -2.148661020828566,
+    "mode_switch_only_delta_rad": 0.0,
+    "mode_switch_only_delta_deg": 0.0,
+    "session_reference_semantics": "SESSION_LOCAL_ONLY_NOT_ZERO_OR_READY"
+  },
+  "safety": {
+    "motor_state_required": "DISABLED",
+    "flash_eeprom_save_used": false,
+    "set_zero_used": false,
+    "id_write_used": false,
+    "other_rid_write_used": false,
+    "automatic_mit_rollback_used": false,
+    "final_fd_send_minimum": 3,
+    "final_disabled_feedback_minimum": 5
+  }
+}

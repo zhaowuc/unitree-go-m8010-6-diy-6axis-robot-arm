@@ -7,9 +7,13 @@ contract can be tested without a robot or ROS installation.
 from __future__ import annotations
 
 import math
+import hashlib
+import json
 import statistics
 from collections import deque
 from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
 from typing import Deque, Dict, Iterable, Mapping, Optional
 
 
@@ -74,6 +78,149 @@ def _valid_sha256(value: object) -> bool:
     )
 J2_SESSION_STARTUP_TOLERANCE_RAD = math.radians(2.0)
 SESSION_STARTUP_TOLERANCE_RAD = J2_SESSION_STARTUP_TOLERANCE_RAD
+PRESERVED_SESSION_REFERENCE_SCHEMA = "go-m8010-preserved-session-reference/1.0"
+
+
+def session_reference_for_raw(raw: float, reference: float, hint: float, sign: int) -> float:
+    """Select the existing nearby rotor-turn branch without changing its zero."""
+    if sign not in (-1, 1) or not all(math.isfinite(v) for v in (raw, reference, hint)):
+        raise ValueError("invalid power-session reference mapping")
+    selected = reference + round(
+        (raw - sign * GEAR_RATIO * hint - reference) / (2.0 * math.pi)
+    ) * (2.0 * math.pi)
+    if abs(sign * (raw - selected) / GEAR_RATIO - hint) > SESSION_STARTUP_TOLERANCE_RAD:
+        raise ValueError("power-session reference startup mismatch")
+    return selected
+
+
+def validate_preserved_session_reference(document: dict) -> dict[str, float]:
+    """Recompute fresh startup positions from a hash-pinned, unchanged old mapping."""
+    proof = document.get("preserved_reference")
+    if proof is None:
+        return {}
+    if not isinstance(proof, dict) or proof.get("schema") != PRESERVED_SESSION_REFERENCE_SCHEMA:
+        raise ValueError("preserved session-reference schema mismatch")
+    source_path = Path(proof["source_path"])
+    if source_path.is_symlink() or not source_path.is_file() or source_path.stat().st_size > 4_194_304:
+        raise ValueError("preserved source must be a bounded regular file")
+    data = source_path.read_bytes()
+    if not _valid_sha256(proof.get("source_sha256")) or hashlib.sha256(data).hexdigest() != proof["source_sha256"]:
+        raise ValueError("preserved source SHA256 mismatch")
+    source = json.loads(data)
+    # Every recovery refers to the same original geometry, so there is no
+    # growing chain of calibration files or recursively interpreted offsets.
+    if source.get("preserved_reference") is not None:
+        raise ValueError("preserve the original session geometry, not a recovery chain")
+    evidence = source["source_evidence"]
+    evidence_path = Path(evidence["path"])
+    if evidence_path.is_symlink() or not evidence_path.is_file() or evidence_path.stat().st_size > 4_194_304:
+        raise ValueError("preserved raw evidence must be a bounded regular file")
+    evidence_data = evidence_path.read_bytes()
+    if not _valid_sha256(evidence.get("sha256")) or hashlib.sha256(evidence_data).hexdigest() != evidence["sha256"]:
+        raise ValueError("preserved raw evidence SHA256 mismatch")
+    capture = json.loads(evidence_data)
+    embedded = source["raw_capture"]
+    if (capture.get("schema") != embedded.get("source_schema")
+            or capture.get("status") != "PASS" or capture.get("physical_power_state_during_capture") != "24V_ON"
+            or embedded.get("source_file_sha256") != evidence["sha256"]):
+        raise ValueError("preserved raw evidence status/schema mismatch")
+    for field in ("capture_id", "power_session_id", "host_boot_id", "recorded_boottime_ns"):
+        if capture[field] != embedded[field]:
+            raise ValueError(f"preserved raw evidence {field} mismatch")
+    if datetime.fromisoformat(capture["recorded_at_utc"].replace("Z", "+00:00")) != datetime.fromisoformat(embedded["recorded_at_utc"].replace("Z", "+00:00")):
+        raise ValueError("preserved raw evidence timestamp mismatch")
+    confirmation = source["operator_confirmation"]
+    if (any(confirmation.get(field) is not True for field in (
+            "vertical_initialization_pose", "support_reliable", "arm_not_moved", "not_at_mechanical_limit"))
+            or confirmation.get("power_session_id") != capture["power_session_id"]
+            or not confirmation.get("evidence_id") or not confirmation.get("confirmed_at_utc")):
+        raise ValueError("preserved source physical confirmation is incomplete")
+    expected_gate = ("J2_VERTICAL" if "J2A" in source["motors"] else "WHOLE_ARM_VERTICAL") + "=YES;SUPPORT_RELIABLE=YES;ARM_STATIONARY=YES;NOT_AT_MECHANICAL_LIMIT=YES"
+    if confirmation.get("confirmation_gate") != expected_gate:
+        raise ValueError("preserved source physical confirmation scope mismatch")
+    safety = capture["safety"]
+    if safety.get("execution_policy") != "BRAKE_ONLY" or safety.get("all_controller_modes") != ["brake"] or safety.get("command_rx_enabled") is not False:
+        raise ValueError("preserved raw evidence is not BRAKE-only")
+    for field in ("foc_tx_attempt_count", "active_or_hold_commands_sent", "communication_failure_packets", "merror_nonzero_packets"):
+        if type(safety.get(field)) is not int or safety[field] != 0:
+            raise ValueError("preserved raw evidence contains an active command or fault")
+    for field in ("motor_internal_zero_modified", "rid_written", "flash_or_eeprom_written"):
+        if safety.get(field) is not False:
+            raise ValueError("preserved raw evidence records a forbidden write")
+    if set(capture["motors"]) != set(embedded["motors"]):
+        raise ValueError("preserved raw evidence motor set mismatch")
+    minimum_samples = 450 if "J2A" in source["motors"] else 500
+    domains = {"j2": capture} if minimum_samples == 450 else capture["domains"]
+    for domain in domains.values():
+        if type(domain["packet_count"]) is not int or domain["packet_count"] < minimum_samples or not math.isfinite(domain["source_coverage_s"]) or domain["source_coverage_s"] < 4.0:
+            raise ValueError("preserved raw evidence sampling coverage is insufficient")
+    for name, record in capture["motors"].items():
+        if any(record[field] != embedded["motors"][name][field] for field in ("sample_count", "unwrapped_raw_position_rad")):
+            raise ValueError(f"{name} preserved raw statistics mismatch")
+        domain = domains["j2" if minimum_samples == 450 else "j1" if name == "J1" else "j345"]
+        stats = record["unwrapped_raw_position_rad"]
+        values = [stats[k] for k in ("minimum", "mean", "maximum", "span", "standard_deviation")]
+        if (record["sample_count"] != domain["packet_count"] or record["sample_count"] != source["motors"][name]["sample_count"]
+                or not all(type(v) in (int, float) and math.isfinite(v) for v in values)
+                or not stats["minimum"] <= stats["mean"] <= stats["maximum"]
+                or not 0 <= stats["span"] <= GEAR_RATIO * math.radians(0.2)
+                or not 0 <= stats["standard_deviation"] <= stats["span"] + 1e-12
+                or not math.isclose(stats["maximum"] - stats["minimum"], stats["span"], rel_tol=1e-9, abs_tol=1e-12)
+                or source["motors"][name]["sample_span_raw_rad"] != stats["span"]):
+            raise ValueError(f"{name} preserved raw evidence is not stationary")
+    if "J2A" in source["motors"]:
+        summary = capture["raw_safety_summary"]
+        if any(embedded[field] != summary[field] for field in ("startup_brake_prime", "phase_tx_accounting")) or any(embedded["worker"][field] != summary["worker"][field] for field in ("path", "sha256", "terminal_proof")):
+            raise ValueError("preserved J2 raw proof mismatch")
+        if any(embedded[field] != capture[field] for field in ("packet_count", "source_coverage_s")):
+            raise ValueError("preserved J2 sampling coverage mismatch")
+    else:
+        normalized_domains = {bus: {field: domain[field] for field in (
+            "packet_count", "source_coverage_s", "motor_names")}
+            for bus, domain in capture["domains"].items()}
+        if embedded["worker"] != capture["worker"] or embedded["domains"] != normalized_domains:
+            raise ValueError("preserved GO-AUX raw proof mismatch")
+    for field in ("schema", "reference_name", "parent_persistent_zero_sha256"):
+        if source.get(field) != document.get(field):
+            raise ValueError(f"preserved source {field} mismatch")
+    for field in ("recovery_branch_hints_sha256", "initial_pose_sha256"):
+        if source.get("preserved_inputs", {}).get(field) != document.get("preserved_inputs", {}).get(field):
+            raise ValueError(f"preserved source {field} mismatch")
+    if source.get("anchor_version") != 1 or any(
+        source.get("control_authority", {}).get(field) is not False
+        for field in ("is_software_zero", "authorizes_active_control", "authorizes_motor_internal_write")
+    ) or any(source.get("writes", {}).get(field) is not False for field in (
+        "motor_internal_zero_modified", "rid_written", "flash_or_eeprom_written"
+    )):
+        raise ValueError("preserved source scope is invalid")
+    motors = document["motors"]
+    if set(source["motors"]) != set(motors):
+        raise ValueError("preserved source motor set mismatch")
+    positions = {}
+    for name, record in motors.items():
+        original = source["motors"][name]
+        if not math.isclose(original["session_reference_raw_rad"],
+                source["raw_capture"]["motors"][name]["unwrapped_raw_position_rad"]["mean"],
+                rel_tol=0, abs_tol=1e-12):
+            raise ValueError(f"{name} original reference is not capture-bound")
+        for field in ("session_reference_raw_rad", "logical_position_rad", "sign", "gear_ratio"):
+            if record[field] != original[field]:
+                raise ValueError(f"{name} preserved geometry changed")
+        raw = document["raw_capture"]["motors"][name]["unwrapped_raw_position_rad"]
+        reference, hint, sign = (record["session_reference_raw_rad"], record["logical_position_rad"], record["sign"])
+        if not math.isclose(record["gear_ratio"], GEAR_RATIO, rel_tol=0, abs_tol=1e-6):
+            raise ValueError(f"{name} preserved gear ratio mismatch")
+        selected = session_reference_for_raw(raw["mean"], reference, hint, sign)
+        for edge in (raw["minimum"], raw["maximum"]):
+            session_reference_for_raw(edge, reference, hint, sign)
+        positions[name] = sign * (raw["mean"] - selected) / GEAR_RATIO
+        if not math.isclose(record["startup_logical_position_rad"], positions[name], rel_tol=0, abs_tol=1e-12):
+            raise ValueError(f"{name} startup position is not derived from raw capture")
+    if "J2A" in positions and abs(positions["J2A"] - positions["J2B"]) > math.radians(0.5):
+        raise ValueError("preserved J2 capture exceeds synchronization limit")
+    return positions
+
+
 VALID_FEEDBACK_MOTOR_SETS = frozenset({
     frozenset({"J1"}),
     frozenset({"J2A", "J2B"}),
@@ -560,15 +707,7 @@ class MirrorSessionReferenceV1:
             phase_reference = self.power_session_references[feedback.motor]
             hint = self.power_session_hints[feedback.motor]
             spec = MOTOR_SPECS[feedback.motor]
-            desired_reference = unwrapped - spec.sign * spec.gear_ratio * hint
-            reference = phase_reference + round(
-                (desired_reference - phase_reference) / (2.0 * math.pi)
-            ) * (2.0 * math.pi)
-            recovered = spec.sign * (unwrapped - reference) / spec.gear_ratio
-            if abs(recovered - hint) > SESSION_STARTUP_TOLERANCE_RAD:
-                raise ValueError(
-                    f"power-session reference startup mismatch for {feedback.motor}"
-                )
+            reference = session_reference_for_raw(unwrapped, phase_reference, hint, spec.sign)
             self.references[feedback.motor] = reference
             if self.captured_monotonic_ns is None:
                 self.captured_monotonic_ns = feedback.receipt_monotonic_ns

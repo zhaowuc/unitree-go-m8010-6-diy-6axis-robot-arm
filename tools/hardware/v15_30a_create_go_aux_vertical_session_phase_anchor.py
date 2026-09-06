@@ -390,6 +390,7 @@ def run(
         sidecar_sha=fingerprints["sidecar"], capture_path=capture_path,
         capture=capture, confirmation=confirmation,
     )
+    preserved_source_path = base.preserve_reference_if_requested(anchor, args, _validate_capture)
     timestamp = base.parse_utc_timestamp(
         capture["recorded_at_utc"], "capture time"
     ).strftime("%Y%m%dT%H%M%SZ")
@@ -414,11 +415,14 @@ def run(
     for paths in paths_by_bus.values():
         output_paths.extend(paths.values())
     protected = set(inputs)
+    if preserved_source_path is not None:
+        protected.add(preserved_source_path)
     if any(path.resolve() in protected for path in output_paths):
         raise base.AnchorValidationError("output aliases protected input")
     if len({path.resolve() for path in output_paths}) != len(output_paths):
         raise base.AnchorValidationError("output paths are not distinct")
     if args.apply:
+        base.validate_preserved_session_reference(anchor)
         if args.confirm != APPLY_GATE:
             raise base.AnchorValidationError(f"apply requires --confirm {APPLY_GATE}")
         permit_output_paths = [
@@ -467,6 +471,7 @@ def run(
         )}
         if after != fingerprints:
             raise base.AnchorValidationError("protected input changed during publication")
+        base.validate_preserved_session_reference(anchor)
     return {
         "schema": RESULT_SCHEMA,
         "applied": bool(args.apply),
@@ -501,6 +506,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--expected-initial-pose-sha256", required=True)
     parser.add_argument("--capture-statistics-file", type=Path, required=True)
     parser.add_argument("--expected-capture-sha256", required=True)
+    parser.add_argument("--preserve-reference-file", type=Path)
+    parser.add_argument("--expected-preserve-reference-sha256")
     parser.add_argument("--operator-evidence-id", required=True)
     parser.add_argument("--operator-confirmed-at-utc", required=True)
     parser.add_argument("--operator-power-session-id", required=True)

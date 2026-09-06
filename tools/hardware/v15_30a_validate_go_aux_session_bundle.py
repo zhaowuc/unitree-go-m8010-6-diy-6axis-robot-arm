@@ -9,10 +9,15 @@ import json
 import math
 import os
 import stat
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] /
+    "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware"))
+from go_m8010_arm_hardware.state_model import validate_preserved_session_reference
 
 
 ANCHOR_SCHEMA = "go-m8010-go-aux-power-session-reference/1.0"
@@ -139,6 +144,7 @@ def validate(args: argparse.Namespace) -> list[str]:
     permit_paths = {bus: file.path for bus, file in permit_files.items()}
     worker_path = worker_file.path
     anchor = load(anchor_file, "GO-AUX anchor")
+    validate_preserved_session_reference(anchor)
     zero_sha = zero_file.sha256
     hints_sha = hints_file.sha256
     initial_sha = initial_file.sha256

@@ -1038,6 +1038,7 @@ PY
 }
 
 validate_j2_session_launch_gate() {
+  PYTHONPATH="$ROS_WS/src/go_m8010_arm_hardware${PYTHONPATH:+:$PYTHONPATH}" \
   python3 - "$1" "$2" "$3" "$PERSISTENT_ZERO" \
     "$PERSISTENT_ZERO.sha256" "$RECOVERY_BRANCH_HINTS" "$INITIAL_POSE" \
     "$GO_BINARY" <<'PY'
@@ -1052,6 +1053,7 @@ import sys
 import time
 import uuid
 from datetime import datetime, timezone
+from go_m8010_arm_hardware.state_model import validate_preserved_session_reference
 
 (
     anchor_text,
@@ -1225,6 +1227,7 @@ try:
         raise ValueError("J2 launch permit is outside the canonical pending directory")
 
     anchor = load_json(anchor_path, "J2 session reference")
+    preserved_startup = validate_preserved_session_reference(anchor)
     permit = load_json(permit_path, "J2 launch permit", 131072)
     anchor_sha256 = digest(anchor_path)
     worker_sha256 = digest(worker_path)
@@ -1677,7 +1680,7 @@ try:
         )
         gear = finite_number(anchor_motor.get("gear_ratio"), f"{name} gear ratio")
         if (
-            not math.isclose(reference, mean, rel_tol=0.0, abs_tol=1e-12)
+            (not preserved_startup and not math.isclose(reference, mean, rel_tol=0.0, abs_tol=1e-12))
             or abs(logical) > 1e-9
             or not math.isclose(anchor_span, span, rel_tol=0.0, abs_tol=1e-12)
             or anchor_motor.get("sample_count") != packet_count

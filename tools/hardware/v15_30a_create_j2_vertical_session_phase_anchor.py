@@ -21,12 +21,20 @@ import hashlib
 import json
 import math
 import os
+import sys
 import tempfile
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] /
+    "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware"))
+from go_m8010_arm_hardware.state_model import (
+    PRESERVED_SESSION_REFERENCE_SCHEMA, session_reference_for_raw,
+    validate_preserved_session_reference,
+)
 
 
 ANCHOR_SCHEMA = "go-m8010-j2-power-session-reference/1.0"
@@ -817,6 +825,47 @@ def versioned_output_path(anchor_directory: Path, anchor: dict[str, Any]) -> Pat
     return anchor_directory.resolve() / filename
 
 
+def preserve_reference_if_requested(anchor: dict[str, Any], args: argparse.Namespace,
+                                    capture_validator=validate_capture) -> Path | None:
+    source_arg = getattr(args, "preserve_reference_file", None)
+    expected_sha = getattr(args, "expected_preserve_reference_sha256", None)
+    if bool(source_arg) != bool(expected_sha):
+        raise AnchorValidationError("preserve-reference requires both source file and SHA256")
+    if source_arg is None:
+        return None
+    source_path = source_arg.resolve(strict=True)
+    source, data = read_json(source_path)
+    source_sha = normalized_sha256(expected_sha, "preserved reference")
+    if sha256_bytes(data) != source_sha:
+        raise AnchorValidationError("preserved reference SHA256 mismatch")
+    evidence, evidence_data = read_json(Path(source["source_evidence"]["path"]))
+    normalized = capture_validator(evidence)
+    if source["raw_capture"] != {
+        "source_schema": evidence["schema"],
+        "source_file_sha256": sha256_bytes(evidence_data), **normalized,
+    }:
+        raise AnchorValidationError("preserved original capture does not match validated evidence")
+    anchor["preserved_reference"] = {
+        "schema": PRESERVED_SESSION_REFERENCE_SCHEMA,
+        "source_path": str(source_path), "source_sha256": source_sha,
+    }
+    for name, record in anchor["motors"].items():
+        original = source["motors"][name]
+        for field in ("session_reference_raw_rad", "logical_position_rad", "sign", "gear_ratio"):
+            record[field] = original[field]
+        raw = anchor["raw_capture"]["motors"][name]["unwrapped_raw_position_rad"]["mean"]
+        reference = session_reference_for_raw(
+            raw, record["session_reference_raw_rad"], record["logical_position_rad"], record["sign"]
+        )
+        record["startup_logical_position_rad"] = record["sign"] * (raw - reference) / GEAR_RATIO
+    validate_preserved_session_reference(anchor)
+    anchor["anchor_id"] = anchor["anchor_id"].rsplit("-", 1)[0] + "-" + sha256_bytes(
+        canonical_bytes({"anchor_id": anchor["anchor_id"], "preserved_source": source_sha})
+    )[:16]
+    anchor["derivation"]["startup_position_source"] = "FRESH_RAW_WITH_UNCHANGED_SESSION_GEOMETRY"
+    return source_path
+
+
 def current_host_boot_id(path: Path = HOST_BOOT_ID_PATH) -> str:
     try:
         value = path.read_text(encoding="ascii").strip()
@@ -1162,6 +1211,7 @@ def run(
         capture=capture,
         operator_confirmation=operator_confirmation,
     )
+    preserved_source_path = preserve_reference_if_requested(anchor, args)
     output_path = versioned_output_path(args.anchor_directory, anchor)
     anchor_data = json_bytes(anchor)
     anchor_sha256 = sha256_bytes(anchor_data)
@@ -1197,6 +1247,8 @@ def run(
         initial_pose_path,
         capture_path,
     }
+    if preserved_source_path is not None:
+        protected_paths.add(preserved_source_path)
     immutable_output_paths = [output_path, *permit_paths.values()]
     if any(path.resolve() in protected_paths for path in immutable_output_paths):
         raise AnchorValidationError("immutable output aliases protected input evidence")
@@ -1206,6 +1258,7 @@ def run(
         raise AnchorValidationError("immutable output paths must be distinct")
 
     if args.apply:
+        validate_preserved_session_reference(anchor)
         if args.confirm != APPLY_GATE:
             raise AnchorValidationError(f"apply requires --confirm {APPLY_GATE}")
         if publish_deferred_launch_permit:
@@ -1267,6 +1320,7 @@ def run(
             raise AnchorValidationError(
                 "protected input changed during launch-permit publication"
             )
+        validate_preserved_session_reference(anchor)
 
     return {
         "schema": "go-m8010-j2-vertical-session-phase-anchor-result/1.0",
@@ -1301,6 +1355,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--expected-initial-pose-sha256", required=True)
     parser.add_argument("--capture-statistics-file", type=Path, required=True)
     parser.add_argument("--expected-capture-sha256", required=True)
+    parser.add_argument("--preserve-reference-file", type=Path)
+    parser.add_argument("--expected-preserve-reference-sha256")
     parser.add_argument("--operator-evidence-id", required=True)
     parser.add_argument("--operator-confirmed-at-utc", required=True)
     parser.add_argument("--operator-power-session-id", required=True)
@@ -1320,7 +1376,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main() -> int:
     try:
         result = run(parse_args())
-    except (AnchorValidationError, FileNotFoundError, OSError) as exc:
+    except (ValueError, KeyError, TypeError, OSError) as exc:
         print(
             json.dumps(
                 {

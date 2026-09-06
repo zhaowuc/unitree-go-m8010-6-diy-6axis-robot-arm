@@ -1,0 +1,14 @@
+{
+  "master_id": 0,
+  "motor_id": 1,
+  "ctrl_mode": 1,
+  "pmax_rad": 12.5,
+  "writes": false,
+  "disabled_states": [
+    0,
+    0,
+    0,
+    0,
+    0
+  ]
+}

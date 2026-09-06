@@ -1,0 +1,141 @@
+{
+  "schema": "go-m8010-j6-disabled-raw-capture-statistics/1.0",
+  "capture_id": "j6-disabled-raw-20260906T073359415201Z-b5540e5d1a4c49f9",
+  "power_session_id": "j6-power-session-20260906T073359415201Z-b5540e5d1a4c49f98b2ff391f608c5aa",
+  "recorded_at_utc": "2026-09-06T07:33:59.415201Z",
+  "host_boot_id": "a5542fa1-f39c-42c3-b466-a47b0e50aac9",
+  "recorded_boottime_ns": 4597986810657492,
+  "pose_binding_id": "2a2dff64e4e18b084418ac389f02f359aa1cb5918b8b0e2c000544fd1e64d662",
+  "status": "PASS",
+  "hardware_accessed": true,
+  "physical_power_state_during_capture": "24V_ON",
+  "packet_count": 500,
+  "source_coverage_s": 50.009930259082466,
+  "safety": {
+    "execution_policy": "DISABLED_REFRESH_ONLY",
+    "total_tx_attempt_count": 505,
+    "refresh_request_count": 505,
+    "rid_read_request_count": 0,
+    "rid_write_count": 0,
+    "flash_or_eeprom_write_count": 0,
+    "motor_internal_zero_write_count": 0,
+    "set_zero_command_count": 0,
+    "fc_enable_count": 0,
+    "fd_disable_count": 0,
+    "position_velocity_torque_command_count": 0,
+    "other_tx_attempt_count": 0,
+    "forbidden_tx_attempt_count": 0,
+    "only_disabled_refresh_requests": true,
+    "observed_tx_audit": {
+      "total_tx_attempt_count": 505,
+      "refresh_request_count": 505,
+      "rid_read_request_count": 0,
+      "rid_write_count": 0,
+      "flash_or_eeprom_write_count": 0,
+      "motor_internal_zero_write_count": 0,
+      "set_zero_command_count": 0,
+      "fc_enable_count": 0,
+      "fd_disable_count": 0,
+      "position_velocity_torque_command_count": 0,
+      "other_tx_attempt_count": 0,
+      "forbidden_tx_attempt_count": 0,
+      "only_disabled_refresh_requests": true
+    },
+    "active_or_hold_commands_sent": 0,
+    "active_commands_sent": 0,
+    "hold_commands_sent": 0,
+    "motor_internal_zero_modified": false,
+    "rid_written": false,
+    "flash_or_eeprom_written": false
+  },
+  "motors": {
+    "J6": {
+      "sample_count": 500,
+      "raw_position_rad": {
+        "mean": -2.1484763866636154,
+        "median": -2.148279545281147,
+        "minimum": -2.1490424963759835,
+        "maximum": -2.1478980697337295,
+        "span": 0.001144426642254004,
+        "standard_deviation": 0.000250075770657231
+      },
+      "velocity_rad_s": {
+        "minimum": -0.0549450549450512,
+        "maximum": 0.0549450549450512,
+        "mean": -0.012615384615384528
+      },
+      "mos_temperature_c": {
+        "minimum": 36.0,
+        "maximum": 36.0
+      },
+      "coil_temperature_c": {
+        "minimum": 33.0,
+        "maximum": 33.0
+      },
+      "state_values": [
+        0
+      ],
+      "state_names": [
+        "DISABLED"
+      ]
+    }
+  },
+  "terminal": {
+    "final_disabled_frames": 5,
+    "required_final_disabled_frames": 5,
+    "states": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "state_names": [
+      "DISABLED",
+      "DISABLED",
+      "DISABLED",
+      "DISABLED",
+      "DISABLED"
+    ],
+    "confirmed": true,
+    "channel_closed": true
+  },
+  "failures": [],
+  "physical_power_off_required": false,
+  "physical_confirmation": {
+    "confirmation_gate": "J6_24V_ON=YES;SUPPORT_RELIABLE=YES;WHOLE_ARM_VERTICAL_INITIALIZATION_POSE=YES;ARM_STATIONARY=YES;NOT_AT_MECHANICAL_LIMIT=YES",
+    "j6_24v_on": true,
+    "support_reliable": true,
+    "whole_arm_vertical_initialization_pose": true,
+    "arm_stationary": true,
+    "not_at_mechanical_limit": true
+  },
+  "usb_identity": {
+    "sysfs": "/sys/bus/usb/devices/3-1",
+    "vid": "34b7",
+    "pid": "6877",
+    "serial": "EEE8D71AB573449FCAFE7B39BD222C75",
+    "manufacturer": "DaMiao-Tech",
+    "product": "DM-USB2FDCAN",
+    "busnum": "3",
+    "devnum": "11"
+  },
+  "raw_safety_summary": {
+    "local_capture_duration_s": 50.10981605807319,
+    "error_callback_count": 0,
+    "unknown_rx_callback_count": 0,
+    "expected_usb": {
+      "vid": "34b7",
+      "pid": "6877",
+      "serial": "EEE8D71AB573449FCAFE7B39BD222C75"
+    },
+    "expected_can_channel": 0,
+    "expected_motor_id": 1,
+    "expected_master_id": 0,
+    "branch_inputs_loaded": false,
+    "persistent_zero_loaded": false,
+    "recovery_hint_loaded": false,
+    "integer_turn_branch_inferred": false
+  },
+  "completed_at_utc": "2026-09-06T07:34:50.149217Z"
+}
