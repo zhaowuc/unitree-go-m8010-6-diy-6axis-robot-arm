@@ -4,7 +4,8 @@
 Other axes retain their original final targets; existing sequential correction
 segments are allowed only within 0.25 degrees and are recorded. No gains,
 geometry, preview gates, or motor transport are replaced. --execute requires a
-fresh empirical envelope: the final BRAKE spends it even after success.
+fresh empirical envelope: the final BRAKE spends it even after success. One to
+three cycles reuse one saved action file and the same initial HOLD target.
 """
 from __future__ import annotations
 
@@ -40,7 +41,9 @@ def check_recipe(recipe, origin):
 
 
 class J1Demo:
-    def __init__(self, window, observe, confirm, set_scale, start_group, *, now=time.monotonic):
+    def __init__(self, window, observe, confirm, set_scale, start_group, *, cycles=1, now=time.monotonic):
+        if type(cycles) is not int or not 1 <= cycles <= 3:
+            raise ValueError("cycles must be an integer from 1 to 3")
         self.window, self.observe, self.confirm = window, observe, confirm
         self.set_scale, self.start_group, self.now = set_scale, start_group, now
         self.started = now()
@@ -50,18 +53,36 @@ class J1Demo:
         self.last_confirmation = -float("inf")
         self.dialog, self.terminal = None, None
         self.action_group_file = None
+        self.requested_cycles, self.cycle_number = cycles, 1
+        self.maximum_seconds = MAXIMUM_SECONDS + 45.0 * (cycles - 1)
+        self.cycle_results = []
         self.success = self.done = False
         self.samples, self.events = [], []
 
     def stop(self, reason=None):
         if self.terminal is not None:
             return
+        record_failure = reason is not None and self.stage == "action_group"
         self.failure = reason
         self.stage = "terminal"
         self.terminal = HoldProbe(self.window, self.observe, now=self.now)
         self.terminal.identity = self.identity
         self.terminal.failure = reason
         self.terminal._terminal()
+        if record_failure:
+            self._record_cycle("FAIL", failure=reason)
+
+    def _record_cycle(self, status, **details):
+        runner = self.dialog.runner if self.dialog is not None else None
+        log_path = getattr(self.dialog, "log_path", None)
+        self.cycle_results.append({"cycle": self.cycle_number, "status": status,
+            "out_deg": None, "return_error_deg": None, **details,
+            "action_group_log": str(log_path) if log_path is not None else None,
+            "runner_result": getattr(runner, "result", None),
+            "action_group_events": list(runner.events) if runner is not None else [],
+            "recipe_events": [event for event in self.events
+                              if event.get("event") == "checked_recipe_before_submit"
+                              and event.get("cycle") == self.cycle_number]})
 
     def tick(self):
         if self.done:
@@ -72,9 +93,10 @@ class J1Demo:
             return
         try:
             now, sample = self.now(), self.observe()
-            self.samples.append({**sample, "stage": self.stage})
-            if now - self.started >= MAXIMUM_SECONDS - 3:
-                raise RuntimeError("177-second active deadline reached")
+            self.samples.append({**sample, "stage": self.stage,
+                                 "cycle": self.cycle_number if self.stage == "action_group" else None})
+            if now - self.started >= self.maximum_seconds - 3:
+                raise RuntimeError(f"{self.maximum_seconds - 3:g}-second active deadline reached")
             if self.origin is None:
                 if now - self.started >= 20:
                     raise RuntimeError("current-pose HOLD readiness timed out")
@@ -138,8 +160,8 @@ class J1Demo:
                         self.last_confirmation = now
                     elif sample["position_authorized"]:
                         self.window._tick()
-                        self.dialog = self.start_group(self.origin)
                         self.stage = "action_group"
+                        self.dialog = self.start_group(self.origin)
                 return
             runner = self.dialog.runner
             if runner is None or runner.state in {"failed", "stopped"}:
@@ -160,28 +182,39 @@ class J1Demo:
                 returned = arrivals[1]["actual_model_deg"][0] - initial
                 if not 0.75 <= displacement <= 1.25 or abs(returned) > 0.25:
                     raise RuntimeError("measured J1 out/back displacement failed demo bounds")
-                self.events.append({"event": "measured_j1_out_and_back", "out_deg": displacement, "return_error_deg": returned})
-                self.success = True
-                self.stop()
+                self.events.append({"event": "measured_j1_out_and_back", "cycle": self.cycle_number,
+                                    "out_deg": displacement, "return_error_deg": returned})
+                self._record_cycle("PASS", out_deg=displacement, return_error_deg=returned)
+                if self.cycle_number == self.requested_cycles:
+                    self.success = True
+                    self.stop()
+                else:
+                    self.cycle_number += 1
+                    self.dialog = None
+                    self.window._tick()
+                    self.dialog = self.start_group(self.origin)
         except Exception as error:
             self.stop(str(error))
 
     def result(self):
         terminal_ok = self.terminal is not None and self.terminal.terminal_confirmed
         failure = self.failure or (self.terminal.failure if self.terminal else "terminal not observed")
+        completed = sum(result["status"] == "PASS" for result in self.cycle_results)
         return {"schema": "go-m8010-j1-action-group-demo/1.0",
-                "status": "PASS" if self.success and terminal_ok and not failure else "FAIL",
+                "status": "PASS" if self.success and completed == self.requested_cycles and terminal_ok and not failure else "FAIL",
                 "scope": "J1_1_DEG_OUT_BACK_WITH_RECORDED_BOUNDED_SECONDARY_CORRECTIONS",
                 "strict_precision_qualification": "NOT_RUN_OR_MODIFIED", "failure": failure,
                 "terminal_brake_and_j6_disabled_confirmed": terminal_ok,
                 "elapsed_s": self.now() - self.started, "initial_hold_target_rad": self.origin,
                 "action_group_file": self.action_group_file,
+                "requested_cycles": self.requested_cycles, "completed_cycles": completed,
+                "maximum_seconds": self.maximum_seconds, "cycle_results": self.cycle_results,
                 "events": self.events, "samples": self.samples,
                 "terminal_samples": self.terminal.samples if self.terminal else [],
                 "action_group_events": self.dialog.runner.events if self.dialog and self.dialog.runner else []}
 
 
-def run_live(ros_args, binding):
+def run_live(ros_args, binding, cycles=1):
     root = Path(__file__).resolve().parents[2]
     sys.path.insert(0, str(root / "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui"))
     from go_m8010_arm_gui import main_window as gui
@@ -210,7 +243,7 @@ def run_live(ros_args, binding):
             if not self.submitted and self.window._preview_approval_matches_candidate():
                 recipe = self.window.workflow_contract.q_plan_trajectory
                 segments = check_recipe(recipe, demo.origin)
-                demo.events.append({"event": "checked_recipe_before_submit", "step": self.runner.index,
+                demo.events.append({"event": "checked_recipe_before_submit", "cycle": demo.cycle_number, "step": self.runner.index,
                                     "plan_token_id": self.window.workflow_contract.current_plan_token.token_id,
                                     "start_error_from_initial_deg": [math.degrees(a-b) for a,b in zip(recipe.start_rad, demo.origin)],
                                     "segments": segments})
@@ -271,27 +304,33 @@ def run_live(ros_args, binding):
 
     def start_group(origin):
         dialog = window.action_group_dialog
-        baseline = [math.degrees(a) + b for a, b in zip(origin, window.session_pose_deg)]
-        target = baseline[:]
-        target[0] += 1.0
-        group = ActionGroup("J1 1°往返动作组示例", (
-            ActionStep(tuple(target), speed_deg_s=1.0, dwell_s=0.5),
-            ActionStep(tuple(baseline), speed_deg_s=1.0, dwell_s=0.5),
-        ), window.workflow_contract.model_sha256)
         path = node.log_directory / "j1_demo_action_group.json"
-        if path.exists():
-            raise RuntimeError("action-group artifact already exists; use a fresh run directory")
-        group.save(path)
+        if demo.action_group_file is None:
+            baseline = [math.degrees(a) + b for a, b in zip(origin, window.session_pose_deg)]
+            target = baseline[:]
+            target[0] += 1.0
+            group = ActionGroup("J1 1°往返动作组示例", (
+                ActionStep(tuple(target), speed_deg_s=1.0, dwell_s=0.5),
+                ActionStep(tuple(baseline), speed_deg_s=1.0, dwell_s=0.5),
+            ), window.workflow_contract.model_sha256)
+            if path.exists():
+                raise RuntimeError("action-group artifact already exists; use a fresh run directory")
+            group.save(path)
+            demo.action_group_file = {"path": str(path.resolve()), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+        if str(path.resolve()) != demo.action_group_file["path"] or hashlib.sha256(path.read_bytes()).hexdigest() != demo.action_group_file["sha256"]:
+            raise RuntimeError("saved action-group file changed between cycles")
         loaded = ActionGroup.load(path, expected_model_sha256=window.workflow_contract.model_sha256,
                                   joint_limits_deg=window.absolute_limits)
-        demo.action_group_file = {"path": str(path.resolve()), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+        if hashlib.sha256(path.read_bytes()).hexdigest() != demo.action_group_file["sha256"]:
+            raise RuntimeError("saved action-group file changed while loading")
+        dialog.table.setRowCount(0)
         dialog.name.setText(loaded.name)
         for step in loaded.steps:
             dialog.append_step(step)
         dialog.start()
         return dialog
 
-    demo = J1Demo(window, observe, confirm, set_scale, start_group)
+    demo = J1Demo(window, observe, confirm, set_scale, start_group, cycles=cycles)
     timer = gui.QTimer(window)
     def tick():
         try:
@@ -312,7 +351,7 @@ def run_live(ros_args, binding):
     stop = window.addToolBar("验证停止").addAction("停止往返示例并制动（Esc）")
     stop.setShortcut("Esc")
     stop.triggered.connect(lambda *_: demo.stop("operator pressed stop"))
-    window.setWindowTitle("J1 1°往返动作组示例；逐轴小修正会记录；结束自动制动")
+    window.setWindowTitle(f"J1 1°往返动作组示例 × {cycles}轮；逐轴小修正会记录；结束自动制动")
     window.show()
     try:
         app.exec()
@@ -347,6 +386,7 @@ def main(argv=None):
     split = values.index("--ros-args") if "--ros-args" in values else len(values)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--cycles", type=int, choices=range(1, 4), default=1)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--envelope", type=Path)
     parser.add_argument("--anchor-validation", type=Path)
@@ -354,7 +394,7 @@ def main(argv=None):
     args = parser.parse_args(values[:split])
     if not args.execute:
         print(json.dumps({"mode": "OFFLINE_DESCRIPTION_ONLY", "hardware_accessed": False,
-                          "maximum_seconds": MAXIMUM_SECONDS, "gravity_levels": LEVELS,
+                          "cycles": args.cycles, "maximum_seconds": MAXIMUM_SECONDS + 45 * (args.cycles - 1), "gravity_levels": LEVELS,
                           "demo": "J1 1 degree out/back; secondary corrections <=0.25 degrees"}))
         return 0
     if (not all((args.output, args.envelope, args.anchor_validation, args.expected_envelope_sha256))
@@ -367,7 +407,7 @@ def main(argv=None):
     with args.output.open("x+", encoding="utf-8") as stream:
         stream.write('{"status":"INCOMPLETE"}\n')
         stream.flush()
-        result = run_live(values[split:], binding)
+        result = run_live(values[split:], binding, args.cycles)
         stream.seek(0)
         json.dump(result, stream, ensure_ascii=False, allow_nan=False, indent=2)
         stream.write("\n")

@@ -1,9 +1,13 @@
 """Run without ROS or hardware: python tools/hardware/test_v15_31d_gui_j1_demo.py."""
 from contextlib import redirect_stdout
 from io import StringIO
+import ast
+import hashlib
+import json
 import math
 from pathlib import Path
 import sys
+import tempfile
 from types import SimpleNamespace
 
 from v15_31d_gui_j1_demo import J1Demo, LEVELS, MOTORS, check_recipe, main
@@ -12,9 +16,12 @@ from v15_31b_acceptance_signal import SignalPayloadSequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] /
     "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_hardware"))
 from go_m8010_arm_hardware.empirical_validation_envelope import validate_stage_confirmation
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] /
+    "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui"))
+from go_m8010_arm_gui.action_groups import ActionGroup, ActionStep, PRODUCTION_ABSOLUTE_JOINT_LIMITS_DEG
 
 
-def harness():
+def harness(cycles=1):
     clock, commands, state = [0.0], [], {"index": 0, "entered": 0.0, "confirmed": -1.0}
     override = {}
     binding = SimpleNamespace(envelope_id="envelope", envelope_sha256="a" * 64, sha256="a" * 64,
@@ -67,7 +74,7 @@ def harness():
         assert observe()["position_authorized"]
         commands.append("action_group")
         return SimpleNamespace(runner=SimpleNamespace(state="moving", detail="waiting", events=[]))
-    demo = J1Demo(window, observe, confirm, scale, start_group, now=lambda: clock[0])
+    demo = J1Demo(window, observe, confirm, scale, start_group, cycles=cycles, now=lambda: clock[0])
     def tick(seconds=0.1):
         clock[0] = round(clock[0] + seconds, 6)
         demo.tick()
@@ -142,6 +149,76 @@ def test_bounded_j1_action_group():
     assert "OFFLINE_DESCRIPTION_ONLY" in output.getvalue()
 
 
+def test_three_cycles_reuse_file_and_keep_completed_cycle_when_second_fails():
+    # Execute the actual disk load/table-reset callback with a tiny UI stand-in.
+    # This catches a changed file or accumulating rows without importing Qt/ROS.
+    source = Path(__file__).with_name("v15_31d_gui_j1_demo.py")
+    run_live = next(node for node in ast.parse(source.read_text(encoding="utf-8")).body
+                    if isinstance(node, ast.FunctionDef) and node.name == "run_live")
+    start = next(node for node in run_live.body if isinstance(node, ast.FunctionDef) and node.name == "start_group")
+    for fault in (None, "authority", "file_changed"):
+        with tempfile.TemporaryDirectory() as directory:
+            demo, commands, override, tick = harness(cycles=3)
+            rows, row_counts = [], []
+            dialog = SimpleNamespace(name=SimpleNamespace(setText=lambda _: None),
+                table=SimpleNamespace(setRowCount=lambda count: rows.clear()), append_step=rows.append)
+            def start_dialog():
+                commands.append("action_group")
+                row_counts.append(len(rows))
+                dialog.log_path = Path(directory) / f"cycle-{len(row_counts)}.jsonl"
+                dialog.runner = SimpleNamespace(state="moving", detail="waiting", events=[])
+            dialog.start = start_dialog
+            demo.window.action_group_dialog = dialog
+            demo.window.workflow_contract = SimpleNamespace(model_sha256="a" * 64)
+            demo.window.absolute_limits = PRODUCTION_ABSOLUTE_JOINT_LIMITS_DEG
+            namespace = dict(window=demo.window, node=SimpleNamespace(log_directory=Path(directory)),
+                             demo=demo, ActionGroup=ActionGroup, ActionStep=ActionStep, math=math, hashlib=hashlib)
+            exec(compile(ast.Module(body=[start], type_ignores=[]), str(source), "exec"), namespace)
+            demo.start_group = namespace["start_group"]
+            for _ in range(120):
+                tick()
+                if demo.stage == "action_group":
+                    break
+            original = demo.origin
+            path = Path(demo.action_group_file["path"])
+            original_bytes = path.read_bytes()
+            for cycle in range(1, 4):
+                if fault == "authority" and cycle == 2:
+                    override["authority"] = False
+                    tick()
+                    override.clear()
+                    break
+                assert len(rows) == 2 and rows[0].target_deg[0] == 1 and rows[1].target_deg[0] == 0
+                assert path.read_bytes() == original_bytes
+                demo.window.actual[0] = math.radians(0.08)
+                dialog.runner.events = [
+                    {"event": "measured_arrival", "index": 0, "actual_model_deg": [1.1] + [0.0] * 5},
+                    {"event": "measured_arrival", "index": 1, "actual_model_deg": [0.08] + [0.0] * 5},
+                ]
+                dialog.runner.state = "complete"
+                if fault == "file_changed":
+                    path.write_bytes(original_bytes + b"\n")
+                tick()
+                if fault == "file_changed":
+                    break
+            for _ in range(4):
+                tick()
+            result = demo.result()
+            assert demo.origin == original and commands.count("hold") == commands.count("brake") == 1
+            assert result["requested_cycles"] == 3 and result["maximum_seconds"] == 270
+            assert result["completed_cycles"] == (3 if fault is None else 1)
+            assert [item["status"] for item in result["cycle_results"]] == (["PASS"] * 3 if fault is None else ["PASS", "FAIL"])
+            assert result["status"] == ("PASS" if fault is None else "FAIL")
+            assert result["cycle_results"][0]["out_deg"] == 1.1
+            assert len(result["cycle_results"][0]["action_group_events"]) == 2
+            assert row_counts == ([2, 2, 2] if fault is None else [2, 2] if fault == "authority" else [2])
+            assert result["action_group_file"]["sha256"] == hashlib.sha256(original_bytes).hexdigest()
+    with redirect_stdout(StringIO()) as output:
+        assert main(["--cycles", "3"]) == 0
+    assert json.loads(output.getvalue())["maximum_seconds"] == 270
+
+
 if __name__ == "__main__":
     test_bounded_j1_action_group()
+    test_three_cycles_reuse_file_and_keep_completed_cycle_when_second_fails()
     print("GUI_J1_DEMO_OFFLINE=PASS")

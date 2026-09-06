@@ -1,0 +1,392 @@
+{
+  "schema": "go-m8010-j1-action-group-summary/1.0",
+  "generated_at_utc": "2026-09-06T09:59:38.619333+00:00",
+  "status": "PASS",
+  "scope": "J1_1_DEG_OUT_BACK_WITH_RECORDED_BOUNDED_SECONDARY_CORRECTIONS",
+  "cycles_requested": 1,
+  "cycles_completed": 1,
+  "repeatability_statistics": "SINGLE_CYCLE_ONLY_NOT_REPEATED_CYCLE_VALIDATION",
+  "strict_precision_qualification": "NOT_RUN_OR_MODIFIED",
+  "conditions": {
+    "support": "USER_CONFIRMED_RELIABLE_INDEPENDENT_SUPPORT",
+    "primary_request": "J1_NOMINAL_PLUS_1_DEG_THEN_RETURN",
+    "secondary_corrections": "SEQUENTIAL_J2_J3_J4_J5_SEGMENTS_INCLUDED",
+    "pure_j1_motion": false,
+    "non_j1_correction_limit_deg": 0.25,
+    "gripper_steps": "NONE",
+    "physical_gripping_tested": false
+  },
+  "binding": {
+    "session_id": "persistent:4a74e16f9e3ad6e1:j2session:d5bcbd89cefc68d2:goauxsession:6360b3780f43db93",
+    "state_instance_id": "d080f0f227c14852668ef41525a9439c",
+    "envelope_sha256": "e96079f5d5a5fbeaaf63798ed8e8c82d1a0d80c5a76f2a463d53732a33ffadcc",
+    "anchor_sha256": "dea02eb6f54f0cd4c33f882294f01ca5385199bf5bcbc5fb21040ffb50cdfd20"
+  },
+  "elapsed_s_including_five_level_authorization_and_terminal": 105.9328728071414,
+  "saved_loaded_and_executed_group": {
+    "name": "J1 1°往返动作组示例",
+    "model_sha256": "5ea615cff88d3594fa12812fc9e4c738fb84c7993159feaf45b364d86a58f9c9",
+    "coordinate_frame": "model_absolute_deg",
+    "step_count": 2,
+    "step_speed_deg_s": [
+      1.0,
+      1.0
+    ],
+    "step_dwell_s": [
+      0.5,
+      0.5
+    ],
+    "saved_group_exactly_matches_real_hardware_run_start": true,
+    "jsonl_completed_steps": 2,
+    "artifact": {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_j1_demo_20260906/run/j1_demo_action_group.json",
+      "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\attempt3_action_group.json",
+      "sha256": "4ee447a441cb4cbf8a78872654f9c401109c2906609bb0395b3380882d3e6662"
+    }
+  },
+  "five_stage_authorization": [
+    {
+      "stage_index": 0,
+      "gravity_level": 0,
+      "completed_observed": true,
+      "observation_rows": 501,
+      "distinct_source_samples": 498,
+      "observed_source_coverage_s": 10.000066332,
+      "first_source_monotonic_ns": 3158631062658660,
+      "last_source_monotonic_ns": 3158641062724992,
+      "completed_observation_rows": 11,
+      "position_authorized_observation_rows": 0,
+      "maximum_fixed_hold_error_deg": 0.04371387770892052,
+      "all_observed_samples_healthy_authorized_thermal_ready_with_paired_j6_hold": true
+    },
+    {
+      "stage_index": 1,
+      "gravity_level": 0.25,
+      "completed_observed": true,
+      "observation_rows": 612,
+      "distinct_source_samples": 580,
+      "observed_source_coverage_s": 12.219972769,
+      "first_source_monotonic_ns": 3158641082700723,
+      "last_source_monotonic_ns": 3158653302673492,
+      "completed_observation_rows": 11,
+      "position_authorized_observation_rows": 0,
+      "maximum_fixed_hold_error_deg": 0.04371387770892052,
+      "all_observed_samples_healthy_authorized_thermal_ready_with_paired_j6_hold": true
+    },
+    {
+      "stage_index": 2,
+      "gravity_level": 0.5,
+      "completed_observed": true,
+      "observation_rows": 612,
+      "distinct_source_samples": 553,
+      "observed_source_coverage_s": 12.219935817,
+      "first_source_monotonic_ns": 3158653322693092,
+      "last_source_monotonic_ns": 3158665542628909,
+      "completed_observation_rows": 11,
+      "position_authorized_observation_rows": 0,
+      "maximum_fixed_hold_error_deg": 0.04371387770892052,
+      "all_observed_samples_healthy_authorized_thermal_ready_with_paired_j6_hold": true
+    },
+    {
+      "stage_index": 3,
+      "gravity_level": 0.75,
+      "completed_observed": true,
+      "observation_rows": 611,
+      "distinct_source_samples": 592,
+      "observed_source_coverage_s": 12.200006958,
+      "first_source_monotonic_ns": 3158665562689735,
+      "last_source_monotonic_ns": 3158677762696693,
+      "completed_observation_rows": 11,
+      "position_authorized_observation_rows": 0,
+      "maximum_fixed_hold_error_deg": 0.04371387770892052,
+      "all_observed_samples_healthy_authorized_thermal_ready_with_paired_j6_hold": true
+    },
+    {
+      "stage_index": 4,
+      "gravity_level": 1,
+      "completed_observed": true,
+      "observation_rows": 603,
+      "distinct_source_samples": 591,
+      "observed_source_coverage_s": 12.039996404,
+      "first_source_monotonic_ns": 3158677782614077,
+      "last_source_monotonic_ns": 3158689822610481,
+      "completed_observation_rows": 2,
+      "position_authorized_observation_rows": 1,
+      "maximum_fixed_hold_error_deg": 0.04371387770892052,
+      "all_observed_samples_healthy_authorized_thermal_ready_with_paired_j6_hold": true
+    }
+  ],
+  "recipes": [
+    {
+      "step_index": 0,
+      "plan_token_id": "63c414cc4f36e53f65f91893494c9bd4c0abcb0aa1d519b8135195cebbaeef38",
+      "preview_approval_checked_before_submit": true,
+      "start_error_from_initial_deg": [
+        0.01041361081742318,
+        -0.007809938358357541,
+        0.0017356018029038558,
+        -0.02082722163484629,
+        0.006944565249293832,
+        0.0
+      ],
+      "segments": [
+        {
+          "segment_index": 0,
+          "moving_joints": [
+            "J1"
+          ],
+          "commanded_delta_deg_by_joint": {
+            "J1": 0.9895863891825769
+          },
+          "trajectory_sha256": "dbaf8e21f847e87d3d3184b802d7cdb3cd4c8cc18209faf80d6de40b90e16b8c"
+        },
+        {
+          "segment_index": 1,
+          "moving_joints": [
+            "J2"
+          ],
+          "commanded_delta_deg_by_joint": {
+            "J2": 0.007809938358351174
+          },
+          "trajectory_sha256": "ff464aef3b90389c82f09412eb8d59dc0a790c93d32463dd21e82e7e9a19e94e"
+        },
+        {
+          "segment_index": 2,
+          "moving_joints": [
+            "J3"
+          ],
+          "commanded_delta_deg_by_joint": {
+            "J3": -0.0017356018029033218
+          },
+          "trajectory_sha256": "fea8f02dc54be47a036346630267f5ca7a32eb75f3710c5197d89ee5f6179d70"
+        },
+        {
+          "segment_index": 3,
+          "moving_joints": [
+            "J4"
+          ],
+          "commanded_delta_deg_by_joint": {
+            "J4": 0.020827221634846082
+          },
+          "trajectory_sha256": "7d629b3dab7587801bed5294a4dac6c6cf3e23c526f783eb611c9e41a40763ba"
+        },
+        {
+          "segment_index": 4,
+          "moving_joints": [
+            "J5"
+          ],
+          "commanded_delta_deg_by_joint": {
+            "J5": -0.0069445652492920425
+          },
+          "trajectory_sha256": "e703bfad3a01fe75d66f6e9faa6c0f2ad7cdfc4d2ab15229b914f7176748d245"
+        }
+      ]
+    },
+    {
+      "step_index": 1,
+      "plan_token_id": "6649f4b6ae66374609ed25a084b74b967e5f568078e04acb2ecbf3f2d8bc7e19",
+      "preview_approval_checked_before_submit": true,
+      "start_error_from_initial_deg": [
+        1.1437610486042227,
+        -0.007809938358357541,
+        0.0017356018029038558,
+        -0.036447098351561395,
+        0.006944565249293832,
+        0.0
+      ],
+      "segments": [
+        {
+          "segment_index": 0,
+          "moving_joints": [
+            "J1"
+          ],
+          "commanded_delta_deg_by_joint": {
+            "J1": -1.1437610486042227
+          },
+          "trajectory_sha256": "8d3fe2993673797db7774076a3e2b9706b383baf13e0343e4c8bc4d731f539f1"
+        },
+        {
+          "segment_index": 1,
+          "moving_joints": [
+            "J2"
+          ],
+          "commanded_delta_deg_by_joint": {
+            "J2": 0.007809938358351174
+          },
+          "trajectory_sha256": "9f85b365287c8e78b8873a150b9242a9ca700a0ba7228634f5b2e34a59377a4c"
+        },
+        {
+          "segment_index": 2,
+          "moving_joints": [
+            "J3"
+          ],
+          "commanded_delta_deg_by_joint": {
+            "J3": -0.0017356018029033218
+          },
+          "trajectory_sha256": "8cee8ae5efb21db6d24a563dabd206693a985ec1564d4cced357d5c73c7b4266"
+        },
+        {
+          "segment_index": 3,
+          "moving_joints": [
+            "J4"
+          ],
+          "commanded_delta_deg_by_joint": {
+            "J4": 0.03644709835156119
+          },
+          "trajectory_sha256": "75793e98633c04472419a10c2c209c8baa96a8e4c0817676a2980b49fe498f15"
+        },
+        {
+          "segment_index": 4,
+          "moving_joints": [
+            "J5"
+          ],
+          "commanded_delta_deg_by_joint": {
+            "J5": -0.0069445652492920425
+          },
+          "trajectory_sha256": "25fedea13f397b2b0ff493e7bb15a3d5314ff08eceb84668be8f054bd31c8ae7"
+        }
+      ]
+    }
+  ],
+  "measured_out_and_back": {
+    "j1_initial_model_deg": 0.26272635797867555,
+    "outbound_displacement_deg": 1.1437610486042225,
+    "outbound_error_from_nominal_1_deg": 0.14376104860422245,
+    "return_error_deg": 0.14405441013160059,
+    "demo_outbound_allowed_range_deg": [
+      0.75,
+      1.25
+    ],
+    "demo_return_abs_error_limit_deg": 0.25,
+    "endpoint_observations": [
+      {
+        "event": "measured_arrival",
+        "at_monotonic_s": 3158712.661599548,
+        "index": 0,
+        "actual_model_deg": [
+          1.406487406582898,
+          90.02177921252618,
+          -14.419117448617879,
+          13.457539096583847,
+          46.3793208242623,
+          3.2774479812264175
+        ],
+        "error_deg": [
+          -0.14376104860422262,
+          0.008677469505093297,
+          -0.0017356018029033218,
+          0.03471203605807695,
+          -0.008679627542776229,
+          0.0
+        ]
+      },
+      {
+        "event": "measured_arrival",
+        "at_monotonic_s": 3158735.661546756,
+        "index": 1,
+        "actual_model_deg": [
+          0.40678076811027614,
+          90.0209106023606,
+          -14.417381846814974,
+          13.455804034290363,
+          46.3793208242623,
+          3.2774479812264175
+        ],
+        "error_deg": [
+          -0.1440544101316006,
+          0.00954607967067465,
+          -0.003471203605807181,
+          0.03644709835156119,
+          -0.008679627542776229,
+          0.0
+        ]
+      }
+    ]
+  },
+  "maximum_non_j1_planned_correction_or_offset_deg": 0.036447098351561395,
+  "maximum_actual_secondary_deviation_from_initial_during_action_deg": {
+    "J2": 0.012150831148585848,
+    "J3": 0.003471203605807715,
+    "J4": 0.04512456785666107,
+    "J5": 0.012149752129746588,
+    "J6": 0.04371387770902229
+  },
+  "maximum_actual_velocity_during_action_deg_s_by_joint": {
+    "J1": 1.3853724533714584,
+    "J2": 0.013014570222874139,
+    "J3": 0.017355252575623727,
+    "J4": 0.030372586671260672,
+    "J5": 0.017350430171563146,
+    "J6": 0.16392573164211055
+  },
+  "maximum_temperature_c": {
+    "J1": 32.0,
+    "J2A": 32.0,
+    "J2B": 32.0,
+    "J3": 31.0,
+    "J4": 31.0,
+    "J5": 32.0,
+    "J6": 37.0
+  },
+  "maximum_j2_sync_error_deg": 0.17253865157490983,
+  "probe_terminal": {
+    "brake_and_paired_j6_disabled_confirmed": true,
+    "paired_observation_rows": 5,
+    "distinct_j6_disabled_sequences": [
+      23386,
+      23390,
+      23394
+    ]
+  },
+  "controlled_worker_shutdown": {
+    "status": "PASS",
+    "domains": {
+      "j1": {
+        "terminal": "FINAL_BRAKE=PASS",
+        "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_j1_demo_20260906/run/j1_controller.log",
+        "sha256": "ecf307376076a5f4bf9d852a6b1bff1d54bbcda680fc7b3d68ab8f4595c214cc"
+      },
+      "j2": {
+        "terminal": "FINAL_BRAKE=PASS",
+        "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_j1_demo_20260906/run/j2_controller.log",
+        "sha256": "ca6eecb3f0ba44f11e0072f38e5fd5521aa5b90104f8c718c6c1e8532bdcb168"
+      },
+      "j345": {
+        "terminal": "FINAL_BRAKE=PASS",
+        "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_j1_demo_20260906/run/j345_controller.log",
+        "sha256": "d45a25415de22525cdb48e262463ae25919774355f0b102f05fa9cd794e8188e"
+      },
+      "j6": {
+        "terminal": "J6_FINAL_DISABLED=PASS",
+        "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_j1_demo_20260906/run/j6_controller.log",
+        "sha256": "6c3e82abb91ef9153d9d3fb8e312fbec45dbbb9fe6bd95aef7af750cb0aa10be"
+      }
+    },
+    "evidence": {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_j1_demo_20260906/evidence/worker_terminal_result.json",
+      "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\attempt3_worker_terminal_result.json",
+      "sha256": "0ed95e5361328de568dc4391384b3fad5a0c99f75f1a2e9c9a69173a18cff2fd"
+    }
+  },
+  "full_report": {
+    "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_j1_demo_20260906/evidence/j1_action_group_demo.json",
+    "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\attempt3_j1_demo.json",
+    "sha256": "c459d48dfb7a2c395b1416e8cc97290db7598491afbdd72aa4a80be7dcc8603e"
+  },
+  "execution_jsonl": {
+    "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_j1_demo_20260906/run/action_group_20260906_094502_578991.jsonl",
+    "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\attempt3_action_group.jsonl",
+    "sha256": "79188acd6ce3a89214b1b986a3170d964cf7caad2ac5b605fca96ff201fc185e",
+    "real_hardware_run_start": true,
+    "final_state": "complete"
+  },
+  "independent_summary_checks": "ORIGINAL_BYTES_SHA256_GROUP_JSONL_EQUALITY_STAGE_SAMPLES_RECIPE_DELTAS_ARRIVAL_MATH_AND_TERMINAL_PAIRING_VERIFIED",
+  "not_qualified": [
+    "STRICT_PLUS_MINUS_0_1_DEG_POSITIONING",
+    "PLUS_MINUS_5_DEG_OR_FULL_RANGE_POSITIONING",
+    "UNSUPPORTED_FULL_PAYLOAD_OR_LONG_TERM_HOLD",
+    "REPEATED_CYCLE_RELIABILITY",
+    "PHYSICAL_GRIPPER_LINKAGE",
+    "SIX_AXIS_ZERO_GRAVITY"
+  ]
+}
