@@ -45,6 +45,7 @@ def harness(cycles=1):
     def observe():
         complete = clock[0] - state["entered"] >= 0.5
         return {"source_monotonic_ns": int(clock[0] * 1e9), "healthy": True,
+                "source_age_ms": 0.0,
                 "thermal_ready": True, "authority": True, "zero_ff_authority": state["index"] == 0,
                 "identity": ("session", "state", "gravity", "anchor", "envelope"),
                 "router_ready": True, "router_rejected_commands": 0,
@@ -117,6 +118,7 @@ def test_bounded_j1_action_group():
 
     demo, commands, override, tick = harness()
     tick()
+    tick()
     override["j6_drive_state"] = None
     tick()
     assert demo.stage == "engaging" and not demo.done
@@ -149,6 +151,30 @@ def test_bounded_j1_action_group():
     with redirect_stdout(StringIO()) as output:
         assert main([]) == 0
     assert "OFFLINE_DESCRIPTION_ONLY" in output.getvalue()
+
+
+def test_initial_hold_waits_for_advancing_fresh_paired_brake_but_active_fault_stops():
+    demo, commands, override, tick = harness()
+    for age in (193.0, 233.0, 263.0):
+        override.update(source_age_ms=age, j6_drive_state=None)
+        tick()
+    assert "hold" not in commands
+    override.clear()
+    override["j6_drive_state"] = None
+    tick()
+    assert "hold" not in commands
+    override.update(j6_drive_state=0, source_monotonic_ns=420_000_000, j6_raw_sequence=420)
+    tick(0.02)
+    override["source_age_ms"] = 20.0
+    tick(0.02)
+    assert "hold" not in commands
+    override.update(source_monotonic_ns=440_000_000, j6_raw_sequence=440)
+    tick(0.02)
+    assert commands.count("hold") == 1
+    override.clear()
+    override["healthy"] = False
+    tick()
+    assert demo.stage == "terminal" and commands.count("brake") == 1
 
 
 def test_three_cycles_reuse_file_and_keep_completed_cycle_when_second_fails():
@@ -320,6 +346,7 @@ def test_initial_recovery_uses_original_file_and_checks_all_axes_before_hold():
 
 if __name__ == "__main__":
     test_bounded_j1_action_group()
+    test_initial_hold_waits_for_advancing_fresh_paired_brake_but_active_fault_stops()
     test_three_cycles_reuse_file_and_keep_completed_cycle_when_second_fails()
     test_initial_recovery_uses_original_file_and_checks_all_axes_before_hold()
     print("GUI_J1_DEMO_OFFLINE=PASS")

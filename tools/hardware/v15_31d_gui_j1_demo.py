@@ -27,6 +27,19 @@ LEVELS = (0.0, 0.25, 0.5, 0.75, 1.0)
 MAXIMUM_SECONDS = 180.0
 
 
+def initial_brake_ready(sample):
+    age = sample.get("source_age_ms")
+    modes = sample.get("modes")
+    return bool(sample.get("healthy") and sample.get("thermal_ready") and sample.get("authority")
+        and sample.get("zero_ff_authority") and sample.get("router_ready")
+        and type(age) in {int, float} and math.isfinite(age) and 0 <= age < 100
+        and isinstance(modes, dict) and set(modes) == set(MOTORS)
+        and all(mode == "brake" for mode in modes.values())
+        and type(sample.get("j6_drive_state")) is int and sample["j6_drive_state"] == 0
+        and type(sample.get("source_monotonic_ns")) is int and sample["source_monotonic_ns"] > 0
+        and type(sample.get("j6_raw_sequence")) is int and sample["j6_raw_sequence"] > 0)
+
+
 def check_recipe(recipe, origin, *, recover_initial=False):
     """Keep the five secondary corrections bounded without changing the recipe."""
     result = []
@@ -55,6 +68,7 @@ class J1Demo:
         self.started = now()
         self.stage, self.failure, self.origin, self.identity = "readiness", None, None, None
         self.rejected = None
+        self.initial_ready_sample = None
         self.pending_level, self.pending_since, self.future = None, 0.0, None
         self.last_confirmation = -float("inf")
         self.dialog, self.terminal = None, None
@@ -128,11 +142,19 @@ class J1Demo:
             if self.origin is None:
                 if now - self.started >= 20:
                     raise RuntimeError("current-pose HOLD readiness timed out")
-                if not (sample["healthy"] and sample["thermal_ready"] and sample["authority"] and sample["zero_ff_authority"] and sample["router_ready"]):
+                if not initial_brake_ready(sample):
+                    self.initial_ready_sample = None
+                    return
+                previous = self.initial_ready_sample
+                self.initial_ready_sample = sample
+                if (previous is None or sample["identity"] != previous["identity"]
+                        or sample["source_monotonic_ns"] <= previous["source_monotonic_ns"]
+                        or sample["j6_raw_sequence"] <= previous["j6_raw_sequence"]):
                     return
                 self.window._tick()
                 sample = self.observe()
-                if not (sample["healthy"] and sample["thermal_ready"] and sample["authority"] and sample["zero_ff_authority"]):
+                if not initial_brake_ready(sample) or sample["identity"] != self.initial_ready_sample["identity"]:
+                    self.initial_ready_sample = None
                     return
                 if self.recover_initial_first:
                     self.samples.append({**sample, "stage": "recovery_preflight", "cycle": None})
