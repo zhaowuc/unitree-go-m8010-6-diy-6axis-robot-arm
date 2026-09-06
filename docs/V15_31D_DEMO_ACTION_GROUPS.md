@@ -6,6 +6,18 @@
 
 ## 已实现的入口
 
+在 Linux 控制机的仓库根目录，可使用已打包的现场演示入口：
+
+```bash
+python3 tools/hardware/v15_31d_demo_session.py --execute --cycles 3 --supported --vertical --hands-off --clearance
+```
+
+四个现场标志须与实际情况一致。入口建立独立新会话，执行同一动作文件的
+1～3 次 J1 1°往返，并保存结果、退出后核对制动终态。不带 `--execute` 只检查。
+只有确实再次断电后才添加 `--power-cycled`，让原工具恢复 J6 的本次 POS_VEL 模式；
+正常重复使用已完成的模式配置，J6 驱动仍会读取并核对实际模式，不重复写入 RID10。
+具体依赖和证据目录见 `tools/hardware/v15_31d_demo_templates/README.md`。
+
 在正常机械臂 GUI 顶部打开“动作组”。添加虚拟目标或捕获有新鲜反馈的实姿，
 编辑六关节目标、速度、停留和夹爪动作；保存或加载 UTF-8 JSON。
 编辑和加载不发送运动。J2 始终是双电机共同驱动的一个关节，J6 仍是 DM-G6220。

@@ -1,0 +1,100 @@
+{
+  "schema": "go-m8010-repeat-validation-summary/1.0",
+  "generated_at_utc": "2026-09-06T11:08:22.208000+00:00",
+  "status": "BLOCKED",
+  "launcher_reported_status": "FAIL",
+  "requested_cycles": 3,
+  "completed_cycles": 0,
+  "action_group_execution_started": false,
+  "repeatability_passed": false,
+  "blocked_stage": "READONLY_J6_STATIONARITY_CAPTURE",
+  "failure": "RuntimeError: exit 2; ; see /home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T110327-11adc7_scripts/stage_readonly.sh.log",
+  "j6_capture": {
+    "reported_status": "FAIL",
+    "reported_failures": [
+      "CaptureError:J6 raw span 0.176623178 rad is not stationary"
+    ],
+    "packet_count": 500,
+    "source_coverage_s": 50.01908122096211,
+    "raw_position_statistics_rad": {
+      "mean": -2.1672487983520266,
+      "median": -2.148661020828566,
+      "minimum": -2.3161287861448088,
+      "maximum": -2.1395056076905465,
+      "span": 0.17662317845426223,
+      "standard_deviation": 0.04984160866797041
+    },
+    "raw_position_span_deg": 10.1197626896152,
+    "execution_policy": "DISABLED_REFRESH_ONLY",
+    "refresh_request_count": 505,
+    "fc_enable_count": 0,
+    "position_velocity_torque_command_count": 0,
+    "motor_internal_zero_write_count": 0,
+    "terminal_disabled_frames": 5,
+    "terminal_disabled_confirmed": true,
+    "channel_closed": true,
+    "physical_power_off_required_reported": false,
+    "cause_of_observed_motion": "UNRESOLVED_NO_OPERATOR_OR_AUTONOMOUS_CAUSE_ASSUMED",
+    "evidence": {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T110327-11adc7/j6_disabled_raw.json",
+      "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\repeat_blocked_20260906T110327-11adc7_j6_raw.json",
+      "sha256": "c62dc67b63239a7aef1501200b362165c9ae2bfa06b29fb5aa49f3b13d8ee7f8"
+    }
+  },
+  "go_brake_worker_terminal": {
+    "J1": {
+      "final_mode": "BRAKE",
+      "final_brake": "PASS",
+      "foc_serial_send_call_count": 0,
+      "brake_tx_attempt_count": 5220,
+      "evidence": {
+        "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T110327-11adc7/boot_j1.log",
+        "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\repeat_blocked_20260906T110327-11adc7_boot_j1.log",
+        "sha256": "3eafd35205b4f1ba716455cd56f3ec8cd1a4396f7b75349b771057514c69926b"
+      }
+    },
+    "J2": {
+      "final_mode": "BRAKE",
+      "final_brake": "PASS",
+      "foc_serial_send_call_count": 0,
+      "brake_tx_attempt_count": 10484,
+      "evidence": {
+        "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T110327-11adc7/boot_j2.log",
+        "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\repeat_blocked_20260906T110327-11adc7_boot_j2.log",
+        "sha256": "793dff5c1fe8095a794d452f47d3e6528d6310a5ddae347c71044525b84293b3"
+      }
+    },
+    "J345": {
+      "final_mode": "UNCONFIRMED",
+      "final_brake": "FAIL",
+      "foc_serial_send_call_count": 0,
+      "brake_tx_attempt_count": 15804,
+      "evidence": {
+        "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T110327-11adc7/boot_j345.log",
+        "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\repeat_blocked_20260906T110327-11adc7_boot_j345.log",
+        "sha256": "0e93ee01b58b19d4b5148d301fd79363a103aab4e9e3e0f2e2e83f37afc6a343"
+      }
+    }
+  },
+  "all_three_go_final_brake_confirmed": false,
+  "launcher_stop_errors": [],
+  "launcher_active_domain_terminal_flags": {
+    "J1": false,
+    "J2": false,
+    "J345": false,
+    "J6": false
+  },
+  "launcher_evidence": {
+    "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260906T110327-11adc7_scripts/session_result.json",
+    "local_path": "D:\\AI_GOM8010_6\\go-m8010-robot-arm-v15-31a-ft\\.codex-tmp\\hold_evidence_20260906\\launcher_20260906T110327-11adc7.json",
+    "sha256": "120404e902850245483d260e390f76c07d2d54bddea5e8aa37dba917c8d3d46c"
+  },
+  "previous_verified_single_cycle": {
+    "summary_path": "hardware/v15_31d_recovery_20260906/j1_action_group_summary.json",
+    "status": "PASS",
+    "completed_cycles": 1,
+    "does_not_count_as_three_cycle_pass": true
+  },
+  "original_evidence_rewritten": false,
+  "scope_note": "THREE_CYCLE_REQUEST_STOPPED_BEFORE_ACTION_GROUP_EXECUTION; PREVIOUS_SINGLE_CYCLE_PASS_REMAINS_SEPARATE"
+}

@@ -15,6 +15,9 @@ python3 tools/hardware/v15_31d_demo_session.py --execute --cycles 3 --supported 
 同一会话建立一次真实重力阶梯，再执行指定的 1～3 次 J1 1°往返动作组；
 其他轴的小修正按现有逐轴控制链记录，不能称为仅 J1 收到 POSITION。
 
+未再次断电时复用原工具已完成的 POS_VEL 配置，不重复发起模式设定；
+J6 worker 启动时仍读取实际 RID10，非 POS_VEL 会拒绝启用。
+
 每次创建独立 `.runtime/v15_31d_demo_<时间及随机编号>` 和旁边的 `_scripts`
 目录。前者保存原始证据和动作组报告，后者保存展开脚本、各阶段日志及
 `session_result.json`。退出时停止本次拥有的 worker、重力节点和状态核心，
@@ -27,12 +30,11 @@ python3 tools/hardware/v15_31d_demo_session.py --execute --cycles 3 --supported 
 `start_arm_gui.sh` 一致，可用既有环境变量指定另一个已配置的 J6 Python。
 ROS 2 Humble、工作区依赖及桌面会话继续使用本机已有安装。
 
-预构建及占用检查完成后，入口先复用原 J6 POS_VEL commissioning 工具读取
-RID10。已为 2 时只采只读 DISABLED 基线；原工具签发新 PREFLIGHT_READY
-token 时，按原协议执行一次运行时 RID10 切换并确认最终 5 帧 DISABLED。
-仅在确实发生了 J6 24V 断电重上电时增加 `--power-cycled`；默认不声称断过电。
-旧账本要求断电确认但没有该标志时保留原工具拒绝原因并停止。账本归档由原
-工具管理，未增加 Flash、零位或其他 RID 写入。
+正常重复运行复用已完成的 J6 模式配置，实机 worker 仍须读取 RID10 并确认
+POS_VEL 后才可启用。仅在确实发生了 J6 24V 断电重上电时增加 `--power-cycled`：
+这时才调用原 commissioning 工具，使用新 PREFLIGHT_READY token 执行必要的
+运行时模式切换，并确认最终 5 帧 DISABLED。默认不声称再次断过电，也不重复
+申请已消费的模式设定。账本归档由原工具管理，不增加 Flash 或零位写入。
 
 `fastdds_udp_only.xml` 是从当时实机已使用的 `/tmp/fastdds_udp_only.xml`
 只读复制的原文。入口把它放到新的脚本目录，不依赖 `/tmp` 留存配置。
