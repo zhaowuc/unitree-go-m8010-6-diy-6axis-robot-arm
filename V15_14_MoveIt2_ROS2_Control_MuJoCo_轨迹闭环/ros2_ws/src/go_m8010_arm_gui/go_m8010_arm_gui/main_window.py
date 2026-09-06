@@ -152,6 +152,14 @@ PRODUCTION_KINEMATIC_GUARD_SHA256 = (
 )
 
 
+def effective_preview_segment_delta_rad(gravity_status: object) -> float:
+    empirical = gravity_status.get("empirical_validation") if isinstance(gravity_status, dict) else None
+    limit = empirical.get("maximum_abs_position_segment_deg") if isinstance(empirical, dict) else None
+    if type(limit) in {int, float} and math.isfinite(limit) and limit > 0.0:
+        return min(float(COLLISION_EXECUTE_SEGMENT_MAX_DEG), float(limit)) * RAD
+    return float(COLLISION_EXECUTE_SEGMENT_MAX_DEG) * RAD
+
+
 def build_virtual_preview_plan(snapshot: dict) -> dict:
     """Build and serialize one immutable preview request off the Qt thread.
 
@@ -3556,7 +3564,7 @@ class MainWindow(QMainWindow):
             and result.get("maximum_acceleration_rad_s2")
             == current_acceleration
             and result.get("maximum_segment_delta_rad")
-            == float(COLLISION_EXECUTE_SEGMENT_MAX_DEG) * RAD
+            == effective_preview_segment_delta_rad(getattr(self.node, "latest_gravity_status", None))
             and result.get("maximum_sample_period_s") == 0.01
             and self.node.control_streams_fresh(now)
             and self.connected == [True] * 6
@@ -3871,7 +3879,7 @@ class MainWindow(QMainWindow):
                     float(control["最大加速度_度每二次方秒"]) * RAD
                 ),
                 "maximum_segment_delta_rad": (
-                    float(COLLISION_EXECUTE_SEGMENT_MAX_DEG) * RAD
+                    effective_preview_segment_delta_rad(getattr(self.node, "latest_gravity_status", None))
                 ),
                 "maximum_sample_period_s": 0.01,
                 "source_instance_id": self.node.command_source_instance_id,

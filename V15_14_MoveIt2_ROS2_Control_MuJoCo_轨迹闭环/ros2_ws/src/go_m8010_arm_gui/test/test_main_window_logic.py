@@ -425,6 +425,27 @@ def test_preview_plan_invalidation_cancels_the_single_latest_queued_future():
     assert future.cancel_count == 1
 
 
+def test_empirical_preview_splits_twenty_degree_leg_at_five_degrees():
+    limit = load_function("effective_preview_segment_delta_rad", {
+        "COLLISION_EXECUTE_SEGMENT_MAX_DEG": 30.0,
+    })
+    for status in (None, {}, {"empirical_validation": None}):
+        assert limit(status) == math.radians(30)
+    for invalid in (False, "5", 0.0, -1.0, float("nan"), float("inf")):
+        assert limit({"empirical_validation": {"maximum_abs_position_segment_deg": invalid}}) == math.radians(30)
+    assert limit({"empirical_validation": {"maximum_abs_position_segment_deg": 40}}) == math.radians(30)
+    cap = limit({"empirical_validation": {"maximum_abs_position_segment_deg": 5}})
+    target = (math.radians(20), 0.0, 0.0, 0.0, 0.0, 0.0)
+    recipe = generate_segmented_quintic_recipe(
+        (0.0,) * 6, target, tuple((math.radians(-180), math.radians(180)) for _ in range(6)),
+        maximum_velocity_rad_s=math.radians(3), maximum_acceleration_rad_s2=math.radians(15),
+        maximum_segment_delta_rad=cap,
+    )
+    assert len(recipe.segments) == 4
+    assert all(abs(s.target_rad[0] - s.start_rad[0]) <= math.radians(5) + 1e-12 for s in recipe.segments)
+    assert recipe.target_rad == recipe.samples[-1].q_rad == target
+
+
 def test_preview_plan_apply_drops_stale_identity_feedback_and_config():
     snapshot, worker_result, _started_ns, _finished_ns = (
         _preview_plan_worker_fixture()
@@ -435,6 +456,9 @@ def test_preview_plan_apply_drops_stale_identity_feedback_and_config():
             "WorkflowState": WorkflowState,
             "RAD": math.pi / 180.0,
             "COLLISION_EXECUTE_SEGMENT_MAX_DEG": 30.0,
+            "effective_preview_segment_delta_rad": load_function(
+                "effective_preview_segment_delta_rad", {"COLLISION_EXECUTE_SEGMENT_MAX_DEG": 30.0}
+            ),
             "PLAN_ACTUAL_DRIFT_TOLERANCE_RAD": math.radians(0.25),
             "PLANNED_REQUEST_PUBLISH_MAX_AGE_NS": 1_000_000_000,
         },
@@ -516,6 +540,9 @@ def test_preview_plan_apply_drops_stale_identity_feedback_and_config():
     config = Window()
     config.config["控制"]["最大速度_度每秒"] = 4.0
     stale_variants.append((config, True))
+    empirical = Window()
+    empirical.node.latest_gravity_status = {"empirical_validation": {"maximum_abs_position_segment_deg": 5.0}}
+    stale_variants.append((empirical, True))
 
     for window, records_failure in stale_variants:
         result = dict(worker_result)

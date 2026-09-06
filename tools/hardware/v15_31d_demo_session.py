@@ -2,7 +2,7 @@
 """Repeat the validated site bootstrap and J1 out/back demo, preserving evidence.
 
 Default: inspect required files and validate rendered Bash; no devices or units
-are touched. Run on Linux with --execute --cycles 1..3 --supported --vertical
+are touched. Run on Linux with --execute --cycles 1..10 --supported --vertical
 --hands-off --clearance to use conditions already confirmed by the operator.
 J6_PYTHON has the same optional override as start_arm_gui.sh.
 """
@@ -169,7 +169,11 @@ def cleanup(unit, session):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--execute", action="store_true")
-    parser.add_argument("--cycles", type=int, choices=(1, 2, 3), default=1)
+    parser.add_argument("--cycles", type=int, choices=range(1, 11), default=1)
+    parser.add_argument("--excursion-deg", type=float, default=1.0)
+    parser.add_argument("--speed-deg-s", type=float, default=1.0)
+    parser.add_argument("--symmetric", action="store_true")
+    parser.add_argument("--return-center", action="store_true")
     parser.add_argument("--bash", default=shutil.which("bash") or "/bin/bash")
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--power-cycled", action="store_true",
@@ -179,6 +183,8 @@ def main(argv=None):
     for flag in ("supported", "vertical", "hands-off", "clearance"):
         parser.add_argument("--" + flag, action="store_true")
     args = parser.parse_args(argv)
+    if not 0 < args.excursion_deg <= 10 or not 0 < args.speed_deg_s <= 3:
+        parser.error("excursion must be in (0,10] degrees and speed in (0,3] degrees/second")
     token = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S") + "-" + secrets.token_hex(3)
     session = ROOT / ".runtime" / f"v15_31d_demo_{token}"
     scripts, unit = session.with_name(session.name + "_scripts"), f"v15-31d-demo-{token}"
@@ -196,6 +202,10 @@ def main(argv=None):
                 check = subprocess.run([args.bash], input=script + 'printf "%s" "${recovery_args[@]}"\n',
                                        text=True, capture_output=True, encoding="utf-8", check=True)
                 assert check.stdout == (flag if enabled else "")
+        motion_script = "set -- 10 false 10 3 true true\n" + bodies["start_bounded_j1_demo.sh"].split("scripts=", 1)[0]
+        motion_check = subprocess.run([args.bash], input=motion_script + 'printf "%s\\n" "${motion_args[@]}"\n',
+                                      text=True, capture_output=True, encoding="utf-8", check=True)
+        assert motion_check.stdout.splitlines() == ["--excursion-deg", "10", "--speed-deg-s", "3", "--symmetric", "--return-center"]
         assert last_terminal_pass("FINAL_BRAKE=FAIL\nFINAL_BRAKE=PASS\n", "FINAL_BRAKE")
         assert not last_terminal_pass("FINAL_BRAKE=PASS\nFINAL_BRAKE=FAIL\n", "FINAL_BRAKE")
         assert not last_terminal_pass("FINAL_BRAKE=PASS\nFINAL_BRAKE=UNKNOWN\n", "FINAL_BRAKE")
@@ -205,7 +215,11 @@ def main(argv=None):
     problems = [str(ROOT / name) for name in REQUIRED if not (ROOT / name).is_file()]
     problems += [f"SHA256 mismatch: {ROOT / name}" for name, sha in PINNED.items()
                  if (ROOT / name).is_file() and hashlib.sha256((ROOT / name).read_bytes()).hexdigest() != sha]
+    from v15_31d_gui_j1_demo import maximum_demo_seconds
     plan = {"mode": "EXECUTE" if args.execute else "DRY_RUN", "cycles": args.cycles,
+            "excursion_deg": args.excursion_deg, "speed_deg_s": args.speed_deg_s,
+            "symmetric": args.symmetric, "return_center": args.return_center,
+            "maximum_demo_seconds": maximum_demo_seconds(args.cycles, args.excursion_deg, args.symmetric),
             "j6_power_cycle_attested": args.power_cycled,
             "supported_near_vertical_recovery": args.supported_near_vertical_recovery,
             "repo": str(ROOT), "session": str(session), "scripts": str(scripts), "unit_prefix": unit,
@@ -259,8 +273,14 @@ def execute(args, bodies, plan, session, scripts, unit):
         run_stage([args.bash, str(scripts / "j6_posvel_preflight.sh"), str(args.power_cycled).lower()],
                   scripts / "j6_posvel_preflight.log", 120)
         for name in ("stage_readonly.sh", "stage_active.sh", "start_bounded_j1_demo.sh"):
-            run_stage([args.bash, str(scripts / name), str(args.cycles),
-                       str(args.supported_near_vertical_recovery).lower()], scripts / (name + ".log"), 300)
+            command = [args.bash, str(scripts / name), str(args.cycles),
+                       str(args.supported_near_vertical_recovery).lower()]
+            timeout = 300
+            if name == "start_bounded_j1_demo.sh":
+                command += [str(args.excursion_deg), str(args.speed_deg_s),
+                            str(args.symmetric).lower(), str(args.return_center).lower()]
+                timeout = max(timeout, plan["maximum_demo_seconds"] + 30)
+            run_stage(command, scripts / (name + ".log"), timeout)
         demo_path = session / "evidence/j1_action_group_demo.json"
         demo = json.loads(demo_path.read_text(encoding="utf-8"))
         result["demo"] = {key: demo.get(key) for key in ("status", "requested_cycles", "completed_cycles", "failure")}

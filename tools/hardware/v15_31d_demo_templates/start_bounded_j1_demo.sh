@@ -4,6 +4,9 @@ recovery_args=()
 if [[ "${2:-false}" == true ]]; then
   recovery_args+=(--recover-initial-first)
 fi
+motion_args=(--excursion-deg "${3:-1}" --speed-deg-s "${4:-1}")
+if [[ "${5:-false}" == true ]]; then motion_args+=(--symmetric); fi
+if [[ "${6:-false}" == true ]]; then motion_args+=(--return-center); fi
 scripts=@@SCRIPTS@@
 repo=@@REPO@@
 session=@@SESSION@@
@@ -32,6 +35,7 @@ PY
 sha=$(sha256sum "$session/empirical_validation_envelope.json" | cut -d ' ' -f1)
 exec "$repo/.venv/arm-gui/bin/python" "$repo/tools/hardware/v15_31d_gui_j1_demo.py" \
  "${recovery_args[@]}" \
+ "${motion_args[@]}" \
  --execute --cycles "${1:-1}" --output "$session/evidence/j1_action_group_demo.json" \
  --envelope "$session/empirical_validation_envelope.json" \
  --anchor-validation "$session/evidence/model_session_anchor_validation.json" \

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Bounded J1 1-degree out/back action-group example using the production GUI.
+"""Bounded J1 action-group example using the production GUI.
 
 Other axes retain their original final targets; existing sequential correction
 segments are allowed only within 0.25 degrees and are recorded. No gains,
 geometry, preview gates, or motor transport are replaced. --execute requires a
 fresh empirical envelope: the final BRAKE spends it even after success. One to
-three cycles reuse one saved action file and the same initial HOLD target.
+ten cycles reuse one saved action file and the same initial HOLD target.
+--symmetric visits +excursion and -excursion about that fixed midpoint;
+--return-center adds a separate final move to the midpoint, not another cycle.
 --recover-initial-first optionally returns all axes to the hash-bound original initial
 pose before capturing the shared demonstration HOLD; no calibration is changed.
 """
@@ -25,6 +27,17 @@ from v15_31d_gui_hold_probe import HoldProbe, MOTORS, empirical_binding_matches,
 
 LEVELS = (0.0, 0.25, 0.5, 0.75, 1.0)
 MAXIMUM_SECONDS = 180.0
+
+
+def maximum_demo_seconds(cycles, excursion_deg=1.0, symmetric=False):
+    if type(cycles) is not int or not 1 <= cycles <= 10:
+        raise ValueError("cycles must be an integer from 1 to 10")
+    if (type(excursion_deg) not in {int, float} or not math.isfinite(excursion_deg)
+            or not 0 < excursion_deg <= 10):
+        raise ValueError("excursion_deg must be finite and greater than 0 through 10")
+    if type(symmetric) is not bool:
+        raise ValueError("symmetric must be boolean")
+    return 1500.0 if cycles > 3 or excursion_deg != 1.0 or symmetric else MAXIMUM_SECONDS + 45.0 * (cycles - 1)
 
 
 def initial_brake_ready(sample):
@@ -60,9 +73,14 @@ def check_recipe(recipe, origin, *, recover_initial=False):
 
 class J1Demo:
     def __init__(self, window, observe, confirm, set_scale, start_group, *, cycles=1,
+                 excursion_deg=1.0, symmetric=False, speed_deg_s=1.0, return_center=False, start_center=None,
                  recover_initial_first=False, start_recovery=None, validate_recovery_start=None, now=time.monotonic):
-        if type(cycles) is not int or not 1 <= cycles <= 3:
-            raise ValueError("cycles must be an integer from 1 to 3")
+        self.maximum_seconds = maximum_demo_seconds(cycles, excursion_deg, symmetric)
+        if (type(speed_deg_s) not in {int, float} or not math.isfinite(speed_deg_s)
+                or not 0 < speed_deg_s <= 3):
+            raise ValueError("speed_deg_s must be finite and greater than 0 through 3")
+        self.excursion_deg, self.symmetric, self.speed_deg_s = excursion_deg, symmetric, speed_deg_s
+        self.return_center, self.start_center, self.center_return = return_center, start_center, None
         self.window, self.observe, self.confirm = window, observe, confirm
         self.set_scale, self.start_group, self.now = set_scale, start_group, now
         self.started = now()
@@ -78,7 +96,6 @@ class J1Demo:
         self.recovery_target = self.recovery_result = self.recovery_started = None
         self.initial_hold_target = None
         self.requested_cycles, self.cycle_number = cycles, 1
-        self.maximum_seconds = MAXIMUM_SECONDS + 45.0 * (cycles - 1)
         self.cycle_results = []
         self.success = self.done = False
         self.samples, self.events = [], []
@@ -87,6 +104,7 @@ class J1Demo:
         if self.terminal is not None:
             return
         record_failure = reason is not None and self.stage == "action_group"
+        center_failure = reason is not None and self.stage == "return_center"
         recovery_failure = reason is not None and (self.stage in {"recover_initial", "recovery_hold"}
             or (self.recover_initial_first and self.recovery_result is None))
         self.failure = reason
@@ -99,6 +117,17 @@ class J1Demo:
             self._record_cycle("FAIL", failure=reason)
         if recovery_failure:
             self._record_recovery("FAIL", failure=reason)
+        if center_failure:
+            self._record_center("FAIL", failure=reason)
+
+    def _record_center(self, status, **details):
+        runner = self.dialog.runner if self.dialog is not None else None
+        self.center_return = {"status": status, "target_rad": list(self.origin), **details,
+            "runner_result": getattr(runner, "result", None),
+            "action_group_events": list(runner.events) if runner is not None else [],
+            "action_group_log": str(getattr(self.dialog, "log_path", "")),
+            "recipe_events": [event for event in self.events
+                              if event.get("event") == "checked_center_recipe_before_submit"]}
 
     def _record_recovery(self, status, **details):
         runner = self.dialog.runner if self.dialog is not None else None
@@ -234,7 +263,9 @@ class J1Demo:
             if runner is None or runner.state in {"failed", "stopped"}:
                 raise RuntimeError("action group failed: " + (runner.detail if runner else "not started"))
             if runner.state == "complete":
-                target = self.recovery_target if self.stage == "recover_initial" else self.origin
+                target = list(self.recovery_target if self.stage == "recover_initial" else self.origin)
+                if self.stage == "action_group" and self.symmetric:
+                    target[0] -= math.radians(self.excursion_deg)
                 if (not sample["stationary_hold_ready"] or not sample["router_hold_fresh"]
                         or max(abs(math.degrees(a-b)) for a,b in zip(sample["actual_rad"], target)) > 0.25):
                     raise RuntimeError("final fresh HOLD pose no longer satisfies the return bound")
@@ -262,19 +293,40 @@ class J1Demo:
                     self.origin = tuple(self.window.command_targets)
                     self.stage = "recovery_hold"
                     return
+                if self.stage == "return_center":
+                    if len(arrivals) != 1:
+                        raise RuntimeError("one measured center-return endpoint is required")
+                    center_model = [math.degrees(a) + b for a, b in zip(self.origin, self.window.session_pose_deg)]
+                    errors = [a-b for a,b in zip(arrivals[0]["actual_model_deg"], center_model)]
+                    if max(abs(error) for error in errors) > 0.25:
+                        raise RuntimeError("measured center return failed demo bounds")
+                    self._record_center("PASS", measured_arrival=arrivals[0], actual_rad=list(sample["actual_rad"]),
+                                        error_deg=errors)
+                    self.success = True
+                    self.stop()
+                    return
                 if len(arrivals) != 2:
                     raise RuntimeError("two measured endpoints are required")
                 initial = math.degrees(self.origin[0]) + self.window.session_pose_deg[0]
                 displacement = arrivals[0]["actual_model_deg"][0] - initial
                 returned = arrivals[1]["actual_model_deg"][0] - initial
-                if not 0.75 <= displacement <= 1.25 or abs(returned) > 0.25:
+                out_error = displacement - self.excursion_deg
+                return_error = returned + self.excursion_deg if self.symmetric else returned
+                if abs(out_error) > 0.25 or abs(return_error) > 0.25:
                     raise RuntimeError("measured J1 out/back displacement failed demo bounds")
                 self.events.append({"event": "measured_j1_out_and_back", "cycle": self.cycle_number,
-                                    "out_deg": displacement, "return_error_deg": returned})
-                self._record_cycle("PASS", out_deg=displacement, return_error_deg=returned)
+                                    "out_deg": displacement, "return_deg": returned,
+                                    "out_error_deg": out_error, "return_error_deg": return_error})
+                self._record_cycle("PASS", out_deg=displacement, return_deg=returned,
+                                   out_error_deg=out_error, return_error_deg=return_error)
                 if self.cycle_number == self.requested_cycles:
-                    self.success = True
-                    self.stop()
+                    if self.return_center:
+                        self.stage, self.dialog = "return_center", None
+                        self.window._tick()
+                        self.dialog = self.start_center(self.origin)
+                    else:
+                        self.success = True
+                        self.stop()
                 else:
                     self.cycle_number += 1
                     self.dialog = None
@@ -288,14 +340,17 @@ class J1Demo:
         failure = self.failure or (self.terminal.failure if self.terminal else "terminal not observed")
         completed = sum(result["status"] == "PASS" for result in self.cycle_results)
         recovery_ok = not self.recover_initial_first or (self.recovery_result or {}).get("status") == "PASS"
+        center_ok = not self.return_center or (self.center_return or {}).get("status") == "PASS"
         return {"schema": "go-m8010-j1-action-group-demo/1.0",
-                "status": "PASS" if self.success and completed == self.requested_cycles and terminal_ok and recovery_ok and not failure else "FAIL",
-                "scope": "J1_1_DEG_OUT_BACK_WITH_RECORDED_BOUNDED_SECONDARY_CORRECTIONS",
+                "status": "PASS" if self.success and completed == self.requested_cycles and terminal_ok and recovery_ok and center_ok and not failure else "FAIL",
+                "scope": "J1_SYMMETRIC_ENDPOINTS" if self.symmetric else "J1_OUT_AND_BACK",
                 "strict_precision_qualification": "NOT_RUN_OR_MODIFIED", "failure": failure,
                 "terminal_brake_and_j6_disabled_confirmed": terminal_ok,
                 "elapsed_s": self.now() - self.started, "initial_hold_target_rad": self.initial_hold_target,
                 "action_group_origin_rad": self.origin, "recovery_result": self.recovery_result,
                 "recover_initial_first": self.recover_initial_first,
+                "excursion_deg": self.excursion_deg, "symmetric": self.symmetric, "speed_deg_s": self.speed_deg_s,
+                "return_center": self.return_center, "center_return": self.center_return,
                 "action_group_file": self.action_group_file,
                 "requested_cycles": self.requested_cycles, "completed_cycles": completed,
                 "maximum_seconds": self.maximum_seconds, "cycle_results": self.cycle_results,
@@ -304,7 +359,8 @@ class J1Demo:
                 "action_group_events": self.dialog.runner.events if self.dialog and self.dialog.runner else []}
 
 
-def run_live(ros_args, binding, cycles=1, recover_initial_first=False):
+def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
+             excursion_deg=1.0, symmetric=False, speed_deg_s=1.0, return_center=False):
     root = Path(__file__).resolve().parents[2]
     sys.path.insert(0, str(root / "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui"))
     from go_m8010_arm_gui import main_window as gui
@@ -334,8 +390,9 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False):
                 recipe = self.window.workflow_contract.q_plan_trajectory
                 recovering = demo.stage == "recover_initial"
                 segments = check_recipe(recipe, demo.origin, recover_initial=recovering)
-                demo.events.append({"event": "checked_recovery_recipe_before_submit" if recovering else "checked_recipe_before_submit",
-                                    "cycle": 0 if recovering else demo.cycle_number, "step": self.runner.index,
+                center = demo.stage == "return_center"
+                demo.events.append({"event": "checked_recovery_recipe_before_submit" if recovering else "checked_center_recipe_before_submit" if center else "checked_recipe_before_submit",
+                                    "cycle": None if center else 0 if recovering else demo.cycle_number, "step": self.runner.index,
                                     "plan_token_id": self.window.workflow_contract.current_plan_token.token_id,
                                     "start_error_from_initial_deg": [math.degrees(a-b) for a,b in zip(recipe.start_rad, demo.origin)],
                                     "segments": segments})
@@ -400,10 +457,12 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False):
         if demo.action_group_file is None:
             baseline = [math.degrees(a) + b for a, b in zip(origin, window.session_pose_deg)]
             target = baseline[:]
-            target[0] += 1.0
-            group = ActionGroup("J1 1°往返动作组示例", (
-                ActionStep(tuple(target), speed_deg_s=1.0, dwell_s=0.5),
-                ActionStep(tuple(baseline), speed_deg_s=1.0, dwell_s=0.5),
+            target[0] += demo.excursion_deg
+            if demo.symmetric:
+                baseline[0] -= demo.excursion_deg
+            group = ActionGroup(f"J1 {'±' if demo.symmetric else ''}{demo.excursion_deg:g}°往返动作组示例", (
+                ActionStep(tuple(target), speed_deg_s=demo.speed_deg_s, dwell_s=0.5),
+                ActionStep(tuple(baseline), speed_deg_s=demo.speed_deg_s, dwell_s=0.5),
             ), window.workflow_contract.model_sha256)
             if path.exists():
                 raise RuntimeError("action-group artifact already exists; use a fresh run directory")
@@ -418,6 +477,18 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False):
         dialog.table.setRowCount(0)
         dialog.name.setText(loaded.name)
         for step in loaded.steps:
+            dialog.append_step(step)
+        dialog.start()
+        return dialog
+
+    def start_center(origin):
+        group = ActionGroup("J1 回固定中点", (ActionStep(tuple(
+            math.degrees(a) + b for a,b in zip(origin, window.session_pose_deg)),
+            speed_deg_s=demo.speed_deg_s, dwell_s=0.5),), window.workflow_contract.model_sha256)
+        dialog = window.action_group_dialog
+        dialog.table.setRowCount(0)
+        dialog.name.setText(group.name)
+        for step in group.steps:
             dialog.append_step(step)
         dialog.start()
         return dialog
@@ -460,6 +531,8 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False):
         return dialog
 
     demo = J1Demo(window, observe, confirm, set_scale, start_group, cycles=cycles,
+                  excursion_deg=excursion_deg, symmetric=symmetric, speed_deg_s=speed_deg_s,
+                  return_center=return_center, start_center=start_center,
                   recover_initial_first=recover_initial_first, start_recovery=start_recovery,
                   validate_recovery_start=read_initial_reference)
     timer = gui.QTimer(window)
@@ -482,7 +555,7 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False):
     stop = window.addToolBar("验证停止").addAction("停止往返示例并制动（Esc）")
     stop.setShortcut("Esc")
     stop.triggered.connect(lambda *_: demo.stop("operator pressed stop"))
-    window.setWindowTitle(f"J1 1°往返动作组示例 × {cycles}轮；逐轴小修正会记录；结束自动制动")
+    window.setWindowTitle(f"J1 {'±' if symmetric else ''}{excursion_deg:g}°往返动作组示例 × {cycles}轮；逐轴小修正会记录；结束自动制动")
     window.show()
     try:
         app.exec()
@@ -517,18 +590,30 @@ def main(argv=None):
     split = values.index("--ros-args") if "--ros-args" in values else len(values)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--execute", action="store_true")
-    parser.add_argument("--cycles", type=int, choices=range(1, 4), default=1)
+    parser.add_argument("--cycles", type=int, choices=range(1, 11), default=1)
+    parser.add_argument("--excursion-deg", type=float, default=1.0)
+    parser.add_argument("--symmetric", action="store_true")
+    parser.add_argument("--speed-deg-s", type=float, default=1.0)
+    parser.add_argument("--return-center", action="store_true")
     parser.add_argument("--recover-initial-first", action="store_true")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--envelope", type=Path)
     parser.add_argument("--anchor-validation", type=Path)
     parser.add_argument("--expected-envelope-sha256")
     args = parser.parse_args(values[:split])
+    try:
+        maximum_seconds = maximum_demo_seconds(args.cycles, args.excursion_deg, args.symmetric)
+        if not math.isfinite(args.speed_deg_s) or not 0 < args.speed_deg_s <= 3:
+            raise ValueError("speed_deg_s must be finite and greater than 0 through 3")
+    except ValueError as error:
+        parser.error(str(error))
     if not args.execute:
         print(json.dumps({"mode": "OFFLINE_DESCRIPTION_ONLY", "hardware_accessed": False,
                           "cycles": args.cycles, "recover_initial_first": args.recover_initial_first,
-                          "maximum_seconds": MAXIMUM_SECONDS + 45 * (args.cycles - 1), "gravity_levels": LEVELS,
-                          "demo": "J1 1 degree out/back; secondary corrections <=0.25 degrees"}))
+                          "excursion_deg": args.excursion_deg, "symmetric": args.symmetric,
+                          "speed_deg_s": args.speed_deg_s, "return_center": args.return_center,
+                          "maximum_seconds": maximum_seconds, "gravity_levels": LEVELS,
+                          "demo": "J1 fixed-origin endpoints; secondary corrections <=0.25 degrees"}))
         return 0
     if (not all((args.output, args.envelope, args.anchor_validation, args.expected_envelope_sha256))
             or args.output.exists() or split == len(values)):
@@ -540,7 +625,9 @@ def main(argv=None):
     with args.output.open("x+", encoding="utf-8") as stream:
         stream.write('{"status":"INCOMPLETE"}\n')
         stream.flush()
-        result = run_live(values[split:], binding, args.cycles, args.recover_initial_first)
+        result = run_live(values[split:], binding, args.cycles, args.recover_initial_first,
+                          excursion_deg=args.excursion_deg, symmetric=args.symmetric,
+                          speed_deg_s=args.speed_deg_s, return_center=args.return_center)
         stream.seek(0)
         json.dump(result, stream, ensure_ascii=False, allow_nan=False, indent=2)
         stream.write("\n")

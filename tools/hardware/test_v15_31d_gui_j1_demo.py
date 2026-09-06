@@ -10,7 +10,7 @@ import sys
 import tempfile
 from types import SimpleNamespace
 
-from v15_31d_gui_j1_demo import J1Demo, LEVELS, MOTORS, check_recipe, main
+from v15_31d_gui_j1_demo import J1Demo, LEVELS, MOTORS, check_recipe, main, maximum_demo_seconds
 from v15_31b_acceptance_signal import SignalPayloadSequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] /
@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] /
 from go_m8010_arm_gui.action_groups import ActionGroup, ActionStep, PRODUCTION_ABSOLUTE_JOINT_LIMITS_DEG
 
 
-def harness(cycles=1):
+def harness(cycles=1, **options):
     clock, commands, state = [0.0], [], {"index": 0, "entered": 0.0, "confirmed": -1.0}
     override = {}
     binding = SimpleNamespace(envelope_id="envelope", envelope_sha256="a" * 64, sha256="a" * 64,
@@ -77,7 +77,7 @@ def harness(cycles=1):
         assert observe()["position_authorized"]
         commands.append("action_group")
         return SimpleNamespace(runner=SimpleNamespace(state="moving", detail="waiting", events=[]))
-    demo = J1Demo(window, observe, confirm, scale, start_group, cycles=cycles, now=lambda: clock[0])
+    demo = J1Demo(window, observe, confirm, scale, start_group, cycles=cycles, now=lambda: clock[0], **options)
     def tick(seconds=0.1):
         clock[0] = round(clock[0] + seconds, 6)
         demo.tick()
@@ -246,6 +246,90 @@ def test_three_cycles_reuse_file_and_keep_completed_cycle_when_second_fails():
     assert json.loads(output.getvalue())["maximum_seconds"] == 270
 
 
+def test_ten_symmetric_cycles_keep_midpoint_file_and_return_center():
+    source = Path(__file__).with_name("v15_31d_gui_j1_demo.py")
+    run_live = next(node for node in ast.parse(source.read_text(encoding="utf-8")).body
+                    if isinstance(node, ast.FunctionDef) and node.name == "run_live")
+    callbacks = [node for node in run_live.body if isinstance(node, ast.FunctionDef)
+                 and node.name in {"start_group", "start_center"}]
+    for fault in (None, "negative_endpoint", "center"):
+        with tempfile.TemporaryDirectory() as directory:
+            demo, commands, _, tick = harness(cycles=10, excursion_deg=10, symmetric=True,
+                                              speed_deg_s=3, return_center=True)
+            original_deg = [0.37, 0.02, -0.03, 0.04, -0.05, 0.06]
+            demo.window.actual = [math.radians(value) for value in original_deg]
+            rows, endpoints = [], []
+            dialog = SimpleNamespace(name=SimpleNamespace(setText=lambda _: None),
+                table=SimpleNamespace(setRowCount=lambda _: rows.clear()), append_step=rows.append)
+            def start_dialog():
+                endpoints.extend([step.target_deg[0] - original_deg[0] for step in rows])
+                dialog.log_path = Path(directory) / f"move-{len(endpoints)}.jsonl"
+                dialog.runner = SimpleNamespace(state="moving", detail="waiting", events=[])
+            dialog.start = start_dialog
+            demo.window.action_group_dialog = dialog
+            demo.window.workflow_contract = SimpleNamespace(model_sha256="a" * 64)
+            demo.window.absolute_limits = PRODUCTION_ABSOLUTE_JOINT_LIMITS_DEG
+            namespace = dict(window=demo.window, node=SimpleNamespace(log_directory=Path(directory)),
+                demo=demo, ActionGroup=ActionGroup, ActionStep=ActionStep, math=math, hashlib=hashlib)
+            exec(compile(ast.Module(body=callbacks, type_ignores=[]), str(source), "exec"), namespace)
+            demo.start_group, demo.start_center = namespace["start_group"], namespace["start_center"]
+            for _ in range(120):
+                tick()
+                if demo.stage == "action_group":
+                    break
+            origin = demo.origin
+            path = Path(demo.action_group_file["path"])
+            original_bytes = path.read_bytes()
+            for cycle in range(10):
+                assert len(rows) == 2 and all(step.speed_deg_s == 3 for step in rows)
+                assert all(step.target_deg[1:] == tuple(original_deg[1:]) for step in rows)
+                assert path.read_bytes() == original_bytes and demo.origin == origin
+                positive, negative = original_deg[:], original_deg[:]
+                positive[0] += 10.1
+                negative[0] -= 9.74 if fault == "negative_endpoint" and cycle == 1 else 9.9
+                demo.window.actual[0] = math.radians(original_deg[0] - 9.9)
+                dialog.runner.events = [
+                    {"event": "measured_arrival", "index": index, "actual_model_deg": endpoint}
+                    for index, endpoint in enumerate((positive, negative))]
+                dialog.runner.state = "complete"
+                tick()
+                if demo.stage == "terminal":
+                    break
+            if fault != "negative_endpoint":
+                assert demo.stage == "return_center" and len(rows) == 1
+                assert all(abs(a-b) < 1e-12 for a,b in zip(rows[0].target_deg, original_deg))
+                assert demo.result()["completed_cycles"] == 10 and not demo.success
+                centered = original_deg[:]
+                centered[0] += 0.26 if fault == "center" else 0.1
+                demo.window.actual = [math.radians(value) for value in centered]
+                dialog.runner.events = [{"event": "measured_arrival", "index": 0, "actual_model_deg": centered}]
+                dialog.runner.state = "complete"
+                tick()
+            for _ in range(4):
+                tick()
+            result = demo.result()
+            assert demo.origin == origin and commands.count("hold") == commands.count("brake") == 1
+            assert result["status"] == ("PASS" if fault is None else "FAIL")
+            assert result["maximum_seconds"] == 1500 and path.read_bytes() == original_bytes
+            if fault != "negative_endpoint":
+                assert all(abs(a-b) < 1e-12 for a,b in zip(endpoints, [10, -10] * 10 + [0]))
+                assert len(endpoints) == 21 and len(result["cycle_results"]) == 10
+                assert result["center_return"]["status"] == ("PASS" if fault is None else "FAIL")
+            else:
+                assert result["completed_cycles"] == 1 and result["center_return"] is None
+    with redirect_stdout(StringIO()) as output:
+        assert main(["--cycles", "10", "--excursion-deg", "10", "--symmetric", "--speed-deg-s", "3", "--return-center"]) == 0
+    assert json.loads(output.getvalue())["maximum_seconds"] == 1500
+    assert [maximum_demo_seconds(cycles) for cycles in (1, 2, 3)] == [180, 225, 270]
+    for cycles, excursion in ((11, 1), (1, 10.01), (1, float("nan"))):
+        try:
+            maximum_demo_seconds(cycles, excursion)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("accepted invalid cycles/excursion")
+
+
 def test_initial_recovery_uses_original_file_and_checks_all_axes_before_hold():
     source = Path(__file__).with_name("v15_31d_gui_j1_demo.py")
     run_live = next(node for node in ast.parse(source.read_text(encoding="utf-8")).body
@@ -348,5 +432,6 @@ if __name__ == "__main__":
     test_bounded_j1_action_group()
     test_initial_hold_waits_for_advancing_fresh_paired_brake_but_active_fault_stops()
     test_three_cycles_reuse_file_and_keep_completed_cycle_when_second_fails()
+    test_ten_symmetric_cycles_keep_midpoint_file_and_return_center()
     test_initial_recovery_uses_original_file_and_checks_all_axes_before_hold()
     print("GUI_J1_DEMO_OFFLINE=PASS")
