@@ -117,6 +117,7 @@ def generate_launch_description() -> LaunchDescription:
         package="go_m8010_arm_gui",
         executable="arm_gui",
         name="arm_control_gui",
+        condition=IfCondition(LaunchConfiguration("start_gui")),
         output="screen",
         parameters=[{
             "config_path": LaunchConfiguration("config_path"),
@@ -157,6 +158,7 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("state_instance_id", default_value=""),
         DeclareLaunchArgument("gravity_anchor_path", default_value=""),
         DeclareLaunchArgument("start_gravity_node", default_value="true"),
+        DeclareLaunchArgument("start_gui", default_value="true"),
         DeclareLaunchArgument("empirical_envelope_path", default_value=""),
         DeclareLaunchArgument(
             "expected_empirical_envelope_sha256", default_value=""

@@ -56,6 +56,7 @@ export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}"
 export QT_QPA_PLATFORM=wayland
 
 exec ros2 launch go_m8010_arm_gui arm_gui.launch.py \
+  start_gui:=false \
   model_path:="$model" \
   session_pose_deg:="0,90,-14.40,13.49,47.94,0" \
   pose_matched:=true \
