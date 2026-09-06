@@ -44,6 +44,7 @@ from .state_model import (
     validate_j6_feedback_identity,
     validate_worker_supervisor_status,
     validate_preserved_session_reference,
+    supported_near_vertical_recovery,
 )
 from .thermal_manager import (
     THERMAL_CONFIG_SHA256,
@@ -367,11 +368,12 @@ def load_initial_pose(
 
 
 def load_j2_session_reference(
-    path: Path, persistent_zero_sha256: str
+    path: Path, persistent_zero_sha256: str, *,
+    runtime_startup_hints: Optional[dict[str, float]] = None,
 ) -> tuple[dict[str, float], dict[str, float], str]:
     data = path.read_bytes()
     document = json.loads(data)
-    validate_preserved_session_reference(document)
+    measured_startup = validate_preserved_session_reference(document)
     if document.get("schema") != "go-m8010-j2-power-session-reference/1.0":
         raise ValueError("J2 session reference schema mismatch")
     if document.get("reference_name") != "PERSISTENT_SOFTWARE_ZERO_V1":
@@ -453,6 +455,8 @@ def load_j2_session_reference(
             raise ValueError(f"J2 session reference {name} value is invalid")
         references[name] = reference
         hints[name] = logical
+    if runtime_startup_hints is not None and supported_near_vertical_recovery(document):
+        runtime_startup_hints.update(measured_startup)
     return references, hints, hashlib.sha256(data).hexdigest()
 
 
@@ -462,10 +466,11 @@ def load_go_aux_session_reference(
     recovery_hint_sha256: str,
     initial_pose_sha256: str,
     initial_pose: dict[str, float],
+    *, runtime_startup_hints: Optional[dict[str, float]] = None,
 ) -> tuple[dict[str, float], dict[str, float], str]:
     data = path.read_bytes()
     document = json.loads(data)
-    validate_preserved_session_reference(document)
+    measured_startup = validate_preserved_session_reference(document)
     if document.get("schema") != "go-m8010-go-aux-power-session-reference/1.0":
         raise ValueError("GO-AUX session reference schema mismatch")
     if document.get("reference_name") != "PERSISTENT_SOFTWARE_ZERO_V1":
@@ -554,6 +559,8 @@ def load_go_aux_session_reference(
             raise ValueError(f"GO-AUX session reference {name} value is invalid")
         references[name] = reference
         logical_positions[name] = logical
+    if runtime_startup_hints is not None and supported_near_vertical_recovery(document):
+        runtime_startup_hints.update(measured_startup)
     return references, logical_positions, hashlib.sha256(data).hexdigest()
 
 
@@ -649,6 +656,7 @@ class WholeArmStateNode(Node):
         )
         j2_session_references = None
         j2_session_hints = None
+        runtime_startup_hints: dict[str, float] = {}
         self.j2_session_reference_sha256: Optional[str] = None
         if session_path_text:
             if self.persistent_zero_sha256 is None:
@@ -658,7 +666,8 @@ class WholeArmStateNode(Node):
                 j2_session_hints,
                 self.j2_session_reference_sha256,
             ) = load_j2_session_reference(
-                Path(session_path_text).resolve(), self.persistent_zero_sha256
+                Path(session_path_text).resolve(), self.persistent_zero_sha256,
+                runtime_startup_hints=runtime_startup_hints,
             )
         aux_session_path_text = str(
             self.get_parameter("go_aux_session_reference_path").value
@@ -686,6 +695,7 @@ class WholeArmStateNode(Node):
                 recovery_hint_sha256,
                 self.initial_pose_sha256,
                 initial_pose,
+                runtime_startup_hints=runtime_startup_hints,
             )
         self.model = MirrorSessionReferenceV1(
             capture_samples=int(self.get_parameter("capture_samples").value),
@@ -702,6 +712,7 @@ class WholeArmStateNode(Node):
             j2_session_hints=j2_session_hints,
             go_aux_session_references=go_aux_session_references,
             go_aux_session_hints=go_aux_session_hints,
+            runtime_startup_hints=runtime_startup_hints,
         )
         self.velocity_observer = PositionSpanVelocityObserver()
         evidence = Path(str(self.get_parameter("evidence_directory").value)).resolve()

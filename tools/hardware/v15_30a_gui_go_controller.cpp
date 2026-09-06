@@ -1028,6 +1028,7 @@ struct MotorRuntime {
   double session_logical_position = 0.0;
   double session_capture_raw_position = 0.0;
   double session_startup_logical_position = 0.0;
+  bool supported_near_vertical_recovery = false;
   bool valid = false;
   // Transport/mode health for the most recent transaction only.  `valid`
   // remains the five-frame hard-fault latch input so a single bad frame does
@@ -1058,6 +1059,8 @@ struct MotorRuntime {
 };
 
 double reference_for_j2_session(double unwrapped, const MotorRuntime& motor);
+double reference_for_session_hint(double unwrapped, const MotorRuntime& motor,
+                                  double hint, double maximum_offset);
 
 struct J2GovernedReference {
   bool feasible = false;
@@ -1946,6 +1949,18 @@ bool validate_preserved_session_geometry(const nlohmann::json& document) {
   const auto& proof = document.at("preserved_reference");
   if (proof.at("schema") != "go-m8010-preserved-session-reference/1.0")
     throw std::runtime_error("PRESERVED_REFERENCE_SCHEMA_MISMATCH");
+  if (proof.contains("supported_near_vertical_recovery")) {
+    const nlohmann::json expected = {
+        {"schema", "go-m8010-supported-near-vertical-recovery/1.0"},
+        {"purpose", "SUPPORTED_RETURN_TO_HASH_BOUND_INITIAL_POSE"},
+        {"software_maximum_offset_deg", 5.0},
+        {"user_declared_near_original_pose", true}, {"support_reliable", true},
+        {"self_return_authorized", true},
+        {"externally_measured_five_degree_accuracy_claimed", false},
+        {"operator_evidence_id", document.at("operator_confirmation").at("evidence_id")}};
+    if (proof.at("supported_near_vertical_recovery") != expected)
+      throw std::runtime_error("SUPPORTED_NEAR_VERTICAL_RECOVERY_DECLARATION_MISMATCH");
+  }
   const auto source_file = read_secure_owned_file(
       proof.at("source_path").get<std::string>(), 4194304U,
       "PRESERVED_REFERENCE_OPEN_FAILED", "PRESERVED_REFERENCE_FILE_UNSAFE",
@@ -2071,20 +2086,25 @@ bool validate_preserved_session_geometry(const nlohmann::json& document) {
 
 void apply_session_capture_reference(
     MotorRuntime& motor, const nlohmann::json& value,
-    const nlohmann::json& statistics, bool preserved) {
+    const nlohmann::json& statistics, bool preserved, bool supported_recovery) {
   motor.session_capture_raw_position = statistics.at("mean").get<double>();
+  const double proof_limit = supported_recovery ? 5.0 * kPi / 180.0 : kJ2SessionStartupTolerance;
+  const auto proof_reference = [&](double raw) {
+    return reference_for_session_hint(raw, motor, motor.session_logical_position, proof_limit);
+  };
   motor.session_startup_logical_position = motor.sign *
       (motor.session_capture_raw_position -
-       reference_for_j2_session(motor.session_capture_raw_position, motor)) / kGear;
+       proof_reference(motor.session_capture_raw_position)) / kGear;
   if (preserved) {
-    (void)reference_for_j2_session(statistics.at("minimum").get<double>(), motor);
-    (void)reference_for_j2_session(statistics.at("maximum").get<double>(), motor);
+    (void)proof_reference(statistics.at("minimum").get<double>());
+    (void)proof_reference(statistics.at("maximum").get<double>());
     const double claimed = value.at("startup_logical_position_rad").get<double>();
     if (!std::isfinite(claimed) ||
         std::abs(claimed - motor.session_startup_logical_position) > 1e-12 ||
         !within_mechanical_feedback_envelope(motor.joint_index, claimed))
       throw std::runtime_error("PRESERVED_REFERENCE_STARTUP_POSITION_MISMATCH");
   }
+  motor.supported_near_vertical_recovery = supported_recovery;
 }
 
 void apply_j2_session_reference_document(
@@ -2194,7 +2214,8 @@ void apply_j2_session_reference_document(
     motor.session_reference = reference;
     motor.session_logical_position = logical;
     motor.session_reference_configured = true;
-    apply_session_capture_reference(motor, value, raw_statistics, preserved_geometry);
+    apply_session_capture_reference(motor, value, raw_statistics, preserved_geometry,
+        preserved_geometry && document.at("preserved_reference").contains("supported_near_vertical_recovery"));
   }
   if (motors.size() != 2U ||
       !std::all_of(motors.begin(), motors.end(), [](const MotorRuntime& motor) {
@@ -2338,7 +2359,8 @@ void apply_go_aux_session_reference_document(
     motor.session_reference = reference;
     motor.session_logical_position = logical;
     motor.session_reference_configured = true;
-    apply_session_capture_reference(motor, value, statistics, preserved_geometry);
+    apply_session_capture_reference(motor, value, statistics, preserved_geometry,
+        preserved_geometry && document.at("preserved_reference").contains("supported_near_vertical_recovery"));
   }
   if (!std::all_of(motors.begin(), motors.end(), [](const MotorRuntime& motor) {
         return motor.session_reference_configured;
@@ -2896,22 +2918,28 @@ double reference_for_recovery_branch(double unwrapped,
   return reference;
 }
 
-double reference_for_j2_session(double unwrapped,
-                                const MotorRuntime& motor) {
+double reference_for_session_hint(double unwrapped, const MotorRuntime& motor,
+                                  double hint, double maximum_offset) {
   if (!motor.session_reference_configured)
     throw std::runtime_error("J2_SESSION_REFERENCE_NOT_CONFIGURED");
   const double desired_reference = unwrapped -
-      motor.sign * kGear * motor.session_logical_position;
+      motor.sign * kGear * hint;
   const double reference = motor.session_reference +
       std::round((desired_reference - motor.session_reference) /
                  (2.0 * kPi)) * (2.0 * kPi);
   const double recovered =
       motor.sign * (unwrapped - reference) / kGear;
   if (!std::isfinite(recovered) ||
-      std::abs(recovered - motor.session_logical_position) >
-          kJ2SessionStartupTolerance)
+      std::abs(recovered - hint) > maximum_offset)
     throw std::runtime_error("J2_SESSION_REFERENCE_STARTUP_MISMATCH");
   return reference;
+}
+
+double reference_for_j2_session(double unwrapped, const MotorRuntime& motor) {
+  return reference_for_session_hint(unwrapped, motor,
+      motor.supported_near_vertical_recovery ? motor.session_startup_logical_position
+                                           : motor.session_logical_position,
+      kJ2SessionStartupTolerance);
 }
 
 struct Feedback {

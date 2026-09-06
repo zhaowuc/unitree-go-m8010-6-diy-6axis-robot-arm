@@ -34,6 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] /
 from go_m8010_arm_hardware.state_model import (
     PRESERVED_SESSION_REFERENCE_SCHEMA, session_reference_for_raw,
     validate_preserved_session_reference,
+    SUPPORTED_RECOVERY_DECLARATION, SUPPORTED_RECOVERY_LIMIT_RAD,
 )
 
 
@@ -829,6 +830,9 @@ def preserve_reference_if_requested(anchor: dict[str, Any], args: argparse.Names
                                     capture_validator=validate_capture) -> Path | None:
     source_arg = getattr(args, "preserve_reference_file", None)
     expected_sha = getattr(args, "expected_preserve_reference_sha256", None)
+    recovery = getattr(args, "supported_near_vertical_recovery", False)
+    if recovery and source_arg is None:
+        raise AnchorValidationError("supported recovery requires preserve-reference evidence")
     if bool(source_arg) != bool(expected_sha):
         raise AnchorValidationError("preserve-reference requires both source file and SHA256")
     if source_arg is None:
@@ -849,19 +853,26 @@ def preserve_reference_if_requested(anchor: dict[str, Any], args: argparse.Names
         "schema": PRESERVED_SESSION_REFERENCE_SCHEMA,
         "source_path": str(source_path), "source_sha256": source_sha,
     }
+    if recovery:
+        anchor["preserved_reference"]["supported_near_vertical_recovery"] = {
+            **SUPPORTED_RECOVERY_DECLARATION,
+            "operator_evidence_id": anchor["operator_confirmation"]["evidence_id"],
+        }
     for name, record in anchor["motors"].items():
         original = source["motors"][name]
         for field in ("session_reference_raw_rad", "logical_position_rad", "sign", "gear_ratio"):
             record[field] = original[field]
         raw = anchor["raw_capture"]["motors"][name]["unwrapped_raw_position_rad"]["mean"]
         reference = session_reference_for_raw(
-            raw, record["session_reference_raw_rad"], record["logical_position_rad"], record["sign"]
+            raw, record["session_reference_raw_rad"], record["logical_position_rad"], record["sign"],
+            **({"maximum_offset_rad": SUPPORTED_RECOVERY_LIMIT_RAD} if recovery else {}),
         )
         record["startup_logical_position_rad"] = record["sign"] * (raw - reference) / GEAR_RATIO
     validate_preserved_session_reference(anchor)
-    anchor["anchor_id"] = anchor["anchor_id"].rsplit("-", 1)[0] + "-" + sha256_bytes(
-        canonical_bytes({"anchor_id": anchor["anchor_id"], "preserved_source": source_sha})
-    )[:16]
+    identity = {"anchor_id": anchor["anchor_id"], "preserved_source": source_sha}
+    if recovery:
+        identity["supported_near_vertical_recovery"] = anchor["preserved_reference"]["supported_near_vertical_recovery"]
+    anchor["anchor_id"] = anchor["anchor_id"].rsplit("-", 1)[0] + "-" + sha256_bytes(canonical_bytes(identity))[:16]
     anchor["derivation"]["startup_position_source"] = "FRESH_RAW_WITH_UNCHANGED_SESSION_GEOMETRY"
     return source_path
 
@@ -1357,6 +1368,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--expected-capture-sha256", required=True)
     parser.add_argument("--preserve-reference-file", type=Path)
     parser.add_argument("--expected-preserve-reference-sha256")
+    parser.add_argument("--supported-near-vertical-recovery", action="store_true")
     parser.add_argument("--operator-evidence-id", required=True)
     parser.add_argument("--operator-confirmed-at-utc", required=True)
     parser.add_argument("--operator-power-session-id", required=True)

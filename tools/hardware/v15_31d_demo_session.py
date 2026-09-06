@@ -174,6 +174,8 @@ def main(argv=None):
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--power-cycled", action="store_true",
                         help="attest an actual J6 24V power cycle since the prior commissioning session")
+    parser.add_argument("--supported-near-vertical-recovery", action="store_true",
+                        help="use the bounded near-original-pose recovery, then return to the original pose through the GUI before cycles")
     for flag in ("supported", "vertical", "hands-off", "clearance"):
         parser.add_argument("--" + flag, action="store_true")
     args = parser.parse_args(argv)
@@ -186,6 +188,14 @@ def main(argv=None):
         weird = Path("/tmp/demo space 'quote' $(not-executed)")
         checked_bash(args.bash, rendered(weird, weird / "session", weird / "scripts", "v15-31d-demo-test"))
         assert all("--preserve-reference-file" in bodies[name] for name in ("stage_readonly.sh", "stage_active.sh"))
+        for name, flag in (("stage_readonly.sh", "--supported-near-vertical-recovery"),
+                           ("stage_active.sh", "--supported-near-vertical-recovery"),
+                           ("start_bounded_j1_demo.sh", "--recover-initial-first")):
+            for enabled in (False, True):
+                script = f"set -- 3 {str(enabled).lower()}\n" + bodies[name].split("scripts=", 1)[0]
+                check = subprocess.run([args.bash], input=script + 'printf "%s" "${recovery_args[@]}"\n',
+                                       text=True, capture_output=True, encoding="utf-8", check=True)
+                assert check.stdout == (flag if enabled else "")
         assert last_terminal_pass("FINAL_BRAKE=FAIL\nFINAL_BRAKE=PASS\n", "FINAL_BRAKE")
         assert not last_terminal_pass("FINAL_BRAKE=PASS\nFINAL_BRAKE=FAIL\n", "FINAL_BRAKE")
         assert not last_terminal_pass("FINAL_BRAKE=PASS\nFINAL_BRAKE=UNKNOWN\n", "FINAL_BRAKE")
@@ -197,6 +207,7 @@ def main(argv=None):
                  if (ROOT / name).is_file() and hashlib.sha256((ROOT / name).read_bytes()).hexdigest() != sha]
     plan = {"mode": "EXECUTE" if args.execute else "DRY_RUN", "cycles": args.cycles,
             "j6_power_cycle_attested": args.power_cycled,
+            "supported_near_vertical_recovery": args.supported_near_vertical_recovery,
             "repo": str(ROOT), "session": str(session), "scripts": str(scripts), "unit_prefix": unit,
             "missing_or_mismatched_inputs": problems, "bash_syntax": "PASS",
             "order": ["prebuild-only", "j6_posvel_preflight", "stage_readonly", "stage_active", "bounded_j1_demo", "stop_owned_units"]}
@@ -240,7 +251,8 @@ def execute(args, bodies, plan, session, scripts, unit):
         run_stage([args.bash, str(scripts / "j6_posvel_preflight.sh"), str(args.power_cycled).lower()],
                   scripts / "j6_posvel_preflight.log", 120)
         for name in ("stage_readonly.sh", "stage_active.sh", "start_bounded_j1_demo.sh"):
-            run_stage([args.bash, str(scripts / name), str(args.cycles)], scripts / (name + ".log"), 300)
+            run_stage([args.bash, str(scripts / name), str(args.cycles),
+                       str(args.supported_near_vertical_recovery).lower()], scripts / (name + ".log"), 300)
         demo_path = session / "evidence/j1_action_group_demo.json"
         demo = json.loads(demo_path.read_text(encoding="utf-8"))
         result["demo"] = {key: demo.get(key) for key in ("status", "requested_cycles", "completed_cycles", "failure")}

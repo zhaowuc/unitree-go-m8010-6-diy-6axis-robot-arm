@@ -7,14 +7,16 @@ import os
 import subprocess
 import tempfile
 import unittest
+import time
 from pathlib import Path
 
 import test_v15_30a_create_j2_vertical_session_phase_anchor as j2
 import test_v15_30a_create_go_aux_vertical_session_phase_anchor as aux
+from go_m8010_arm_hardware.state_model import MirrorSessionReferenceV1, MotorFeedback
 
 
 class PreservedReferenceTest(unittest.TestCase):
-    def exercise(self, auxiliary=False):
+    def exercise(self, auxiliary=False, *, recovery=False, offsets=None):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)
@@ -39,11 +41,13 @@ class PreservedReferenceTest(unittest.TestCase):
         source_path.chmod(0o600)
         args.preserve_reference_file = source_path
         args.expected_preserve_reference_sha256 = hashlib.sha256(source_data).hexdigest()
+        args.supported_near_vertical_recovery = recovery
         protected = {p: p.read_bytes() for p in (
             args.zero_file, args.zero_sha256_file, args.recovery_hint_file,
             args.initial_pose_file, source_path, original_capture_path)}
         expected = ({"J1": 0.256, "J3": -0.021, "J4": 0.020, "J5": -1.57}
                     if auxiliary else {"J2A": 0.007, "J2B": 0.139})
+        expected.update(offsets or {})
         capture = json.loads(args.capture_statistics_file.read_text(encoding="utf-8"))
         args.capture_statistics_file = root / "fresh_capture.json"
         for name, delta in expected.items():
@@ -65,7 +69,25 @@ class PreservedReferenceTest(unittest.TestCase):
             self.assertEqual(anchor["motors"][name]["logical_position_rad"], 0.0)
         self.assertEqual(source_path.read_bytes(), source_data)
         if not auxiliary:
-            self.assertAlmostEqual(math.degrees(derived["J2B"] - derived["J2A"]), 0.132, places=9)
+            self.assertAlmostEqual(math.degrees(derived["J2B"] - derived["J2A"]), expected["J2B"] - expected["J2A"], places=9)
+        if recovery:
+            zero = json.loads(args.zero_file.read_bytes())
+            model_args = dict(persistent_references={n: v["raw_position_rad"] for n, v in zero["motors"].items()},
+                              recovery_hints={"J2A": 0.0, "J2B": 0.0}, runtime_startup_hints=derived)
+            prefix = "go_aux" if auxiliary else "j2"
+            model_args[prefix + "_session_references"] = {n: v["session_reference_raw_rad"] for n, v in anchor["motors"].items()}
+            model_args[prefix + "_session_hints"] = {n: v["logical_position_rad"] for n, v in anchor["motors"].items()}
+            model = MirrorSessionReferenceV1(**model_args)
+            stamp = time.monotonic_ns()
+            for name, value in derived.items():
+                raw = anchor["raw_capture"]["motors"][name]["unwrapped_raw_position_rad"]["mean"]
+                sign = anchor["motors"][name]["sign"]
+                model.update(MotorFeedback(name, raw, 0.0, 30.0, 0, True, stamp, stamp))
+                self.assertAlmostEqual(sign * (raw - model.references[name]) / j2.MODULE.GEAR_RATIO, value, places=12)
+                self.assertEqual(model.power_session_hints[name], 0.0)
+                outside = MirrorSessionReferenceV1(**model_args)
+                with self.assertRaises(ValueError):
+                    outside.update(MotorFeedback(name, raw + sign * j2.MODULE.GEAR_RATIO * math.radians(2.01), 0.0, 30.0, 0, True, stamp, stamp))
         binary = os.environ.get("M8010_REFERENCE_AUDIT_BINARY")
         if binary:
             completed = subprocess.run([binary], input=json.dumps(anchor), text=True,
@@ -75,6 +97,9 @@ class PreservedReferenceTest(unittest.TestCase):
             self.assertFalse(result["serial_opened"])
             for name, value in derived.items():
                 self.assertAlmostEqual(result["motors"][name]["startup_logical"], value, places=12)
+                self.assertAlmostEqual(result["motors"][name]["runtime_logical"], value, places=12)
+                if recovery:
+                    self.assertTrue(result["motors"][name]["runtime_two_degree_drift_rejected"])
             tampered = copy.deepcopy(anchor)
             tampered["motors"][next(iter(expected))]["startup_logical_position_rad"] = 0.0
             rejected = subprocess.run([binary], input=json.dumps(tampered), text=True,
@@ -91,6 +116,49 @@ class PreservedReferenceTest(unittest.TestCase):
 
     def test_auxiliary_pose_survives_new_capture(self):
         self.exercise(True)
+
+    def test_explicit_supported_recovery_preserves_geometry_and_runtime_window(self):
+        with self.assertRaises(ValueError):
+            self.exercise(True, offsets={"J4": 2.067051})
+        anchor, _ = self.exercise(True, recovery=True, offsets={"J4": 2.067051})
+        j2_anchor, _ = self.exercise(recovery=True, offsets={"J2A": 1.969163, "J2B": 2.211498})
+        candidates = []
+        missing = copy.deepcopy(anchor)
+        del missing["preserved_reference"]["supported_near_vertical_recovery"]
+        candidates.append(missing)
+        for field, value in (("software_maximum_offset_deg", 6.0), ("support_reliable", False)):
+            changed = copy.deepcopy(anchor)
+            changed["preserved_reference"]["supported_near_vertical_recovery"][field] = value
+            candidates.append(changed)
+        for original, name, delta in ((anchor, "J4", 3.0), (j2_anchor, "J2B", 0.4)):
+            changed = copy.deepcopy(original)
+            record = changed["motors"][name]
+            raw = changed["raw_capture"]["motors"][name]["unwrapped_raw_position_rad"]
+            for field in ("mean", "minimum", "maximum"):
+                raw[field] += record["sign"] * j2.MODULE.GEAR_RATIO * math.radians(delta)
+            record["startup_logical_position_rad"] += math.radians(delta)
+            candidates.append(changed)
+        for candidate in candidates:
+            with self.assertRaises(ValueError):
+                j2.MODULE.validate_preserved_session_reference(candidate)
+            binary = os.environ.get("M8010_REFERENCE_AUDIT_BINARY")
+            if binary:
+                result = subprocess.run([binary], input=json.dumps(candidate), text=True, capture_output=True, timeout=10)
+                self.assertNotEqual(result.returncode, 0)
+
+    def test_supported_recovery_still_rejects_five_degree_edges_and_sync(self):
+        for offsets in ({"J4": 5.01}, {"J4": 4.999}):
+            with self.assertRaises(ValueError):
+                self.exercise(True, recovery=True, offsets=offsets)
+        with self.assertRaises(ValueError):
+            self.exercise(recovery=True, offsets={"J2A": 2.0, "J2B": 2.6})
+
+    def test_supported_recovery_requires_original_preserve_reference(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            args, _ = j2.make_fixture_tree(Path(temporary))
+            args.supported_near_vertical_recovery = True
+            with self.assertRaises(ValueError):
+                j2.run_tool(args)
 
     def test_geometry_source_and_claim_tampering_are_rejected(self):
         anchor, path = self.exercise()

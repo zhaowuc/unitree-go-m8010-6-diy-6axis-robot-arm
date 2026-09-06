@@ -23,11 +23,22 @@ int main() {
     else
       apply_go_aux_session_reference_document(document, zero, hints, session, boot, motors);
     nlohmann::json result = {{"serial_opened", false}, {"motors", nlohmann::json::object()}};
-    for (const auto& motor : motors)
+    for (const auto& motor : motors) {
+      const double reference = reference_for_j2_session(motor.session_capture_raw_position, motor);
+      bool drift_rejected = false;
+      if (motor.supported_near_vertical_recovery) {
+        try {
+          (void)reference_for_j2_session(motor.session_capture_raw_position +
+              motor.sign * kGear * 2.01 * kPi / 180.0, motor);
+        } catch (const std::runtime_error&) { drift_rejected = true; }
+      }
       result["motors"][motor.name] = {
           {"reference", motor.session_reference},
           {"logical_hint", motor.session_logical_position},
-          {"startup_logical", motor.session_startup_logical_position}};
+          {"startup_logical", motor.session_startup_logical_position},
+          {"runtime_logical", motor.sign * (motor.session_capture_raw_position - reference) / kGear},
+          {"runtime_two_degree_drift_rejected", drift_rejected}};
+    }
     std::cout << result.dump() << '\n';
     return 0;
   } catch (const std::exception& error) {

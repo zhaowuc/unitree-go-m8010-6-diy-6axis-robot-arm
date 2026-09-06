@@ -41,6 +41,7 @@ def load_with_ros_stubs(events, ros_state):
     )
     state_model.validate_worker_supervisor_status = lambda value, _now, _age: value
     state_model.validate_preserved_session_reference = lambda _value: {}
+    state_model.supported_near_vertical_recovery = lambda _value: False
     thermal_manager = ModuleType(f"{package_name}.thermal_manager")
 
     def thermal_state(

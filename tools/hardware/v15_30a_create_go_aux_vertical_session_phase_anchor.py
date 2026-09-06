@@ -508,6 +508,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--expected-capture-sha256", required=True)
     parser.add_argument("--preserve-reference-file", type=Path)
     parser.add_argument("--expected-preserve-reference-sha256")
+    parser.add_argument("--supported-near-vertical-recovery", action="store_true")
     parser.add_argument("--operator-evidence-id", required=True)
     parser.add_argument("--operator-confirmed-at-utc", required=True)
     parser.add_argument("--operator-power-session-id", required=True)

@@ -79,16 +79,42 @@ def _valid_sha256(value: object) -> bool:
 J2_SESSION_STARTUP_TOLERANCE_RAD = math.radians(2.0)
 SESSION_STARTUP_TOLERANCE_RAD = J2_SESSION_STARTUP_TOLERANCE_RAD
 PRESERVED_SESSION_REFERENCE_SCHEMA = "go-m8010-preserved-session-reference/1.0"
+SUPPORTED_RECOVERY_LIMIT_RAD = math.radians(5.0)
+SUPPORTED_RECOVERY_DECLARATION = {
+    "schema": "go-m8010-supported-near-vertical-recovery/1.0",
+    "purpose": "SUPPORTED_RETURN_TO_HASH_BOUND_INITIAL_POSE",
+    "software_maximum_offset_deg": 5.0,
+    "user_declared_near_original_pose": True,
+    "support_reliable": True,
+    "self_return_authorized": True,
+    "externally_measured_five_degree_accuracy_claimed": False,
+}
 
 
-def session_reference_for_raw(raw: float, reference: float, hint: float, sign: int) -> float:
+def supported_near_vertical_recovery(document: dict) -> bool:
+    proof = document.get("preserved_reference", {})
+    if "supported_near_vertical_recovery" not in proof:
+        return False
+    marker = proof["supported_near_vertical_recovery"]
+    expected = {**SUPPORTED_RECOVERY_DECLARATION,
+                "operator_evidence_id": document["operator_confirmation"]["evidence_id"]}
+    if (not isinstance(marker, dict) or marker != expected
+            or any(type(marker[k]) is not type(v) for k, v in expected.items())):
+        raise ValueError("supported near-vertical recovery declaration mismatch")
+    return True
+
+
+def session_reference_for_raw(raw: float, reference: float, hint: float, sign: int,
+                              *, maximum_offset_rad: float = SESSION_STARTUP_TOLERANCE_RAD) -> float:
     """Select the existing nearby rotor-turn branch without changing its zero."""
     if sign not in (-1, 1) or not all(math.isfinite(v) for v in (raw, reference, hint)):
         raise ValueError("invalid power-session reference mapping")
     selected = reference + round(
         (raw - sign * GEAR_RATIO * hint - reference) / (2.0 * math.pi)
     ) * (2.0 * math.pi)
-    if abs(sign * (raw - selected) / GEAR_RATIO - hint) > SESSION_STARTUP_TOLERANCE_RAD:
+    if maximum_offset_rad not in (SESSION_STARTUP_TOLERANCE_RAD, SUPPORTED_RECOVERY_LIMIT_RAD):
+        raise ValueError("unsupported session reference proof window")
+    if abs(sign * (raw - selected) / GEAR_RATIO - hint) > maximum_offset_rad:
         raise ValueError("power-session reference startup mismatch")
     return selected
 
@@ -100,6 +126,7 @@ def validate_preserved_session_reference(document: dict) -> dict[str, float]:
         return {}
     if not isinstance(proof, dict) or proof.get("schema") != PRESERVED_SESSION_REFERENCE_SCHEMA:
         raise ValueError("preserved session-reference schema mismatch")
+    recovery = supported_near_vertical_recovery(document)
     source_path = Path(proof["source_path"])
     if source_path.is_symlink() or not source_path.is_file() or source_path.stat().st_size > 4_194_304:
         raise ValueError("preserved source must be a bounded regular file")
@@ -210,9 +237,10 @@ def validate_preserved_session_reference(document: dict) -> dict[str, float]:
         reference, hint, sign = (record["session_reference_raw_rad"], record["logical_position_rad"], record["sign"])
         if not math.isclose(record["gear_ratio"], GEAR_RATIO, rel_tol=0, abs_tol=1e-6):
             raise ValueError(f"{name} preserved gear ratio mismatch")
-        selected = session_reference_for_raw(raw["mean"], reference, hint, sign)
+        limit = SUPPORTED_RECOVERY_LIMIT_RAD if recovery else SESSION_STARTUP_TOLERANCE_RAD
+        selected = session_reference_for_raw(raw["mean"], reference, hint, sign, maximum_offset_rad=limit)
         for edge in (raw["minimum"], raw["maximum"]):
-            session_reference_for_raw(edge, reference, hint, sign)
+            session_reference_for_raw(edge, reference, hint, sign, maximum_offset_rad=limit)
         positions[name] = sign * (raw["mean"] - selected) / GEAR_RATIO
         if not math.isclose(record["startup_logical_position_rad"], positions[name], rel_tol=0, abs_tol=1e-12):
             raise ValueError(f"{name} startup position is not derived from raw capture")
@@ -552,6 +580,7 @@ class MirrorSessionReferenceV1:
         j2_session_hints: Optional[Mapping[str, float]] = None,
         go_aux_session_references: Optional[Mapping[str, float]] = None,
         go_aux_session_hints: Optional[Mapping[str, float]] = None,
+        runtime_startup_hints: Optional[Mapping[str, float]] = None,
     ) -> None:
         if capture_samples < 3 or freshness_s <= 0.0:
             raise ValueError("invalid session reference configuration")
@@ -643,6 +672,13 @@ class MirrorSessionReferenceV1:
             **self.j2_session_hints,
             **self.go_aux_session_hints,
         }
+        self.runtime_startup_hints = dict(runtime_startup_hints or {})
+        if not set(self.runtime_startup_hints).issubset(self.power_session_references) or any(
+            type(value) not in (int, float) or not math.isfinite(value)
+            or abs(value - self.power_session_hints[name]) > SUPPORTED_RECOVERY_LIMIT_RAD
+            for name, value in self.runtime_startup_hints.items()
+        ):
+            raise ValueError("invalid validated recovery startup hints")
         # GO-M8010-6 loses its accumulated multi-turn count at motor power-off.
         # A previous-session raw value therefore cannot select J2's new startup
         # branch.  When a persistent parent is in use, J2 remains unavailable
@@ -705,7 +741,7 @@ class MirrorSessionReferenceV1:
             and feedback.motor in self.power_session_references
         ):
             phase_reference = self.power_session_references[feedback.motor]
-            hint = self.power_session_hints[feedback.motor]
+            hint = self.runtime_startup_hints.get(feedback.motor, self.power_session_hints[feedback.motor])
             spec = MOTOR_SPECS[feedback.motor]
             reference = session_reference_for_raw(unwrapped, phase_reference, hint, spec.sign)
             self.references[feedback.motor] = reference

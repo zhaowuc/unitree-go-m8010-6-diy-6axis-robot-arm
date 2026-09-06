@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+recovery_args=()
+if [[ "${2:-false}" == true ]]; then
+  recovery_args+=(--supported-near-vertical-recovery)
+fi
 scripts=@@SCRIPTS@@
 repo=@@REPO@@
 current=@@SESSION@@
@@ -78,6 +82,7 @@ j2_recorded=$("$py" -c 'import json,sys; print(json.load(open(sys.argv[1]))["rec
 go_recorded=$("$py" -c 'import json,sys; print(json.load(open(sys.argv[1]))["recorded_at_utc"])' "$current/go_aux_brake_raw.json")
 
 "$py" tools/hardware/v15_30a_create_j2_vertical_session_phase_anchor.py \
+  "${recovery_args[@]}" \
   --preserve-reference-file "$repo/.runtime/v15_31b_ft/current/j2_anchors/j2_power_session_reference_v1_20260905T100720Z_781a6fe88c63848a.json" \
   --expected-preserve-reference-sha256 "ed9948b2de6c470496a92209d8f5b6650df0e06b97118251bd0cc6b3a6f1fd0b" \
   --zero-file "$zero" --zero-sha256-file "$zero.sha256" \
@@ -93,6 +98,7 @@ go_recorded=$("$py" -c 'import json,sys; print(json.load(open(sys.argv[1]))["rec
   --confirm V15_30A_CREATE_J2_VERTICAL_SESSION_PHASE_ANCHOR=YES \
   >"$current/j2_anchor_apply.json"
 "$py" tools/hardware/v15_30a_create_go_aux_vertical_session_phase_anchor.py \
+  "${recovery_args[@]}" \
   --preserve-reference-file "$repo/.runtime/v15_31b_ft/current/go_anchors/go_aux_power_session_reference_v1_20260905T100715Z_4279866a88d1aaf9.json" \
   --expected-preserve-reference-sha256 "11f4336a835c96625d2b687c3d1c7e41db54e67ff370eccf269a1a3c513023fb" \
   --zero-file "$zero" --zero-sha256-file "$zero.sha256" \
@@ -220,4 +226,3 @@ print(f"SESSION_ID={d['session_id']}")
 print(f"STATE_INSTANCE_ID={d['state_instance_id']}")
 print(f"VALID_FRAMES={d['valid_frame_count']}")
 PY
-

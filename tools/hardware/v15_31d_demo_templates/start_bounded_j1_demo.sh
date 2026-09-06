@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 set -eo pipefail
+recovery_args=()
+if [[ "${2:-false}" == true ]]; then
+  recovery_args+=(--recover-initial-first)
+fi
 scripts=@@SCRIPTS@@
 repo=@@REPO@@
 session=@@SESSION@@
@@ -27,6 +31,7 @@ with (s/'j1_demo_gui_params.yaml').open('x',encoding='utf-8') as f:
 PY
 sha=$(sha256sum "$session/empirical_validation_envelope.json" | cut -d ' ' -f1)
 exec "$repo/.venv/arm-gui/bin/python" "$repo/tools/hardware/v15_31d_gui_j1_demo.py" \
+ "${recovery_args[@]}" \
  --execute --cycles "${1:-1}" --output "$session/evidence/j1_action_group_demo.json" \
  --envelope "$session/empirical_validation_envelope.json" \
  --anchor-validation "$session/evidence/model_session_anchor_validation.json" \

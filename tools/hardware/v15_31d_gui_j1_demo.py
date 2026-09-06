@@ -6,6 +6,8 @@ segments are allowed only within 0.25 degrees and are recorded. No gains,
 geometry, preview gates, or motor transport are replaced. --execute requires a
 fresh empirical envelope: the final BRAKE spends it even after success. One to
 three cycles reuse one saved action file and the same initial HOLD target.
+--recover-initial-first optionally returns all axes to the hash-bound original initial
+pose before capturing the shared demonstration HOLD; no calibration is changed.
 """
 from __future__ import annotations
 
@@ -25,15 +27,18 @@ LEVELS = (0.0, 0.25, 0.5, 0.75, 1.0)
 MAXIMUM_SECONDS = 180.0
 
 
-def check_recipe(recipe, origin):
+def check_recipe(recipe, origin, *, recover_initial=False):
     """Keep the five secondary corrections bounded without changing the recipe."""
     result = []
     for segment in recipe.segments:
         moving = [i for i, (a, b) in enumerate(zip(segment.start_rad, segment.target_rad)) if a != b]
-        for i in range(1, 6):
+        for i in range(6) if recover_initial else range(1, 6):
+            limit = 5.0 if recover_initial else 0.25
             if max(abs(segment.start_rad[i] - origin[i]), abs(segment.target_rad[i] - origin[i]),
-                   abs(segment.target_rad[i] - segment.start_rad[i])) > math.radians(0.25) + 1e-12:
-                raise RuntimeError(f"J{i + 1} correction exceeds 0.25 degrees")
+                   abs(segment.target_rad[i] - segment.start_rad[i])) > math.radians(limit) + 1e-12:
+                raise RuntimeError(f"J{i + 1} correction exceeds {limit:g} degrees")
+        if recover_initial and segment.profile.duration_s > 15.0:
+            raise RuntimeError("initial-pose recovery segment exceeds 15 seconds")
         result.append({"moving_joints": [f"J{i + 1}" for i in moving],
                        "start_rad": list(segment.start_rad), "target_rad": list(segment.target_rad),
                        "trajectory_sha256": segment.sha256})
@@ -41,7 +46,8 @@ def check_recipe(recipe, origin):
 
 
 class J1Demo:
-    def __init__(self, window, observe, confirm, set_scale, start_group, *, cycles=1, now=time.monotonic):
+    def __init__(self, window, observe, confirm, set_scale, start_group, *, cycles=1,
+                 recover_initial_first=False, start_recovery=None, validate_recovery_start=None, now=time.monotonic):
         if type(cycles) is not int or not 1 <= cycles <= 3:
             raise ValueError("cycles must be an integer from 1 to 3")
         self.window, self.observe, self.confirm = window, observe, confirm
@@ -53,6 +59,10 @@ class J1Demo:
         self.last_confirmation = -float("inf")
         self.dialog, self.terminal = None, None
         self.action_group_file = None
+        self.recover_initial_first, self.start_recovery = recover_initial_first, start_recovery
+        self.validate_recovery_start = validate_recovery_start
+        self.recovery_target = self.recovery_result = self.recovery_started = None
+        self.initial_hold_target = None
         self.requested_cycles, self.cycle_number = cycles, 1
         self.maximum_seconds = MAXIMUM_SECONDS + 45.0 * (cycles - 1)
         self.cycle_results = []
@@ -63,6 +73,8 @@ class J1Demo:
         if self.terminal is not None:
             return
         record_failure = reason is not None and self.stage == "action_group"
+        recovery_failure = reason is not None and (self.stage in {"recover_initial", "recovery_hold"}
+            or (self.recover_initial_first and self.recovery_result is None))
         self.failure = reason
         self.stage = "terminal"
         self.terminal = HoldProbe(self.window, self.observe, now=self.now)
@@ -71,6 +83,20 @@ class J1Demo:
         self.terminal._terminal()
         if record_failure:
             self._record_cycle("FAIL", failure=reason)
+        if recovery_failure:
+            self._record_recovery("FAIL", failure=reason)
+
+    def _record_recovery(self, status, **details):
+        runner = self.dialog.runner if self.dialog is not None else None
+        if self.recovery_result is None:
+            self.recovery_result = {}
+        self.recovery_result.update({"status": status, **details})
+        if runner is not None:
+            self.recovery_result.update({"runner_result": getattr(runner, "result", None),
+                "action_group_events": list(runner.events),
+                "action_group_log": str(getattr(self.dialog, "log_path", ""))})
+        self.recovery_result["recipe_events"] = [event for event in self.events
+            if event.get("event") == "checked_recovery_recipe_before_submit"]
 
     def _record_cycle(self, status, **details):
         runner = self.dialog.runner if self.dialog is not None else None
@@ -97,6 +123,8 @@ class J1Demo:
                                  "cycle": self.cycle_number if self.stage == "action_group" else None})
             if now - self.started >= self.maximum_seconds - 3:
                 raise RuntimeError(f"{self.maximum_seconds - 3:g}-second active deadline reached")
+            if self.stage in {"recover_initial", "recovery_hold"} and now - self.recovery_started >= 45:
+                raise RuntimeError("initial-pose recovery exceeded its 45-second deadline")
             if self.origin is None:
                 if now - self.started >= 20:
                     raise RuntimeError("current-pose HOLD readiness timed out")
@@ -106,10 +134,14 @@ class J1Demo:
                 sample = self.observe()
                 if not (sample["healthy"] and sample["thermal_ready"] and sample["authority"] and sample["zero_ff_authority"]):
                     return
+                if self.recover_initial_first:
+                    self.samples.append({**sample, "stage": "recovery_preflight", "cycle": None})
+                    self.validate_recovery_start(sample)
                 self.window._hold_current()
                 if self.window.hardware_mode != "hold" or self.window.command_stream_suspended:
                     raise RuntimeError("GUI rejected initial HOLD")
                 self.origin = tuple(self.window.command_targets)
+                self.initial_hold_target = self.origin
                 self.identity, self.rejected = sample["identity"], sample["router_rejected_commands"]
                 self.stage = "engaging"
                 self.events.append({"event": "frozen_initial_hold", "target_rad": list(self.origin)})
@@ -160,21 +192,54 @@ class J1Demo:
                         self.last_confirmation = now
                     elif sample["position_authorized"]:
                         self.window._tick()
-                        self.stage = "action_group"
-                        self.dialog = self.start_group(self.origin)
+                        if self.recover_initial_first:
+                            self.stage, self.recovery_started = "recover_initial", now
+                            self.recovery_result = {"status": "RUNNING", "initial_hold_target_rad": list(self.origin)}
+                            self.dialog = self.start_recovery(self.origin)
+                        else:
+                            self.stage = "action_group"
+                            self.dialog = self.start_group(self.origin)
+                return
+            if self.stage == "recovery_hold":
+                if (sample["stationary_hold_ready"] and sample["router_hold_fresh"]
+                        and type(sample["j6_drive_state"]) is int and sample["j6_drive_state"] == 1
+                        and max(abs(math.degrees(a-b)) for a,b in zip(sample["actual_rad"], self.origin)) <= 0.25):
+                    self._record_recovery("PASS", action_group_origin_rad=list(self.origin))
+                    self.stage, self.dialog = "action_group", None
+                    self.dialog = self.start_group(self.origin)
                 return
             runner = self.dialog.runner
             if runner is None or runner.state in {"failed", "stopped"}:
                 raise RuntimeError("action group failed: " + (runner.detail if runner else "not started"))
             if runner.state == "complete":
+                target = self.recovery_target if self.stage == "recover_initial" else self.origin
                 if (not sample["stationary_hold_ready"] or not sample["router_hold_fresh"]
-                        or max(abs(math.degrees(a-b)) for a,b in zip(sample["actual_rad"], self.origin)) > 0.25):
+                        or max(abs(math.degrees(a-b)) for a,b in zip(sample["actual_rad"], target)) > 0.25):
                     raise RuntimeError("final fresh HOLD pose no longer satisfies the return bound")
                 if sample["j6_drive_state"] is None:
                     return
                 if type(sample["j6_drive_state"]) is not int or sample["j6_drive_state"] != 1:
                     raise RuntimeError("final paired J6 raw feedback does not confirm enabled HOLD")
                 arrivals = [item for item in runner.events if item["event"] == "measured_arrival"]
+                if self.stage == "recover_initial":
+                    if len(arrivals) != 1:
+                        raise RuntimeError("one measured initial-pose recovery endpoint is required")
+                    if (any(abs(a-b) > math.radians(0.25) for a,b in zip(self.initial_hold_target, target))
+                            and not any(event.get("event") == "checked_recovery_recipe_before_submit" for event in self.events)):
+                        raise RuntimeError("initial-pose recovery has no checked plan token")
+                    self._record_recovery("HOLD_RECAPTURE_REQUESTED", measured_arrival=arrivals[0],
+                        actual_rad=list(sample["actual_rad"]),
+                        error_deg=[math.degrees(b-a) for a,b in zip(sample["actual_rad"], target)])
+                    self.window._tick()
+                    epoch = self.window.activation_epoch
+                    self.window._hold_current()
+                    if (self.window.hardware_mode != "hold" or self.window.command_stream_suspended
+                            or self.window.activation_epoch <= epoch
+                            or tuple(self.window.command_targets) != tuple(self.window.actual)):
+                        raise RuntimeError("GUI did not capture the recovered current-pose HOLD")
+                    self.origin = tuple(self.window.command_targets)
+                    self.stage = "recovery_hold"
+                    return
                 if len(arrivals) != 2:
                     raise RuntimeError("two measured endpoints are required")
                 initial = math.degrees(self.origin[0]) + self.window.session_pose_deg[0]
@@ -200,12 +265,15 @@ class J1Demo:
         terminal_ok = self.terminal is not None and self.terminal.terminal_confirmed
         failure = self.failure or (self.terminal.failure if self.terminal else "terminal not observed")
         completed = sum(result["status"] == "PASS" for result in self.cycle_results)
+        recovery_ok = not self.recover_initial_first or (self.recovery_result or {}).get("status") == "PASS"
         return {"schema": "go-m8010-j1-action-group-demo/1.0",
-                "status": "PASS" if self.success and completed == self.requested_cycles and terminal_ok and not failure else "FAIL",
+                "status": "PASS" if self.success and completed == self.requested_cycles and terminal_ok and recovery_ok and not failure else "FAIL",
                 "scope": "J1_1_DEG_OUT_BACK_WITH_RECORDED_BOUNDED_SECONDARY_CORRECTIONS",
                 "strict_precision_qualification": "NOT_RUN_OR_MODIFIED", "failure": failure,
                 "terminal_brake_and_j6_disabled_confirmed": terminal_ok,
-                "elapsed_s": self.now() - self.started, "initial_hold_target_rad": self.origin,
+                "elapsed_s": self.now() - self.started, "initial_hold_target_rad": self.initial_hold_target,
+                "action_group_origin_rad": self.origin, "recovery_result": self.recovery_result,
+                "recover_initial_first": self.recover_initial_first,
                 "action_group_file": self.action_group_file,
                 "requested_cycles": self.requested_cycles, "completed_cycles": completed,
                 "maximum_seconds": self.maximum_seconds, "cycle_results": self.cycle_results,
@@ -214,7 +282,7 @@ class J1Demo:
                 "action_group_events": self.dialog.runner.events if self.dialog and self.dialog.runner else []}
 
 
-def run_live(ros_args, binding, cycles=1):
+def run_live(ros_args, binding, cycles=1, recover_initial_first=False):
     root = Path(__file__).resolve().parents[2]
     sys.path.insert(0, str(root / "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui"))
     from go_m8010_arm_gui import main_window as gui
@@ -242,8 +310,10 @@ def run_live(ros_args, binding, cycles=1):
         def _move_status(self):
             if not self.submitted and self.window._preview_approval_matches_candidate():
                 recipe = self.window.workflow_contract.q_plan_trajectory
-                segments = check_recipe(recipe, demo.origin)
-                demo.events.append({"event": "checked_recipe_before_submit", "cycle": demo.cycle_number, "step": self.runner.index,
+                recovering = demo.stage == "recover_initial"
+                segments = check_recipe(recipe, demo.origin, recover_initial=recovering)
+                demo.events.append({"event": "checked_recovery_recipe_before_submit" if recovering else "checked_recipe_before_submit",
+                                    "cycle": 0 if recovering else demo.cycle_number, "step": self.runner.index,
                                     "plan_token_id": self.window.workflow_contract.current_plan_token.token_id,
                                     "start_error_from_initial_deg": [math.degrees(a-b) for a,b in zip(recipe.start_rad, demo.origin)],
                                     "segments": segments})
@@ -330,7 +400,46 @@ def run_live(ros_args, binding, cycles=1):
         dialog.start()
         return dialog
 
-    demo = J1Demo(window, observe, confirm, set_scale, start_group, cycles=cycles)
+    def read_initial_reference(sample=None):
+        path = node.initial_pose_path
+        data = path.read_bytes()
+        initial = json.loads(data)
+        hardware = node.latest_hardware
+        if not gui.initial_pose_binding_valid(initial, data, hardware):
+            raise RuntimeError("original initial-pose file does not match the current hardware binding")
+        reference = [initial["关节位置_弧度"][f"J{i}"] for i in range(1, 7)]
+        if any(type(value) not in {int, float} or not math.isfinite(value) for value in reference):
+            raise RuntimeError("original six-axis reference is not finite")
+        if sample is not None:
+            if (sample["source_monotonic_ns"] != hardware.get("source_monotonic_ns")
+                    or sample["actual_rad"] != hardware.get("position_rad")):
+                raise RuntimeError("recovery pre-HOLD snapshot changed")
+            for index, (actual, original) in enumerate(zip(sample["actual_rad"], reference)):
+                if abs(actual - original) > math.radians(5):
+                    raise RuntimeError(f"recovery pre-HOLD J{index + 1} is more than 5 degrees from the original reference")
+        return reference, {"path": str(path.resolve()), "sha256": hashlib.sha256(data).hexdigest()}
+
+    def start_recovery(origin):
+        target, source = read_initial_reference()
+        if any(abs(a-b) > math.radians(5) for a,b in zip(target, origin)):
+            raise RuntimeError("initial-pose recovery target is more than 5 degrees away")
+        demo.recovery_target = tuple(target)
+        demo.recovery_result.update({"initial_pose_file": source, "target_rad": target,
+                                     "original_reference_rad": list(target)})
+        group = ActionGroup("回原初始化姿态（不改校准）", (ActionStep(tuple(
+            math.degrees(a) + b for a,b in zip(target, window.session_pose_deg)), speed_deg_s=1.0, dwell_s=0.5),),
+            window.workflow_contract.model_sha256)
+        dialog = window.action_group_dialog
+        dialog.table.setRowCount(0)
+        dialog.name.setText(group.name)
+        for step in group.steps:
+            dialog.append_step(step)
+        dialog.start()
+        return dialog
+
+    demo = J1Demo(window, observe, confirm, set_scale, start_group, cycles=cycles,
+                  recover_initial_first=recover_initial_first, start_recovery=start_recovery,
+                  validate_recovery_start=read_initial_reference)
     timer = gui.QTimer(window)
     def tick():
         try:
@@ -387,6 +496,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--cycles", type=int, choices=range(1, 4), default=1)
+    parser.add_argument("--recover-initial-first", action="store_true")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--envelope", type=Path)
     parser.add_argument("--anchor-validation", type=Path)
@@ -394,7 +504,8 @@ def main(argv=None):
     args = parser.parse_args(values[:split])
     if not args.execute:
         print(json.dumps({"mode": "OFFLINE_DESCRIPTION_ONLY", "hardware_accessed": False,
-                          "cycles": args.cycles, "maximum_seconds": MAXIMUM_SECONDS + 45 * (args.cycles - 1), "gravity_levels": LEVELS,
+                          "cycles": args.cycles, "recover_initial_first": args.recover_initial_first,
+                          "maximum_seconds": MAXIMUM_SECONDS + 45 * (args.cycles - 1), "gravity_levels": LEVELS,
                           "demo": "J1 1 degree out/back; secondary corrections <=0.25 degrees"}))
         return 0
     if (not all((args.output, args.envelope, args.anchor_validation, args.expected_envelope_sha256))
@@ -407,7 +518,7 @@ def main(argv=None):
     with args.output.open("x+", encoding="utf-8") as stream:
         stream.write('{"status":"INCOMPLETE"}\n')
         stream.flush()
-        result = run_live(values[split:], binding, args.cycles)
+        result = run_live(values[split:], binding, args.cycles, args.recover_initial_first)
         stream.seek(0)
         json.dump(result, stream, ensure_ascii=False, allow_nan=False, indent=2)
         stream.write("\n")

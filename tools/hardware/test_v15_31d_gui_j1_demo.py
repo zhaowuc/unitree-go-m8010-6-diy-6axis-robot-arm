@@ -29,10 +29,12 @@ def harness(cycles=1):
     sequence = SignalPayloadSequence(binding, source_instance_id="c" * 32,
                                      monotonic_ns=lambda: int(clock[0] * 1e9))
     window = SimpleNamespace(actual=[0.0] * 6, command_targets=[0.0] * 6,
-                             session_pose_deg=[0.0] * 6, hardware_mode="brake", command_stream_suspended=True)
+                             session_pose_deg=[0.0] * 6, activation_epoch=0,
+                             hardware_mode="brake", command_stream_suspended=True)
     window._tick = lambda: None
     def hold():
         commands.append("hold")
+        window.activation_epoch += 1
         window.command_targets = window.actual[:]
         window.hardware_mode, window.command_stream_suspended = "hold", False
     def brake(*, support_confirmed):
@@ -218,7 +220,106 @@ def test_three_cycles_reuse_file_and_keep_completed_cycle_when_second_fails():
     assert json.loads(output.getvalue())["maximum_seconds"] == 270
 
 
+def test_initial_recovery_uses_original_file_and_checks_all_axes_before_hold():
+    source = Path(__file__).with_name("v15_31d_gui_j1_demo.py")
+    run_live = next(node for node in ast.parse(source.read_text(encoding="utf-8")).body
+                    if isinstance(node, ast.FunctionDef) and node.name == "run_live")
+    start = next(node for node in run_live.body if isinstance(node, ast.FunctionDef) and node.name == "start_recovery")
+    read = next(node for node in run_live.body if isinstance(node, ast.FunctionDef) and node.name == "read_initial_reference")
+    gui_source = Path(__file__).resolve().parents[2] / "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui/go_m8010_arm_gui/main_window.py"
+    helpers = [node for node in ast.parse(gui_source.read_text(encoding="utf-8")).body
+               if isinstance(node, ast.FunctionDef) and node.name in {"optional_sha256_valid", "initial_pose_binding_valid"}]
+    validation = {"hashlib": hashlib}
+    exec(compile(ast.Module(body=helpers, type_ignores=[]), str(gui_source), "exec"), validation)
+    for fault in (None, "health", "j6_too_far"):
+        with tempfile.TemporaryDirectory() as directory:
+            demo, commands, override, tick = harness()
+            demo.recover_initial_first = True
+            demo.window.actual = [math.radians(value) for value in (1.629, -0.06, -0.055, 2.067, -1.554, 0.64)]
+            if fault == "j6_too_far":
+                demo.window.actual[5] = math.radians(5.01)
+            path = Path(directory) / "initial_pose.json"
+            initial = {"有效": True, "会话标识": "persistent:" + "e" * 16,
+                       "关节位置_弧度": {f"J{i}": 0.0 for i in range(1, 7)}}
+            data = json.dumps(initial).encode()
+            path.write_bytes(data)
+            hardware = {"reference": "PERSISTENT_SOFTWARE_ZERO_V1", "persistent_zero_sha256": "e" * 64,
+                        "initial_pose_sha256": hashlib.sha256(data).hexdigest()}
+            rows = []
+            dialog = SimpleNamespace(name=SimpleNamespace(setText=lambda _: None),
+                table=SimpleNamespace(setRowCount=lambda _: rows.clear()), append_step=rows.append,
+                log_path=Path(directory) / "recovery.jsonl")
+            def start_dialog():
+                commands.append("recover_initial")
+                dialog.runner = SimpleNamespace(state="moving", detail="recovering", events=[])
+                demo.events.append({"event": "checked_recovery_recipe_before_submit", "plan_token_id": "b" * 64,
+                                    "segments": [f"J{i}" for i in range(1, 7)]})
+            dialog.start = start_dialog
+            demo.window.action_group_dialog = dialog
+            demo.window.workflow_contract = SimpleNamespace(model_sha256="a" * 64)
+            namespace = dict(window=demo.window, node=SimpleNamespace(initial_pose_path=path, latest_hardware=hardware),
+                demo=demo, ActionGroup=ActionGroup, ActionStep=ActionStep, math=math, hashlib=hashlib, json=json,
+                gui=SimpleNamespace(initial_pose_binding_valid=validation["initial_pose_binding_valid"]))
+            exec(compile(ast.Module(body=[read, start], type_ignores=[]), str(source), "exec"), namespace)
+            demo.start_recovery = namespace["start_recovery"]
+            def validate_start(sample):
+                hardware["position_rad"] = list(sample["actual_rad"])
+                hardware["source_monotonic_ns"] = sample["source_monotonic_ns"]
+                namespace["read_initial_reference"](sample)
+            demo.validate_recovery_start = validate_start
+            for _ in range(120):
+                tick()
+                if demo.stage == "recover_initial" or demo.done:
+                    break
+            if fault == "j6_too_far":
+                assert commands.count("hold") == 0 and "recover_initial" not in commands
+                assert "J6" in demo.failure and demo.recovery_result["status"] == "FAIL"
+                assert path.read_bytes() == data
+                continue
+            assert len(rows) == 1 and rows[0].target_deg == (0.0,) * 6
+            assert demo.recovery_target == (0.0,) * 6 and "action_group" not in commands
+            if fault == "health":
+                override["healthy"] = False
+                tick()
+                override.clear()
+                for _ in range(4):
+                    tick()
+                assert demo.recovery_result["status"] == "FAIL" and "action_group" not in commands
+            else:
+                demo.window.actual = [math.radians(value) for value in (0.04, 0.02, -0.03, 0.12, -0.06, 0.04)]
+                dialog.runner.events = [{"event": "measured_arrival", "index": 0,
+                                         "actual_model_deg": [0.04, 0.02, -0.03, 0.12, -0.06, 0.04]}]
+                dialog.runner.state = "complete"
+                tick()
+                assert demo.stage == "recovery_hold" and commands.count("hold") == 2
+                assert demo.initial_hold_target[3] == math.radians(2.067)
+                assert demo.origin[3] == math.radians(0.12)
+                override["j6_drive_state"] = None
+                tick()
+                assert "action_group" not in commands
+                override.clear()
+                tick()
+                assert demo.recovery_result["status"] == "PASS" and commands.count("action_group") == 1
+                demo.stop("end offline recovery scenario")
+            assert path.read_bytes() == data
+    from go_m8010_arm_gui.workflow_contract import generate_segmented_quintic_recipe
+    origin = tuple(math.radians(value) for value in (1.629, -0.06, -0.055, 2.067, -1.554, 0.64))
+    recipe = generate_segmented_quintic_recipe(origin, (0,) * 6, ((-math.pi, math.pi),) * 6,
+        maximum_velocity_rad_s=math.radians(1), maximum_acceleration_rad_s2=math.radians(15),
+        maximum_segment_delta_rad=math.radians(5))
+    assert [item["moving_joints"] for item in check_recipe(recipe, origin, recover_initial=True)] == [[f"J{i}"] for i in range(1, 7)]
+    recipe = SimpleNamespace(segments=[SimpleNamespace(start_rad=(0,) * 6,
+        target_rad=(math.radians(5.01), 0, 0, 0, 0, 0), profile=SimpleNamespace(duration_s=10), sha256="c" * 64)])
+    try:
+        check_recipe(recipe, origin, recover_initial=True)
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("recovery allowed an oversized J1 correction")
+
+
 if __name__ == "__main__":
     test_bounded_j1_action_group()
     test_three_cycles_reuse_file_and_keep_completed_cycle_when_second_fails()
+    test_initial_recovery_uses_original_file_and_checks_all_axes_before_hold()
     print("GUI_J1_DEMO_OFFLINE=PASS")
