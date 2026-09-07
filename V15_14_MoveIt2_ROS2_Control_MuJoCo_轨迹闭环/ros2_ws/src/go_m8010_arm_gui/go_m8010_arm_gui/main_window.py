@@ -3467,12 +3467,15 @@ class MainWindow(QMainWindow):
         self.teach_button.pressed.connect(self._start_assisted_teach)
         self.teach_button.released.connect(self._release_assisted_teach)
         self.teach_button.installEventFilter(self)
-        layout.addWidget(self.teach_joint_selector, 3, 0)
-        layout.addWidget(self.teach_button, 3, 1, 1, 2)
-        layout.addWidget(self._button("记录实姿到动作组", self._record_teach_point), 3, 3, 1, 2)
+        self.teach_toolbar = self.addToolBar("选轴辅助示教")
+        self.teach_toolbar.setMovable(False)
+        self.teach_toolbar.addWidget(QLabel("示教关节："))
+        self.teach_toolbar.addWidget(self.teach_joint_selector)
+        self.teach_toolbar.addWidget(self.teach_button)
+        self.teach_toolbar.addWidget(self._button("记录实姿到动作组", self._record_teach_point))
         self.teach_status = QLabel("单轴辅助示教：J1–J5可选，J2双电机联动，J6始终保持；每次≤30秒／5°")
         self.teach_status.setWordWrap(True)
-        layout.addWidget(self.teach_status, 4, 0, 1, 5)
+        layout.addWidget(self.teach_status, 5, 0, 1, 5)
         self.mode_label = QLabel(
             "当前方向：虚拟驱动现实（默认，无需寻找单独按钮）　｜　"
             "控制请求：制动　｜　硬件确认：等待状态反馈"

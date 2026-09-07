@@ -281,6 +281,8 @@ class J1Demo:
                                 raise RuntimeError("explicit single-axis teaching authority is unavailable")
                             self.stage, self.interactive_ready = "interactive_teach", True
                             self.window.centralWidget().setEnabled(True)
+                            if hasattr(self.window, "teach_toolbar"):
+                                self.window.teach_toolbar.setEnabled(True)
                             self.events.append({"event": "interactive_teach_ready", "at_monotonic_s": now})
                         elif self.recover_initial_first:
                             self.stage, self.recovery_started = "recover_initial", now
@@ -606,6 +608,8 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
     for signum in (signal.SIGINT, signal.SIGTERM):
         signal.signal(signum, lambda *_: demo.stop("operator/process stop requested"))
     window.centralWidget().setEnabled(False)
+    if hasattr(window, "teach_toolbar"):
+        window.teach_toolbar.setEnabled(False)
     stop = window.addToolBar("验证停止").addAction("停止往返示例并制动（Esc）")
     stop.setShortcut("Esc")
     stop.triggered.connect(lambda *_: demo.stop(None if interactive_teach else "operator pressed stop"))
@@ -613,7 +617,12 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
     if interactive_teach:
         window.setWindowTitle("选轴辅助示教：J1–J5 单轴可拖动，其余保持；松键锁定；10分钟自动结束")
         stop.setText("结束示教并制动（Esc）")
-    window.show()
+    if interactive_teach:
+        window.showMaximized()
+    else:
+        window.show()
+    window.raise_()
+    window.activateWindow()
     try:
         app.exec()
     except BaseException as error:
