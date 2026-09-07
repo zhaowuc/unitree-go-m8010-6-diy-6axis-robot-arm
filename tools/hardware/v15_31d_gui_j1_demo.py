@@ -75,9 +75,12 @@ class J1Demo:
     def __init__(self, window, observe, confirm, set_scale, start_group, *, cycles=1,
                  excursion_deg=1.0, symmetric=False, speed_deg_s=1.0, return_center=False, start_center=None,
                  recover_initial_first=False, start_recovery=None, validate_recovery_start=None,
-                 interactive_teach=False, now=time.monotonic):
+                 interactive_teach=False, teach_observe=False, now=time.monotonic):
         self.interactive_teach = interactive_teach
         self.interactive_ready = False
+        self.teach_observe = teach_observe
+        self.teach_observation_started = None
+        self.teach_observation_finished = False
         self.maximum_seconds = 600.0 if interactive_teach else maximum_demo_seconds(cycles, excursion_deg, symmetric)
         if (type(speed_deg_s) not in {int, float} or not math.isfinite(speed_deg_s)
                 or not 0 < speed_deg_s <= 3):
@@ -211,6 +214,24 @@ class J1Demo:
                 # ladder's no_person_contact attestation during operator teaching.
                 if self.window.hardware_mode in {"brake", "drag"} or self.window.command_stream_suspended:
                     self.stop("operator left the armed teaching session")
+                    return
+                if self.teach_observe and not self.teach_observation_finished:
+                    if self.teach_observation_started is None:
+                        self.window.teach_joint_selector.setCurrentIndex(0)
+                        self.window.teach_button.setDown(True)
+                        self.window._start_assisted_teach()
+                        if self.window.teach_joint != 0 or self.window.hardware_mode != "teach":
+                            raise RuntimeError("GUI rejected the requested short J1 teaching observation")
+                        self.teach_observation_started = now
+                        self.events.append({"event": "teach_observation_started", "at_monotonic_s": now,
+                                            "duration_limit_s": 20.0})
+                        print("J1_TEACH_OBSERVATION=STARTED; 20 seconds then fixed HOLD", flush=True)
+                    elif self.window.teach_joint is None or now - self.teach_observation_started >= 20.0:
+                        self.window._release_assisted_teach("短时姿态观察结束")
+                        self.window.teach_button.setDown(False)
+                        self.teach_observation_finished = True
+                        self.events.append({"event": "teach_observation_released", "at_monotonic_s": now})
+                        print("J1_TEACH_OBSERVATION=RELEASED; awaiting physical HOLD feedback", flush=True)
                 return
             level = (
                 self.pending_level
@@ -389,7 +410,7 @@ class J1Demo:
 
 
 def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
-             excursion_deg=1.0, symmetric=False, speed_deg_s=1.0, return_center=False, interactive_teach=False):
+             excursion_deg=1.0, symmetric=False, speed_deg_s=1.0, return_center=False, interactive_teach=False, teach_observe=False):
     root = Path(__file__).resolve().parents[2]
     sys.path.insert(0, str(root / "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui"))
     from go_m8010_arm_gui import main_window as gui
@@ -567,7 +588,7 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
                   excursion_deg=excursion_deg, symmetric=symmetric, speed_deg_s=speed_deg_s,
                   return_center=return_center, start_center=start_center,
                   recover_initial_first=recover_initial_first, start_recovery=start_recovery,
-                  validate_recovery_start=read_initial_reference, interactive_teach=interactive_teach)
+                  validate_recovery_start=read_initial_reference, interactive_teach=interactive_teach, teach_observe=teach_observe)
     timer = gui.QTimer(window)
     def tick():
         try:
@@ -633,11 +654,14 @@ def main(argv=None):
     parser.add_argument("--return-center", action="store_true")
     parser.add_argument("--recover-initial-first", action="store_true")
     parser.add_argument("--interactive-teach", action="store_true")
+    parser.add_argument("--teach-observe", action="store_true", help="enable J1 assisted teaching for 20 seconds without a position move, then release to HOLD")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--envelope", type=Path)
     parser.add_argument("--anchor-validation", type=Path)
     parser.add_argument("--expected-envelope-sha256")
     args = parser.parse_args(values[:split])
+    if args.teach_observe and not args.interactive_teach:
+        parser.error("--teach-observe requires --interactive-teach")
     try:
         maximum_seconds = 600.0 if args.interactive_teach else maximum_demo_seconds(args.cycles, args.excursion_deg, args.symmetric)
         if not math.isfinite(args.speed_deg_s) or not 0 < args.speed_deg_s <= 3:
@@ -664,7 +688,7 @@ def main(argv=None):
         stream.flush()
         result = run_live(values[split:], binding, args.cycles, args.recover_initial_first,
                           excursion_deg=args.excursion_deg, symmetric=args.symmetric,
-                          speed_deg_s=args.speed_deg_s, return_center=args.return_center, interactive_teach=args.interactive_teach)
+                          speed_deg_s=args.speed_deg_s, return_center=args.return_center, interactive_teach=args.interactive_teach, teach_observe=args.teach_observe)
         stream.seek(0)
         json.dump(result, stream, ensure_ascii=False, allow_nan=False, indent=2)
         stream.write("\n")

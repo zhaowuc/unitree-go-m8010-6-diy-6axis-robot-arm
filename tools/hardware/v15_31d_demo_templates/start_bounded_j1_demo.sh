@@ -8,6 +8,7 @@ motion_args=(--excursion-deg "${3:-1}" --speed-deg-s "${4:-1}")
 if [[ "${5:-false}" == true ]]; then motion_args+=(--symmetric); fi
 if [[ "${6:-false}" == true ]]; then motion_args+=(--return-center); fi
 if [[ "${GO_ASSISTED_TEACH:-0}" == 1 ]]; then motion_args+=(--interactive-teach); fi
+if [[ "${GO_TEACH_OBSERVE:-0}" == 1 ]]; then motion_args+=(--teach-observe); fi
 scripts=@@SCRIPTS@@
 repo=@@REPO@@
 session=@@SESSION@@

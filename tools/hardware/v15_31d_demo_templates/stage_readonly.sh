@@ -199,7 +199,7 @@ v=json.loads(yaml.safe_load(open(sys.argv[1]).read().replace('\n---',''))['data'
 assert v['telemetry_healthy'] is True
 for q, offset in zip(v['position_rad'], (0,90,-14.40,13.49,47.94,0)):
     assert math.isfinite(q)
-    print(q + math.radians(offset))
+    print(format(q + math.radians(offset), ".17f"))
 PY
 )
 [[ ${#model_q[@]} -eq 6 ]]

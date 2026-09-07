@@ -465,3 +465,32 @@ def test_interactive_teach_bootstrap_never_runs_motion_or_refreshes_hands_off_du
             assert demo.result()["scope"].startswith("BOOTSTRAP_AND_TERMINAL")
         else:
             assert demo.result()["status"] == "FAIL" and not enabled
+
+
+def test_requested_teach_observation_is_one_bounded_activation_without_position_moves():
+    demo, commands, override, tick = harness(interactive_teach=True, teach_observe=True)
+    demo.window.centralWidget = lambda: SimpleNamespace(setEnabled=lambda _: None)
+    override["assisted_teach_authorized"] = True
+    demo.window.teach_joint = None
+    demo.window.teach_joint_selector = SimpleNamespace(setCurrentIndex=lambda i: commands.append(("select", i)))
+    demo.window.teach_button = SimpleNamespace(setDown=lambda value: commands.append(("down", value)))
+    def start():
+        commands.append("teach_start")
+        demo.window.teach_joint, demo.window.hardware_mode = 0, "teach"
+    def release(reason):
+        commands.append("teach_release")
+        demo.window.teach_joint, demo.window.hardware_mode = None, "hold"
+    demo.window._start_assisted_teach, demo.window._release_assisted_teach = start, release
+    for _ in range(150):
+        tick()
+        if demo.interactive_ready:
+            break
+    tick()
+    assert commands.count("teach_start") == 1 and demo.window.hardware_mode == "teach"
+    tick(19.9)
+    assert "teach_release" not in commands
+    tick(0.2)
+    assert commands.count("teach_release") == 1 and demo.window.hardware_mode == "hold"
+    tick(10)
+    assert commands.count("teach_start") == 1 and demo.teach_observation_finished
+    assert "action_group" not in commands and demo.window.command_targets == [0.0] * 6
