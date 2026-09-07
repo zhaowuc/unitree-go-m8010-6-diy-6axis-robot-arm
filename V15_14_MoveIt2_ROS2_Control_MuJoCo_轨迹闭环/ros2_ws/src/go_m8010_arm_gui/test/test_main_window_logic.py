@@ -1828,6 +1828,39 @@ def test_scroll_gutter_and_summary_refresh_are_layout_stable():
     assert "set_widget_text_if_changed(self.summary, summary_text)" in summary
 
 
+def test_teach_mode_label_and_live_summary_render_without_key_error():
+    clock = [100.0]
+    arm_mode = SimpleNamespace(REAL_TO_SIM=object(), SIM_TO_REAL=object())
+    namespace = {"time": SimpleNamespace(monotonic=lambda: clock[0]), "ArmMode": arm_mode,
+        "DEG": 180 / math.pi, "SUMMARY_REFRESH_PERIOD_S": 0.5,
+        "mujoco_status_text": lambda *_: "正常", "command_router_status_text": lambda *_: ("teach", "normal"),
+        "set_widget_text_if_changed": lambda widget, text: setattr(widget, "value", text)}
+    update = load_main_window_method("_update_mode_label", namespace)
+    summary = load_main_window_method("_refresh_summary", namespace)
+    hardware = hardware_state()
+    hardware["controller_mode_by_motor"]["J1"] = "teach"
+    window = SimpleNamespace(hardware_mode="teach", direction=arm_mode.SIM_TO_REAL,
+        machine=SimpleNamespace(fixed_hold_after_arrival=True),
+        mode_label=SimpleNamespace(value=""), summary=SimpleNamespace(value=""),
+        last_summary_refresh_at=0.0, command_stream_suspended=False, connected=[True] * 6,
+        config={"控制": {"命令租约_秒": 0.5}}, _refresh_safety_notice=lambda _: None,
+        real_widgets=[SimpleNamespace(state=SimpleNamespace(text=lambda: "保持中")) for _ in range(6)],
+        node=SimpleNamespace(latest_hardware=hardware, latest_mujoco=None, latest_control_status={},
+            control_streams_fresh=lambda _: True, mujoco_stream_fresh=lambda _: True,
+            control_status_fresh=lambda _: True))
+    update(window, "按住J1")
+    summary(window)
+    assert "控制请求：选轴辅助示教" in window.mode_label.value
+    assert "控制请求：选轴辅助示教" in window.summary.value
+    assert "控制器确认：保持中、选轴辅助示教" in window.summary.value
+    window.hardware_mode = "hold"
+    hardware["controller_mode_by_motor"]["J1"] = "hold"
+    clock[0] += 1
+    update(window)
+    summary(window)
+    assert "选轴辅助示教" not in window.mode_label.value + window.summary.value
+
+
 def test_latest_state_subscriptions_and_bounded_callback_pump_avoid_backlog():
     source = SOURCE.read_text(encoding="utf-8")
     assert (

@@ -5640,6 +5640,7 @@ class MainWindow(QMainWindow):
                 "position": "现有位置轨迹与移动掩码保持不变",
                 "brake": "仍保持制动请求",
                 "drag": "仍保持关闭驱动请求",
+                "teach": "选轴辅助示教与其余关节原HOLD目标保持不变",
             }[self.hardware_mode]
             self._notify(
                 "目标超出历史3D模型关节范围；"
@@ -5946,7 +5947,7 @@ class MainWindow(QMainWindow):
             direction_text += "（默认，无需寻找单独按钮）"
         drive_text = {
             "brake": "制动", "drag": "关闭驱动力／拖动",
-            "hold": "保持", "position": "位置控制",
+            "hold": "保持", "position": "位置控制", "teach": "选轴辅助示教",
         }[self.hardware_mode]
         fixed_hold_text = (
             "开" if self.machine.fixed_hold_after_arrival
@@ -7123,7 +7124,7 @@ class MainWindow(QMainWindow):
         ) if ros_ok else set()
         mode_text = {
             "brake": "已制动", "drag": "可拖动", "hold": "保持中",
-            "position": "位置控制", "unknown": "未知",
+            "position": "位置控制", "teach": "选轴辅助示教", "unknown": "未知",
         }
         confirmed = "、".join(sorted(mode_text.get(item, "未知") for item in actual_modes)) or "等待确认"
         lease_safe_hold_motors = (
@@ -7140,7 +7141,7 @@ class MainWindow(QMainWindow):
         )
         requested = {
             "brake": "制动", "drag": "关闭驱动力／拖动",
-            "hold": "保持", "position": "位置控制",
+            "hold": "保持", "position": "位置控制", "teach": "选轴辅助示教",
         }[self.hardware_mode]
         fixed_hold_policy_text = (
             "开" if self.machine.fixed_hold_after_arrival
