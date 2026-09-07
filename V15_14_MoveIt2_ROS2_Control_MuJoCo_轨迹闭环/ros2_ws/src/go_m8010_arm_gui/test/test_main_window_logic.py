@@ -3549,6 +3549,57 @@ def test_matching_safe_execute_result_commits_exactly_one_moving_axis():
     )
 
 
+@pytest.mark.parametrize("mode", ["position", "hold"])
+def test_queued_arrival_and_hold_barrier_timeout_abort_without_advancing(mode):
+    from go_m8010_arm_gui.state_machine import ArrivalTracker, ModeMachine
+    clock = [0.0]
+    namespace = {"time": SimpleNamespace(monotonic=lambda: clock[0]),
+                 "DEG": 180.0 / math.pi, "collision_motion_state_ready": lambda *args: False}
+    advance = load_main_window_method("_continue_queued_sequence_if_ready", namespace)
+    stop_position = load_main_window_method("_transition_position_to_fixed_hold", {
+        **namespace, "fixed_hold_targets_after_position_stop": load_function("fixed_hold_targets_after_position_stop")})
+    original = [math.radians(value) for value in (-5.018, 0.2, -0.3, 0.4, -0.5, 0.6)]
+    window = SimpleNamespace(hardware_mode=mode, command_targets=original[:],
+        actual=[math.radians(-4.751)] + original[1:],
+        queued_pose_target=[math.radians(-10)] + original[1:],
+        command_stream_suspended=False, pending_collision_execute_sequence=None,
+        active_sequence_joint=0 if mode == "position" else None,
+        requested_active_joint_mask=[True] * 6,
+        moving_joint_mask=[mode == "position"] + [False] * 5,
+        node=SimpleNamespace(latest_hardware={}), machine=ModeMachine(),
+        arrival=ArrivalTracker(math.radians(0.25), 0.5, 90.0))
+    events = []
+    def cancel(*, restore_command_target):
+        assert restore_command_target
+        window.queued_pose_target = None
+        window.active_sequence_joint = None
+    window._cancel_queued_pose = cancel
+    window._set_virtual_editable = lambda _: None
+    window._show_targets_on_virtual = lambda: None
+    window._resume_command_stream = lambda: None
+    window._transition_position_to_fixed_hold = lambda: stop_position(window)
+    window._set_workflow_state = lambda state, detail: events.append((state, detail))
+    window._update_mode_label = lambda _: None
+    window._notify = lambda *args: None
+    window._begin_next_queued_segment = lambda: events.append("advanced")
+    window.arrival.start(0.0)
+    errors = [a-b for a,b in zip(original, window.actual)]
+    assert window.arrival.update(89.99, errors, [True] * 6)[0] == "运动中"
+    clock[0] = 89.99
+    advance(window)
+    assert window.queued_pose_target is not None and not events
+    assert window.arrival.update(90.0, errors, [True] * 6)[0] == "未到位"
+    clock[0] = 90.0
+    advance(window)
+    assert window.queued_pose_target is None and window.hardware_mode == "hold"
+    assert events[0][0] == "timeout" and "0.267" in events[0][1]
+    assert window.command_targets[1:] == original[1:]
+    assert window.command_targets[0] == (window.actual[0] if mode == "position" else original[0])
+    clock[0] = 900.0
+    advance(window)
+    assert len(events) == 1 and "advanced" not in events
+
+
 def test_queued_segment_arrival_forces_exact_target_hold_and_waits_for_all_hold():
     arm_mode = SimpleNamespace(SIM_TO_REAL=object(), REAL_TO_SIM=object())
     refresh = load_main_window_method(

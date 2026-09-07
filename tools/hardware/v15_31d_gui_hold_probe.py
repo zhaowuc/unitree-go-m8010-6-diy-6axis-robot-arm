@@ -289,6 +289,10 @@ def observe_gui(window, gui, raw_j6, binding):
                                   and type(router_age) in (int, float) and 0 <= router_age < 250),
         "actual_rad": hardware.get("position_rad"),
         "velocity_rad_s": hardware.get("velocity_rad_s"),
+        "motor_tracking": {name: {key: item.get(key) for key in (
+            "tau_cmd_rotor_nm", "tau_feedback_rotor_nm", "gravity_feedforward_rotor_nm",
+            "trajectory_state", "trajectory_sample_index", "trajectory_interval_count")}
+            for name, item in hardware.get("per_motor", {}).items()},
         "temperature_c": {name: item.get("temperature_c") for name, item in hardware.get("per_motor", {}).items()},
         "j2_sync_error_rad": hardware.get("j2_e_sync_rad"),
         "controller_faults": hardware.get("controller_fault_by_motor"),

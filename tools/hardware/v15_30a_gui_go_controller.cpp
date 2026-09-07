@@ -98,7 +98,7 @@ constexpr std::array<double, 6> kFrozenMaximumGravityJointNm{{
     3.818740297241469e-16, 13.75842143182542, 6.4747735382240394,
     2.2171628590237833, 0.7261632329533525, 0.01010275736943872}};
 constexpr std::array<double, 6> kHoldIntegralRotorHardNm{{
-    0.35, 1.50, 1.60, 0.75, 0.50, 0.0}};
+    0.45, 1.50, 1.60, 0.75, 0.50, 0.0}};
 constexpr std::array<double, 6> kAuxPredictedRotorWorkNm{{
     2.50, 0.0, 3.00, 2.50, 2.00, 0.0}};
 constexpr std::array<double, 6> kAuxPredictedRotorPdHardNm{{
@@ -5948,6 +5948,27 @@ void command_mask_self_test() {
       std::abs(aux_authorized_target - 20.0 * kPi / 180.0) > 1e-12)
     throw std::runtime_error("AUX_WIRE_GOVERNOR_SELF_TEST_FAILED");
 
+  // A steady J1 endpoint residual must accumulate compensation up to the
+  // configured bound, and BRAKE must still clear it before a new activation.
+  BoundedHoldIntegralState j1_endpoint_integral;
+  double j1_endpoint_wire = 0.0;
+  for (int frame = 0; frame < 9000; ++frame)
+    j1_endpoint_wire = update_bounded_hold_integral(
+        j1_endpoint_integral, true, true, -0.267 * kPi / 180.0, 0.0,
+        kHoldIntegralRotorHardNm[0], kAuxIntegralKiPerRotorRadS,
+        kAuxIntegralRateHardNmS, kAuxIntegralEnterError,
+        kAuxIntegralEnterVelocity, kAuxIntegralDeadband,
+        kAuxIntegralDwellFrames);
+  if (j1_endpoint_wire >= -0.35 ||
+      std::abs(j1_endpoint_wire) > kHoldIntegralRotorHardNm[0] ||
+      update_bounded_hold_integral(
+          j1_endpoint_integral, false, false, 0.0, 0.0,
+          kHoldIntegralRotorHardNm[0], kAuxIntegralKiPerRotorRadS,
+          kAuxIntegralRateHardNmS, kAuxIntegralEnterError,
+          kAuxIntegralEnterVelocity, kAuxIntegralDeadband,
+          kAuxIntegralDwellFrames) != 0.0)
+    throw std::runtime_error("J1_ENDPOINT_INTEGRAL_BOUND_RESET_SELF_TEST_FAILED");
+
   BoundedHoldIntegralState integral_self_test;
   double integral_wire = 0.0;
   for (int frame = 0; frame < 80; ++frame) {
@@ -7480,7 +7501,7 @@ int run(const Options& options) {
                  "J2_TFF=BOUNDED_COMMON_HOLD_INTEGRAL\nJ2_TFF_HARD_NM=1.50\n"
                  "J2_PREDICTED_WORK_NM=1.75\nJ2_HOLD_PREDICTED_WORK_NM=3.00\n"
                  "GO_AUX_TFF=BOUNDED_HOLD_INTEGRAL\n"
-                 "GO_AUX_TFF_HARD_NM=J1:0.35,J3:1.60,J4:0.75,J5:0.50\n"
+                 "GO_AUX_TFF_HARD_NM=J1:0.45,J3:1.60,J4:0.75,J5:0.50\n"
                  "GO_AUX_PREDICTED_WORK_NM=J1:2.50,J3:3.00,J4:2.50,J5:2.00\n"
                  "GO_AUX_GOVERNOR=IMMUTABLE_PLANNER_AFFINE_WIRE_REFERENCE\n"
                  "J2_GOVERNOR=MEASURED_STATE_AFFINE_INTERVAL_NO_SOFT_BRAKE\n"

@@ -4418,6 +4418,32 @@ class MainWindow(QMainWindow):
         )
 
     def _continue_queued_sequence_if_ready(self) -> None:
+        # ArrivalTracker's "未到位" is a display state, not an execution stop.
+        # Enforce its existing deadline for both physical arrival and the
+        # subsequent all-axis HOLD barrier; neither may wait indefinitely.
+        started_at = getattr(self.arrival, "started_at", None)
+        if (
+            self.queued_pose_target is not None
+            and not self.command_stream_suspended
+            and self.pending_collision_execute_sequence is None
+            and (self.hardware_mode == "position" or self.active_sequence_joint is None)
+            and started_at is not None
+            and time.monotonic() - started_at >= self.arrival.timeout_s
+        ):
+            error_deg = max(abs(target - actual) * DEG
+                            for target, actual in zip(self.command_targets, self.actual))
+            detail = (
+                f"分段到位或六轴HOLD确认超过{self.arrival.timeout_s:g}秒，"
+                f"最大目标误差{error_deg:.3f}°；剩余序列已停止"
+            )
+            if self.hardware_mode == "position":
+                self._transition_position_to_fixed_hold()
+            else:
+                self._cancel_queued_pose(restore_command_target=True)
+            self._set_workflow_state("timeout", detail)
+            self._update_mode_label(detail)
+            self._notify(detail, "warning")
+            return
         if (
             self.queued_pose_target is not None
             and self.active_sequence_joint is None
