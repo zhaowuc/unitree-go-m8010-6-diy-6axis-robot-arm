@@ -290,7 +290,7 @@ def observe_gui(window, gui, raw_j6, binding):
         "actual_rad": hardware.get("position_rad"),
         "velocity_rad_s": hardware.get("velocity_rad_s"),
         "motor_tracking": {name: {key: item.get(key) for key in (
-            "tau_cmd_rotor_nm", "tau_feedback_rotor_nm", "gravity_feedforward_rotor_nm",
+            "tau_cmd_rotor_nm", "tau_feedback_rotor_nm", "gravity_feedforward_rotor_nm", "dq_joint_rad_s",
             "trajectory_state", "trajectory_sample_index", "trajectory_interval_count")}
             for name, item in hardware.get("per_motor", {}).items()},
         "temperature_c": {name: item.get("temperature_c") for name, item in hardware.get("per_motor", {}).items()},
