@@ -1,0 +1,141 @@
+{
+  "schema": "go-m8010-j1-integral-gate-evidence/1.0",
+  "date": "2026-09-07",
+  "code_commit": "fbc770d",
+  "session": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T103655-fba468",
+  "status": "FAIL",
+  "failure": "action group failed: 本步预演或执行已失效：timeout",
+  "elapsed_s": 241.0547934328206,
+  "requested_cycles": 10,
+  "completed_cycles": 0,
+  "gui_target_timeout_s": 90.0,
+  "action_observation": {
+    "samples": 7511,
+    "max_gui_source_age_ms": 33.466846
+  },
+  "last_1500_action_samples": {
+    "count": 1500,
+    "coverage_s": 30.017368340399116,
+    "j1_position_span_deg": 0.008678009014519135,
+    "transmitted_integral_rotor_nm_min": 0.0,
+    "transmitted_integral_rotor_nm_max": 0.0,
+    "all_tau_cmd_equal_gravity_feedforward": true,
+    "j1_trajectory_states": [
+      "COMPLETE"
+    ]
+  },
+  "live_snapshot": {
+    "source_monotonic_ns": 3190505541254161,
+    "session_id": "persistent:4a74e16f9e3ad6e1:j2session:8faafda6b9d5edc9:goauxsession:fabde4fe27fcb6fc",
+    "state_instance_id": "272d409c5ace119a78ee2a4950d3e547",
+    "matches_gui_session_and_instance": true,
+    "j1": {
+      "q_joint_rad": -0.0849878562966247,
+      "dq_joint_rad_s": -0.08530212907417055,
+      "tau_cmd_rotor_nm": -1.888463704134169e-19,
+      "tau_feedback_rotor_nm": -0.03515625,
+      "gravity_feedforward_rotor_nm": -1.888463704134169e-19,
+      "trajectory_state": "COMPLETE",
+      "trajectory_sha256": "b2e6c3540b69911b07000350b80562235a25242355177f42038c9fd94705907d",
+      "trajectory_sample_index": 313,
+      "trajectory_interval_count": 313,
+      "temperature_c": 31.0,
+      "communication_ok": true,
+      "age_ms": 2.096825
+    },
+    "j1_state_derived_velocity_rad_s": 0.00014424093281774589,
+    "state_velocity_source": "POSITION_SPAN_0P40S",
+    "trajectory_matched_target_logical_deg": -5.148077457543448,
+    "actual_logical_deg": -4.8694454756609336,
+    "target_minus_actual_deg": -0.2786319818825145
+  },
+  "correction_to_prior_inference": {
+    "prior_summary": "j1_stall_summary.json",
+    "status": "CAP_SATURATION_HYPOTHESIS_CONTRADICTED_BY_NEW_MEASUREMENT",
+    "finding": "With trajectory COMPLETE and the joint nearly stationary, transmitted integral (tau_cmd minus gravity feedforward) remained exactly zero throughout the final 1500 action samples. It was not saturated at 0.45 Nm. The prior unmeasured 0.35 Nm cap explanation is withdrawn as the working diagnosis; this does not fabricate torque measurements for the older session.",
+    "relevant_gate": "The controller used motor-reported velocity for auxiliary-axis integral learning. The live J1 velocity is approximately -4.89 deg/s while encoder-derived state velocity is approximately +0.00826 deg/s; the raw value fails the 1.5 deg/s stationary gate.",
+    "next_change": "Root restored the J1 integral bound to 0.35 Nm; the controller learning gate is being corrected to use encoder-derived velocity. No subsequent hardware outcome is claimed."
+  },
+  "terminal": {
+    "gui_brake_and_j6_disabled_confirmed": true,
+    "launcher_controller_terminal_confirmed": {
+      "J1": true,
+      "J2": true,
+      "J345": true,
+      "J6": true
+    },
+    "stop_errors": [],
+    "worker_logs": {
+      "J1": {
+        "FINAL_MODE": "BRAKE",
+        "FINAL_BRAKE": "PASS"
+      },
+      "J2": {
+        "FINAL_MODE": "BRAKE",
+        "FINAL_BRAKE": "PASS"
+      },
+      "J345": {
+        "FINAL_MODE": "BRAKE",
+        "FINAL_BRAKE": "PASS"
+      },
+      "J6": {
+        "J6_FINAL_DISABLED": "PASS"
+      }
+    }
+  },
+  "strict_precision_qualification": "NOT_RUN_OR_MODIFIED",
+  "original_artifacts": [
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T103655-fba468/evidence/j1_action_group_demo.json",
+      "sha256": "42806d263de19d82456eddd85d522771b26f017e5b63ab7148d3289beb7475cb",
+      "bytes": 53014927
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T103655-fba468_scripts/session_result.json",
+      "sha256": "7b159d14bbfdb7fd1cf64c9da3f389a2b7f3e14df53af2f1c2f46e90d250341c",
+      "bytes": 1532
+    },
+    {
+      "remote_path": "/tmp/j1_active_tracking_snapshot.json",
+      "sha256": "0310bcb62c29925a771a08250e8bca797e49aa367932ba2b2fe9146a9fc59738",
+      "bytes": 37722,
+      "local_path": ".codex-tmp/hold_evidence_20260907/integral_gate_103655-fba468/j1_active_tracking_snapshot.json",
+      "format_note": "Original ROS CLI bytes: one JSON object followed by a --- separator; preserved unchanged."
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T103655-fba468/run/j1_demo_action_group.json",
+      "sha256": "3ec097405f57666ba0c0b9e6964ac854d07427fff7a8e4c467e225cb9e789cef",
+      "bytes": 925
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T103655-fba468/run/action_group_20260907_104117_365870.jsonl",
+      "sha256": "515ed561bf8f6d04c1b18ebd08a9ff635b67922d011ae064e2f10808c9db534f",
+      "bytes": 2422
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T103655-fba468/run/action_group_20260907_104046_282023.jsonl",
+      "sha256": "098d00703b60590935fe25cb622a3fb625dcf94f586fa2c4908d3d5434a89ed5",
+      "bytes": 1904
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T103655-fba468/run/j1_controller.log",
+      "sha256": "8467f702096c52c38949fb4fcf2116d62b1ac3ab81fd45c2e86166f28718425a",
+      "bytes": 1399
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T103655-fba468/run/j2_controller.log",
+      "sha256": "56ae6c74b5b628fa7da1a6fc28fe1313f8be05dfc2bb3ed128366c948deeac99",
+      "bytes": 1580
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T103655-fba468/run/j345_controller.log",
+      "sha256": "15977ed85cecd9fc1633d1f8fffb5e1c63ab62707d4c9aeba24e094649ffd6e1",
+      "bytes": 1787
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T103655-fba468/run/j6_controller.log",
+      "sha256": "3c8c63e8fd7a4c8eccca642de1fd3a3deaf550f1aaef77f64bab472d83c5d0d8",
+      "bytes": 333
+    }
+  ]
+}

@@ -16,7 +16,17 @@ python3 tools/hardware/v15_31d_demo_session.py --execute --cycles 3 --supported 
 `--supported-near-vertical-recovery`；本次“回正＋三轮往返”实测使用了此参数。
 
 四个现场标志须与实际情况一致。入口建立独立新会话，执行同一动作文件的
-1～3 次 J1 1°往返，并保存结果、退出后核对制动终态。不带 `--execute` 只检查。
+默认 J1 1°往返，并保存结果、退出后核对制动终态。不带 `--execute` 只检查。
+
+J1 固定中点两侧 ±10° 的十轮入口为：
+
+```bash
+python3 tools/hardware/v15_31d_demo_session.py --execute --cycles 10 --excursion-deg 10 --symmetric --speed-deg-s 3 --return-center --supported --vertical --hands-off --clearance
+```
+
+一轮包含正、负两个端点；最后回中点单独记录，不计为额外一轮。每个子段仍最多 5°，
+到位/HOLD 等待超过原配置 90 秒会失败并停止剩余动作。参数入口可用不等于十轮实机通过；
+当天结果见 [2026-09-07 实机记录](V15_31D_HARDWARE_STATUS_20260907.md)。
 只有确实再次断电后才添加 `--power-cycled`，让原工具恢复 J6 的本次 POS_VEL 模式；
 正常重复使用已完成的模式配置，J6 驱动仍会读取并核对实际模式，不重复写入 RID10。
 具体依赖和证据目录见 `tools/hardware/v15_31d_demo_templates/README.md`。

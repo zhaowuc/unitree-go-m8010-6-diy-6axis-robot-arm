@@ -1,0 +1,374 @@
+{
+  "schema": "go-m8010-j1-ten-cycle-summary/1.0",
+  "date": "2026-09-07",
+  "session": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8",
+  "status": "PASS",
+  "elapsed_s": 1065.3066394929774,
+  "requested_cycles": 10,
+  "completed_cycles": 10,
+  "symmetric": true,
+  "excursion_deg": 10.0,
+  "speed_deg_s": 3.0,
+  "initial_recovery_status": "PASS",
+  "fixed_action_group_origin_rad": [
+    -1.8938848060580752e-05,
+    0.00020296103072767852,
+    -0.0007577499464619148,
+    -0.00038245383620002783,
+    0.00032671767593932385,
+    -1.907377737087046e-05
+  ],
+  "fixed_j1_center_deg": -0.0010851160627108015,
+  "cycles": [
+    {
+      "cycle": 1,
+      "status": "PASS",
+      "out_deg": 9.96755629849208,
+      "out_error_deg": -0.032443701507920863,
+      "return_deg": -10.059542924291273,
+      "return_error_deg": -0.05954292429127328
+    },
+    {
+      "cycle": 2,
+      "status": "PASS",
+      "out_deg": 9.955406546362331,
+      "out_error_deg": -0.044593453637668645,
+      "return_deg": -10.031773295444811,
+      "return_error_deg": -0.03177329544481111
+    },
+    {
+      "cycle": 3,
+      "status": "PASS",
+      "out_deg": 9.96755629849208,
+      "out_error_deg": -0.032443701507920863,
+      "return_deg": -10.035244499050618,
+      "return_error_deg": -0.035244499050618217
+    },
+    {
+      "cycle": 4,
+      "status": "PASS",
+      "out_deg": 9.969291360785562,
+      "out_error_deg": -0.03070863921443845,
+      "return_deg": -10.054336118882562,
+      "return_error_deg": -0.054336118882561735
+    },
+    {
+      "cycle": 5,
+      "status": "PASS",
+      "out_deg": 9.96755629849208,
+      "out_error_deg": -0.032443701507920863,
+      "return_deg": -9.974498469668323,
+      "return_error_deg": 0.025501530331677458
+    },
+    {
+      "cycle": 6,
+      "status": "PASS",
+      "out_deg": 9.957143766693493,
+      "out_error_deg": -0.04285623330650701,
+      "return_deg": -10.038715702656425,
+      "return_error_deg": -0.03871570265642532
+    },
+    {
+      "cycle": 7,
+      "status": "PASS",
+      "out_deg": 9.96755629849208,
+      "out_error_deg": -0.032443701507920863,
+      "return_deg": -9.991854453978021,
+      "return_error_deg": 0.008145546021978589
+    },
+    {
+      "cycle": 8,
+      "status": "PASS",
+      "out_deg": 9.96755629849208,
+      "out_error_deg": -0.032443701507920863,
+      "return_deg": -10.045658109868041,
+      "return_error_deg": -0.04565810986804131
+    },
+    {
+      "cycle": 9,
+      "status": "PASS",
+      "out_deg": 9.96755629849208,
+      "out_error_deg": -0.032443701507920863,
+      "return_deg": -9.971027266062514,
+      "return_error_deg": 0.02897273393748634
+    },
+    {
+      "cycle": 10,
+      "status": "PASS",
+      "out_deg": 9.96755629849208,
+      "out_error_deg": -0.032443701507920863,
+      "return_deg": -10.057807322488367,
+      "return_error_deg": -0.05780732248836706
+    }
+  ],
+  "cycle_error_convention": "out/return error = actual excursion from fixed center minus requested +10/-10 deg endpoint; this is opposite to measured_arrival.error_deg (target minus actual).",
+  "max_abs_j1_endpoint_error_deg": 0.05954292429127328,
+  "center_return": {
+    "status": "PASS",
+    "target_rad": [
+      -1.8938848060580752e-05,
+      0.00020296103072767852,
+      -0.0007577499464619148,
+      -0.00038245383620002783,
+      0.00032671767593932385,
+      -1.907377737087046e-05
+    ],
+    "measured_arrival": {
+      "event": "measured_arrival",
+      "at_monotonic_s": 3192024.466078174,
+      "index": 0,
+      "actual_model_deg": [
+        -0.016704992779425904,
+        90.01683831342213,
+        -14.445151475661437,
+        13.464614726702504,
+        47.965659793097586,
+        -0.001092846942723013
+      ],
+      "error_deg": [
+        0.015619876716715102,
+        -0.0052095029558108415,
+        0.001735601802903915,
+        0.0034722826246472234,
+        -0.006940249173938426,
+        0.0
+      ]
+    },
+    "later_captured_actual_rad": [
+      -0.0002309731935944169,
+      0.00029388400969893367,
+      -0.0008486258443545807,
+      -0.00044305660055990746,
+      0.00041756532518483637,
+      -1.907377737087046e-05
+    ],
+    "later_captured_actual_minus_target_deg": [
+      -0.012148673110907388,
+      0.005209502955809655,
+      -0.005206805408711571,
+      -0.0034722826246469467,
+      0.005205186880452724,
+      0.0
+    ],
+    "note": "Measured arrival and later captured actual are distinct observations; final return-center is separate from the ten cycles."
+  },
+  "observation": {
+    "scope": "All GUI report samples, excluding separate terminal_samples",
+    "sample_count": 53160,
+    "gui_source_age_ms_max": 35.962825,
+    "gui_source_age_ms_p95_nearest_rank": 26.807766,
+    "temperature_c_max_by_motor": {
+      "J1": 32.0,
+      "J2A": 32.0,
+      "J2B": 32.0,
+      "J3": 31.0,
+      "J4": 31.0,
+      "J5": 32.0,
+      "J6": 36.0
+    },
+    "j2_sync_abs_deg_max": 0.11179420700153364,
+    "transmitted_integral_rotor_nm_range_by_motor": {
+      "J1": {
+        "min": -0.0546875,
+        "max": 0.03125,
+        "nonzero_samples": 52582
+      },
+      "J2A": {
+        "min": 0.0,
+        "max": 0.0,
+        "nonzero_samples": 0
+      },
+      "J2B": {
+        "min": 0.0,
+        "max": 0.0,
+        "nonzero_samples": 0
+      },
+      "J3": {
+        "min": 0.0,
+        "max": 0.0234375,
+        "nonzero_samples": 48814
+      },
+      "J4": {
+        "min": -0.02734375,
+        "max": 0.0,
+        "nonzero_samples": 53061
+      },
+      "J5": {
+        "min": 0.0,
+        "max": 0.0,
+        "nonzero_samples": 0
+      }
+    },
+    "integral_interpretation": "Same-sample tau_cmd_rotor_nm minus gravity_feedforward_rotor_nm; not the PD-inclusive total motor torque."
+  },
+  "plan_token_ids": [
+    "af750adf4bb09c80a9e523a2f0efce20173b6fea31dcf601617da862a50a0f54",
+    "7c2b1bc28220a380621fad6b81f4abbc0748590917b5a07893611426d772a94f",
+    "fc139c58c05073ceec52b658a6aef2e881e36d4f163f11e03d967e5413d1d486",
+    "94c5f9318a68957c71221150697fadc9b46ab9081c1d3c7fe07bdbed592d3bde",
+    "e84356d2f3d848fdf5ab89674aab32c936017fd671abbd69443268440e540127",
+    "e96b7d7062fdc62154942ff2bc853f0063ad0328d5af5041ffe447600e3042fa",
+    "290d35019488238141c111da9d7b6f569fb0ad8d7987a8f8cf1a7f74c3cc955e",
+    "9e35fad04a8f64bab6334ae4ab93b21d857c35b1b2f62729f72ddb29d624a346",
+    "467f827e310b9c03286de102509b49071595790abaab6870386956fcd22ecfa1",
+    "712dab2609047d1e046db940487331ee19678dad34b0c9b2c173db188e8f9274",
+    "b56b4c50be8b54ea6719fb79e87349b4164c90b7b31ffe027c00fa138afb9be0",
+    "ba1e0da9daa8681da04bf196f8d6b973eb59e2ae2fb5a749f6f64253ce026f46",
+    "3b17dbc23421adb61faa2d46cd9af0a7ec4c21c7da6886480414bc5f92c719e4",
+    "cbbdc104f86529d3b1ea173830c3d775444d5a879ae1c1a81c55c6b5352352cf",
+    "bf701ca01518cf8e0d5af436c93f7d01d37bffccfaaa60be27b714086e60edef",
+    "a3a37d24d4d119d9e6d0968fb94a79d11615c9c3fd3d1c8d970118c68a90ef8e",
+    "bc98de94e335af6810f22d939a6b9a55ac1ac0fc3a14830549a6b3cd71edd92b",
+    "7b8aa0798f7b837145f61526dee5f2e911c5882f7d7e0b536503dbed00c5b412",
+    "286c77534d4ff151b1380098453c439c7f7e766db23790220b3f619df09f55b0",
+    "74df60feaf2363e625ee694501703708bc47c1181375cad110a05442fc849e7d",
+    "0f677d38c73c2be19cf59c2d821a496f54f417e32834edb6d8c0acdcb99d9fc2",
+    "0939a9253bb19f688dac36a8bebc1c6824fc1a6ee4394ecbee46ee1b23326ac3"
+  ],
+  "plan_token_count": 22,
+  "actual_recipe_moving_joints": [
+    "J1",
+    "J2",
+    "J3",
+    "J4",
+    "J5",
+    "J6"
+  ],
+  "segment_count": 184,
+  "segment_max_abs_delta_deg": 5.0,
+  "action_group_file": {
+    "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/run/j1_demo_action_group.json",
+    "sha256": "0304e2e020f3067fa32f8138e0a0bd96594285a2d2c4d530bc3ee0166c8fc265"
+  },
+  "terminal": {
+    "paired_gui_brake_and_j6_disabled": true,
+    "launcher_status": "PASS",
+    "controller_terminal_confirmed": {
+      "J1": true,
+      "J2": true,
+      "J345": true,
+      "J6": true
+    },
+    "stop_errors": [],
+    "native_logs": {
+      "J1": {
+        "FINAL_MODE": "BRAKE",
+        "FINAL_BRAKE": "PASS"
+      },
+      "J2": {
+        "FINAL_MODE": "BRAKE",
+        "FINAL_BRAKE": "PASS"
+      },
+      "J345": {
+        "FINAL_MODE": "BRAKE",
+        "FINAL_BRAKE": "PASS"
+      },
+      "J6": {
+        "J6_FINAL_DISABLED": "PASS"
+      }
+    }
+  },
+  "original_artifacts": [
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/evidence/j1_action_group_demo.json",
+      "sha256": "be1e6d360a34b69ceba4e0a6ab196146a1b8c2c69df17b88de78f522a24b3cdf",
+      "bytes": 251925731
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8_scripts/session_result.json",
+      "sha256": "6704fd6d1fa671707ce565aea951aa2bf4425a057ae63fb71324dd2307252b9f",
+      "bytes": 1295
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/run/j1_demo_action_group.json",
+      "sha256": "0304e2e020f3067fa32f8138e0a0bd96594285a2d2c4d530bc3ee0166c8fc265",
+      "bytes": 925
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/run/action_group_20260907_105146_901784.jsonl",
+      "sha256": "a66a825dc89c97b8b64f27acade33f71f9607cf8e1385f94fa703c4a43d9cecf",
+      "bytes": 1906
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/run/action_group_20260907_105222_839523.jsonl",
+      "sha256": "d0b43fc7bf1e5dadd6b807b2b0f80de0be8b119d426b6ca63b2720d601da30a8",
+      "bytes": 3088
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/run/action_group_20260907_105338_284465.jsonl",
+      "sha256": "0bd0dfc1616e1a492c2b05c397d92e1b3b8cad47af90f11a2367e111de3535ae",
+      "bytes": 3062
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/run/action_group_20260907_105519_003339.jsonl",
+      "sha256": "bdfb620f9900046ed41e6b6323065ce676ddd05d48dfda35c3b355460693ce89",
+      "bytes": 3087
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/run/action_group_20260907_105655_571203.jsonl",
+      "sha256": "406629ff6979bfc08d5bd759337d9220f15a93cccf1fc1ef1b843b6075a2728d",
+      "bytes": 3084
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/run/action_group_20260907_105833_707020.jsonl",
+      "sha256": "ee8a5e4908a649b21df214ed87ff202c464464d4082d7ce7409a172040004c3e",
+      "bytes": 3069
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/run/action_group_20260907_110011_515585.jsonl",
+      "sha256": "f0957f285fd73a4b310fee129ae31ee57e947dee96b11ffeca90f89eb8c94ed6",
+      "bytes": 3081
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/run/action_group_20260907_110145_814354.jsonl",
+      "sha256": "36f6991799f51aeef37d585e23c4ed125a4a3a18b43d9dcbdb593655fbaf9308",
+      "bytes": 3070
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/run/action_group_20260907_110319_927980.jsonl",
+      "sha256": "09de291e8c4d622bf6b08aeeb99e6d642377faea2cd363cc6492dc092cae9180",
+      "bytes": 3088
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/run/action_group_20260907_110454_728562.jsonl",
+      "sha256": "f611f99691236d9ecab4c615351b047a982e19ae5f437818abd1f03198bcdd62",
+      "bytes": 3087
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/run/action_group_20260907_110629_752510.jsonl",
+      "sha256": "031a088f19c5fe5ac76bc268b7545a61f34f865bda2a3eac02b622d5a1b3c3eb",
+      "bytes": 3071
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/run/action_group_20260907_110801_434190.jsonl",
+      "sha256": "a6b0eca7da57b9917b07f46fa879941a2cc6e38948099916e31c4353157678c8",
+      "bytes": 2023
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/run/j1_controller.log",
+      "sha256": "02909e8ccf233e73eb182afb9e7051e74b88324cd93208783653e587246d10d0",
+      "bytes": 1499
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/run/j2_controller.log",
+      "sha256": "ed926aa48732338f5d75554946bb05e7929176e50952c7f020d5ce3adb12c798",
+      "bytes": 1585
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/run/j345_controller.log",
+      "sha256": "bef5d79801b1e65234b45d521fd4acd6ec81a938e0520237c50a2bf1cdf28c6a",
+      "bytes": 1791
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T104755-015fe8/run/j6_controller.log",
+      "sha256": "2f37484aa1278e2a493062b83d22d1cbc3071da54e2fc45b4f5f18dc2d347170",
+      "bytes": 334
+    }
+  ],
+  "strict_precision_qualification": "NOT_RUN_OR_MODIFIED",
+  "scope_limits": [
+    "Supported physical configuration and this J1 symmetric task; small correction segments on other joints are included.",
+    "This does not establish complete six-axis loaded long-duration +/-0.1-degree qualification or gripper operation."
+  ],
+  "summary_invariants": "PASS: 10/10 cycles; 22 unique tokens; <=5 deg per segment; exact report/group SHA; cycle arithmetic; center and all terminal confirmations."
+}

@@ -1,0 +1,194 @@
+{
+  "schema": "go-m8010-j1-stall-summary/1.0",
+  "date": "2026-09-07",
+  "code_commit": "5d11932",
+  "session": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T095102-6e7a85",
+  "status": "FAIL",
+  "failure": "operator/process stop requested",
+  "scope": "J1_SYMMETRIC_ENDPOINTS",
+  "requested_cycles": 10,
+  "completed_cycles": 0,
+  "elapsed_s": 877.2349806460552,
+  "return_center_completed": false,
+  "requested_motion": {
+    "symmetric_endpoint_offset_deg": 10,
+    "speed_deg_s": 3,
+    "segment_limit_deg": 5
+  },
+  "recovery_status": "PASS",
+  "action_group_origin_rad": [
+    0.003585814517897555,
+    0.0003999105986815695,
+    -0.0011515455039968006,
+    -0.00038245383620002783,
+    0.0002055121472195646,
+    0.00036240177004653873
+  ],
+  "first_positive_arrival": {
+    "target_model_deg": 10.205452037992268,
+    "actual_model_deg": 9.98556334177073,
+    "center_model_deg": 0.20545203799226788,
+    "actual_excursion_from_center_deg": 9.780111303778462,
+    "target_minus_actual_deg": 0.21988869622153995
+  },
+  "negative_leg_stall": {
+    "description": "Third J1 subsegment on first negative leg; final negative endpoint was not reached.",
+    "segment_target_logical_deg": -5.017908940853917,
+    "observed_actual_logical_deg": -4.751424553063471,
+    "target_minus_actual_deg": -0.26648438779044614,
+    "observation_source": "GUI report terminal_samples[0], still J1 position before BRAKE acknowledgement",
+    "source_monotonic_ns": 3188425254223366,
+    "actual_rad": [
+      -0.0829280026110576,
+      0.0005210407976755863,
+      -0.0012424214018894666,
+      -0.001987918616088076,
+      0.00032671767593932385,
+      0.0007438773174639479
+    ],
+    "temperature_c": {
+      "J1": 31.0,
+      "J2A": 32.0,
+      "J2B": 31.0,
+      "J3": 31.0,
+      "J4": 31.0,
+      "J5": 32.0,
+      "J6": 36.0
+    },
+    "j1_mode": "position",
+    "controller_faults": {
+      "J1": false,
+      "J2A": false,
+      "J2B": false,
+      "J3": false,
+      "J4": false,
+      "J5": false,
+      "J6": false
+    },
+    "router_rejected_commands": 0
+  },
+  "reception": {
+    "instrument_publishes": false,
+    "elapsed_s": 884.210631657,
+    "counts": {
+      "ACCEPTED": 43840
+    },
+    "rows": 43840
+  },
+  "terminal": {
+    "gui_brake_and_j6_disabled_confirmed": true,
+    "launcher_controller_terminal_confirmed": {
+      "J1": true,
+      "J2": true,
+      "J345": true,
+      "J6": true
+    },
+    "launcher_stop_errors": [],
+    "worker_logs": {
+      "J1": {
+        "COMMUNICATION_RECOVERY_ATTEMPT_COUNT": "0",
+        "FOC_TX_ATTEMPT_COUNT": "87668",
+        "FINAL_MODE": "BRAKE",
+        "FINAL_BRAKE": "PASS"
+      },
+      "J2": {
+        "COMMUNICATION_RECOVERY_ATTEMPT_COUNT": "0",
+        "FOC_TX_ATTEMPT_COUNT": "175338",
+        "FINAL_MODE": "BRAKE",
+        "FINAL_BRAKE": "PASS"
+      },
+      "J345": {
+        "COMMUNICATION_RECOVERY_ATTEMPT_COUNT": "0",
+        "FOC_TX_ATTEMPT_COUNT": "263007",
+        "FINAL_MODE": "BRAKE",
+        "FINAL_BRAKE": "PASS"
+      },
+      "J6": {
+        "J6_FINAL_DISABLED": "PASS"
+      }
+    }
+  },
+  "subsequent_change": {
+    "commit": "affbbb7",
+    "status_in_this_summary": "NOT_VALIDATED_BY_THIS_SESSION",
+    "j1_integral_limit_rotor_nm": {
+      "before": 0.35,
+      "after": 0.45
+    },
+    "unchanged_j1_kp": 1.5,
+    "unchanged_total_predicted_work_limit_rotor_nm": 2.5,
+    "rationale": "Cap saturation is inferred from a persistent approximately 0.267 deg residual and the enabled endpoint learning rule; no contemporaneous transmitted integral or FOC torque was archived in this session. At constant error and continuous learning gate, 0.5*6.33*abs(error_rad) reaches 0.35 Nm in approximately 24 seconds. This is not measured saturation or a verified mechanical root cause.",
+    "gui_timeout": "Existing configured 90-second target timeout now also bounds segmented arrival and six-axis HOLD confirmation; on expiry remaining sequence stops and fixed HOLD is requested.",
+    "new_observation_fields": [
+      "tau_cmd_rotor_nm",
+      "tau_feedback_rotor_nm",
+      "gravity_feedforward_rotor_nm",
+      "trajectory state"
+    ],
+    "torque_interpretation": "tau_cmd_rotor_nm is feedforward plus integral, not PD-inclusive total torque."
+  },
+  "strict_precision_qualification": "NOT_RUN_OR_MODIFIED",
+  "limitations": [
+    "Zero of ten symmetric cycles completed.",
+    "First positive arrival is relative to the captured center, not +10 deg from absolute zero.",
+    "No result from the subsequent 101625 session is asserted here."
+  ],
+  "original_artifacts": [
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T095102-6e7a85/evidence/j1_action_group_demo.json",
+      "sha256": "b76db90ad636772b5f0279fc36dd4b7716622c5926d2c6ac73ec5c88d29c7bde",
+      "bytes": 96792450
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T095102-6e7a85_scripts/session_result.json",
+      "sha256": "e2424c369d7085a0eca1efbac6d01958812eca3b07ea2ac635d835a350d069ae",
+      "bytes": 1502
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T095102-6e7a85/evidence/hardware_receiver_trace.json",
+      "sha256": "f6871e2d50d798974f6ca18d56de8a1d45b6968bbf969af8e465ae253736e60c",
+      "bytes": 35978971
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T095102-6e7a85/run/j1_demo_action_group.json",
+      "sha256": "1e732cd963a22d1e281f5f72db10282786dc0e95f61b308f3814832dab6575f7",
+      "bytes": 919
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T095102-6e7a85/run/action_group_20260907_095526_412753.jsonl",
+      "sha256": "3db73d5461ca52c73b87033b97e62987f9889b1b8aa6c4b634884e39eafae41a",
+      "bytes": 2444
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T095102-6e7a85/run/action_group_20260907_095455_080302.jsonl",
+      "sha256": "d37de3ff30791685f2f4b0633b416deecc0e0d515e2e921c238e3d7392359a11",
+      "bytes": 1896
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T095102-6e7a85/run/j1_controller.log",
+      "sha256": "5a1384c2d173f7775de852f7d00aec039dc95bfed0914e6f35790ab8c80467e3",
+      "bytes": 1397
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T095102-6e7a85/run/j2_controller.log",
+      "sha256": "3818c8f3259798aac6b48095fe9fdf3a38b740abba59201b082a4e632a2610db",
+      "bytes": 2321
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T095102-6e7a85/run/j345_controller.log",
+      "sha256": "dbec99382bbb3559a1b587808188e4ca9e7b6ae2d0bad8096ef55f54c7a026c8",
+      "bytes": 1789
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T095102-6e7a85/run/j6_controller.log",
+      "sha256": "0c6b276982a0bf74bf2a9eaebe7d167338cb52147aaaad11d9294b2cc2fe4e5a",
+      "bytes": 333
+    }
+  ],
+  "archive_policy": "Original bytes retained at the listed remote paths; hashes computed read-only after this session ended. Large reports and CSV streams are not duplicated or committed.",
+  "subsequent_correction": {
+    "session": ".runtime/v15_31d_demo_20260907T103655-fba468",
+    "evidence_summary": "j1_integral_gate_summary.json",
+    "finding": "The subsequent instrumented stall measured transmitted integral exactly zero throughout its final 1500 action samples, not cap saturation. The earlier unmeasured cap-saturation explanation is withdrawn as the working diagnosis; this older FAIL and its original artifacts remain unchanged. Motor-reported J1 velocity exceeded the integral learning gate while encoder-derived motion was nearly stationary."
+  }
+}
