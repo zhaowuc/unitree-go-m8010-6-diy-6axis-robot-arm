@@ -192,7 +192,7 @@ export ROS_DOMAIN_ID=30 ROS_LOCALHOST_ONLY=1 RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export FASTRTPS_DEFAULT_PROFILES_FILE="$scripts/fastdds_udp_only.xml"
 export FASTDDS_DEFAULT_PROFILES_FILE="$scripts/fastdds_udp_only.xml"
 # Preserve the model-minus-logical offset; never map the measured drift to zero.
-timeout 8 ros2 topic echo --once --full-length /whole_arm/hardware_state std_msgs/msg/String >"$current/model_pose_snapshot.yaml"
+timeout 8 ros2 topic echo --once --no-lost-messages --full-length /whole_arm/hardware_state std_msgs/msg/String >"$current/model_pose_snapshot.yaml"
 readarray -t model_q < <("$py" - "$current/model_pose_snapshot.yaml" <<'PY'
 import json,sys,yaml,math
 v=json.loads(yaml.safe_load(open(sys.argv[1]).read().replace('\n---',''))['data'])

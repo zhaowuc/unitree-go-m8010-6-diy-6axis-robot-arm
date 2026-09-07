@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Optional
 
 import rclpy
+from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray, String
@@ -289,8 +290,12 @@ def set_widget_value_if_changed(widget: object, value: int) -> bool:
 def pump_ros_callbacks(node: object, spin_once: object) -> None:
     """Drain a bounded number of ready callbacks without blocking the Qt loop."""
 
+    executor = getattr(node, "callback_executor", None)
     for _ in range(ROS_CALLBACK_BUDGET_PER_TICK):
-        spin_once(node, timeout_sec=0.0)
+        if executor is not None:
+            executor.spin_once(timeout_sec=0.0)
+        else:
+            spin_once(node, timeout_sec=0.0)
 
 
 def fitted_window_size(
@@ -2472,6 +2477,15 @@ class ArmGuiNode(Node):
             self._collision_result_callback,
             10,
         )
+        # The global spin_once helper adds/removes the node on every call.
+        # Keep one native executor for both Qt pumps and the close handshake.
+        self.callback_executor = SingleThreadedExecutor(context=self.context)
+        self.callback_executor.add_node(self)
+
+    def destroy_node(self) -> bool:
+        self.callback_executor.remove_node(self)
+        self.callback_executor.shutdown(timeout_sec=0.0)
+        return super().destroy_node()
 
     def _joint_callback(self, message: JointState) -> None:
         if (
@@ -6992,7 +7006,7 @@ class MainWindow(QMainWindow):
 
         def publish_requested_state_and_spin() -> None:
             self._publish_command()
-            rclpy.spin_once(self.node, timeout_sec=0.01)
+            self.node.callback_executor.spin_once(timeout_sec=0.01)
 
         if publish_before_close:
             for _ in range(5):

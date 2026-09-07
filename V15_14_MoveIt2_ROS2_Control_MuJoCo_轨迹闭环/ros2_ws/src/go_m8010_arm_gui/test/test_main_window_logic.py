@@ -1850,6 +1850,17 @@ def test_latest_state_subscriptions_and_bounded_callback_pump_avoid_backlog():
     marker = object()
     pump(marker, fake_spin_once)
     assert calls == [(marker, 0.0)] * 8
+    # All repeated GUI/demo pumps must retain the node on its native executor,
+    # rather than invoking global spin_once's add/remove wrapper each time.
+    native_calls = []
+    executor = SimpleNamespace(spin_once=lambda *, timeout_sec: native_calls.append(timeout_sec))
+    node = SimpleNamespace(callback_executor=executor)
+    for _ in range(5):
+        pump(node, fake_spin_once)
+    assert native_calls == [0.0] * 40
+    assert calls == [(marker, 0.0)] * 8
+    assert "self.callback_executor.add_node(self)" in source
+    assert "self.node.callback_executor.spin_once(timeout_sec=0.01)" in source
 
 
 def test_change_only_widget_helpers_suppress_redundant_qt_writes():
