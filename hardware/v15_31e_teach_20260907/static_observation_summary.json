@@ -1,0 +1,315 @@
+{
+  "schema": "go-m8010-single-axis-teach-static-observation/1.0",
+  "date": "2026-09-07",
+  "code_commit": "2a44908",
+  "session": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T114952-765971",
+  "session_result": {
+    "status": "PASS",
+    "scope": "BOOTSTRAP_AND_TERMINAL; manual teaching evidence is recorded separately",
+    "elapsed_s": 597.3540728488006,
+    "maximum_seconds": 600.0,
+    "interactive_ready": true,
+    "launcher_status": "PASS"
+  },
+  "static_teach_observation": {
+    "status": "PASS",
+    "scope": "Automatic J1 teach entry, stationary observation, release to fixed HOLD; no manual displacement applied.",
+    "requested_joint": "J1",
+    "requested_duration_s": 20.0,
+    "press_event_duration_s": 20.003910257015377,
+    "hardware_confirmed_event": {
+      "event": "teach_hardware_confirmed",
+      "joint": 0,
+      "source_monotonic_ns": 3194738266098516,
+      "actual_rad": [
+        0.00025369826183313504,
+        0.000263526130224687,
+        -0.0011515455039968006,
+        -0.0016547352391287874,
+        0.00041756532518483637,
+        -1.907377737087046E-05
+      ],
+      "controller_mode_by_motor": {
+        "J1": "teach",
+        "J2A": "hold",
+        "J2B": "hold",
+        "J3": "hold",
+        "J4": "hold",
+        "J5": "hold",
+        "J6": "hold"
+      },
+      "activation_epoch": 3194738251504319
+    },
+    "mode_sample_count": 998,
+    "distinct_hardware_source_count": 996,
+    "first_source_monotonic_ns": 3194738286273544,
+    "last_source_monotonic_ns": 3194758246182727,
+    "hardware_source_coverage_s": 19.959909183,
+    "all_observed_modes": {
+      "J1": "teach",
+      "J2A": "hold",
+      "J2B": "hold",
+      "J3": "hold",
+      "J4": "hold",
+      "J5": "hold",
+      "J6": "hold"
+    },
+    "all_samples_match_expected_modes": true,
+    "all_samples_fresh_healthy_and_teach_authorized": true,
+    "frozen_targets_rad": [
+      0.00025369826183313504,
+      0.0002484225202133061,
+      -0.0011515455039968006,
+      -0.000897407841376084,
+      -9.738867999121974E-05,
+      -1.907377737087046E-05
+    ],
+    "all_command_targets_exactly_frozen": true,
+    "max_abs_actual_minus_frozen_target_deg_by_joint": {
+      "J1": 0.015620955735554337,
+      "J2": 0.005209502955809652,
+      "J3": 0.005206805408711565,
+      "J4": 0.04686178818782377,
+      "J5": 0.031239753433430203,
+      "J6": 0.04371387770892052
+    },
+    "j1_position_span_deg": 0.008678548523938904,
+    "max_abs_velocity_deg_s_by_joint": {
+      "J1": 0.034711391554314464,
+      "J2": 0.012404629827726096,
+      "J3": 0.013016915244068818,
+      "J4": 0.017355809151875446,
+      "J5": 0.0173500361566196,
+      "J6": 0.1639246698282912
+    },
+    "max_temperature_c_by_motor": {
+      "J1": 31.0,
+      "J2A": 32.0,
+      "J2B": 32.0,
+      "J3": 31.0,
+      "J4": 31.0,
+      "J5": 31.0,
+      "J6": 37.0
+    },
+    "j2_sync_abs_deg_max": 0.11005914470804941,
+    "max_gui_source_age_ms": 23.438444,
+    "max_router_rejected_commands": 0,
+    "release_event": {
+      "event": "teach_release_requested",
+      "joint": 1,
+      "reason": "短时姿态观察结束",
+      "at_monotonic_s": 3194758.255418157,
+      "activation_epoch": 3194758255406067,
+      "source_monotonic_ns": 3194758246182727,
+      "actual_rad": [
+        1.1362534119359061E-05,
+        0.00029388400969893367,
+        -0.0011212535380325786,
+        -0.0017153003386257957,
+        0.00041756532518483637,
+        0.00036240177004653873
+      ],
+      "frozen_targets_rad": [
+        0.00025369826183313504,
+        0.0002484225202133061,
+        -0.0011515455039968006,
+        -0.000897407841376084,
+        -9.738867999121974E-05,
+        -1.907377737087046E-05
+      ],
+      "hold_targets_rad": [
+        1.1362534119359061E-05,
+        0.0002484225202133061,
+        -0.0011515455039968006,
+        -0.000897407841376084,
+        -9.738867999121974E-05,
+        -1.907377737087046E-05
+      ]
+    },
+    "nonselected_release_targets_exactly_preserved": true,
+    "first_all_hold_after_release": {
+      "source_monotonic_ns": 3194758266132430,
+      "actual_rad": [
+        1.1362534119359061E-05,
+        0.00029388400969893367,
+        -0.0010909615720683568,
+        -0.0016850177888772914,
+        0.0003872827754363322,
+        0.00036240177004653873
+      ],
+      "modes": {
+        "J1": "hold",
+        "J2A": "hold",
+        "J2B": "hold",
+        "J3": "hold",
+        "J4": "hold",
+        "J5": "hold",
+        "J6": "hold"
+      },
+      "feedback_fresh": true,
+      "healthy": true,
+      "command_targets_rad": [
+        1.1362534119359061E-05,
+        0.0002484225202133061,
+        -0.0011515455039968006,
+        -0.000897407841376084,
+        -9.738867999121974E-05,
+        -1.907377737087046E-05
+      ]
+    }
+  },
+  "final_stop": {
+    "gui_paired_brake_and_j6_disabled": true,
+    "launcher_controller_terminal_confirmed": {
+      "J1": true,
+      "J2": true,
+      "J345": true,
+      "J6": true
+    },
+    "stop_errors": [],
+    "native_logs": {
+      "j1_controller.log": {
+        "FOC_TX_ATTEMPT_COUNT": "59675",
+        "FINAL_MODE": "BRAKE",
+        "FINAL_BRAKE": "PASS"
+      },
+      "j2_controller.log": {
+        "FOC_TX_ATTEMPT_COUNT": "119350",
+        "FINAL_MODE": "BRAKE",
+        "FINAL_BRAKE": "PASS"
+      },
+      "j345_controller.log": {
+        "FOC_TX_ATTEMPT_COUNT": "179025",
+        "FINAL_MODE": "BRAKE",
+        "FINAL_BRAKE": "PASS"
+      },
+      "j6_controller.log": {
+        "J6_FINAL_DISABLED": "PASS"
+      }
+    }
+  },
+  "known_gui_defect": {
+    "error": "KeyError: 'teach' in _refresh_summary after command publication",
+    "traceback_count": 90,
+    "impact": "Summary refresh/GUI CSV path interrupted during teach; the separately collected mode/control samples and native final logs remained available. Do not describe this as a clean GUI run.",
+    "followup_local_commit": "da19f72",
+    "followup_fix_hardware_retested_in_this_session": false
+  },
+  "prior_attempt": {
+    "session": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T114323-e6fdc6",
+    "status": "FAIL",
+    "failure": "RuntimeError: exit 2; ; see /home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T114323-e6fdc6_scripts/stage_readonly.sh.log",
+    "scope": "Read-only phase argv parsing of a negative scientific-notation argument; no active teaching stage.",
+    "launcher_active_controller_terminal_confirmed": {
+      "J1": false,
+      "J2": false,
+      "J345": false,
+      "J6": false
+    },
+    "actual_boot_and_j6_terminal_logs": {
+      "boot_j1.log": {
+        "FOC_TX_ATTEMPT_COUNT": "0",
+        "FINAL_MODE": "BRAKE",
+        "FINAL_BRAKE": "PASS"
+      },
+      "boot_j2.log": {
+        "FOC_TX_ATTEMPT_COUNT": "0",
+        "FINAL_MODE": "BRAKE",
+        "FINAL_BRAKE": "PASS"
+      },
+      "boot_j345.log": {
+        "FOC_TX_ATTEMPT_COUNT": "0",
+        "FINAL_MODE": "BRAKE",
+        "FINAL_BRAKE": "PASS"
+      },
+      "j6_controller.log": {
+        "J6_FINAL_DISABLED": "PASS"
+      }
+    },
+    "note": "The launcher active-worker flags are false because those active workers were never started; boot-worker evidence independently proves BRAKE with zero FOC.",
+    "original_artifacts": [
+      {
+        "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T114323-e6fdc6_scripts/session_result.json",
+        "sha256": "20921130f19fdd80b58d0ff64eca03d917b056b69b40043d441e0cd0b8314a0a",
+        "bytes": 1236
+      },
+      {
+        "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T114323-e6fdc6_scripts/stage_readonly.sh.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T114323-e6fdc6/boot_j1.log",
+        "sha256": "5fc14eab26df2372881616eb6c61c430157e09d12ec4e9d02f5b943ba7a2e64e",
+        "bytes": 1050
+      },
+      {
+        "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T114323-e6fdc6/boot_j2.log",
+        "sha256": "65a54d5227a202032283cf3ae637000fe125d62ebe25acbd5970449dd8e32fa6",
+        "bytes": 1051
+      },
+      {
+        "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T114323-e6fdc6/boot_j345.log",
+        "sha256": "051f9d003702eb2878ae96e434316012cd14c046d95eec00e3059852758e329b",
+        "bytes": 1055
+      },
+      {
+        "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T114323-e6fdc6/j6_controller.log",
+        "sha256": "2ccb04a73c5d076c36598aad4702ca5c1b2a17173a96172d9e78e5c8667d788d",
+        "bytes": 331
+      },
+      {
+        "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T114323-e6fdc6/power_on_readonly.log",
+        "sha256": "d79fa93c40043d59b0e2e2bf3f085939f8beb94b7caaa5d7170db32c86e6225b",
+        "bytes": 2000
+      }
+    ],
+    "parser_error": "argument --model-absolute-q-rad: expected 6 arguments"
+  },
+  "unverified": {
+    "manual_drag_feel": "NOT_TESTED",
+    "user_manually_displaced_arm": false,
+    "manual_teaching_points_recorded": false,
+    "j2_to_j5_selected_teach_physical_tests": "NOT_TESTED",
+    "complete_six_axis_zero_gravity": "NOT_ESTABLISHED",
+    "strict_loaded_six_axis_precision_qualification": "NOT_COMPLETED"
+  },
+  "original_artifacts": [
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T114952-765971/evidence/j1_action_group_demo.json",
+      "sha256": "7f36c5f9f6e7456b21b0f33da02a02d9d2b843aeb85e6021182a2773116abf19",
+      "bytes": 150413120
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T114952-765971_scripts/session_result.json",
+      "sha256": "38325b45f67c409b440225acb047dcb57e124d0dcd90360e5476c72d4dcd7067",
+      "bytes": 1354
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T114952-765971_scripts/start_bounded_j1_demo.sh.log",
+      "sha256": "bf37ebe5dbedb1f1e7cf3c849a7dffd9a9a6039701beebae31964159378e2360",
+      "bytes": 44762
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T114952-765971/run/j1_controller.log",
+      "sha256": "9b3bebb41e63816bc341ff695f085803fcc22490a06b3ca720e10091ede11ef5",
+      "bytes": 1400
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T114952-765971/run/j2_controller.log",
+      "sha256": "e23a2dd3d0aacce9a9b2b4512fe0cc0cf4c948ee9dbfcbf276cd48fe89288613",
+      "bytes": 1584
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T114952-765971/run/j345_controller.log",
+      "sha256": "165a81922b8ed8ffd34b59cee2eb53baa9406aa9774b54543611b5b34cdcaf8d",
+      "bytes": 1793
+    },
+    {
+      "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T114952-765971/run/j6_controller.log",
+      "sha256": "f39796e42a5c4fed40d4458b8935bc04401238b3dc8d29a469211c66a5e56ee8",
+      "bytes": 333
+    }
+  ],
+  "archive_policy": "Original report/log bytes remain at these remote paths; this summary is derived, not a replacement for the original FAIL/PASS reports."
+}
