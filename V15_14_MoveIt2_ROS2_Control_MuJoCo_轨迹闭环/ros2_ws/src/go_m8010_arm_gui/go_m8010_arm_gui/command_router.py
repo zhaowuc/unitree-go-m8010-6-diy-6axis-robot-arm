@@ -19,9 +19,10 @@ from rclpy.node import Node
 from std_msgs.msg import String
 
 
-ALLOWED_MODES = {"brake", "drag", "hold", "position"}
+ALLOWED_MODES = {"brake", "drag", "hold", "position", "teach"}
 GUI_COMMAND_SCHEMA_V12 = "go-m8010-gui-command/1.2"
 GUI_COMMAND_SCHEMA_V13 = "go-m8010-gui-command/1.3"
+GUI_COMMAND_SCHEMA_V14 = "go-m8010-gui-command/1.4"
 QUINTIC_COMMAND_SCHEMA = "go-m8010-quintic-command/1.0"
 QUINTIC_PROFILE = "quintic-rest-to-rest-v1"
 PLAN_MANIFEST_SCHEMA = "go-m8010-plan-manifest/1.0"
@@ -1739,6 +1740,9 @@ class GravityAuthorityGate:
                 "feedforward_nm": list(feedforward),
                 "planned_trajectory_feasibility": deepcopy(planned_proof),
             }
+            for field in ("assisted_teach_authorized", "maximum_teach_excursion_deg",
+                          "maximum_teach_seconds", "maximum_teach_velocity_deg_s", "allowed_teach_joints"):
+                self._latest["empirical_" + field] = deepcopy(empirical.get(field))
             return True
         except (KeyError, TypeError, ValueError, OverflowError):
             self._latest = None
@@ -1849,7 +1853,7 @@ class GravityAuthorityGate:
             command["feedforward_nm"] = [0.0] * 6
             command.pop("gravity_authority", None)
             return
-        if command.get("mode") not in {"hold", "position"}:
+        if command.get("mode") not in {"hold", "position", "teach"}:
             return
         # Explicitly enabled legacy POSITION exists only for isolated protocol
         # regression with no workers; it never receives gravity authority.
@@ -1908,6 +1912,18 @@ class GravityAuthorityGate:
             )
         ):
             raise ValueError("重力authority不存在或已过期")
+        if command.get("mode") == "teach":
+            if (latest.get("authority_kind") != EMPIRICAL_AUTHORITY_CLASS
+                    or latest.get("empirical_assisted_teach_authorized") is not True
+                    or latest.get("empirical_position_validation_authorized") is not True
+                    or latest.get("empirical_stage_index") != 4
+                    or latest.get("gravity_scale") != 1.0 or latest.get("gravity_scale_target") != 1.0
+                    or latest.get("empirical_allowed_teach_joints") != ["J1", "J2", "J3", "J4", "J5"]
+                    or any(type(latest.get(name)) not in {int, float} or latest[name] != bound
+                           for name, bound in (("empirical_maximum_teach_excursion_deg", 5.0),
+                                               ("empirical_maximum_teach_seconds", 30.0),
+                                               ("empirical_maximum_teach_velocity_deg_s", 5.0)))):
+                raise ValueError("当前会话未授权有界单轴辅助示教")
         binding_key = (
             command.get("source_instance_id"),
             command.get("activation_epoch"),
@@ -2144,7 +2160,7 @@ class CommandReplayGuard:
         if (
             self._active_source is not None
             and source != self._active_source
-            and command.get("mode") in {"hold", "position"}
+            and command.get("mode") in {"hold", "position", "teach"}
             and command.get("activation_epoch", 0)
             <= self._highest_activation_epoch
         ):
@@ -2320,12 +2336,15 @@ def validate_command(
         "go-m8010-gui-command/1.1",
         GUI_COMMAND_SCHEMA_V12,
         GUI_COMMAND_SCHEMA_V13,
+        GUI_COMMAND_SCHEMA_V14,
     }:
         raise ValueError("命令格式不匹配")
     mode = value.get("mode")
     if mode not in ALLOWED_MODES:
         raise ValueError("控制模式不允许")
-    if schema not in {GUI_COMMAND_SCHEMA_V12, GUI_COMMAND_SCHEMA_V13} and mode != "brake":
+    if mode != "brake" and (mode == "teach") != (schema == GUI_COMMAND_SCHEMA_V14):
+        raise ValueError("1.4协议仅用于单轴辅助示教")
+    if schema not in {GUI_COMMAND_SCHEMA_V12, GUI_COMMAND_SCHEMA_V13, GUI_COMMAND_SCHEMA_V14} and mode != "brake":
         raise ValueError("旧版协议仅允许制动")
     if (
         schema == GUI_COMMAND_SCHEMA_V12
@@ -2391,6 +2410,12 @@ def validate_command(
             raise ValueError("位置运动必须激活全部六个关节")
         if mode == "position" and sum(moving_joint_mask) != 1:
             raise ValueError("位置运动必须且只能选择一个移动关节")
+        if mode == "teach" and (active_joint_mask != [True] * 6 or sum(moving_joint_mask) != 1
+                                or moving_joint_mask[5]):
+            raise ValueError("辅助示教仅允许J1–J5一个选轴，其他关节必须保持激活")
+        if mode == "teach" and any(field in value for field in
+                                    ("collision_guard_proof", "trajectory", "plan_token_id", "plan_manifest")):
+            raise ValueError("辅助示教不得携带POSITION轨迹授权")
         # POSITION 与 HOLD 共用当前竖直会话锚点下的冻结 3D
         # 模型限位。路由器不再把运动目标收窄到统一 ±10°/J2 ±5°。
         for index, (target, active) in enumerate(zip(
@@ -2454,14 +2479,14 @@ def validate_command(
     else:
         activation_epoch = value.get("activation_epoch", 0)
         if (
-            schema in {GUI_COMMAND_SCHEMA_V12, GUI_COMMAND_SCHEMA_V13}
+            schema in {GUI_COMMAND_SCHEMA_V12, GUI_COMMAND_SCHEMA_V13, GUI_COMMAND_SCHEMA_V14}
             and (
                 type(activation_epoch) is not int
                 or not 0 <= activation_epoch <= (1 << 63) - 1
             )
         ):
             raise ValueError("激活纪元必须是非负整数")
-        if schema not in {GUI_COMMAND_SCHEMA_V12, GUI_COMMAND_SCHEMA_V13}:
+        if schema not in {GUI_COMMAND_SCHEMA_V12, GUI_COMMAND_SCHEMA_V13, GUI_COMMAND_SCHEMA_V14}:
             activation_epoch = 0
         if any(active_joint_mask) and activation_epoch == 0:
             raise ValueError("主动命令的激活纪元必须大于零")
@@ -2502,7 +2527,7 @@ def validate_command(
         )
     normalized = {
         "schema": (
-            GUI_COMMAND_SCHEMA_V13
+            GUI_COMMAND_SCHEMA_V14 if mode == "teach" else GUI_COMMAND_SCHEMA_V13
             if trajectory is not None
             else GUI_COMMAND_SCHEMA_V12
         ),
@@ -2549,14 +2574,14 @@ def payload_for_domain(normalized: dict, domain: str) -> bytes:
         domain_command = _normalize_brake_fields(worker_command)
         return json.dumps(domain_command, separators=(",", ":")).encode("utf-8")
     domain_command = worker_command
-    active_mode = worker_command["mode"] in {"drag", "hold", "position"}
+    active_mode = worker_command["mode"] in {"drag", "hold", "position", "teach"}
     domain_selected = any(
         worker_command["active_joint_mask"][index]
         for index in DOMAIN_JOINT_INDICES[domain]
     )
     if active_mode and not domain_selected:
         domain_command = _normalize_brake_fields(worker_command)
-    elif worker_command["mode"] == "position" and not any(
+    elif worker_command["mode"] in {"position", "teach"} and not any(
         worker_command["moving_joint_mask"][index]
         for index in DOMAIN_JOINT_INDICES[domain]
     ):
@@ -2567,6 +2592,14 @@ def payload_for_domain(normalized: dict, domain: str) -> bytes:
         domain_command.pop("plan_token_id", None)
         domain_command.pop("trajectory", None)
         domain_command.pop("plan_manifest", None)
+    if domain_command["mode"] != "teach" and isinstance(domain_command.get("gravity_authority"), dict):
+        domain_command = dict(domain_command)
+        domain_command["gravity_authority"] = {
+            key: value for key, value in domain_command["gravity_authority"].items()
+            if key not in {"empirical_assisted_teach_authorized", "empirical_maximum_teach_excursion_deg",
+                           "empirical_maximum_teach_seconds", "empirical_maximum_teach_velocity_deg_s",
+                           "empirical_allowed_teach_joints"}
+        }
     return json.dumps(domain_command, separators=(",", ":")).encode("utf-8")
 
 

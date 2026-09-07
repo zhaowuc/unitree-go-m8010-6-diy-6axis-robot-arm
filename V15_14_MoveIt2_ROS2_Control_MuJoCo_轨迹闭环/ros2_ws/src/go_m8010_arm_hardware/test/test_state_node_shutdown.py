@@ -486,6 +486,33 @@ def test_cross_temperature_domain_uses_each_motor_reported_state():
         assert result["thermal"]["state"] == reported_state
 
 
+def test_teach_feedback_stays_observed_without_weakening_freshness_or_faults():
+    module, _no_signal_handlers = load_with_ros_stubs([], {
+        "ok": False, "on_spin": lambda: None,
+    })
+    metadata = _observed_thermal_metadata("NORMAL", mode="teach")
+    state = _fresh_motor_state(25.0)
+    result = module.controller_metadata_for_hardware_state(
+        metadata, state, TEST_THERMAL_LIMITS
+    )
+    assert result["metadata_status"] == "OBSERVED"
+    assert result["controller_mode"] == "teach"
+    assert result["brake_observed"] is False
+    assert result["thermal"]["state"] == "NORMAL"
+    metadata["domain_fault"] = True
+    result = module.controller_metadata_for_hardware_state(
+        metadata, state, TEST_THERMAL_LIMITS
+    )
+    assert result["domain_fault"] is True
+    state["fresh"] = False
+    result = module.controller_metadata_for_hardware_state(
+        metadata, state, TEST_THERMAL_LIMITS
+    )
+    assert result["metadata_status"] == "UNKNOWN"
+    assert result["controller_mode"] == "unknown"
+    assert result["domain_fault"] is None
+
+
 def test_exact_55c_boundary_is_derating_not_unknown():
     module, _no_signal_handlers = load_with_ros_stubs([], {
         "ok": False, "on_spin": lambda: None,

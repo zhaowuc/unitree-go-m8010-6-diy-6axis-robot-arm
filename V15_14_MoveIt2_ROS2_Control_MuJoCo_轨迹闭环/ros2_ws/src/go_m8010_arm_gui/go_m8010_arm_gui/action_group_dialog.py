@@ -106,7 +106,7 @@ class ActionGroupDialog(QDialog):
             self.internal_command = previous
 
     def _edit(self, callback) -> None:
-        if self.active:
+        if self.active or getattr(self.window, "teach_joint", None) is not None:
             return
         try:
             callback()
@@ -185,6 +185,9 @@ class ActionGroupDialog(QDialog):
                 raise RuntimeError("动作组停止：停留期间六轴不再静止保持目标")
 
     def start(self) -> None:
+        if getattr(self.window, "teach_joint", None) is not None:
+            self.status.setText("请先松开辅助示教按钮并确认HOLD")
+            return
         if self.active:
             return
         self.runner = None
@@ -327,12 +330,13 @@ class ActionGroupDialog(QDialog):
 
     def _refresh_controls(self) -> None:
         active = self.active
-        self.name.setEnabled(not active)
-        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers if active
+        occupied = active or getattr(self.window, "teach_joint", None) is not None
+        self.name.setEnabled(not occupied)
+        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers if occupied
                                    else QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)
         for button in self.edit_buttons:
-            button.setEnabled(not active)
-        self.run_button.setEnabled(not active)
+            button.setEnabled(not occupied)
+        self.run_button.setEnabled(not occupied)
         paused = active and self.runner.state == "paused"
         self.pause_button.setEnabled(active and not paused)
         resume_ready = paused and (
@@ -343,7 +347,7 @@ class ActionGroupDialog(QDialog):
         self.stop_button.setEnabled(active)
         for button in getattr(self.window, "action_group_manual_buttons", []):
             if button is not getattr(self.window, "acceptance_target_button", None):
-                button.setEnabled(not active)
+                button.setEnabled(not occupied)
         self.window._refresh_virtual_editability()
 
     def pause(self) -> None:

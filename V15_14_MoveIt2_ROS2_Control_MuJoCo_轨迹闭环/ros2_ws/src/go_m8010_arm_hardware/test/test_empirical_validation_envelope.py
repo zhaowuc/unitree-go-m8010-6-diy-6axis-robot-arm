@@ -31,7 +31,7 @@ from v15_31b_create_empirical_validation_envelope import (  # noqa: E402
 MOTORS = ("J1", "J2A", "J2B", "J3", "J4", "J5", "J6")
 
 
-def _envelope_file(tmp_path: Path, now: datetime) -> tuple[Path, str]:
+def _envelope_file(tmp_path: Path, now: datetime, *, assisted_teach=False) -> tuple[Path, str]:
     document = build_envelope(
         session_id="session-31b",
         state_instance_id="state-31b",
@@ -50,6 +50,7 @@ def _envelope_file(tmp_path: Path, now: datetime) -> tuple[Path, str]:
         hold_seconds=5.0,
         lifetime_seconds=300,
         created_at=now,
+        assisted_teach=assisted_teach,
     )
     data = json_bytes(document)
     path = tmp_path / "envelope.json"
@@ -373,3 +374,86 @@ def test_official_and_empirical_authority_selection_are_distinct():
         empirical_authoritative=True,
         empirical_envelope_configured=True,
     ) == "BLOCKED_AMBIGUOUS_AUTHORITY"
+
+
+@pytest.mark.parametrize("opt_in", [False, True])
+def test_assisted_teach_requires_explicit_envelope_full_ladder_and_live_confirmation(tmp_path, opt_in):
+    now = datetime.now(timezone.utc)
+    path, digest = _envelope_file(tmp_path, now, assisted_teach=opt_in)
+    assert ("assisted_teach" in json.loads(path.read_bytes())) is opt_in
+    envelope = EmpiricalValidationEnvelope.from_path(
+        path, digest, now_utc=now, now_monotonic_ns=1_000_000_000)
+    gate = EmpiricalStageGate(envelope)
+    ns = 1_000_000_000
+    assert not gate.status()["assisted_teach_authorized"]
+    assert _step(gate, now, ns, 0.0, 0.0, mode="brake")
+    assert not gate.status()["assisted_teach_authorized"]
+    ns += 1_000_000
+    assert _step(gate, now, ns, 0.0, 0.0)
+    ns += 5_000_000_000
+    assert _step(gate, now, ns, 0.0, 0.0)
+    for sequence, target in enumerate((0.25, 0.5, 0.75, 1.0), 1):
+        ns += 1_000_000
+        assert gate.observe_confirmation(_confirmation(envelope, ns, sequence, target), now_monotonic_ns=ns)
+        assert _step(gate, now, ns, target, target - 0.25)
+        ns += 2_000_000_000
+        assert _step(gate, now, ns, target, target)
+        ns += 5_000_000_000
+        assert _step(gate, now, ns, target, target)
+        assert not gate.status()["assisted_teach_authorized"]
+    ns += 1_000_000
+    assert gate.observe_confirmation(_confirmation(envelope, ns, 5, 1.0), now_monotonic_ns=ns)
+    assert _step(gate, now, ns, 1.0, 1.0)
+    assert gate.status()["position_validation_authorized"]
+    assert gate.status()["assisted_teach_authorized"] is opt_in
+    assert gate.status()["maximum_teach_seconds"] == (30.0 if opt_in else None)
+    hardware = _hardware(ns + 1)
+    hardware["controller_mode_by_motor"].update(J2A="teach", J2B="teach")
+    assert gate.step(requested_scale=1.0, applied_scale=1.0,
+        hardware_state=hardware, session_id=envelope.session_id,
+        state_instance_id=envelope.state_instance_id, anchor_sha256=envelope.anchor_sha256,
+        hardware_enable_requested=True, now_monotonic_ns=ns + 1, now_utc=now) is opt_in
+    if opt_in:
+        ns += 30_000_000_001
+        # The separately opted-in manual session does not fabricate a new
+        # hands-free attestation while the operator is touching the arm.
+        assert _step(gate, now, ns, 1.0, 1.0)
+        assert gate.status()["assisted_teach_authorized"]
+        assert not _step(gate, now, envelope.monotonic_deadline_ns, 1.0, 1.0)
+        assert gate.invalidated and not gate.status()["assisted_teach_authorized"]
+
+
+@pytest.mark.parametrize("field,value", [
+    ("maximum_press_seconds", 30.01), ("maximum_excursion_from_press_deg", 5.01),
+    ("maximum_velocity_deg_s", 5.01), ("allowed_after_scale", True),
+    ("maximum_selected_joints", True), ("allowed_joints", ["J1", "J6"]),
+    ("j6_fixed_hold_required", False), ("unexpected", True),
+])
+def test_assisted_teach_rejects_widened_or_malformed_opt_in(tmp_path, field, value):
+    now = datetime.now(timezone.utc)
+    path, _ = _envelope_file(tmp_path, now, assisted_teach=True)
+    document = json.loads(path.read_bytes())
+    document["assisted_teach"][field] = value
+    data = json_bytes(document)
+    path.write_bytes(data)
+    with pytest.raises(EmpiricalEnvelopeError, match="ASSISTED_TEACH"):
+        EmpiricalValidationEnvelope.from_path(path, hashlib.sha256(data).hexdigest(),
+            now_utc=now, now_monotonic_ns=1_000_000_000)
+
+
+@pytest.mark.parametrize("taught,allowed", [
+    (("J1",), True), (("J2A", "J2B"), True), (("J5",), True),
+    (("J6",), False), (("J2A",), False), (("J1", "J3"), False),
+])
+def test_assisted_teach_keeps_one_joint_other_holds_and_velocity_gate(taught, allowed):
+    ns = 1_000_000_000
+    hardware = _hardware(ns)
+    hardware["controller_mode_by_motor"].update({name: "teach" for name in taught})
+    kwargs = dict(session_id="session-31b", state_instance_id="state-31b",
+        now_monotonic_ns=ns, require_current_position_hold=True)
+    blocker, _ = live_hardware_blocker(hardware, allow_assisted_teach=True, **kwargs)
+    assert (not blocker) is allowed
+    assert live_hardware_blocker(hardware, **kwargs)[0]
+    if allowed:
+        hardware["velocity_rad_s"][0] = 0.087267
+        assert live_hardware_blocker(hardware, allow_assisted_teach=True, **kwargs)[0] == "EMPIRICAL_ABNORMAL_VELOCITY"

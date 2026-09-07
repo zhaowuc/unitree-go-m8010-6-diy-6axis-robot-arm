@@ -684,7 +684,9 @@ def build_envelope(
     hold_seconds: float,
     lifetime_seconds: int,
     created_at: datetime,
+    assisted_teach: bool = False,
 ) -> dict[str, Any]:
+    _require(type(assisted_teach) is bool, "assisted_teach must be boolean")
     session = nonempty_text(session_id, "session_id")
     instance = nonempty_text(state_instance_id, "state_instance_id")
     normalized_sha256(anchor_sha256, "anchor SHA-256")
@@ -900,6 +902,24 @@ def build_envelope(
             "this_file_alone_enables_hardware": False,
         },
     }
+    if assisted_teach:
+        envelope["assisted_teach"] = {
+            "schema": "go-m8010-assisted-teach-envelope/1.0",
+            "enabled": True,
+            "allowed_joints": ["J1", "J2", "J3", "J4", "J5"],
+            "maximum_selected_joints": 1,
+            "maximum_excursion_from_press_deg": 5.0,
+            "maximum_press_seconds": 30.0,
+            "maximum_velocity_deg_s": 5.0,
+            "unlock_requires_completed_gravity_ladder": True,
+            "allowed_after_scale": 1.0,
+            "nonselected_joints_fixed_hold_required": True,
+            "j6_fixed_hold_required": True,
+            "continuous_operation_authorized": False,
+        }
+        envelope["assisted_teach"]["final_confirmation_policy"] = (
+            "ONCE_AFTER_LADDER_THEN_LIVE_GATES_FOR_MANUAL_SESSION"
+        )
     identity_seed = json.dumps(
         envelope, ensure_ascii=True, allow_nan=False, sort_keys=True,
         separators=(",", ":"),
@@ -982,6 +1002,10 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--expected-state-instance-id", required=True)
     parser.add_argument("--hold-seconds", type=float, default=MINIMUM_HOLD_SECONDS)
     parser.add_argument(
+        "--assisted-teach", action="store_true",
+        help="Explicitly permit one J1-J5 joint at a time after the full gravity ladder, at most 5 degrees and 30 seconds per press; J6 remains HOLD.",
+    )
+    parser.add_argument(
         "--lifetime-seconds", type=int, default=DEFAULT_LIFETIME_SECONDS
     )
     parser.add_argument("--output", type=Path, required=True)
@@ -1040,6 +1064,7 @@ def run(args: argparse.Namespace, *, now: datetime | None = None) -> dict[str, A
         hold_seconds=args.hold_seconds,
         lifetime_seconds=args.lifetime_seconds,
         created_at=created_at,
+        assisted_teach=getattr(args, "assisted_teach", False),
     )
     data = json_bytes(envelope)
     if args.apply:

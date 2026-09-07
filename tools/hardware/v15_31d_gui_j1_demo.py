@@ -74,8 +74,11 @@ def check_recipe(recipe, origin, *, recover_initial=False):
 class J1Demo:
     def __init__(self, window, observe, confirm, set_scale, start_group, *, cycles=1,
                  excursion_deg=1.0, symmetric=False, speed_deg_s=1.0, return_center=False, start_center=None,
-                 recover_initial_first=False, start_recovery=None, validate_recovery_start=None, now=time.monotonic):
-        self.maximum_seconds = maximum_demo_seconds(cycles, excursion_deg, symmetric)
+                 recover_initial_first=False, start_recovery=None, validate_recovery_start=None,
+                 interactive_teach=False, now=time.monotonic):
+        self.interactive_teach = interactive_teach
+        self.interactive_ready = False
+        self.maximum_seconds = 600.0 if interactive_teach else maximum_demo_seconds(cycles, excursion_deg, symmetric)
         if (type(speed_deg_s) not in {int, float} or not math.isfinite(speed_deg_s)
                 or not 0 < speed_deg_s <= 3):
             raise ValueError("speed_deg_s must be finite and greater than 0 through 3")
@@ -165,6 +168,9 @@ class J1Demo:
             self.samples.append({**sample, "stage": self.stage,
                                  "cycle": self.cycle_number if self.stage == "action_group" else None})
             if now - self.started >= self.maximum_seconds - 3:
+                if self.interactive_teach and self.interactive_ready:
+                    self.stop()
+                    return
                 raise RuntimeError(f"{self.maximum_seconds - 3:g}-second active deadline reached")
             if self.stage in {"recover_initial", "recovery_hold"} and now - self.recovery_started >= 45:
                 raise RuntimeError("initial-pose recovery exceeded its 45-second deadline")
@@ -200,6 +206,12 @@ class J1Demo:
             if (not sample["healthy"] or not sample["thermal_ready"] or not sample["authority"] or sample["identity"] != self.identity
                     or sample["router_rejected_commands"] != self.rejected):
                 raise RuntimeError("feedback, authority, session or command-router health changed")
+            if self.stage == "interactive_teach":
+                # Manual contact is expected here: never refresh the calibration
+                # ladder's no_person_contact attestation during operator teaching.
+                if self.window.hardware_mode in {"brake", "drag"} or self.window.command_stream_suspended:
+                    self.stop("operator left the armed teaching session")
+                return
             level = (
                 self.pending_level
                 if self.pending_level is not None and sample.get("stage_level") < self.pending_level
@@ -243,7 +255,13 @@ class J1Demo:
                         self.last_confirmation = now
                     elif sample["position_authorized"]:
                         self.window._tick()
-                        if self.recover_initial_first:
+                        if self.interactive_teach:
+                            if not sample.get("assisted_teach_authorized"):
+                                raise RuntimeError("explicit single-axis teaching authority is unavailable")
+                            self.stage, self.interactive_ready = "interactive_teach", True
+                            self.window.centralWidget().setEnabled(True)
+                            self.events.append({"event": "interactive_teach_ready", "at_monotonic_s": now})
+                        elif self.recover_initial_first:
                             self.stage, self.recovery_started = "recover_initial", now
                             self.recovery_result = {"status": "RUNNING", "initial_hold_target_rad": list(self.origin)}
                             self.dialog = self.start_recovery(self.origin)
@@ -338,6 +356,17 @@ class J1Demo:
     def result(self):
         terminal_ok = self.terminal is not None and self.terminal.terminal_confirmed
         failure = self.failure or (self.terminal.failure if self.terminal else "terminal not observed")
+        if self.interactive_teach:
+            return {"schema": "go-m8010-interactive-teach-session/1.0",
+                    "status": "PASS" if self.interactive_ready and terminal_ok and not failure else "FAIL",
+                    "scope": "BOOTSTRAP_AND_TERMINAL; manual teaching evidence is recorded separately",
+                    "failure": failure, "interactive_ready": self.interactive_ready,
+                    "elapsed_s": self.now() - self.started, "maximum_seconds": self.maximum_seconds,
+                    "terminal_brake_and_j6_disabled_confirmed": terminal_ok,
+                    "initial_hold_target_rad": self.initial_hold_target,
+                    "events": self.events, "samples": self.samples,
+                    "teach_events": list(getattr(self.window, "teach_events", [])),
+                    "terminal_samples": self.terminal.samples if self.terminal else []}
         completed = sum(result["status"] == "PASS" for result in self.cycle_results)
         recovery_ok = not self.recover_initial_first or (self.recovery_result or {}).get("status") == "PASS"
         center_ok = not self.return_center or (self.center_return or {}).get("status") == "PASS"
@@ -360,7 +389,7 @@ class J1Demo:
 
 
 def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
-             excursion_deg=1.0, symmetric=False, speed_deg_s=1.0, return_center=False):
+             excursion_deg=1.0, symmetric=False, speed_deg_s=1.0, return_center=False, interactive_teach=False):
     root = Path(__file__).resolve().parents[2]
     sys.path.insert(0, str(root / "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui"))
     from go_m8010_arm_gui import main_window as gui
@@ -379,7 +408,7 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
     class Window(gui.MainWindow):
         def closeEvent(self, event):
             if demo is not None and not demo.done:
-                demo.stop("operator closed demo window")
+                demo.stop(None if interactive_teach else "operator closed demo window")
                 event.ignore()
             else:
                 super().closeEvent(event)
@@ -415,6 +444,9 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
 
     def observe():
         sample = observe_gui(window, gui, raw, binding)
+        if interactive_teach:
+            sample.update(command_targets_rad=list(window.command_targets),
+                          teach_joint=getattr(window, "teach_joint", None))
         gravity = node.latest_gravity_status or {}
         empirical = gravity.get("empirical_validation", {})
         sample.update({"authority": bool(node.gravity_status_fresh() and empirical_binding_matches(gravity, binding)
@@ -423,7 +455,8 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
             "thermal_ready": window._current_preview_checks(time.monotonic()).thermal_pass,
             "stage_index": empirical.get("stage_index"), "stage_level": empirical.get("stage_level"),
             "stage_complete": empirical.get("stage_complete") is True,
-            "position_authorized": empirical.get("position_validation_authorized") is True})
+            "position_authorized": empirical.get("position_validation_authorized") is True,
+            "assisted_teach_authorized": empirical.get("assisted_teach_authorized") is True})
         acceptance = node.latest_acceptance_status or {}
         if (gui.receipt_is_fresh(node.last_acceptance_status_receipt, time.monotonic(), 1.0)
                 and acceptance.get("result") in {"RUNNING", "FINALIZING"}):
@@ -534,7 +567,7 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
                   excursion_deg=excursion_deg, symmetric=symmetric, speed_deg_s=speed_deg_s,
                   return_center=return_center, start_center=start_center,
                   recover_initial_first=recover_initial_first, start_recovery=start_recovery,
-                  validate_recovery_start=read_initial_reference)
+                  validate_recovery_start=read_initial_reference, interactive_teach=interactive_teach)
     timer = gui.QTimer(window)
     def tick():
         try:
@@ -554,8 +587,11 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
     window.centralWidget().setEnabled(False)
     stop = window.addToolBar("验证停止").addAction("停止往返示例并制动（Esc）")
     stop.setShortcut("Esc")
-    stop.triggered.connect(lambda *_: demo.stop("operator pressed stop"))
+    stop.triggered.connect(lambda *_: demo.stop(None if interactive_teach else "operator pressed stop"))
     window.setWindowTitle(f"J1 {'±' if symmetric else ''}{excursion_deg:g}°往返动作组示例 × {cycles}轮；逐轴小修正会记录；结束自动制动")
+    if interactive_teach:
+        window.setWindowTitle("选轴辅助示教：J1–J5 单轴可拖动，其余保持；松键锁定；10分钟自动结束")
+        stop.setText("结束示教并制动（Esc）")
     window.show()
     try:
         app.exec()
@@ -575,7 +611,7 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
         result["binding"] = {"session_id": binding.session_id, "state_instance_id": binding.state_instance_id,
             "envelope_sha256": binding.envelope_sha256, "anchor_sha256": binding.anchor_sha256}
         result["gui_control_config"] = window.config["控制"]
-        result["action_group_log"] = str(window.action_group_dialog.log_path)
+        result["action_group_log"] = str(window.action_group_dialog.log_path) if window.action_group_dialog else None
         window.timer.stop()
         window.close()
         node.destroy_subscription(subscription)
@@ -596,13 +632,14 @@ def main(argv=None):
     parser.add_argument("--speed-deg-s", type=float, default=1.0)
     parser.add_argument("--return-center", action="store_true")
     parser.add_argument("--recover-initial-first", action="store_true")
+    parser.add_argument("--interactive-teach", action="store_true")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--envelope", type=Path)
     parser.add_argument("--anchor-validation", type=Path)
     parser.add_argument("--expected-envelope-sha256")
     args = parser.parse_args(values[:split])
     try:
-        maximum_seconds = maximum_demo_seconds(args.cycles, args.excursion_deg, args.symmetric)
+        maximum_seconds = 600.0 if args.interactive_teach else maximum_demo_seconds(args.cycles, args.excursion_deg, args.symmetric)
         if not math.isfinite(args.speed_deg_s) or not 0 < args.speed_deg_s <= 3:
             raise ValueError("speed_deg_s must be finite and greater than 0 through 3")
     except ValueError as error:
@@ -627,7 +664,7 @@ def main(argv=None):
         stream.flush()
         result = run_live(values[split:], binding, args.cycles, args.recover_initial_first,
                           excursion_deg=args.excursion_deg, symmetric=args.symmetric,
-                          speed_deg_s=args.speed_deg_s, return_center=args.return_center)
+                          speed_deg_s=args.speed_deg_s, return_center=args.return_center, interactive_teach=args.interactive_teach)
         stream.seek(0)
         json.dump(result, stream, ensure_ascii=False, allow_nan=False, indent=2)
         stream.write("\n")

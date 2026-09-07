@@ -435,3 +435,33 @@ if __name__ == "__main__":
     test_ten_symmetric_cycles_keep_midpoint_file_and_return_center()
     test_initial_recovery_uses_original_file_and_checks_all_axes_before_hold()
     print("GUI_J1_DEMO_OFFLINE=PASS")
+
+
+def test_interactive_teach_bootstrap_never_runs_motion_or_refreshes_hands_off_during_contact():
+    for authorized in (False, True):
+        demo, commands, override, tick = harness(interactive_teach=True)
+        enabled = []
+        demo.window.centralWidget = lambda: SimpleNamespace(setEnabled=enabled.append)
+        override["assisted_teach_authorized"] = authorized
+        for _ in range(150):
+            tick()
+            if demo.interactive_ready or demo.done:
+                break
+        assert "action_group" not in commands
+        assert demo.interactive_ready is authorized
+        if authorized:
+            assert enabled == [True] and demo.maximum_seconds == 600
+            confirmations = [c for c in commands if isinstance(c, tuple) and c[0] == "confirm"]
+            demo.window.hardware_mode = "teach"
+            demo.window.actual[0] = math.radians(2)
+            for _ in range(10):
+                tick()
+            assert confirmations == [c for c in commands if isinstance(c, tuple) and c[0] == "confirm"]
+            assert not demo.done and demo.stage == "interactive_teach"
+            demo.stop()
+            for _ in range(5):
+                tick()
+            assert demo.result()["status"] == "PASS"
+            assert demo.result()["scope"].startswith("BOOTSTRAP_AND_TERMINAL")
+        else:
+            assert demo.result()["status"] == "FAIL" and not enabled

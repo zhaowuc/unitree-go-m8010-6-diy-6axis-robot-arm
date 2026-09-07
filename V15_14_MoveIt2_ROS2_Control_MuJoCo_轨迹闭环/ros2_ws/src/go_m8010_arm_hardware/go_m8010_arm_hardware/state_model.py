@@ -1464,7 +1464,7 @@ def parse_controller_feedback_metadata(
     motors = {sample.motor for sample in samples}
 
     controller_mode = payload.get("controller_mode", "unknown")
-    if controller_mode not in {"brake", "drag", "hold", "position", "unknown"}:
+    if controller_mode not in {"brake", "drag", "hold", "position", "teach", "unknown"}:
         raise ValueError("controller mode is invalid")
     modes_by_motor = payload.get("controller_mode_by_motor", {})
     if not isinstance(modes_by_motor, Mapping):
@@ -1476,7 +1476,7 @@ def parse_controller_feedback_metadata(
     normalized_modes = {}
     for motor in motors:
         mode = modes_by_motor[motor]
-        if mode not in {"brake", "drag", "hold", "position", "unknown"}:
+        if mode not in {"brake", "drag", "hold", "position", "teach", "unknown"}:
             raise ValueError("controller mode is invalid")
         normalized_modes[motor] = mode
 

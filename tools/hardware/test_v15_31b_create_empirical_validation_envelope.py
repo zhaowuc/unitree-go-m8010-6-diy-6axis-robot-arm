@@ -233,6 +233,22 @@ def _run(tmp_path: Path, **kwargs) -> dict:
     return tool.run(tool.parse_args(_arguments(tmp_path, **kwargs)), now=NOW)
 
 
+def test_assisted_teach_cli_opt_in_is_separate_and_changes_bound_identity(tmp_path):
+    ordinary = _run(tmp_path)
+    opted = _run(tmp_path, extra=["--assisted-teach"])
+    assert "assisted_teach" not in ordinary["envelope"]
+    assert ordinary["envelope"]["envelope_id"] != opted["envelope"]["envelope_id"]
+    assert ordinary["envelope_sha256"] != opted["envelope_sha256"]
+    teach = opted["envelope"]["assisted_teach"]
+    assert teach["allowed_joints"] == ["J1", "J2", "J3", "J4", "J5"]
+    assert teach["maximum_selected_joints"] == 1
+    assert teach["maximum_press_seconds"] == 30.0
+    assert teach["maximum_excursion_from_press_deg"] == 5.0
+    assert teach["maximum_velocity_deg_s"] == 5.0
+    assert opted["envelope"]["position_validation"] == ordinary["envelope"]["position_validation"]
+    assert opted["hardware_accessed"] is False and opted["applied"] is False
+
+
 def test_default_is_validate_only_and_builds_exact_bounded_ladder(
     tmp_path: Path,
 ) -> None:

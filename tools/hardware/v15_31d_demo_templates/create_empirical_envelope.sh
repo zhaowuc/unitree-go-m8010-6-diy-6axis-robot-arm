@@ -35,6 +35,8 @@ gravity_sha=${values[2]}
 session_id=${values[3]}
 state_id=${values[4]}
 [[ ! -e "$output" && ! -e "$result" ]]
+teach_args=()
+if [[ "${GO_ASSISTED_TEACH:-0}" == 1 ]]; then teach_args+=(--assisted-teach); fi
 "$py" tools/hardware/v15_31b_create_empirical_validation_envelope.py \
   --power-on-readonly "$power" \
   --expected-power-on-sha256 "$power_sha" \
@@ -47,6 +49,7 @@ state_id=${values[4]}
   --thermal-config "$thermal_config" \
   --expected-session-id "$session_id" \
   --expected-state-instance-id "$state_id" \
+  "${teach_args[@]}" \
   --hold-seconds 10 \
   --lifetime-seconds 4200 \
   --output "$output" --apply \

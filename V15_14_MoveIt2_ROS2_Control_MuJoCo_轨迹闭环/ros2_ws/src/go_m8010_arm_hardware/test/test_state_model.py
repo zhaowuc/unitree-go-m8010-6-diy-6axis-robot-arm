@@ -281,6 +281,34 @@ class ControllerFeedbackMetadataTest(unittest.TestCase):
         )
         self.assertEqual(record["gravity"]["applied_rotor_nm"], 0.1)
 
+    def test_teach_feedback_preserves_selected_motors_and_safety_metadata(self):
+        for motors, selected in (
+            (("J1",), {"J1"}),
+            (("J2A", "J2B"), {"J2A", "J2B"}),
+            (("J3", "J4", "J5"), {"J3"}),
+            (("J3", "J4", "J5"), {"J4"}),
+            (("J3", "J4", "J5"), {"J5"}),
+        ):
+            payload = self.payload(motors)
+            payload["controller_mode"] = "teach"
+            payload["controller_mode_by_motor"] = {
+                motor: "teach" if motor in selected else "hold" for motor in motors
+            }
+            result = self.parse(payload)
+            for motor in motors:
+                self.assertEqual(result[motor]["controller_mode"],
+                                 "teach" if motor in selected else "hold")
+                self.assertFalse(result[motor]["domain_fault"])
+                self.assertFalse(result[motor]["lease_safe_hold"])
+                self.assertFalse(result[motor]["thermal"]["fault_latched"])
+            payload["domain_fault"] = True
+            self.assertTrue(all(record["domain_fault"] for record in self.parse(payload).values()))
+            with self.assertRaisesRegex(ValueError, "stale"):
+                parse_feedback_payload(payload, payload["source_monotonic_ns"] + 100_000_001)
+            payload["controller_mode_by_motor"][motors[0]] = "invalid"
+            with self.assertRaisesRegex(ValueError, "controller mode"):
+                self.parse(payload)
+
     def test_j2_physical_feedforward_signs_are_checked(self):
         payload = self.payload(("J2A", "J2B"))
         result = self.parse(payload)

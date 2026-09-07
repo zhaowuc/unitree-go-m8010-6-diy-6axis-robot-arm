@@ -56,7 +56,7 @@ from .thermal_manager import (
 
 J2_MOTOR_NAMES = frozenset({"J2A", "J2B"})
 WARNING_LOG_INTERVAL_NS = 5_000_000_000
-CONTROLLER_MODES = frozenset({"brake", "drag", "hold", "position", "unknown"})
+CONTROLLER_MODES = frozenset({"brake", "drag", "hold", "position", "teach", "unknown"})
 WORKER_SUPERVISOR_STATUS_FILENAME = "worker_supervisor_status.json"
 WORKER_SUPERVISOR_STATUS_MAX_BYTES = 16_384
 

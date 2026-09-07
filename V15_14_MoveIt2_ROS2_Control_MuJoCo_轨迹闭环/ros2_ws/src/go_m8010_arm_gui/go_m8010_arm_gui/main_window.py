@@ -33,7 +33,7 @@ from go_m8010_arm_hardware.thermal_manager import load_thermal_limits
 from PySide6.QtCore import QEvent, Qt, QTimer, Signal
 from PySide6.QtGui import QCloseEvent, QColor, QFont, QImage, QPixmap
 from PySide6.QtWidgets import (
-    QAbstractItemView, QAbstractScrollArea, QApplication, QDoubleSpinBox, QGridLayout, QGroupBox,
+    QAbstractItemView, QAbstractScrollArea, QApplication, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox,
     QHBoxLayout, QLabel, QMainWindow, QMessageBox, QProgressBar, QPushButton,
     QDialog, QScrollArea, QTableWidget, QTableWidgetItem,
     QSizePolicy, QSlider, QVBoxLayout, QWidget,
@@ -79,7 +79,7 @@ THERMAL_STATE_CN = {
     "COOLDOWN": "冷却中",
     "WAIT_OPERATOR_CONFIRM": "等待确认",
 }
-CONTROLLER_MODES = frozenset({"brake", "drag", "hold", "position", "unknown"})
+CONTROLLER_MODES = frozenset({"brake", "drag", "hold", "position", "teach", "unknown"})
 DEG = 180.0 / math.pi
 RAD = math.pi / 180.0
 CONTROL_STREAM_TIMEOUT_S = 0.5
@@ -1661,6 +1661,20 @@ def fixed_hold_targets_after_position_stop(
     ]
 
 
+def assisted_teach_authorized(status: dict) -> bool:
+    empirical = status.get("empirical_validation", {})
+    return bool(
+        isinstance(empirical, dict) and empirical.get("assisted_teach_authorized") is True
+        and empirical.get("position_validation_authorized") is True
+        and empirical.get("stage_index") == 4 and empirical.get("stage_complete") is True
+        and status.get("gravity_scale") == 1.0 and status.get("gravity_scale_target") == 1.0
+        and empirical.get("allowed_teach_joints") == ["J1", "J2", "J3", "J4", "J5"]
+        and all(type(empirical.get(name)) in {int, float} and empirical[name] == bound
+                for name, bound in (("maximum_teach_excursion_deg", 5.0),
+                                    ("maximum_teach_seconds", 30.0),
+                                    ("maximum_teach_velocity_deg_s", 5.0))))
+
+
 def parse_pose_degrees(value: str) -> np.ndarray:
     fields = [field.strip() for field in value.split(",")]
     if len(fields) != 6:
@@ -2177,11 +2191,11 @@ def command_router_status_text(
         rejection_age_ms = None
 
     last_mode = status.get("last_mode")
-    mode_text = str(last_mode) if last_mode in {"brake", "drag", "hold", "position"} else "等待"
+    mode_text = str(last_mode) if last_mode in {"brake", "drag", "hold", "position", "teach"} else "等待"
     j2_forwarded_mode = status.get("j2_forwarded_mode")
     j2_forwarded_text = (
         str(j2_forwarded_mode)
-        if j2_forwarded_mode in {"brake", "drag", "hold", "position"}
+        if j2_forwarded_mode in {"brake", "drag", "hold", "position", "teach"}
         else "等待"
     )
     active_joint_mask = status.get("last_active_joint_mask")
@@ -2193,7 +2207,7 @@ def command_router_status_text(
     )
     j2_forwarding_contradiction = bool(
         j2_active_requested
-        and last_mode in {"hold", "position"}
+        and last_mode in {"hold", "position", "teach"}
         and j2_forwarded_mode == "brake"
     )
     rejected_text = "无效" if rejected is None else str(rejected)
@@ -2652,6 +2666,11 @@ class ArmGuiNode(Node):
                 for i in range(6)
             ],
         }
+        if mode == "teach":
+            if (active_joint_mask != [True] * 6 or len(moving_joint_mask) != 6
+                    or sum(moving_joint_mask) != 1 or moving_joint_mask[5]):
+                raise ValueError("辅助示教必须保持全轴激活且只选择J1–J5之一")
+            payload["schema"] = "go-m8010-gui-command/1.4"
         if mode == "position":
             if not isinstance(collision_guard_proof, dict):
                 raise ValueError("POSITION命令缺少已批准的碰撞守卫证明")
@@ -2768,6 +2787,15 @@ class MainWindow(QMainWindow):
         # non-authorizing and the command stream remains suspended at startup.
         self.direction = ArmMode.SIM_TO_REAL
         self.hardware_mode = "brake"
+        self.teach_joint = None
+        self.teach_started_at = None
+        self.teach_entry_targets = None
+        self.teach_binding = None
+        self.teach_authority_binding = None
+        self.teach_rejected_commands = None
+        self.teach_acknowledged = False
+        self.teach_record_target = None
+        self.teach_events = []
         # The candidate is the final, operator-visible virtual pose.  ``targets``
         # remains the exact target of the current physical segment.  Keeping the
         # two separate prevents a <=30 degree segment from replacing the final
@@ -2891,6 +2919,7 @@ class MainWindow(QMainWindow):
             else "六自由度机械臂控制系统"
         )
         self._build_ui()
+        QApplication.instance().installEventFilter(self)
         self._fit_window_to_available_screen()
         self.collision_preview_timer = QTimer(self)
         self.collision_preview_timer.setSingleShot(True)
@@ -3009,6 +3038,170 @@ class MainWindow(QMainWindow):
         self.runtime_details.raise_()
         self.runtime_details.activateWindow()
 
+    def _start_assisted_teach(self) -> None:
+        if self.teach_joint is not None:
+            return
+        try:
+            if ((self.action_group_dialog is not None and self.action_group_dialog.active)
+                    or self.queued_pose_target is not None or self.pending_collision_execute_sequence is not None):
+                raise RuntimeError("请先停止动作组／轨迹")
+            baseline = self._action_group_health()
+            hardware = self.node.latest_hardware
+            gravity = self.node.latest_gravity_status or {}
+            if not assisted_teach_authorized(gravity):
+                raise RuntimeError("当前会话尚未授权单轴辅助示教，请先完成重力阶梯")
+            if not self._action_group_hold_ready(self.command_targets):
+                raise RuntimeError("先等待六轴静止HOLD确认")
+            index = self.teach_joint_selector.currentIndex()
+            if not 0 <= index < 5:
+                raise RuntimeError("仅允许选择J1–J5；J6保持")
+            self._cancel_queued_pose(restore_command_target=True)
+            self.teach_entry_targets = list(self.command_targets)
+            self.teach_entry_targets[index] = hardware["position_rad"][index]
+            self.teach_binding = baseline["binding"]
+            empirical = gravity["empirical_validation"]
+            self.teach_authority_binding = (gravity["source_instance_id"], empirical["envelope_sha256"], empirical["anchor_sha256"])
+            self.teach_rejected_commands = self.node.latest_control_status["rejected_commands"]
+            self.command_targets = list(self.teach_entry_targets)
+            self.targets = self.candidate_targets = list(self.command_targets)
+            self.pending_target_joint_mask = [False] * 6
+            self.moving_joint_mask = [i == index for i in range(6)]
+            self._authorize_active_joints([True] * 6)
+            self.hardware_mode = "teach"
+            self.teach_joint, self.teach_started_at = index, time.monotonic()
+            self.teach_acknowledged, self.teach_record_target = False, None
+            self.teach_joint_selector.setEnabled(False)
+            for button in self.action_group_manual_buttons:
+                button.setEnabled(False)
+            self._set_virtual_editable(False)
+            self.teach_status.setText(f"按住辅助拖动J{index + 1}；其他关节保持原目标，J6保持。松开停止。")
+            self.teach_events.append({"event": "teach_requested", "joint": index + 1,
+                "at_monotonic_s": self.teach_started_at, "activation_epoch": self.activation_epoch,
+                "source_monotonic_ns": hardware["source_monotonic_ns"],
+                "actual_rad": list(hardware["position_rad"]), "frozen_targets_rad": list(self.teach_entry_targets)})
+            self._publish_command()
+        except (ValueError, RuntimeError, KeyError) as error:
+            if self.teach_joint is not None:
+                self._release_assisted_teach("示教请求异常")
+            self.teach_status.setText("未进入辅助示教：" + str(error))
+
+    def _clear_assisted_teach(self) -> None:
+        self.teach_joint = None
+        self.teach_joint_selector.setEnabled(True)
+        for button in self.action_group_manual_buttons:
+            if button is not self.acceptance_target_button:
+                button.setEnabled(True)
+        self._refresh_virtual_editability()
+
+    def _release_assisted_teach(self, reason="松开按钮") -> None:
+        if self.teach_joint is None:
+            return
+        selected = self.teach_joint
+        try:
+            self._action_group_health(self.teach_binding, self.teach_rejected_commands,
+                                      allowed_modes=("hold", "teach"))
+            hardware = self.node.latest_hardware
+            gravity = self.node.latest_gravity_status or {}
+            empirical = gravity.get("empirical_validation", {})
+            if (not assisted_teach_authorized(gravity)
+                    or self.teach_authority_binding != (gravity.get("source_instance_id"),
+                        empirical.get("envelope_sha256"), empirical.get("anchor_sha256"))):
+                raise RuntimeError("示教authority已变化或过期")
+            self.command_targets = fixed_hold_targets_after_position_stop(
+                self.teach_entry_targets, hardware["position_rad"], [True] * 6,
+                [i == selected for i in range(6)])
+            self.targets = self.candidate_targets = list(self.command_targets)
+            self.moving_joint_mask = self.pending_target_joint_mask = [False] * 6
+            self.active_collision_proof = self.active_trajectory_descriptor = self.active_plan_manifest = None
+            self._authorize_active_joints([True] * 6)
+            self.machine.hold()
+            self.hardware_mode = "hold"
+            self.arrival.start(time.monotonic())
+            self.teach_record_target = tuple(self.command_targets)
+            self.teach_events.append({"event": "teach_release_requested", "joint": selected + 1,
+                "reason": reason, "at_monotonic_s": time.monotonic(), "activation_epoch": self.activation_epoch,
+                "source_monotonic_ns": hardware["source_monotonic_ns"], "actual_rad": list(hardware["position_rad"]),
+                "frozen_targets_rad": list(self.teach_entry_targets), "hold_targets_rad": list(self.command_targets)})
+            self.teach_status.setText(f"{reason}：已请求J{selected + 1}保持当前角度，其他目标不变；等待真实HOLD确认。")
+        except (ValueError, RuntimeError, KeyError) as error:
+            self.teach_record_target = None
+            self.teach_events.append({"event": "teach_refresh_stopped", "joint": selected + 1,
+                "reason": str(error), "at_monotonic_s": time.monotonic(), "activation_epoch": self.activation_epoch,
+                "fresh_actual_confirmed": False, "actual_rad": None,
+                "frozen_targets_rad": list(self.teach_entry_targets)})
+            self._suspend_command_stream("辅助示教已停止刷新：" + str(error))
+            self.teach_status.setText("示教反馈／授权失效，已停止刷新；执行原底层超时制动策略，未确认HOLD。")
+        finally:
+            self._clear_assisted_teach()
+        self._publish_command()
+
+    def _tick_assisted_teach(self, now: float) -> None:
+        if self.teach_joint is None:
+            return
+        try:
+            self._action_group_health(self.teach_binding, self.teach_rejected_commands,
+                                      allowed_modes=("hold", "teach"))
+            hardware = self.node.latest_hardware
+            gravity = self.node.latest_gravity_status or {}
+            empirical = gravity.get("empirical_validation", {})
+            if (not assisted_teach_authorized(gravity) or self.teach_authority_binding !=
+                    (gravity.get("source_instance_id"), empirical.get("envelope_sha256"), empirical.get("anchor_sha256"))):
+                raise RuntimeError("示教authority变化或过期")
+            if self.command_targets != self.teach_entry_targets:
+                raise RuntimeError("按住期间锁定目标被修改")
+            selected = self.teach_joint
+            selected_motors = MOTOR_GROUPS[selected]
+            modes = hardware["controller_mode_by_motor"]
+            if any(mode != "hold" for name, mode in modes.items() if name not in selected_motors):
+                raise RuntimeError("非选中关节未保持HOLD")
+            if any(abs(actual - target) > math.radians(0.25)
+                   for index, (actual, target) in enumerate(zip(hardware["position_rad"], self.teach_entry_targets))
+                   if index != selected):
+                self._release_assisted_teach("非选中关节误差超过0.25°")
+                return
+            confirmed = all(modes[name] == "teach" for name in selected_motors)
+            if (now - self.teach_started_at >= 29.0
+                    or abs(hardware["position_rad"][selected] - self.teach_entry_targets[selected]) >= math.radians(4.5)
+                    or abs(hardware["velocity_rad_s"][selected]) > math.radians(5.0)
+                    or (self.teach_acknowledged and not confirmed)):
+                self._release_assisted_teach("示教边界／原生停止")
+                return
+            if confirmed and not self.teach_acknowledged:
+                self.teach_events.append({"event": "teach_hardware_confirmed", "joint": selected,
+                    "source_monotonic_ns": hardware["source_monotonic_ns"],
+                    "actual_rad": list(hardware["position_rad"]),
+                    "controller_mode_by_motor": dict(modes), "activation_epoch": self.activation_epoch})
+            self.teach_acknowledged = self.teach_acknowledged or confirmed
+            if not self.teach_acknowledged and now - self.teach_started_at >= 2.0:
+                self._release_assisted_teach("辅助模式确认超时")
+        except (ValueError, RuntimeError, KeyError) as error:
+            self._release_assisted_teach(str(error))
+
+    def _record_teach_point(self) -> None:
+        if (self.teach_joint is not None or self.teach_record_target is None
+                or not self._action_group_hold_ready(self.teach_record_target)):
+            self.teach_status.setText("先松开按钮并等待新鲜、静止的六轴HOLD，再记录实姿。")
+            return
+        self._show_action_groups()
+        self.actual = list(self.node.latest_hardware["position_rad"])
+        self.action_group_dialog._edit(lambda: self.action_group_dialog.capture(True))
+
+    def eventFilter(self, watched, event) -> bool:
+        if getattr(self, "teach_joint", None) is not None and (
+            event.type() == QEvent.ApplicationDeactivate
+            or (watched is self and event.type() in {QEvent.WindowDeactivate, QEvent.Hide})
+            or (watched is self.teach_button and event.type() in {QEvent.FocusOut, QEvent.UngrabMouse})
+        ):
+            self._release_assisted_teach("窗口／按钮失去控制")
+        return super().eventFilter(watched, event)
+
+    def keyPressEvent(self, event) -> None:
+        if event.key() == Qt.Key_Escape and getattr(self, "teach_joint", None) is not None:
+            self._release_assisted_teach("Esc停止")
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
     def _show_action_groups(self) -> None:
         from .action_group_dialog import ActionGroupDialog
 
@@ -3018,7 +3211,7 @@ class MainWindow(QMainWindow):
         self.action_group_dialog.raise_()
         self.action_group_dialog.activateWindow()
 
-    def _action_group_health(self, binding=None, rejected_commands=None) -> dict:
+    def _action_group_health(self, binding=None, rejected_commands=None, *, allowed_modes=("hold", "position")) -> dict:
         """Check current hardware facts; never grant preview or drive authority."""
         now = time.monotonic()
         hardware = self.node.latest_hardware
@@ -3041,10 +3234,10 @@ class MainWindow(QMainWindow):
         if (hardware["session_id"] != self.session_id
                 or hardware["state_instance_id"] != self.state_instance_id):
             raise RuntimeError("动作组停止：GUI 与硬件会话绑定不一致")
-        if (self.command_stream_suspended or self.hardware_mode not in {"hold", "position"}
+        if (self.command_stream_suspended or self.hardware_mode not in allowed_modes
                 or not all(self.requested_active_joint_mask)
                 or any(hardware["lease_safe_hold_by_motor"].values())
-                or any(mode not in {"hold", "position"}
+                or any(mode not in allowed_modes
                        for mode in hardware["controller_mode_by_motor"].values())):
             raise RuntimeError("动作组需要 GUI 已接管的六轴 HOLD；控制权已撤销或租约保持中")
         checks = self._current_preview_checks(now)
@@ -3267,6 +3460,19 @@ class MainWindow(QMainWindow):
             else:
                 self.action_group_manual_buttons.append(button)
             layout.addWidget(button, 0, index)
+        self.teach_joint_selector = QComboBox()
+        self.teach_joint_selector.addItems([f"J{i}" for i in range(1, 6)])
+        self.teach_button = QPushButton("按住辅助拖动（其他关节保持）")
+        self.teach_button.setAutoRepeat(False)
+        self.teach_button.pressed.connect(self._start_assisted_teach)
+        self.teach_button.released.connect(self._release_assisted_teach)
+        self.teach_button.installEventFilter(self)
+        layout.addWidget(self.teach_joint_selector, 3, 0)
+        layout.addWidget(self.teach_button, 3, 1, 1, 2)
+        layout.addWidget(self._button("记录实姿到动作组", self._record_teach_point), 3, 3, 1, 2)
+        self.teach_status = QLabel("单轴辅助示教：J1–J5可选，J2双电机联动，J6始终保持；每次≤30秒／5°")
+        self.teach_status.setWordWrap(True)
+        layout.addWidget(self.teach_status, 4, 0, 1, 5)
         self.mode_label = QLabel(
             "当前方向：虚拟驱动现实（默认，无需寻找单独按钮）　｜　"
             "控制请求：制动　｜　硬件确认：等待状态反馈"
@@ -3329,7 +3535,8 @@ class MainWindow(QMainWindow):
                                       ready and self.hardware_mode != "position" and not group_active)
 
     def _load_acceptance_target(self) -> None:
-        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+        if (getattr(self, "teach_joint", None) is not None or
+                (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual)):
             return
         now = time.monotonic()
         _, _, ready, _ = gravity_preparation_status(
@@ -3746,7 +3953,7 @@ class MainWindow(QMainWindow):
         # still passes the strict full-arm gate in _execute_target(), again in
         # _new_collision_request("execute"), and again at commit time.
         edit_blocked = bool(
-            self.hardware_mode == "position"
+            self.hardware_mode in {"position", "teach"}
             or (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.active)
             or self.pending_collision_execute_sequence is not None
             or self.queued_pose_target is not None
@@ -3785,7 +3992,8 @@ class MainWindow(QMainWindow):
     def _record_virtual_target(self, index: int, target_rad: float) -> None:
         """Record a virtual-first target without granting hardware authority."""
 
-        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+        if (getattr(self, "teach_joint", None) is not None or
+                (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual)):
             return
 
         self.candidate_targets[index] = target_rad
@@ -3851,7 +4059,8 @@ class MainWindow(QMainWindow):
     def _start_virtual_preview(self) -> None:
         """Queue the exact recipe without blocking the Qt event thread."""
 
-        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+        if (getattr(self, "teach_joint", None) is not None or
+                (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual)):
             return
 
         if not self._require_control_feedback(
@@ -4883,7 +5092,8 @@ class MainWindow(QMainWindow):
         )
 
     def _real_to_sim(self) -> None:
-        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+        if (getattr(self, "teach_joint", None) is not None or
+                (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual)):
             return
         self._cancel_queued_pose(restore_command_target=True)
         was_positioning = self.hardware_mode == "position"
@@ -4914,7 +5124,8 @@ class MainWindow(QMainWindow):
         self._update_mode_label("方向切换不会撤销当前承重保持")
 
     def _sim_to_real(self) -> None:
-        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+        if (getattr(self, "teach_joint", None) is not None or
+                (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual)):
             return
         self._cancel_queued_pose(restore_command_target=True)
         was_positioning = self.hardware_mode == "position"
@@ -4945,7 +5156,8 @@ class MainWindow(QMainWindow):
         self._update_mode_label("方向切换不会撤销当前承重保持")
 
     def _position_mode(self) -> None:
-        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+        if (getattr(self, "teach_joint", None) is not None or
+                (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual)):
             return
         if not self._require_control_feedback(
             "进入现实位置模式要求六个关节均有新鲜、健康反馈。",
@@ -5004,7 +5216,8 @@ class MainWindow(QMainWindow):
         ):
             return
 
-        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+        if (getattr(self, "teach_joint", None) is not None or
+                (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual)):
             return
         self.machine.set_fixed_hold_after_arrival(enabled)
         self.direction = ArmMode.SIM_TO_REAL
@@ -5055,7 +5268,8 @@ class MainWindow(QMainWindow):
         return True
 
     def _drag_mode(self) -> None:
-        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+        if (getattr(self, "teach_joint", None) is not None or
+                (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual)):
             return
         dialog = QMessageBox(self)
         dialog.setWindowTitle("可拖动模式安全提示")
@@ -5076,6 +5290,9 @@ class MainWindow(QMainWindow):
     def _emergency_brake(self, *, support_confirmed: bool = False) -> None:
         """Explicitly withdraw drive authority without any feedback gate."""
 
+        if getattr(self, "teach_joint", None) is not None:
+            self._clear_assisted_teach()
+        self.teach_record_target = None
         if getattr(self, "action_group_dialog", None) is not None:
             self.action_group_dialog.stop()
 
@@ -5116,7 +5333,11 @@ class MainWindow(QMainWindow):
         self._publish_command()
 
     def _hold_current(self) -> None:
-        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+        if getattr(self, "teach_joint", None) is not None:
+            self._release_assisted_teach("请求保持")
+            return
+        if (getattr(self, "teach_joint", None) is not None or
+                (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual)):
             return
         if not self._require_control_feedback(
             "建立当前姿态HOLD需要六个关节均有新鲜、健康反馈。",
@@ -5198,7 +5419,8 @@ class MainWindow(QMainWindow):
         self.arrival.start(time.monotonic())
 
     def _execute_target(self) -> None:
-        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+        if (getattr(self, "teach_joint", None) is not None or
+                (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual)):
             return
         if not self._preview_approval_matches_candidate():
             self._notify(
@@ -5486,7 +5708,11 @@ class MainWindow(QMainWindow):
         return True
 
     def _stop(self) -> None:
-        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+        if getattr(self, "teach_joint", None) is not None:
+            self._release_assisted_teach("停止")
+            return
+        if (getattr(self, "teach_joint", None) is not None or
+                (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual)):
             self.action_group_dialog.stop()
             return
         # Stop always aborts any not-yet-authorized virtual segments.  It does
@@ -5530,7 +5756,7 @@ class MainWindow(QMainWindow):
             )
             self._publish_command()
             return
-        if self.hardware_mode in {"hold", "position"} or self.command_stream_suspended:
+        if self.hardware_mode in {"hold", "position", "teach"} or self.command_stream_suspended:
             self._suspend_command_stream(
                 "停止时反馈不可用；停止发送新命令并保留底层租约安全保持"
             )
@@ -5563,7 +5789,8 @@ class MainWindow(QMainWindow):
         self._publish_command()
 
     def _save_initial_pose(self) -> None:
-        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+        if (getattr(self, "teach_joint", None) is not None or
+                (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual)):
             return
         if self.node.initial_pose_read_only:
             self._notify("生产初始化姿态受只读保护，GUI拒绝覆盖。", "warning")
@@ -5597,7 +5824,8 @@ class MainWindow(QMainWindow):
         self._notify("初始化姿态已保存。", "info")
 
     def _return_initial_pose(self) -> None:
-        if getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual:
+        if (getattr(self, "teach_joint", None) is not None or
+                (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.blocks_manual)):
             return
         if self.queued_pose_target is not None or self.hardware_mode == "position":
             self._notify(
@@ -5689,7 +5917,7 @@ class MainWindow(QMainWindow):
             self._cancel_queued_pose(restore_command_target=True)
 
     def _suspend_for_stale_feedback(self) -> None:
-        if self.hardware_mode in {"drag", "hold", "position"}:
+        if self.hardware_mode in {"drag", "hold", "position", "teach"}:
             self._suspend_command_stream(
                 "关节或硬件状态已过期；GUI停止发送，等待底层租约安全策略"
             )
@@ -6265,7 +6493,7 @@ class MainWindow(QMainWindow):
         if not self.node.control_streams_fresh(now):
             self._suspend_for_stale_feedback()
         if (
-            self.hardware_mode in {"hold", "position"}
+            self.hardware_mode in {"hold", "position", "teach"}
             and any(self.requested_active_joint_mask)
             and (
                 not self.node.gravity_status_fresh(now)
@@ -6280,6 +6508,8 @@ class MainWindow(QMainWindow):
             self._suspend_command_stream(
                 "重力authority失效或过期；停止刷新命令并保留底层租约安全保持"
             )
+        if getattr(self, "teach_joint", None) is not None:
+            self._tick_assisted_teach(now)
         self._refresh_joint_widgets()
         # Arrival first requests the exact-target HOLD barrier.  A later tick
         # observes all seven motors actually reporting HOLD and stationary;
@@ -6338,7 +6568,7 @@ class MainWindow(QMainWindow):
             if self.queued_pose_target is not None:
                 self._cancel_queued_pose(restore_command_target=True)
             self.active_observation_uncertain = bool(
-                self.hardware_mode in {"hold", "position"}
+                self.hardware_mode in {"hold", "position", "teach"}
                 and any(self.requested_active_joint_mask)
             )
             if self.active_observation_uncertain:
@@ -6355,7 +6585,7 @@ class MainWindow(QMainWindow):
             if self.queued_pose_target is not None:
                 self._cancel_queued_pose(restore_command_target=True)
             self.active_observation_uncertain = bool(
-                self.hardware_mode in {"hold", "position"}
+                self.hardware_mode in {"hold", "position", "teach"}
                 and any(self.requested_active_joint_mask)
             )
             if self.active_observation_uncertain:
@@ -6414,7 +6644,7 @@ class MainWindow(QMainWindow):
         uncertain_active = [
             bool(
                 uncertain[index]
-                and self.hardware_mode in {"hold", "position"}
+                and self.hardware_mode in {"hold", "position", "teach"}
                 and self.requested_active_joint_mask[index]
             )
             for index in range(6)
@@ -6609,6 +6839,13 @@ class MainWindow(QMainWindow):
                         "目标已到位；固定保持策略为关，"
                         "继续发送POSITION目标，位置伺服仍会产生必要驱动力"
                     )
+        elif self.hardware_mode == "teach":
+            states = [
+                ("辅助拖动" if confirmed_modes[index] == "teach" else "辅助模式待确认")
+                if index == self.teach_joint else
+                ("保持中" if confirmed_modes[index] == "hold" else "保持待确认")
+                for index in range(6)
+            ]
         elif self.hardware_mode == "brake":
             states = [
                 ("已制动" if confirmed_modes[index] == "brake" else "制动待确认")
@@ -6965,6 +7202,8 @@ class MainWindow(QMainWindow):
         self.log_stream.flush()
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        if getattr(self, "teach_joint", None) is not None:
+            self._release_assisted_teach("关闭窗口")
         if getattr(self, "action_group_dialog", None) is not None:
             self.action_group_dialog.stop()
         self._shutdown_preview_plan_executor()
@@ -6974,7 +7213,7 @@ class MainWindow(QMainWindow):
         self._update_connected(now)
         hold_before_close = (
             not self.command_stream_suspended
-            and self.hardware_mode in {"hold", "position"}
+            and self.hardware_mode in {"hold", "position", "teach"}
             and control_feedback_ready(
                 self.have_first_state, streams_fresh, self.connected
             )
@@ -6992,7 +7231,7 @@ class MainWindow(QMainWindow):
             self._update_mode_label(
                 "窗口关闭前保留已锁定目标；等待底层安全保持接管"
             )
-        elif self.hardware_mode in {"hold", "position"}:
+        elif self.hardware_mode in {"hold", "position", "teach"}:
             self._suspend_command_stream(
                 "窗口关闭且反馈不新鲜；不发送制动，交由底层租约安全保持"
             )

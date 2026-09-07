@@ -26,6 +26,7 @@ from go_m8010_arm_gui.command_router import (
     KP_LIMITS,
     GUI_COMMAND_SCHEMA_V12,
     GUI_COMMAND_SCHEMA_V13,
+    GUI_COMMAND_SCHEMA_V14,
     GRAVITY_CONFIG_SHA256,
     GRAVITY_STATUS_SCHEMA,
     EMPIRICAL_ZERO_HOLD_TRANSITION_GRACE_NS,
@@ -396,6 +397,52 @@ def _empirical_latest(now_ns: int, *, deadline_ns: int) -> dict:
             "trajectory_sha256": RECIPE_SHA256,
         },
     }
+
+
+@pytest.mark.parametrize("joint", range(5))
+def test_assisted_teach_single_axis_authority_and_domain_hold_compatibility(joint):
+    now_ns = time.monotonic_ns()
+    document = json.loads(command(mode="hold"))
+    document.update(schema=GUI_COMMAND_SCHEMA_V14, mode="teach", source_monotonic_ns=now_ns,
+                    moving_joint_mask=[index == joint for index in range(6)],
+                    targets_rad=[0.01 * index for index in range(6)])
+    normalized, _ = production_validate_command(json.dumps(document), now_ns=now_ns)
+    assert normalized["schema"] == GUI_COMMAND_SCHEMA_V14
+    gate = GravityAuthorityGate()
+    gate._latest = _empirical_latest(now_ns, deadline_ns=now_ns + 60_000_000_000)
+    with pytest.raises(ValueError, match="未授权"):
+        gate.authorize(deepcopy(normalized), now_ns=now_ns)
+    extra = {"empirical_assisted_teach_authorized": True, "empirical_maximum_teach_excursion_deg": 5.0,
+             "empirical_maximum_teach_seconds": 30.0, "empirical_maximum_teach_velocity_deg_s": 5.0,
+             "empirical_allowed_teach_joints": ["J1", "J2", "J3", "J4", "J5"]}
+    gate._latest.update(extra)
+    gate.authorize(normalized, now_ns=now_ns)
+    assert len(normalized["gravity_authority"]) == 27
+    owned = {"J1": {0}, "J2": {1}, "J345": {2, 3, 4}, "J6": {5}}
+    for domain, indices in owned.items():
+        forwarded = json.loads(payload_for_domain(normalized, domain))
+        assert forwarded["targets_rad"] == normalized["targets_rad"]
+        assert forwarded["active_joint_mask"] == [True] * 6
+        assert forwarded["kp"] == normalized["kp"] and forwarded["kd"] == normalized["kd"]
+        if joint in indices:
+            assert forwarded["mode"] == "teach" and forwarded["schema"] == GUI_COMMAND_SCHEMA_V14
+            assert len(forwarded["gravity_authority"]) == 27
+            assert all(forwarded["gravity_authority"][key] == value for key, value in extra.items())
+        else:
+            assert forwarded["mode"] == "hold" and forwarded["schema"] == GUI_COMMAND_SCHEMA_V12
+            assert forwarded["moving_joint_mask"] == [False] * 6
+            assert len(forwarded["gravity_authority"]) == 22
+            assert not any(key in forwarded["gravity_authority"] for key in extra)
+    assert len(normalized["gravity_authority"]) == 27  # Routing one domain must not mutate another.
+    ordinary_hold = deepcopy(normalized)
+    ordinary_hold.update(mode="hold", schema=GUI_COMMAND_SCHEMA_V12, moving_joint_mask=[False] * 6)
+    assert len(json.loads(payload_for_domain(ordinary_hold, "J6"))["gravity_authority"]) == 22
+    for mask in ([False] * 6, [True, True, False, False, False, False], [False] * 5 + [True]):
+        candidate = {**document, "moving_joint_mask": mask}
+        with pytest.raises(ValueError, match="辅助示教"):
+            production_validate_command(json.dumps(candidate), now_ns=now_ns)
+    with pytest.raises(ValueError, match="1.4"):
+        production_validate_command(json.dumps({**document, "schema": GUI_COMMAND_SCHEMA_V12}), now_ns=now_ns)
 
 
 def test_empirical_authority_stale_or_deadline_revokes_once():

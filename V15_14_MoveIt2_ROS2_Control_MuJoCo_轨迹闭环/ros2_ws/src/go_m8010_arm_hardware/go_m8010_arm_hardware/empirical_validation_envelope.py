@@ -53,6 +53,10 @@ MAXIMUM_STAGE_TEMPERATURE_RISE_C = 2.0
 J2_SYNC_WARNING_DEG = 0.25
 J2_SYNC_HARD_DEG = 0.50
 MAXIMUM_HOLD_VELOCITY_RAD_S = math.radians(5.0)
+ASSISTED_TEACH_JOINTS = ("J1", "J2", "J3", "J4", "J5")
+MAXIMUM_TEACH_EXCURSION_DEG = 5.0
+MAXIMUM_TEACH_SECONDS = 30.0
+MAXIMUM_TEACH_VELOCITY_DEG_S = 5.0
 MAXIMUM_SCHEDULER_TRANSITION_SLACK_SECONDS = 1.0
 POSITION_PRECISION_CONTRACT_ID = "go-m8010-position-accuracy/0.1deg-v1"
 POSITION_ENDPOINT_ERROR_DEG = 0.1
@@ -174,6 +178,7 @@ class EmpiricalValidationEnvelope:
     maximum_abs_position_segment_deg: float
     loaded_monotonic_ns: int
     monotonic_deadline_ns: int
+    assisted_teach_enabled: bool = False
 
     @classmethod
     def from_path(
@@ -417,6 +422,42 @@ class EmpiricalValidationEnvelope:
             "POSITION_VALIDATION_AUTHORITY_INVALID",
         )
 
+        assisted_teach_enabled = "assisted_teach" in value
+        if assisted_teach_enabled:
+            teach = _exact_mapping(value["assisted_teach"], {
+                "schema", "enabled", "allowed_joints", "maximum_selected_joints",
+                "maximum_excursion_from_press_deg", "maximum_press_seconds",
+                "maximum_velocity_deg_s", "unlock_requires_completed_gravity_ladder",
+                "allowed_after_scale", "nonselected_joints_fixed_hold_required",
+                "j6_fixed_hold_required", "continuous_operation_authorized",
+                "final_confirmation_policy",
+            }, "ASSISTED_TEACH")
+            _require(
+                teach["schema"] == "go-m8010-assisted-teach-envelope/1.0"
+                and teach["enabled"] is True
+                and teach["allowed_joints"] == list(ASSISTED_TEACH_JOINTS)
+                and type(teach["maximum_selected_joints"]) is int
+                and teach["maximum_selected_joints"] == 1
+                and teach["unlock_requires_completed_gravity_ladder"] is True
+                and teach["nonselected_joints_fixed_hold_required"] is True
+                and teach["j6_fixed_hold_required"] is True
+                and teach["continuous_operation_authorized"] is False,
+                "ASSISTED_TEACH_SCOPE_INVALID",
+            )
+            _require(
+                teach["final_confirmation_policy"] ==
+                "ONCE_AFTER_LADDER_THEN_LIVE_GATES_FOR_MANUAL_SESSION",
+                "ASSISTED_TEACH_SCOPE_INVALID",
+            )
+            for field, expected in (
+                ("maximum_excursion_from_press_deg", MAXIMUM_TEACH_EXCURSION_DEG),
+                ("maximum_press_seconds", MAXIMUM_TEACH_SECONDS),
+                ("maximum_velocity_deg_s", MAXIMUM_TEACH_VELOCITY_DEG_S),
+                ("allowed_after_scale", 1.0),
+            ):
+                _require(_finite(teach[field], "ASSISTED_TEACH_" + field.upper()) == expected,
+                         "ASSISTED_TEACH_BOUNDS_INVALID")
+
         live = value.get("live_gates")
         _require(isinstance(live, Mapping), "LIVE_GATES_MISSING")
         feedback = live.get("feedback")
@@ -480,6 +521,7 @@ class EmpiricalValidationEnvelope:
             maximum_abs_position_segment_deg=position_displacement,
             loaded_monotonic_ns=loaded_monotonic_ns,
             monotonic_deadline_ns=loaded_monotonic_ns + remaining_ns,
+            assisted_teach_enabled=assisted_teach_enabled,
         )
 
     def claim_single_use(self, claim_directory: Path) -> Path:
@@ -584,6 +626,7 @@ def live_hardware_blocker(
     stage_start_temperature_c: Optional[Mapping[str, float]] = None,
     require_current_position_hold: bool,
     require_entry_temperature: bool = False,
+    allow_assisted_teach: bool = False,
 ) -> tuple[str, Optional[dict[str, float]]]:
     if not isinstance(hardware_state, Mapping):
         return "EMPIRICAL_HARDWARE_STATE_MISSING", None
@@ -629,7 +672,15 @@ def live_hardware_blocker(
             return f"EMPIRICAL_{name}_STAGE_TEMPERATURE_RISE", None
     if require_current_position_hold:
         modes = hardware_state.get("controller_mode_by_motor")
-        if not isinstance(modes, Mapping) or set(modes) != set(MOTOR_NAMES) or any(modes[name] not in {"hold", "position"} for name in MOTOR_NAMES):
+        if not isinstance(modes, Mapping) or set(modes) != set(MOTOR_NAMES):
+            return "EMPIRICAL_CURRENT_POSITION_HOLD_NOT_CONFIRMED", None
+        taught = {name for name in MOTOR_NAMES if modes[name] == "teach"}
+        if taught:
+            allowed_domains = ({"J1"}, {"J2A", "J2B"}, {"J3"}, {"J4"}, {"J5"})
+            if (not allow_assisted_teach or taught not in allowed_domains
+                    or any(modes[name] != "hold" for name in set(MOTOR_NAMES) - taught)):
+                return "EMPIRICAL_ASSISTED_TEACH_MODE_SCOPE_INVALID", None
+        elif any(modes[name] not in {"hold", "position"} for name in MOTOR_NAMES):
             return "EMPIRICAL_CURRENT_POSITION_HOLD_NOT_CONFIRMED", None
     return "", temperatures
 
@@ -746,6 +797,13 @@ class EmpiricalStageGate:
             # Its hold timer starts only after that HOLD is observed below.
             require_current_position_hold=self.stage_index > 0,
             require_entry_temperature=self.stage_start_temperature_c is None,
+            allow_assisted_teach=bool(
+                self.envelope.assisted_teach_enabled
+                and self.stage_index == len(LEVELS) - 1 and self.stage_complete
+                and self.phase == "POSITION_VALIDATION"
+                and self.last_position_confirmation_ns is not None
+                and 0 <= now_monotonic_ns - self.last_position_confirmation_ns
+            ),
         )
         if live_blocker:
             # Before the first current-position HOLD, stage zero is merely a
@@ -801,7 +859,9 @@ class EmpiricalStageGate:
             if (
                 self.last_position_confirmation_ns is not None
                 and 0 <= now_monotonic_ns - self.last_position_confirmation_ns
-                <= MAXIMUM_CONFIRMATION_AGE_NS
+                and (self.envelope.assisted_teach_enabled or
+                     now_monotonic_ns - self.last_position_confirmation_ns
+                     <= MAXIMUM_CONFIRMATION_AGE_NS)
             ):
                 self.phase = "POSITION_VALIDATION"
             elif self.position_started_ns is not None:
@@ -835,6 +895,16 @@ class EmpiricalStageGate:
             "position_validation_authorized": (
                 self.phase == "POSITION_VALIDATION" and not self.invalidated
             ),
+            "assisted_teach_authorized": bool(
+                self.envelope.assisted_teach_enabled
+                and self.phase == "POSITION_VALIDATION"
+                and self.stage_index == len(LEVELS) - 1 and self.stage_complete
+                and not self.invalidated and not self.blocker
+            ),
+            "maximum_teach_excursion_deg": MAXIMUM_TEACH_EXCURSION_DEG if self.envelope.assisted_teach_enabled else None,
+            "maximum_teach_seconds": MAXIMUM_TEACH_SECONDS if self.envelope.assisted_teach_enabled else None,
+            "maximum_teach_velocity_deg_s": MAXIMUM_TEACH_VELOCITY_DEG_S if self.envelope.assisted_teach_enabled else None,
+            "allowed_teach_joints": list(ASSISTED_TEACH_JOINTS) if self.envelope.assisted_teach_enabled else [],
             "maximum_position_segment_seconds": (
                 self.envelope.maximum_position_segment_seconds
             ),

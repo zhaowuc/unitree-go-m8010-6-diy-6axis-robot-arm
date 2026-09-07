@@ -1863,6 +1863,101 @@ def test_latest_state_subscriptions_and_bounded_callback_pump_avoid_backlog():
     assert "self.node.callback_executor.spin_once(timeout_sec=0.01)" in source
 
 
+@pytest.mark.parametrize("selected", range(5))
+def test_selective_teach_freezes_other_targets_releases_and_records_actual(selected):
+    clock = [100.0]
+    groups = (("J1",), ("J2A", "J2B"), ("J3",), ("J4",), ("J5",), ("J6",))
+    namespace = {"time": SimpleNamespace(monotonic=lambda: clock[0]), "MOTOR_GROUPS": groups,
+        "assisted_teach_authorized": load_function("assisted_teach_authorized"),
+        "fixed_hold_targets_after_position_stop": load_function("fixed_hold_targets_after_position_stop")}
+    methods = {name: load_main_window_method(name, namespace) for name in (
+        "_start_assisted_teach", "_release_assisted_teach", "_clear_assisted_teach",
+        "_tick_assisted_teach", "_record_teach_point")}
+    for stop_reason in ("release", "stale", "duration", "other_axis_drift"):
+        original = [math.radians(value) for value in (1, 2, 3, 4, 5, 6)]
+        hardware = hardware_state()
+        hardware["position_rad"] = original[:]
+        hardware["position_rad"][selected] += math.radians(0.01)
+        gravity = {"source_instance_id": "a" * 32, "gravity_scale": 1.0, "gravity_scale_target": 1.0,
+            "empirical_validation": {"stage_index": 4, "stage_complete": True,
+                "position_validation_authorized": True, "assisted_teach_authorized": True,
+                "maximum_teach_excursion_deg": 5.0, "maximum_teach_seconds": 30.0,
+                "maximum_teach_velocity_deg_s": 5.0, "allowed_teach_joints": ["J1", "J2", "J3", "J4", "J5"],
+                "envelope_sha256": "b" * 64, "anchor_sha256": "c" * 64}}
+        status, published, points = [], [], []
+        window = SimpleNamespace(teach_joint=None, teach_events=[], action_group_dialog=None,
+            teach_record_target=None, queued_pose_target=None, pending_collision_execute_sequence=None,
+            command_targets=original[:], activation_epoch=5, hardware_mode="hold", command_stream_suspended=False,
+            node=SimpleNamespace(latest_hardware=hardware, latest_gravity_status=gravity,
+                                 latest_control_status={"rejected_commands": 0}),
+            teach_joint_selector=SimpleNamespace(currentIndex=lambda: selected, setEnabled=lambda _: None),
+            teach_status=SimpleNamespace(setText=status.append), action_group_manual_buttons=[],
+            acceptance_target_button=None, machine=SimpleNamespace(hold=lambda: None),
+            arrival=SimpleNamespace(start=lambda _: None), held=True, fresh=True)
+        def health(*args, **kwargs):
+            if not window.fresh:
+                raise RuntimeError("stale")
+            return {"binding": ("session", "state", "zero"), "rejected_commands": 0}
+        window._action_group_health = health
+        window._action_group_hold_ready = lambda _: window.held
+        window._cancel_queued_pose = lambda **kwargs: None
+        window._set_virtual_editable = lambda _: None
+        window._refresh_virtual_editability = lambda: None
+        def authorize(_mask):
+            window.activation_epoch += 1
+        window._authorize_active_joints = authorize
+        def publish():
+            if not window.command_stream_suspended:
+                published.append((window.hardware_mode, window.activation_epoch, tuple(window.command_targets)))
+        window._publish_command = publish
+        window._suspend_command_stream = lambda _: setattr(window, "command_stream_suspended", True)
+        window._show_action_groups = lambda: None
+        for name, method in methods.items():
+            setattr(window, name, lambda *args, fn=method: fn(window, *args))
+        window._start_assisted_teach()
+        assert window.teach_joint == selected and published[-1][0] == "teach"
+        frozen = tuple(window.command_targets)
+        assert all(frozen[i] == original[i] for i in range(6) if i != selected)
+        assert window.moving_joint_mask == [i == selected for i in range(6)]
+        for name in groups[selected]:
+            hardware["controller_mode_by_motor"][name] = "teach"
+        hardware["position_rad"][selected] += math.radians(1)
+        clock[0] += 0.2
+        window._tick_assisted_teach(clock[0])
+        assert tuple(window.command_targets) == frozen
+        if stop_reason == "release":
+            window._release_assisted_teach("失焦／松开")
+        elif stop_reason == "stale":
+            window.fresh = False
+            window._tick_assisted_teach(clock[0])
+        elif stop_reason == "duration":
+            clock[0] = window.teach_started_at + 29
+            window._tick_assisted_teach(clock[0])
+        else:
+            other = (selected + 1) % 6
+            hardware["position_rad"][other] += math.radians(0.26)
+            window._tick_assisted_teach(clock[0])
+        assert window.teach_joint is None
+        if stop_reason == "stale":
+            assert window.command_stream_suspended and len(published) == 1 and window.teach_record_target is None
+            assert window.teach_events[-1]["fresh_actual_confirmed"] is False
+        else:
+            assert published[-1][0] == "hold" and published[-1][1] > published[0][1]
+            assert window.command_targets[selected] == hardware["position_rad"][selected]
+            assert all(window.command_targets[i] == original[i] for i in range(6) if i != selected)
+            assert window.teach_events[-1]["event"] == "teach_release_requested"
+            window.action_group_dialog = SimpleNamespace(_edit=lambda callback: callback(), capture=points.append)
+            window.held = False
+            window._record_teach_point()
+            assert not points
+            window.held = True
+            window._record_teach_point()
+            assert points == [True] and window.actual == hardware["position_rad"]
+        count = len(published)
+        window._release_assisted_teach()
+        assert len(published) == count
+
+
 def test_change_only_widget_helpers_suppress_redundant_qt_writes():
     class FakeWidget:
         def __init__(self):
@@ -4832,13 +4927,14 @@ def test_close_holds_when_fresh_and_sends_nothing_for_unconfirmed_active_hold():
     close_start = source.index("    def closeEvent(self, event: QCloseEvent) -> None:")
     close_end = source.index("\n\n\ndef main", close_start)
     close = source[close_start:close_end]
-    assert 'self.hardware_mode in {"hold", "position"}' in close
+    assert 'self.hardware_mode in {"hold", "position", "teach"}' in close
+    assert close.index('self._release_assisted_teach("关闭窗口")') < close.index("hold_before_close =")
     assert "control_feedback_ready(" in close
     assert close.index("self._transition_position_to_fixed_hold()") < close.index(
         'self.hardware_mode = "brake"'
     )
     assert "if self.command_stream_suspended:" in close
-    assert 'elif self.hardware_mode in {"hold", "position"}:' in close
+    assert 'elif self.hardware_mode in {"hold", "position", "teach"}:' in close
     assert "publish_before_close = False" in close
     assert "for _ in range(5):" in close
     assert 'if self.hardware_mode == "position":' in close

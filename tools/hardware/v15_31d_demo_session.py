@@ -176,6 +176,7 @@ def main(argv=None):
     parser.add_argument("--return-center", action="store_true")
     parser.add_argument("--bash", default=shutil.which("bash") or "/bin/bash")
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--assisted-teach", action="store_true", help="open a bounded interactive single-axis teaching GUI after the normal HOLD ladder")
     parser.add_argument("--power-cycled", action="store_true",
                         help="attest an actual J6 24V power cycle since the prior commissioning session")
     parser.add_argument("--supported-near-vertical-recovery", action="store_true",
@@ -219,7 +220,8 @@ def main(argv=None):
     plan = {"mode": "EXECUTE" if args.execute else "DRY_RUN", "cycles": args.cycles,
             "excursion_deg": args.excursion_deg, "speed_deg_s": args.speed_deg_s,
             "symmetric": args.symmetric, "return_center": args.return_center,
-            "maximum_demo_seconds": maximum_demo_seconds(args.cycles, args.excursion_deg, args.symmetric),
+            "maximum_demo_seconds": 600.0 if args.assisted_teach else maximum_demo_seconds(args.cycles, args.excursion_deg, args.symmetric),
+            "assisted_teach": args.assisted_teach,
             "j6_power_cycle_attested": args.power_cycled,
             "supported_near_vertical_recovery": args.supported_near_vertical_recovery,
             "repo": str(ROOT), "session": str(session), "scripts": str(scripts), "unit_prefix": unit,
@@ -255,6 +257,7 @@ def main(argv=None):
 
 
 def execute(args, bodies, plan, session, scripts, unit):
+    os.environ["GO_ASSISTED_TEACH"] = "1" if args.assisted_teach else "0"
     idle_demo_cores()
     scripts.mkdir(parents=True, mode=0o700)
     for name, body in bodies.items():
