@@ -1,0 +1,51 @@
+{
+  "schema": "go-m8010-hand-guidance-manual-evidence/1.0",
+  "session": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T131211-bf07fd",
+  "status": "FAIL",
+  "scope": "FIRST_REAL_MANUAL_REFERENCE_MOVEMENT; self-weight support and force-release stopping not validated",
+  "source_report": {
+    "path": ".runtime/v15_31d_demo_20260908T131211-bf07fd/evidence/j1_action_group_demo.json",
+    "sha256": "426d236a8b62907a78ec715d5a6634ca1f825b0008c5b767f3c40e653d87bc2f"
+  },
+  "launcher_result": {
+    "path": ".runtime/v15_31d_demo_20260908T131211-bf07fd_scripts/session_result.json",
+    "sha256": "9d0706bf95ae0612cb41dfc81d6a0cf64a8eedf5e05898cbb1303aea07ba6178",
+    "status": "FAIL",
+    "controller_terminal_confirmed": {"J1": true, "J2": true, "J345": false, "J6": true},
+    "stop_errors": []
+  },
+  "gui_paired_terminal_confirmed": true,
+  "all_native_terminal_confirmed": false,
+  "initial_vertical_return_verified": false,
+  "failure": "hand guidance lost hardware/feedback/gravity authority",
+  "final_gravity_blocker": "EMPIRICAL_J2A_STAGE_TEMPERATURE_RISE",
+  "final_J2A_temperature_c": 35.0,
+  "final_hardware_healthy": true,
+  "termination_was_envelope_expiry": false,
+  "presses": [
+    {"activation_epoch": 3286534074270602, "hardware_ack_monotonic_s": 3286534.148981377, "release_monotonic_s": 3286534.846831003, "reference_movement_observed": false},
+    {"activation_epoch": 3286535203591396, "hardware_ack_monotonic_s": 3286535.281193612, "release_monotonic_s": 3286538.042066779, "reference_movement_observed": true, "moving_reference_joints": ["J2", "J3", "J4"]}
+  ],
+  "trace_count": 56,
+  "after_second_button_release": {
+    "J2_fixed_target_rad": -0.11902820294434188,
+    "J2_actual_deg_at_0p49_2_5_10_seconds": [-6.39541, -7.3335, -7.8993, -7.92187],
+    "target_unchanged": true,
+    "interpretation": "Position sag and persistent HOLD tracking error after the outer reference was frozen, not continued outer-loop reference movement"
+  },
+  "last_healthy_hold_window": {
+    "frames": 1500,
+    "span_s": 30.159200305584818,
+    "J2_actual_range_deg": [-7.927941504503152, -7.922734159585021],
+    "J2_motor_joint_torque_median_nm": 6.82453116774559,
+    "J2_gravity_feedforward_joint_torque_median_nm": 2.0448699044106284,
+    "J2_initial_bias_nm": -0.1152925780190016,
+    "J2_corrected_residual_median_nm": -4.664368138223628,
+    "J2_corrected_residual_range_nm": [-4.76348307070011, -4.491272416015091],
+    "residual_formula": "gravity_joint_nm - estimated_motor_joint_nm - initial_bias_nm; J2A sign=-1, J2B sign=+1, ratio=6.329999923706055",
+    "cause": "UNDETERMINED; model error, friction and continuing external contact are not distinguished by this record"
+  },
+  "operator_feedback": "User reported the pose remained held after button release and no large pushing force; self-weight support and stopping after removing hand force still need a separate observation.",
+  "followup_hold_integral_fix": {"commit": "6d034e2", "deployed": true, "physically_validated": false},
+  "human_hand_guiding_complete": false
+}
