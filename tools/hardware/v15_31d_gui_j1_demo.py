@@ -290,6 +290,7 @@ class J1Demo:
                             if hasattr(self.window, "teach_toolbar"):
                                 self.window.teach_toolbar.setEnabled(True)
                             self.events.append({"event": "interactive_teach_ready", "at_monotonic_s": now})
+                            print(f"INTERACTIVE_TEACH_READY remaining_seconds={self.maximum_seconds - (now - self.started):.1f}", flush=True)
                         elif self.recover_initial_first:
                             self.stage, self.recovery_started = "recover_initial", now
                             self.recovery_result = {"status": "RUNNING", "initial_hold_target_rad": list(self.origin)}

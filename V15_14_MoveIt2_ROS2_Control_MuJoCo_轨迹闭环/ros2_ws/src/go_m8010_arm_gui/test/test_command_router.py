@@ -1895,6 +1895,44 @@ def test_non_brake_command_requires_strict_source_timestamp(source_time):
         validate_command(json.dumps(document), now_ns=now_ns)
 
 
+def test_expired_hold_between_fresh_heartbeats_does_not_refresh_lease_or_trip_gui(monkeypatch):
+    clock = [10_000_000_000]
+    monkeypatch.setattr(time, "monotonic_ns", lambda: clock[0])
+    sent, diagnostics = [], []
+    router = SimpleNamespace(last_command=None, replay_guard=CommandReplayGuard(),
+        collision_guard_gate=CollisionGuardProofGate(), plan_manifest_gate=PlanManifestGate(),
+        gravity_authority_gate=GravityAuthorityGate(), rejection_tracker=RejectionTracker(), rejected=0,
+        allow_legacy_v12_position=False, _log_rejection_reports=lambda _: None,
+        get_logger=lambda: SimpleNamespace(warning=diagnostics.append),
+        socket=SimpleNamespace(sendto=lambda payload, _: sent.append(json.loads(payload))),
+        destinations=[(name, name) for name in ("J1", "J2", "J345", "J6")])
+    assert router.gravity_authority_gate.observe_status(gravity_status(now_ns=clock[0]), now_ns=clock[0])
+    fresh = json.loads(command(mode="hold"))
+    CommandRouter.on_command(router, SimpleNamespace(data=json.dumps(fresh)))
+    accepted = router.last_command
+    accepted_at = router.replay_guard._active_source_last_accepted_ns
+    clock[0] += 100_000_000
+    expired = {**fresh, "sequence": 99, "source_monotonic_ns": clock[0] - 250_000_001}
+    CommandRouter.on_command(router, SimpleNamespace(data=json.dumps(expired)))
+    assert router.expired_commands == 1 and router.rejected == 0 and len(sent) == 4
+    assert router.last_command is accepted and router.replay_guard._active_source_last_accepted_ns == accepted_at
+    assert router.last_command_timestamp_rejection == {
+        "classification": "EXPIRED", "source_monotonic_ns": expired["source_monotonic_ns"],
+        "source_type": "int", "observed_monotonic_ns": clock[0], "age_ns": 250_000_001}
+    clock[0] += 1
+    fresh.update(sequence=2, source_monotonic_ns=clock[0])
+    CommandRouter.on_command(router, SimpleNamespace(data=json.dumps(fresh)))
+    assert len(sent) == 8 and router.last_command["sequence"] == 2 and router.rejected == 0
+    assert all(message["mode"] == "hold" for message in sent)
+    accepted = router.last_command
+    for timestamp, classification in ((clock[0] + 1, "FUTURE"), (None, "INVALID")):
+        CommandRouter.on_command(router, SimpleNamespace(data=json.dumps({**fresh, "sequence": 3, "source_monotonic_ns": timestamp})))
+        assert router.last_command is accepted and len(sent) == 8
+        assert router.last_command_timestamp_rejection["classification"] == classification
+    assert router.rejected == 2 and router.expired_commands == 1
+    assert any('"age_ns": -1' in text and '"classification": "FUTURE"' in text for text in diagnostics)
+
+
 def test_non_brake_command_rejects_stale_or_future_source_timestamp():
     now_ns = 10_000_000_000
     for source_time in (now_ns - 250_000_001, now_ns + 1):

@@ -1,0 +1,83 @@
+{
+  "status": "FAIL",
+  "scope": "BOOTSTRAP_AND_STATIC_HOLD_NO_MANUAL_TEACH",
+  "code_commit": "fab1967a0d928ed841bf09a7bedca76b8afd3d5f",
+  "session": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T062612-c685a6",
+  "failure": "feedback, authority, session or command-router health changed",
+  "interactive_ready": true,
+  "elapsed_s": 167.5723055540584,
+  "teach_events": [],
+  "events": [
+    {
+      "event": "frozen_initial_hold",
+      "target_rad": [
+        0.024578118682456244,
+        -0.0007068852076567178,
+        0.03401969566153759,
+        0.0003119456188258378,
+        0.0002940628667452725,
+        0.05567635614557087
+      ]
+    },
+    {
+      "event": "stage_entered",
+      "level": 0.25
+    },
+    {
+      "event": "stage_entered",
+      "level": 0.5
+    },
+    {
+      "event": "stage_entered",
+      "level": 0.75
+    },
+    {
+      "event": "stage_entered",
+      "level": 1.0
+    },
+    {
+      "event": "interactive_teach_ready",
+      "at_monotonic_s": 3261724.710790252
+    }
+  ],
+  "last_preterminal": {
+    "source_monotonic_ns": 3261832576717851,
+    "healthy": true,
+    "feedback_fresh": true,
+    "authority": true,
+    "modes": {
+      "J1": "hold",
+      "J2A": "hold",
+      "J2B": "hold",
+      "J3": "hold",
+      "J4": "hold",
+      "J5": "hold",
+      "J6": "hold"
+    },
+    "router_hold_fresh": true,
+    "router_rejected_commands": 2,
+    "source_age_ms": 8.672572,
+    "controller_faults": {
+      "J1": false,
+      "J2A": false,
+      "J2B": false,
+      "J3": false,
+      "J4": false,
+      "J5": false,
+      "J6": false
+    }
+  },
+  "last_error_deg": [
+    0.027769628846461746,
+    0.007805622283000626,
+    -0.027769628846461943,
+    -0.022564441966009,
+    0.031240832452269437,
+    0.0
+  ],
+  "reason": "主动命令来源时间戳无效或过期",
+  "classification": "UNKNOWN_ORIGINAL_REASON_COMBINED_MALFORMED_FUTURE_AND_EXPIRED; command source/receipt timestamps were not logged",
+  "paired_terminal_confirmed": true,
+  "source_report": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T062612-c685a6/evidence/j1_action_group_demo.json",
+  "source_sha256": "7a6711490b4e3442bacb8344540763622d42462fa2e106e40c9a6b2dd3258b5e"
+}

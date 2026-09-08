@@ -2133,6 +2133,19 @@ class GravityAuthorityGate:
             )
 
 
+class CommandTimestampError(ValueError):
+    def __init__(self, classification, source_ns, observed_ns):
+        super().__init__("主动命令来源时间戳无效或过期")
+        self.diagnostic = {"classification": classification,
+            "source_monotonic_ns": source_ns if type(source_ns) is int or source_ns is None else repr(source_ns)[:120],
+            "source_type": type(source_ns).__name__, "observed_monotonic_ns": observed_ns,
+            "age_ns": observed_ns - source_ns if type(source_ns) is int else None}
+
+
+class ExpiredCommandTimestamp(CommandTimestampError):
+    """An old positive source stamp grants no command or lease refresh."""
+
+
 def _validated_command_source(
     value: dict, now_ns: int
 ) -> tuple[str, int, int]:
@@ -2140,13 +2153,12 @@ def _validated_command_source(
     if not _valid_source_instance_id(source_instance_id):
         raise ValueError("主动命令来源实例无效")
     source_monotonic_ns = value.get("source_monotonic_ns")
-    if (
-        type(source_monotonic_ns) is not int
-        or source_monotonic_ns <= 0
-        or source_monotonic_ns > now_ns
-        or now_ns - source_monotonic_ns > COMMAND_SOURCE_MAX_AGE_NS
-    ):
-        raise ValueError("主动命令来源时间戳无效或过期")
+    if type(source_monotonic_ns) is not int or source_monotonic_ns <= 0:
+        raise CommandTimestampError("INVALID", source_monotonic_ns, now_ns)
+    if source_monotonic_ns > now_ns:
+        raise CommandTimestampError("FUTURE", source_monotonic_ns, now_ns)
+    if now_ns - source_monotonic_ns > COMMAND_SOURCE_MAX_AGE_NS:
+        raise ExpiredCommandTimestamp("EXPIRED", source_monotonic_ns, now_ns)
     sequence = value.get("sequence")
     if (
         type(sequence) is not int
@@ -2670,6 +2682,8 @@ class CommandRouter(Node):
         self.last_empirical_revocation_reason: Optional[str] = None
         self.empirical_zero_hold_transition_started_ns: Optional[int] = None
         self.rejected = 0
+        self.expired_commands = 0
+        self.last_command_timestamp_rejection = None
         self.rejection_tracker = RejectionTracker()
         self.timer = self.create_timer(0.5, self.publish_status)
         legacy_status = (
@@ -2862,10 +2876,26 @@ class CommandRouter(Node):
             self.last_command = normalized
             if normalized.get("mode") != "hold":
                 self.empirical_zero_hold_transition_started_ns = None
+        except ExpiredCommandTimestamp as exc:
+            self.expired_commands = getattr(self, "expired_commands", 0) + 1
+            CommandRouter._record_timestamp_rejection(self, exc)
         except Exception as exc:
+            if isinstance(exc, CommandTimestampError):
+                CommandRouter._record_timestamp_rejection(self, exc)
             reports = self.rejection_tracker.record(exc)
             self.rejected = self.rejection_tracker.total
             self._log_rejection_reports(reports)
+
+    def _record_timestamp_rejection(self, error: CommandTimestampError) -> None:
+        previous = getattr(self, "last_command_timestamp_rejection", None)
+        self.last_command_timestamp_rejection = error.diagnostic
+        now_ns = error.diagnostic["observed_monotonic_ns"]
+        if (previous is None or previous["classification"] != error.diagnostic["classification"]
+                or now_ns - getattr(self, "last_timestamp_log_ns", 0) >= 5_000_000_000):
+            self.last_timestamp_log_ns = now_ns
+            get_logger = getattr(self, "get_logger", None)
+            if get_logger is not None:
+                get_logger().warning("COMMAND_TIMESTAMP_REJECTION " + json.dumps(error.diagnostic, ensure_ascii=False))
 
     def _log_rejection_reports(self, reports: list[dict]) -> None:
         for report in reports:
@@ -2943,6 +2973,8 @@ class CommandRouter(Node):
             ),
             "last_command_age_ms": age_ms,
             "rejected_commands": self.rejected,
+            "expired_commands": getattr(self, "expired_commands", 0),
+            "last_command_timestamp_rejection": getattr(self, "last_command_timestamp_rejection", None),
             "last_rejection_age_ms": last_rejection_age_ms,
             "rejected_commands_by_reason": dict(sorted(
                 self.rejection_tracker.by_reason.items()

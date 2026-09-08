@@ -39,3 +39,5 @@ python3 tools/hardware/v15_31d_demo_session.py --execute --assisted-teach --supp
 故障会话先按原流程完整停止并保存证据，再显示独立的只读故障提示，包含具体原生原因和终态；提示窗口没有重试或机械臂控制功能，不延迟停机。
 
 `93ceda1` 后续会话在启动阶段结束，未进入手动示教：七电机已 HOLD，但启用后约 0.3 秒 J1 速度短暂达到 0.255889°/秒，触发原静止门限，位置误差仅 0.100665°。启动器原来凭单帧静止就进入重力阶梯；现在先要求连续 1 秒满足原静止、HOLD、Router 和 J6 使能条件，原 20 秒等待预算及全部门限保留。原始失败及终态见 [startup_settling_failure.json](../hardware/v15_31e_teach_20260908/startup_settling_failure.json)。
+
+`fab1967` 已完成重力阶梯并进入可交互状态，但静止 HOLD 约 108 秒后，Router 的两次时间戳拒收触发测试程序停机，尚无手动示教事件。原统一错误字符串同时覆盖非法、未来和过期时间戳，日志未保存源时间与接收时间，不能认定该事件一定是旧包过期；见 [static_timing_failure.json](../hardware/v15_31e_teach_20260908/static_timing_failure.json)。后续将明确过期的旧包单独丢弃计数，禁止转发或续租；非法／未来时间戳仍走原拒收处理，并记录精确时间差。原 250 ms 来源时效及 500 ms 命令租约不变。
