@@ -1,0 +1,100 @@
+from types import SimpleNamespace
+import copy
+import v15_31f_gui_hand_guidance as runtime
+
+
+class Widget:
+    def __init__(self, text=""):
+        self.text, self.enabled, self.down = text, True, False
+        self.pressed = self.released = self.clicked = SimpleNamespace(connect=lambda *_: None)
+    def setEnabled(self, value): self.enabled = value
+    def setWordWrap(self, value): pass
+    def setText(self, value): self.text = value
+    def isDown(self): return self.down
+
+
+def test_release_freezes_each_native_target_before_ack_and_return_before_brake(monkeypatch):
+    clock = [100.0]
+    monkeypatch.setattr(runtime, "time", SimpleNamespace(monotonic_ns=lambda: int(clock[0]*1e9)))
+    names = tuple(name for group in runtime.MOTOR_GROUPS for name in group)
+    hardware = {"healthy": True, "source_monotonic_ns": int(clock[0]*1e9),
+        "controller_mode_by_motor": dict.fromkeys(names, "hold"), "per_motor": {name: {} for name in names}}
+    sent, actions = [], []
+    sample = dict(healthy=True, feedback_fresh=True, authority=True, modes=hardware["controller_mode_by_motor"],
+        stationary_hold_ready=True, router_hold_fresh=True, j6_drive_state=1, actual_rad=[0.01]*6)
+    window = SimpleNamespace(node=SimpleNamespace(latest_hardware=hardware,
+        latest_gravity_status={"empirical_validation": {"hand_guidance_authorized": True}}),
+        teach_toolbar=SimpleNamespace(actions=lambda: [], addWidget=lambda *_: None),
+        command_targets=[0.0]*6, targets=[0.0]*6, candidate_targets=[0.0]*6, activation_epoch=5,
+        hardware_mode="hold", action_group_manual_buttons=[], machine=SimpleNamespace(hold=lambda: None),
+        _set_virtual_editable=lambda *_: None, _action_group_health=lambda *_, **__: {},
+        _action_group_hold_ready=lambda *_: True, isActiveWindow=lambda: True)
+    window._authorize_active_joints = lambda *_: setattr(window, "activation_epoch", window.activation_epoch+1)
+    window._publish_command = lambda **kwargs: sent.append((window.hardware_mode, window.activation_epoch,
+        tuple(window.command_targets), copy.deepcopy(getattr(window, "hand_guidance_reference", None)), kwargs))
+    window._emergency_brake = lambda **_: actions.append("brake")
+    runner = SimpleNamespace(state="moving")
+    def return_start(origin):
+        actions.append("return")
+        return SimpleNamespace(runner=runner)
+    demo = runtime.GuidanceDemo(window, lambda: sample, lambda *_: None, lambda *_: None, lambda *_: None,
+        gui=SimpleNamespace(QPushButton=Widget, QLabel=Widget), interactive_teach=True,
+        start_center=return_start, now=lambda: clock[0])
+    demo.interactive_ready, demo.origin, demo.bias, demo.guidance_phase = True, (0.0,)*6, (0.0,)*6, "ready"
+    demo.drag_button.down = True
+    demo.start_guidance()
+    assert demo.guidance_phase == "engaging_guidance" and not sent
+    epoch = demo.guide_epoch
+    clock[0] += .02
+    demo.tick()
+    assert len(sent) == 1 and sent[-1][0] == "teach" and sent[-1][4] == {"guidance_owner": True}
+    def feedback(targets, accepted_epoch, pause=None, mode="hold"):
+        hardware["source_monotonic_ns"] = int(clock[0]*1e9)
+        for index, group in enumerate(runtime.MOTOR_GROUPS):
+            for name in group:
+                hardware["controller_mode_by_motor"][name] = mode
+                hardware["per_motor"][name] = {"accepted_guidance_metadata_status": "OBSERVED",
+                    "accepted_guidance_target_rad": targets[index], "accepted_guidance_activation_epoch": accepted_epoch,
+                    "feedback_source_monotonic_ns": int(clock[0]*1e9), "guidance_paused_reason": pause}
+    clock[0] += .02
+    feedback([0.0]*6, epoch, mode="teach")
+    demo.tick()
+    assert demo.guidance_phase == "guiding"
+    # Last published reference can differ from a domain's last accepted one.
+    window.command_targets = [0.02]*6
+    clock[0] += .02
+    demo.drag_button.down = False
+    demo.release_guidance()
+    assert window.command_targets == [0.02]*6 and window.hand_guidance_reference["freeze_reference"] is True
+    demo.tick()
+    assert demo.guidance_phase == "freezing" and sent[-1][0] == "teach" and not actions
+    clock[0] += .02
+    targets = [0.009, 0.01, 0.011, 0.012, 0.01, 0.011]
+    feedback(targets, epoch, pause="GUI_RELEASE")
+    demo.tick()
+    assert demo.guidance_phase == "hold_barrier" and sent[-1][0] == "hold"
+    assert sent[-1][2] == tuple(targets) and window.activation_epoch > epoch
+    clock[0] += .02
+    demo.tick()  # Paused HOLD is insufficient; the newer ACK must be echoed.
+    assert demo.guidance_phase == "hold_barrier"
+    feedback(targets, window.activation_epoch, mode="hold")
+    clock[0] += .02
+    demo.tick()
+    assert demo.guidance_phase == "ready" and not actions
+    monkeypatch.setattr(runtime, "matched_observation", lambda *_, **__: SimpleNamespace(residual_nm=(0.0,)*6))
+    demo.stop()
+    assert demo.ending and not actions
+    clock[0] += .02
+    demo.tick()
+    clock[0] += .51
+    demo.tick()
+    assert actions == ["return"] and window.hand_guidance_reference is None
+    runner.state = "complete"
+    sample["stationary_hold_ready"] = False
+    clock[0] += .02
+    demo.tick()
+    assert actions == ["return"]
+    sample.update(stationary_hold_ready=True, actual_rad=[0.0]*6)
+    clock[0] += .02
+    demo.tick()
+    assert demo.return_verified and actions == ["return", "brake"]

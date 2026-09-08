@@ -446,7 +446,7 @@ class MotorFeedback:
     receipt_monotonic_ns: int
     # GO workers keep actual wire feed-forward, measured rotor torque, and the
     # signed reducer-side estimate distinct.  J6 publishes explicit None for
-    # all three because POS_VEL supplies no authoritative torque channel.
+    # all three; its separately qualified motor estimate uses its own fields.
     tau_cmd_rotor_nm: Optional[float] = None
     tau_feedback_rotor_nm: Optional[float] = None
     tau_joint_estimated_nm: Optional[float] = None
@@ -459,6 +459,49 @@ class MotorFeedback:
     gravity_feedforward_rotor_nm: Optional[float] = None
     thermal_fault_latched: Optional[bool] = None
     load_limit_no_progress: Optional[bool] = None
+    j6_motor_torque_observation: Optional[dict] = None
+
+
+def parse_j6_motor_torque_observation(item: Mapping, motor: str,
+                                     last_valid_ns: Optional[int], receipt_ns: int) -> Optional[dict]:
+    fields = {"motor_torque_estimated_nm", "joint_motor_torque_estimated_nm",
+              "motor_torque_source_monotonic_ns", "motor_torque_qualification_sha256",
+              "motor_torque_estimate_accuracy_not_physically_calibrated"}
+    if not fields.intersection(item):
+        return None
+    invalid = {"motor_torque_estimated_nm": None, "joint_motor_torque_estimated_nm": None,
+               "motor_torque_source_monotonic_ns": None, "motor_torque_qualification_sha256": None,
+               "motor_torque_estimate_metadata_status": "INVALID",
+               "motor_torque_estimate_accuracy_not_physically_calibrated": True}
+    if motor != "J6" or not fields.issubset(item):
+        return invalid
+    source = item["motor_torque_source_monotonic_ns"]
+    if (type(source) is not int or not 0 < source <= receipt_ns or source != last_valid_ns
+            or not _valid_sha256(item["motor_torque_qualification_sha256"])
+            or item["motor_torque_estimate_accuracy_not_physically_calibrated"] is not True
+            or item.get("protocol_torque_is_external_measurement") is not False):
+        return invalid
+    values = [item.get(key) for key in ("protocol_torque", "motor_torque_estimated_nm", "joint_motor_torque_estimated_nm")]
+    if any(type(value) not in {int, float} or not math.isfinite(value) or abs(value) > 10.0 for value in values):
+        return invalid
+    protocol, native, joint = values
+    if native != protocol or joint != -native:
+        return invalid
+    return {key: item[key] for key in fields} | {"protocol_torque": protocol,
+        "motor_torque_estimate_metadata_status": "OBSERVED"}
+
+
+def motor_torque_snapshot_fields(sample: Optional[MotorFeedback], now_ns: int) -> dict:
+    if sample is None or sample.j6_motor_torque_observation is None:
+        return {}
+    observation = dict(sample.j6_motor_torque_observation)
+    source = observation["motor_torque_source_monotonic_ns"]
+    if observation["motor_torque_estimate_metadata_status"] == "OBSERVED" and (
+            not sample.communication_ok or sample.merror != 0 or type(source) is not int
+            or not 0 <= now_ns - source <= FEEDBACK_SOURCE_MAX_AGE_NS):
+        observation.update(motor_torque_estimated_nm=None, joint_motor_torque_estimated_nm=None,
+                           motor_torque_estimate_metadata_status="STALE")
+    return observation
 
 
 def feedback_sample_is_fresh(
@@ -953,6 +996,7 @@ class MirrorSessionReferenceV1:
                     0.0,
                     (sample.receipt_monotonic_ns - sample.source_monotonic_ns) / 1.0e6,
                 ),
+                **motor_torque_snapshot_fields(sample, now_monotonic_ns),
             }
 
         position = [
@@ -1088,6 +1132,7 @@ class MirrorSessionReferenceV1:
                 "age_ms": age_ms,
                 "source_latency_ms": source_latency_ms,
                 "reference_captured": name in self.references,
+                **motor_torque_snapshot_fields(sample, now_monotonic_ns),
             }
 
         j2_available = "J2A" in self.references and "J2B" in self.references
@@ -1379,6 +1424,8 @@ def parse_feedback_payload(
             gravity_feedforward_rotor_nm=gravity_feedforward_rotor_nm,
             thermal_fault_latched=thermal_fault_latched,
             load_limit_no_progress=load_limit_no_progress,
+            j6_motor_torque_observation=parse_j6_motor_torque_observation(
+                item, motor, last_valid_feedback_ns, receipt_monotonic_ns),
         )
         if not all(math.isfinite(value) for value in (
             feedback.position_rad,
@@ -1509,6 +1556,46 @@ def parse_assisted_teach_exit_hold(payload, samples, modes, gravity) -> dict:
         "assisted_teach_exit_hold_validated": True,
         "assisted_teach_exit_hold_source_monotonic_ns": source_ns,
     }
+
+
+def parse_accepted_guidance_metadata(payload, samples, modes) -> dict:
+    """Optional accepted references are diagnostics, never a reason to drop encoders."""
+    fields = {"accepted_guidance_target_rad", "accepted_guidance_activation_epoch", "guidance_paused_reason"}
+    invalid = {"accepted_guidance_target_rad": None, "accepted_guidance_activation_epoch": None,
+               "guidance_paused_reason": None, "accepted_guidance_metadata_status": "INVALID"}
+    raw = {item["motor"].upper(): item for item in payload.get("samples", ())}
+    result = {}
+    for sample in samples:
+        item = raw.get(sample.motor, {})
+        if not fields.intersection(item):
+            continue
+        observation = dict(invalid)
+        target = item.get("accepted_guidance_target_rad")
+        epoch = item.get("accepted_guidance_activation_epoch")
+        reason = item.get("guidance_paused_reason")
+        try:
+            target_valid = type(target) in (int, float) and math.isfinite(target)
+        except (TypeError, OverflowError):
+            target_valid = False
+        if (target_valid and type(epoch) is int and epoch > 0
+                and reason in (None, "DEADMAN_TIMEOUT", "GUI_RELEASE")
+                and modes[sample.motor] in ("hold", "teach")
+                and (reason is None or modes[sample.motor] == "hold")
+                and sample.communication_ok is True and sample.merror == 0
+                and sample.thermal_fault_latched is not True
+                and sample.load_limit_no_progress is not True
+                and payload["domain_fault"] is False):
+            observation.update(accepted_guidance_target_rad=float(target),
+                               accepted_guidance_activation_epoch=epoch,
+                               guidance_paused_reason=reason,
+                               accepted_guidance_metadata_status="OBSERVED")
+        result[sample.motor] = observation
+    if {"J2A", "J2B"}.intersection(result):
+        a, b = result.get("J2A"), result.get("J2B")
+        if (a is None or b is None or a != b
+                or a["accepted_guidance_metadata_status"] != "OBSERVED"):
+            result.update(J2A=dict(invalid), J2B=dict(invalid))
+    return result
 
 
 def parse_controller_feedback_metadata(
@@ -1803,6 +1890,7 @@ def parse_controller_feedback_metadata(
                 "ASSISTED_TEACH_STOP_ERROR_LIMIT",
                 "ASSISTED_TEACH_STOP_VELOCITY_TIMEOUT",
                 "ASSISTED_TEACH_RESTRICTED_VELOCITY_LIMIT",
+                "HAND_GUIDANCE_ACTUAL_VELOCITY_LIMIT",
                 "ASSISTED_TEACH_LOAD_GOVERNOR_ABORT",
                 "ASSISTED_TEACH_PRESS_TIMEOUT",
                 "ASSISTED_TEACH_EXCURSION_LIMIT",
@@ -2124,6 +2212,7 @@ def parse_controller_feedback_metadata(
     exit_hold = parse_assisted_teach_exit_hold(
         payload, samples, normalized_modes, gravity
     )
+    accepted_guidance = parse_accepted_guidance_metadata(payload, samples, normalized_modes)
     by_motor = {}
     for sample in samples:
         if sample.thermal_fault_latched is not None:
@@ -2170,6 +2259,7 @@ def parse_controller_feedback_metadata(
         )
         by_motor[sample.motor] = {
             **exit_hold,
+            **accepted_guidance.get(sample.motor, {}),
             "source_monotonic_ns": sample.source_monotonic_ns,
             "receipt_monotonic_ns": sample.receipt_monotonic_ns,
             "controller_mode": normalized_modes[sample.motor],

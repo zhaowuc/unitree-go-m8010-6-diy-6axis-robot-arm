@@ -380,6 +380,95 @@ def test_udp_raw_observer_gets_original_packet_without_reingestion(monkeypatch):
     assert node.invalid_payload_count == 2 and published == [packet]
 
 
+def test_accepted_guidance_transport_keeps_encoders_and_pairs_native_reference(monkeypatch):
+    from go_m8010_arm_hardware.state_model import (
+        parse_feedback_payload, parse_controller_feedback_metadata, validate_j6_feedback_identity,
+    )
+
+    module, _ = load_with_ros_stubs([], {"ok": False, "on_spin": lambda: None})
+    monkeypatch.setattr(module, "parse_feedback_payload", parse_feedback_payload)
+    monkeypatch.setattr(module, "parse_controller_feedback_metadata", parse_controller_feedback_metadata)
+    monkeypatch.setattr(module, "validate_j6_feedback_identity", validate_j6_feedback_identity)
+    accepted = []
+    node = _bare_state_node(module, model=SimpleNamespace(update_batch=lambda batch: accepted.extend(batch)))
+    node.state_instance_id = "8" * 32
+    ns = 5_000_000_000
+
+    def payload(names=("J2A", "J2B"), mode="hold"):
+        return {
+            "schema": "go-m8010-motor-feedback/1.0", "source_monotonic_ns": ns,
+            "source_instance_id": "9" * 32, "sequence": 1,
+            "session_id": node.session_id, "state_instance_id": node.state_instance_id,
+            "controller_mode": mode, "controller_mode_by_motor": {name: mode for name in names},
+            "domain_fault": False, "j2_sync_fault": False,
+            "tau_j2_logical_total_nm": 0.0 if "J2A" in names else None,
+            "samples": [{"motor": name, "position_rad": 0.1, "velocity_rad_s": 0.0,
+                "temperature_c": 25.0, "communication_ok": True, "merror": 0,
+                "last_valid_feedback_monotonic_ns": ns,
+                "tau_cmd_rotor_nm": None if name == "J6" else 0.0,
+                "tau_feedback_rotor_nm": None if name == "J6" else 0.0,
+                "tau_joint_estimated_nm": None if name == "J6" else 0.0,
+                "accepted_guidance_target_rad": 0.2, "accepted_guidance_activation_epoch": 123,
+            } for name in names],
+        }
+
+    def send(value):
+        assert node.accept_payload(json.dumps(value), ns + 1)
+        assert node.invalid_payload_count == 0
+        assert all(sample.position_rad == 0.1 for sample in accepted)
+        return {name: module.controller_metadata_for_hardware_state(
+            node.controller_feedback[name], {
+                "fresh": True, "feedback_source_monotonic_ns": ns,
+                "feedback_receipt_monotonic_ns": ns + 1, "temperature_c": 25.0,
+                "communication_ok": True, "merror": 0,
+            }, TEST_THERMAL_LIMITS) for name in value["controller_mode_by_motor"]}
+
+    for names in (("J2A", "J2B"), ("J1",), ("J6",)):
+        value = payload(names, mode="teach")
+        observed = send(value)
+        for name in names:
+            assert observed[name]["accepted_guidance_metadata_status"] == "OBSERVED"
+            assert observed[name]["accepted_guidance_target_rad"] == 0.2
+            assert observed[name]["accepted_guidance_activation_epoch"] == 123
+            assert observed[name]["guidance_paused_reason"] is None
+        ns += 10_000_000
+    value = payload()
+    for sample in value["samples"]:
+        sample["guidance_paused_reason"] = "DEADMAN_TIMEOUT"
+    observed = send(value)
+    assert observed["J2A"]["guidance_paused_reason"] == "DEADMAN_TIMEOUT"
+    for sample in value["samples"]:
+        sample["guidance_paused_reason"] = "GUI_RELEASE"
+    observed = send(value)
+    assert all(row["guidance_paused_reason"] == "GUI_RELEASE"
+               and row["accepted_guidance_metadata_status"] == "OBSERVED"
+               and row["domain_fault"] is False for row in observed.values())
+    stale = module.controller_metadata_for_hardware_state(node.controller_feedback["J2A"],
+        {"fresh": False}, TEST_THERMAL_LIMITS)
+    assert stale["accepted_guidance_metadata_status"] == "STALE"
+    assert stale["accepted_guidance_target_rad"] == 0.2
+    assert stale["accepted_guidance_activation_epoch"] == 123
+    for field, invalid in (("accepted_guidance_target_rad", float("nan")),
+                           ("accepted_guidance_target_rad", True),
+                           ("accepted_guidance_target_rad", 0.21),
+                           ("accepted_guidance_activation_epoch", False),
+                           ("accepted_guidance_activation_epoch", 124),
+                           ("guidance_paused_reason", "UNKNOWN")):
+        value = payload()
+        value["samples"][0][field] = invalid
+        observed = send(value)
+        assert all(row["accepted_guidance_metadata_status"] == "INVALID" for row in observed.values())
+    value = payload()
+    value["samples"][0].pop("accepted_guidance_activation_epoch")
+    assert send(value)["J2A"]["accepted_guidance_metadata_status"] == "INVALID"
+    assert send(payload(mode="brake"))["J2A"]["accepted_guidance_metadata_status"] == "INVALID"
+    value = payload()
+    for sample in value["samples"]:
+        sample.pop("accepted_guidance_target_rad")
+        sample.pop("accepted_guidance_activation_epoch")
+    assert all("accepted_guidance_metadata_status" not in row for row in send(value).values())
+
+
 def test_stale_or_unpaired_controller_metadata_is_explicitly_unknown():
     module, _no_signal_handlers = load_with_ros_stubs([], {
         "ok": False, "on_spin": lambda: None,

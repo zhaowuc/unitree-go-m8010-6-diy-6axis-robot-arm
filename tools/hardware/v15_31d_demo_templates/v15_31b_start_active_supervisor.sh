@@ -48,6 +48,16 @@ export FASTDDS_DEFAULT_PROFILES_FILE="$scripts/fastdds_udp_only.xml"
 export PYTHONNOUSERSITE=1 XDG_RUNTIME_DIR=/run/user/$(id -u)
 export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus
 export DISPLAY=:0 WAYLAND_DISPLAY=wayland-0 QT_QPA_PLATFORM=wayland
+if [[ -f "$scripts/hand_guidance_settings.json" ]]; then
+  readarray -t torque_values < <("$py" - "$scripts/hand_guidance_settings.json" <<'PY'
+import json,sys
+v=json.load(open(sys.argv[1]));print(v['j6_torque_readback']);print(v['j6_torque_readback_sha256'])
+PY
+  )
+  export J6_OBSERVE_PROTOCOL_TORQUE=1
+  export J6_PROTOCOL_TORQUE_READBACK_FILE="${torque_values[0]}"
+  export J6_PROTOCOL_TORQUE_READBACK_SHA256="${torque_values[1]}"
+fi
 if [[ -z "${XAUTHORITY:-}" ]]; then
   for candidate in "$XDG_RUNTIME_DIR"/.mutter-Xwaylandauth.*; do
     if [[ -f "$candidate" ]]; then export XAUTHORITY="$candidate"; break; fi

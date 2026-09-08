@@ -2580,6 +2580,9 @@ class ArmGuiNode(Node):
             self.active_hardware_state_instance_id = source
             self.active_hardware_source_received_ns = now_ns
             self.latest_hardware = value
+            history = getattr(self, "guidance_hardware_history", None)
+            if history is not None:
+                history.append(value)
             self.last_hardware_receipt = time.monotonic()
         except json.JSONDecodeError:
             pass
@@ -2679,6 +2682,7 @@ class ArmGuiNode(Node):
         collision_guard_proof: Optional[dict] = None,
         trajectory_descriptor: Optional[dict] = None,
         plan_manifest: Optional[dict] = None,
+        *, hand_guidance: Optional[dict] = None, command_source_monotonic_ns: Optional[int] = None,
     ) -> None:
         control = config["控制"]
         is_brake = mode == "brake"
@@ -2703,7 +2707,19 @@ class ArmGuiNode(Node):
                 for i in range(6)
             ],
         }
-        if mode == "teach":
+        if hand_guidance is not None and mode not in {"brake", "drag"}:
+            from .command_router import _validated_hand_guidance
+            if mode not in {"hold", "teach"} or active_joint_mask != [True] * 6:
+                raise ValueError("手导参考只能用于六轴激活的手导或退出保持")
+            payload["hand_guidance"] = _validated_hand_guidance(
+                hand_guidance, command_targets, moving_joint_mask, mode)
+            payload["schema"] = "go-m8010-gui-command/1.5"
+            payload["maximum_velocity_rad_s"] = 30.0 * RAD
+            if command_source_monotonic_ns is not None:
+                if type(command_source_monotonic_ns) is not int or not 0 < command_source_monotonic_ns <= time.monotonic_ns():
+                    raise ValueError("手导参考生成时间无效")
+                payload["source_monotonic_ns"] = command_source_monotonic_ns
+        elif mode == "teach":
             if (active_joint_mask != [True] * 6 or len(moving_joint_mask) != 6
                     or sum(moving_joint_mask) != 1 or moving_joint_mask[5]):
                 raise ValueError("辅助示教必须保持全轴激活且只选择J1–J5之一")
@@ -6991,7 +7007,7 @@ class MainWindow(QMainWindow):
             self.candidate_targets = list(self.actual)
             self._show_targets_on_virtual()
 
-    def _publish_command(self) -> bool:
+    def _publish_command(self, *, guidance_owner: bool = False) -> bool:
         active_joint_mask = effective_active_joint_mask(
             self.requested_active_joint_mask, self.connected, self.hardware_mode
         )
@@ -7015,6 +7031,12 @@ class MainWindow(QMainWindow):
             self.node.target_publisher.publish(
                 Float64MultiArray(data=self.targets)
             )
+            return False
+        if (self.hardware_mode in {"hold", "teach"}
+                and getattr(self, "hand_guidance_reference", None) is not None and not guidance_owner):
+            # The admittance tick alone publishes its generated reference.
+            # Interleaving GUI heartbeats would change the reference-step dt.
+            self.node.target_publisher.publish(Float64MultiArray(data=self.targets))
             return False
         if (
             self.hardware_mode == "position"
@@ -7058,6 +7080,9 @@ class MainWindow(QMainWindow):
             self.active_collision_proof,
             self.active_trajectory_descriptor,
             self.active_plan_manifest,
+            **({"hand_guidance": self.hand_guidance_reference,
+                "command_source_monotonic_ns": self.hand_guidance_source_monotonic_ns}
+               if getattr(self, "hand_guidance_reference", None) is not None else {}),
         )
         if self.hardware_mode == "position":
             self.active_trajectory_first_publish_pending = False

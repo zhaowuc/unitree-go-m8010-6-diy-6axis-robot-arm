@@ -21,6 +21,7 @@ from typing import Mapping, Optional
 
 ENVELOPE_SCHEMA = "go-m8010-empirical-validation-envelope/1.0"
 CONFIRMATION_SCHEMA = "go-m8010-empirical-stage-confirmation/1.0"
+HAND_GUIDANCE_CONFIRMATION_SCHEMA = "go-m8010-empirical-stage-confirmation/1.1"
 AUTHORITY_CLASS = "EMPIRICAL_VALIDATION_ENVELOPE"
 RATING_CLASSIFICATION = "NOT_OFFICIAL_CONTINUOUS_RATING"
 PURPOSE = "V15.31B_STAGED_POWERED_GRAVITY_VALIDATION_ONLY"
@@ -57,6 +58,10 @@ ASSISTED_TEACH_JOINTS = ("J1", "J2", "J3", "J4", "J5")
 MAXIMUM_TEACH_EXCURSION_DEG = 5.0
 MAXIMUM_TEACH_SECONDS = 30.0
 MAXIMUM_TEACH_VELOCITY_DEG_S = 5.0
+HAND_GUIDANCE_JOINTS = (*ASSISTED_TEACH_JOINTS, "J6")
+MAXIMUM_HAND_GUIDANCE_EXCURSION_DEG = 10.0
+MAXIMUM_HAND_GUIDANCE_SECONDS = 600.0
+MAXIMUM_HAND_GUIDANCE_VELOCITY_DEG_S = 30.0
 TEACH_STOPPING_HOLD_NS = 1_000_000_000
 TEACH_STOPPING_ERROR_RAD = math.radians(2.0)
 MAXIMUM_SCHEDULER_TRANSITION_SLACK_SECONDS = 1.0
@@ -181,6 +186,7 @@ class EmpiricalValidationEnvelope:
     loaded_monotonic_ns: int
     monotonic_deadline_ns: int
     assisted_teach_enabled: bool = False
+    hand_guidance_enabled: bool = False
 
     @classmethod
     def from_path(
@@ -211,6 +217,8 @@ class EmpiricalValidationEnvelope:
             "RATING_CLASSIFICATION_INVALID",
         )
         _require(value.get("purpose") == PURPOSE, "ENVELOPE_PURPOSE_INVALID")
+        hand_guidance_enabled = "hand_guidance" in value
+        _require(not (hand_guidance_enabled and "assisted_teach" in value), "HAND_GUIDANCE_ASSISTED_TEACH_MUTUALLY_EXCLUSIVE")
         _require(value.get("single_use") is True, "ENVELOPE_MUST_BE_SINGLE_USE")
         envelope_id = value.get("envelope_id")
         _require(
@@ -314,7 +322,9 @@ class EmpiricalValidationEnvelope:
             _require(stage.get("hold_seconds") == hold, f"STAGE_{index}_HOLD_INVALID")
             _require(stage.get("entry_requires_previous_stage_pass") is (index > 0), f"STAGE_{index}_PREVIOUS_GATE_INVALID")
             _require(stage.get("operator_stop_reconfirmation_required") is (index > 0), f"STAGE_{index}_STOP_GATE_INVALID")
-            _require(stage.get("support_reconfirmation_required") is (index > 0), f"STAGE_{index}_SUPPORT_GATE_INVALID")
+            _require(stage.get("support_reconfirmation_required") is (index > 0 and not hand_guidance_enabled), f"STAGE_{index}_SUPPORT_GATE_INVALID")
+            if hand_guidance_enabled:
+                _require(stage.get("position_hold_reconfirmation_required") is (index > 0), f"STAGE_{index}_POSITION_HOLD_GATE_INVALID")
         maximum_total = _finite(
             staged.get("maximum_total_active_seconds"),
             "MAXIMUM_TOTAL_ACTIVE_SECONDS",
@@ -470,6 +480,40 @@ class EmpiricalValidationEnvelope:
                 _require(_finite(teach[field], "ASSISTED_TEACH_" + field.upper()) == expected,
                          "ASSISTED_TEACH_BOUNDS_INVALID")
 
+        if hand_guidance_enabled:
+            guidance = _exact_mapping(value["hand_guidance"], {
+                "schema", "enabled", "allowed_joints", "maximum_selected_joints",
+                "maximum_excursion_from_press_deg", "maximum_press_seconds",
+                "maximum_velocity_deg_s", "reference_lead_deg", "control_semantics",
+                "unlock_requires_completed_gravity_ladder", "allowed_after_scale",
+                "nonselected_joints_fixed_hold_required", "continuous_operation_authorized",
+                "final_confirmation_policy", "normal_exit_action", "time_limit_action",
+                "drive_release_requires",
+            }, "HAND_GUIDANCE")
+            _require(
+                guidance["schema"] == "go-m8010-hand-guidance-envelope/1.0"
+                and guidance["enabled"] is True
+                and guidance["allowed_joints"] == list(HAND_GUIDANCE_JOINTS)
+                and type(guidance["maximum_selected_joints"]) is int
+                and guidance["maximum_selected_joints"] == 6
+                and guidance["control_semantics"] == "POSITION_OUTER_ADMITTANCE"
+                and guidance["unlock_requires_completed_gravity_ladder"] is True
+                and guidance["nonselected_joints_fixed_hold_required"] is True
+                and guidance["continuous_operation_authorized"] is False
+                and guidance["final_confirmation_policy"] == "ONCE_AFTER_LADDER_THEN_LIVE_GATES_FOR_MANUAL_SESSION"
+                and guidance["normal_exit_action"] == "KEEP_POSITION_HOLD"
+                and guidance["time_limit_action"] == "KEEP_POSITION_HOLD"
+                and guidance["drive_release_requires"] == "VERIFIED_VERTICAL_POSE",
+                "HAND_GUIDANCE_SCOPE_INVALID",
+            )
+            for field, expected in (
+                ("maximum_excursion_from_press_deg", MAXIMUM_HAND_GUIDANCE_EXCURSION_DEG),
+                ("maximum_press_seconds", MAXIMUM_HAND_GUIDANCE_SECONDS),
+                ("maximum_velocity_deg_s", MAXIMUM_HAND_GUIDANCE_VELOCITY_DEG_S),
+                ("reference_lead_deg", 2.0), ("allowed_after_scale", 1.0),
+            ):
+                _require(_finite(guidance[field], "HAND_GUIDANCE_" + field.upper()) == expected, "HAND_GUIDANCE_BOUNDS_INVALID")
+
         live = value.get("live_gates")
         _require(isinstance(live, Mapping), "LIVE_GATES_MISSING")
         feedback = live.get("feedback")
@@ -488,7 +532,12 @@ class EmpiricalValidationEnvelope:
         _require(isinstance(sync, Mapping) and _finite(sync.get("warning_above_deg"), "J2_SYNC_WARNING") == J2_SYNC_WARNING_DEG and _finite(sync.get("hard_above_deg"), "J2_SYNC_HARD") == J2_SYNC_HARD_DEG, "J2_SYNC_GATE_INVALID")
         _require(isinstance(no_progress, Mapping) and no_progress.get("worker_watchdog_required") is True, "NO_PROGRESS_GATE_INVALID")
         _require(isinstance(operator, Mapping) and operator.get("required_before_each_nonzero_stage") is True and _finite(operator.get("confirmation_maximum_age_seconds"), "CONFIRMATION_MAX_AGE") == 30.0 and operator.get("must_remain_available") is True, "OPERATOR_STOP_GATE_INVALID")
-        _require(isinstance(support, Mapping) and support.get("j2_j3_reliable_support_required") is True and support.get("reconfirmation_required_before_each_nonzero_stage") is True, "PHYSICAL_SUPPORT_GATE_INVALID")
+        if hand_guidance_enabled:
+            support = _exact_mapping(support, {"base_fixed", "external_arm_support", "established_position_hold_required"}, "HAND_GUIDANCE_PHYSICAL_SUPPORT")
+            _require(support["base_fixed"] is True and support["external_arm_support"] is False
+                     and support["established_position_hold_required"] is True, "HAND_GUIDANCE_PHYSICAL_SUPPORT_INVALID")
+        else:
+            _require(isinstance(support, Mapping) and support.get("j2_j3_reliable_support_required") is True and support.get("reconfirmation_required_before_each_nonzero_stage") is True, "PHYSICAL_SUPPORT_GATE_INVALID")
 
         failure = value.get("failure_policy")
         runtime = value.get("runtime_consumption")
@@ -534,6 +583,7 @@ class EmpiricalValidationEnvelope:
             loaded_monotonic_ns=loaded_monotonic_ns,
             monotonic_deadline_ns=loaded_monotonic_ns + remaining_ns,
             assisted_teach_enabled=assisted_teach_enabled,
+            hand_guidance_enabled=hand_guidance_enabled,
         )
 
     def claim_single_use(self, claim_directory: Path) -> Path:
@@ -610,8 +660,12 @@ def validate_stage_confirmation(
         "target_gravity_scale", "operator_stop_ready",
         "j2_j3_support_reliable", "clearance_confirmed", "no_person_contact",
     }
+    hand_guidance = getattr(envelope, "hand_guidance_enabled", False)
+    if hand_guidance:
+        required.remove("j2_j3_support_reliable")
+        required.update({"base_fixed", "external_arm_support", "established_position_hold"})
     mapping = _exact_mapping(value, required, "STAGE_CONFIRMATION")
-    _require(mapping.get("schema") == CONFIRMATION_SCHEMA, "STAGE_CONFIRMATION_SCHEMA")
+    _require(mapping.get("schema") == (HAND_GUIDANCE_CONFIRMATION_SCHEMA if hand_guidance else CONFIRMATION_SCHEMA), "STAGE_CONFIRMATION_SCHEMA")
     source = mapping.get("source_instance_id")
     _require(isinstance(source, str) and len(source) == 32 and all(c in "0123456789abcdef" for c in source), "STAGE_CONFIRMATION_SOURCE")
     sequence = mapping.get("sequence")
@@ -621,11 +675,15 @@ def validate_stage_confirmation(
     _require(mapping.get("envelope_id") == envelope.envelope_id and mapping.get("envelope_sha256") == envelope.sha256, "STAGE_CONFIRMATION_ENVELOPE_MISMATCH")
     _require(mapping.get("session_id") == envelope.session_id and mapping.get("state_instance_id") == envelope.state_instance_id, "STAGE_CONFIRMATION_SESSION_MISMATCH")
     _require(_finite(mapping.get("target_gravity_scale"), "STAGE_CONFIRMATION_TARGET") == target_scale, "STAGE_CONFIRMATION_TARGET_MISMATCH")
-    for field in (
-        "operator_stop_ready", "j2_j3_support_reliable",
-        "clearance_confirmed", "no_person_contact",
-    ):
+    for field in ("operator_stop_ready", "clearance_confirmed", "no_person_contact"):
         _require(mapping.get(field) is True, f"STAGE_CONFIRMATION_{field.upper()}_FALSE")
+    if hand_guidance:
+        _require(mapping["base_fixed"] is True and mapping["external_arm_support"] is False
+                 and (mapping["established_position_hold"] is True or
+                      (target_scale == 0.0 and mapping["established_position_hold"] is False)),
+                 "STAGE_CONFIRMATION_POSITION_HOLD_INVALID")
+    else:
+        _require(mapping["j2_j3_support_reliable"] is True, "STAGE_CONFIRMATION_J2_J3_SUPPORT_RELIABLE_FALSE")
     return source, sequence, source_ns
 
 
@@ -673,6 +731,7 @@ def live_hardware_blocker(
     require_current_position_hold: bool,
     require_entry_temperature: bool = False,
     allow_assisted_teach: bool = False,
+    allow_hand_guidance: bool = False,
 ) -> tuple[str, Optional[dict[str, float]]]:
     if not isinstance(hardware_state, Mapping):
         return "EMPIRICAL_HARDWARE_STATE_MISSING", None
@@ -691,8 +750,9 @@ def live_hardware_blocker(
     velocities = hardware_state.get("velocity_rad_s")
     if hardware_state.get("assisted_teach_exit_hold_validated") is False:
         return "EMPIRICAL_ASSISTED_TEACH_EXIT_PROOF_INVALID", None
-    stopping_joint = assisted_teach_stopping_joint(hardware_state, now_monotonic_ns) if allow_assisted_teach else None
-    if not isinstance(velocities, list) or len(velocities) != 6 or any(type(v) not in {int, float} or not math.isfinite(float(v)) or (index != stopping_joint and abs(float(v)) > MAXIMUM_HOLD_VELOCITY_RAD_S) for index, v in enumerate(velocities)):
+    stopping_joint = assisted_teach_stopping_joint(hardware_state, now_monotonic_ns) if allow_assisted_teach and not allow_hand_guidance else None
+    maximum_velocity = math.radians(MAXIMUM_HAND_GUIDANCE_VELOCITY_DEG_S) if allow_hand_guidance else MAXIMUM_HOLD_VELOCITY_RAD_S
+    if not isinstance(velocities, list) or len(velocities) != 6 or any(type(v) not in {int, float} or not math.isfinite(float(v)) or (index != stopping_joint and abs(float(v)) > maximum_velocity) for index, v in enumerate(velocities)):
         return "EMPIRICAL_ABNORMAL_VELOCITY", None
     per_motor = hardware_state.get("per_motor")
     if not isinstance(per_motor, Mapping) or set(per_motor) != set(MOTOR_NAMES):
@@ -726,7 +786,8 @@ def live_hardware_blocker(
         taught = {name for name in MOTOR_NAMES if modes[name] == "teach"}
         if taught:
             allowed_domains = ({"J1"}, {"J2A", "J2B"}, {"J3"}, {"J4"}, {"J5"})
-            if (not allow_assisted_teach or taught not in allowed_domains
+            scope_allowed = (("J2A" in taught) == ("J2B" in taught)) if allow_hand_guidance else allow_assisted_teach and taught in allowed_domains
+            if (not scope_allowed
                     or any(modes[name] != "hold" for name in set(MOTOR_NAMES) - taught)):
                 return "EMPIRICAL_ASSISTED_TEACH_MODE_SCOPE_INVALID", None
         elif any(modes[name] not in {"hold", "position"} for name in MOTOR_NAMES):
@@ -853,7 +914,18 @@ class EmpiricalStageGate:
                 and self.last_position_confirmation_ns is not None
                 and 0 <= now_monotonic_ns - self.last_position_confirmation_ns
             ),
+            allow_hand_guidance=bool(
+                self.envelope.hand_guidance_enabled
+                and self.stage_index == len(LEVELS) - 1 and self.stage_complete
+                and self.phase == "POSITION_VALIDATION"
+                and self.last_position_confirmation_ns is not None
+                and 0 <= now_monotonic_ns - self.last_position_confirmation_ns
+            ),
         )
+        if (not live_blocker and self.envelope.hand_guidance_enabled
+                and self.stage_index > 0 and self.phase != "POSITION_VALIDATION"
+                and any(mode != "hold" for mode in hardware_state["controller_mode_by_motor"].values())):
+            live_blocker = "EMPIRICAL_CURRENT_POSITION_HOLD_NOT_CONFIRMED"
         if live_blocker:
             # Before the first current-position HOLD, stage zero is merely a
             # pending zero-output gate.  Once that HOLD spends the envelope's
@@ -908,7 +980,7 @@ class EmpiricalStageGate:
             if (
                 self.last_position_confirmation_ns is not None
                 and 0 <= now_monotonic_ns - self.last_position_confirmation_ns
-                and (self.envelope.assisted_teach_enabled or
+                and (self.envelope.assisted_teach_enabled or self.envelope.hand_guidance_enabled or
                      now_monotonic_ns - self.last_position_confirmation_ns
                      <= MAXIMUM_CONFIRMATION_AGE_NS)
             ):
@@ -930,6 +1002,11 @@ class EmpiricalStageGate:
         self.blocker = blocker or "EMPIRICAL_ENVELOPE_INVALIDATED"
 
     def status(self) -> dict:
+        guidance = self.envelope.hand_guidance_enabled
+        teach_enabled = self.envelope.assisted_teach_enabled or guidance
+        teach_authorized = bool(teach_enabled and self.phase == "POSITION_VALIDATION"
+            and self.stage_index == len(LEVELS) - 1 and self.stage_complete
+            and not self.invalidated and not self.blocker)
         return {
             "authority_class": AUTHORITY_CLASS,
             "rating_classification": RATING_CLASSIFICATION,
@@ -944,16 +1021,12 @@ class EmpiricalStageGate:
             "position_validation_authorized": (
                 self.phase == "POSITION_VALIDATION" and not self.invalidated
             ),
-            "assisted_teach_authorized": bool(
-                self.envelope.assisted_teach_enabled
-                and self.phase == "POSITION_VALIDATION"
-                and self.stage_index == len(LEVELS) - 1 and self.stage_complete
-                and not self.invalidated and not self.blocker
-            ),
-            "maximum_teach_excursion_deg": MAXIMUM_TEACH_EXCURSION_DEG if self.envelope.assisted_teach_enabled else None,
-            "maximum_teach_seconds": MAXIMUM_TEACH_SECONDS if self.envelope.assisted_teach_enabled else None,
-            "maximum_teach_velocity_deg_s": MAXIMUM_TEACH_VELOCITY_DEG_S if self.envelope.assisted_teach_enabled else None,
-            "allowed_teach_joints": list(ASSISTED_TEACH_JOINTS) if self.envelope.assisted_teach_enabled else [],
+            "assisted_teach_authorized": teach_authorized,
+            "hand_guidance_authorized": guidance and teach_authorized,
+            "maximum_teach_excursion_deg": MAXIMUM_HAND_GUIDANCE_EXCURSION_DEG if guidance else MAXIMUM_TEACH_EXCURSION_DEG if teach_enabled else None,
+            "maximum_teach_seconds": MAXIMUM_HAND_GUIDANCE_SECONDS if guidance else MAXIMUM_TEACH_SECONDS if teach_enabled else None,
+            "maximum_teach_velocity_deg_s": MAXIMUM_HAND_GUIDANCE_VELOCITY_DEG_S if guidance else MAXIMUM_TEACH_VELOCITY_DEG_S if teach_enabled else None,
+            "allowed_teach_joints": list(HAND_GUIDANCE_JOINTS if guidance else ASSISTED_TEACH_JOINTS) if teach_enabled else [],
             "maximum_position_segment_seconds": (
                 self.envelope.maximum_position_segment_seconds
             ),

@@ -23,6 +23,7 @@ ALLOWED_MODES = {"brake", "drag", "hold", "position", "teach"}
 GUI_COMMAND_SCHEMA_V12 = "go-m8010-gui-command/1.2"
 GUI_COMMAND_SCHEMA_V13 = "go-m8010-gui-command/1.3"
 GUI_COMMAND_SCHEMA_V14 = "go-m8010-gui-command/1.4"
+GUI_COMMAND_SCHEMA_V15 = "go-m8010-gui-command/1.5"
 QUINTIC_COMMAND_SCHEMA = "go-m8010-quintic-command/1.0"
 QUINTIC_PROFILE = "quintic-rest-to-rest-v1"
 PLAN_MANIFEST_SCHEMA = "go-m8010-plan-manifest/1.0"
@@ -1936,17 +1937,20 @@ class GravityAuthorityGate:
             )
         ):
             raise ValueError("重力authority不存在或已过期")
-        if command.get("mode") == "teach":
+        if command.get("mode") == "teach" or command.get("schema") == GUI_COMMAND_SCHEMA_V15:
+            guided = command.get("schema") == GUI_COMMAND_SCHEMA_V15
+            allowed = ["J1", "J2", "J3", "J4", "J5", "J6"] if guided else ["J1", "J2", "J3", "J4", "J5"]
+            excursion, duration, velocity = (10.0, 600.0, 30.0) if guided else (5.0, 30.0, 5.0)
             if (latest.get("authority_kind") != EMPIRICAL_AUTHORITY_CLASS
                     or latest.get("empirical_assisted_teach_authorized") is not True
                     or latest.get("empirical_position_validation_authorized") is not True
                     or latest.get("empirical_stage_index") != 4
                     or latest.get("gravity_scale") != 1.0 or latest.get("gravity_scale_target") != 1.0
-                    or latest.get("empirical_allowed_teach_joints") != ["J1", "J2", "J3", "J4", "J5"]
+                    or latest.get("empirical_allowed_teach_joints") != allowed
                     or any(type(latest.get(name)) not in {int, float} or latest[name] != bound
-                           for name, bound in (("empirical_maximum_teach_excursion_deg", 5.0),
-                                               ("empirical_maximum_teach_seconds", 30.0),
-                                               ("empirical_maximum_teach_velocity_deg_s", 5.0)))):
+                           for name, bound in (("empirical_maximum_teach_excursion_deg", excursion),
+                                               ("empirical_maximum_teach_seconds", duration),
+                                               ("empirical_maximum_teach_velocity_deg_s", velocity)))):
                 raise ValueError("当前会话未授权有界单轴辅助示教")
         binding_key = (
             command.get("source_instance_id"),
@@ -2354,6 +2358,31 @@ class RejectionTracker:
         }
 
 
+def _validated_hand_guidance(value, targets, moving, mode):
+    fields = {"schema", "origin_rad", "velocity_rad_s", "maximum_velocity_deg_s", "freeze_reference",
+              "maximum_excursion_deg", "maximum_reference_error_deg"}
+    if not isinstance(value, dict) or set(value) != fields or value.get("schema") != "go-m8010-hand-guidance-reference/1.0":
+        raise ValueError("手导参考合同无效")
+    for field, expected in (("maximum_velocity_deg_s", 30.0), ("maximum_excursion_deg", 10.0),
+                            ("maximum_reference_error_deg", 2.0)):
+        if type(value[field]) not in (int, float) or value[field] != expected:
+            raise ValueError("手导参考范围无效")
+    for field in ("origin_rad", "velocity_rad_s"):
+        if (not isinstance(value[field], list) or len(value[field]) != 6
+                or any(type(x) not in (int, float) or not math.isfinite(x) for x in value[field])):
+            raise ValueError("手导参考向量无效")
+    if type(value["freeze_reference"]) is not bool or (value["freeze_reference"] and any(value["velocity_rad_s"])):
+        raise ValueError("手导冻结标记或速度无效")
+    for index, (origin, velocity, target) in enumerate(zip(value["origin_rad"], value["velocity_rad_s"], targets)):
+        if (not MODEL_COMMAND_LOWER_RAD[index] <= origin <= MODEL_COMMAND_UPPER_RAD[index]
+                or abs(target - origin) > math.radians(10.0) + 1e-12
+                or abs(velocity) > math.radians(30.0) + 1e-12
+                or (mode == "hold" and velocity != 0.0)
+                or (mode == "teach" and not moving[index] and (target != origin or velocity != 0.0))):
+            raise ValueError("手导参考越界")
+    return deepcopy(value)
+
+
 def validate_command(
     text: str,
     now_ns: Optional[int] = None,
@@ -2373,14 +2402,18 @@ def validate_command(
         GUI_COMMAND_SCHEMA_V12,
         GUI_COMMAND_SCHEMA_V13,
         GUI_COMMAND_SCHEMA_V14,
+        GUI_COMMAND_SCHEMA_V15,
     }:
         raise ValueError("命令格式不匹配")
     mode = value.get("mode")
     if mode not in ALLOWED_MODES:
         raise ValueError("控制模式不允许")
-    if mode != "brake" and (mode == "teach") != (schema == GUI_COMMAND_SCHEMA_V14):
+    guided = schema == GUI_COMMAND_SCHEMA_V15 and mode != "brake"
+    if guided and mode not in {"teach", "hold"}:
+        raise ValueError("1.5协议仅用于有界手导及退出保持")
+    if not guided and mode != "brake" and (mode == "teach") != (schema == GUI_COMMAND_SCHEMA_V14):
         raise ValueError("1.4协议仅用于单轴辅助示教")
-    if schema not in {GUI_COMMAND_SCHEMA_V12, GUI_COMMAND_SCHEMA_V13, GUI_COMMAND_SCHEMA_V14} and mode != "brake":
+    if schema not in {GUI_COMMAND_SCHEMA_V12, GUI_COMMAND_SCHEMA_V13, GUI_COMMAND_SCHEMA_V14, GUI_COMMAND_SCHEMA_V15} and mode != "brake":
         raise ValueError("旧版协议仅允许制动")
     if (
         schema == GUI_COMMAND_SCHEMA_V12
@@ -2446,10 +2479,12 @@ def validate_command(
             raise ValueError("位置运动必须激活全部六个关节")
         if mode == "position" and sum(moving_joint_mask) != 1:
             raise ValueError("位置运动必须且只能选择一个移动关节")
-        if mode == "teach" and (active_joint_mask != [True] * 6 or sum(moving_joint_mask) != 1
+        if guided and (active_joint_mask != [True] * 6 or (mode == "teach" and not any(moving_joint_mask))):
+            raise ValueError("手导必须保持六轴激活并选择至少一轴")
+        if mode == "teach" and not guided and (active_joint_mask != [True] * 6 or sum(moving_joint_mask) != 1
                                 or moving_joint_mask[5]):
             raise ValueError("辅助示教仅允许J1–J5一个选轴，其他关节必须保持激活")
-        if mode == "teach" and any(field in value for field in
+        if (mode == "teach" or guided) and any(field in value for field in
                                     ("collision_guard_proof", "trajectory", "plan_token_id", "plan_manifest")):
             raise ValueError("辅助示教不得携带POSITION轨迹授权")
         # POSITION 与 HOLD 共用当前竖直会话锚点下的冻结 3D
@@ -2515,14 +2550,14 @@ def validate_command(
     else:
         activation_epoch = value.get("activation_epoch", 0)
         if (
-            schema in {GUI_COMMAND_SCHEMA_V12, GUI_COMMAND_SCHEMA_V13, GUI_COMMAND_SCHEMA_V14}
+            schema in {GUI_COMMAND_SCHEMA_V12, GUI_COMMAND_SCHEMA_V13, GUI_COMMAND_SCHEMA_V14, GUI_COMMAND_SCHEMA_V15}
             and (
                 type(activation_epoch) is not int
                 or not 0 <= activation_epoch <= (1 << 63) - 1
             )
         ):
             raise ValueError("激活纪元必须是非负整数")
-        if schema not in {GUI_COMMAND_SCHEMA_V12, GUI_COMMAND_SCHEMA_V13, GUI_COMMAND_SCHEMA_V14}:
+        if schema not in {GUI_COMMAND_SCHEMA_V12, GUI_COMMAND_SCHEMA_V13, GUI_COMMAND_SCHEMA_V14, GUI_COMMAND_SCHEMA_V15}:
             activation_epoch = 0
         if any(active_joint_mask) and activation_epoch == 0:
             raise ValueError("主动命令的激活纪元必须大于零")
@@ -2542,7 +2577,10 @@ def validate_command(
         if (not math.isfinite(maximum_velocity) or maximum_velocity <= 0.0 or
                 not math.isfinite(maximum_acceleration) or maximum_acceleration <= 0.0):
             raise ValueError("速度或加速度必须为正的有限数")
-    effective_maximum_velocity = min(maximum_velocity, math.radians(5.0))
+    guidance = _validated_hand_guidance(value.get("hand_guidance"), targets, moving_joint_mask, mode) if guided else None
+    if not guided and mode != "brake" and "hand_guidance" in value:
+        raise ValueError("手导参考必须使用1.5协议")
+    effective_maximum_velocity = min(maximum_velocity, math.radians(30.0 if guided else 5.0))
     effective_maximum_acceleration = min(
         maximum_acceleration, math.radians(20.0)
     )
@@ -2563,7 +2601,7 @@ def validate_command(
         )
     normalized = {
         "schema": (
-            GUI_COMMAND_SCHEMA_V14 if mode == "teach" else GUI_COMMAND_SCHEMA_V13
+            GUI_COMMAND_SCHEMA_V15 if guided else GUI_COMMAND_SCHEMA_V14 if mode == "teach" else GUI_COMMAND_SCHEMA_V13
             if trajectory is not None
             else GUI_COMMAND_SCHEMA_V12
         ),
@@ -2582,6 +2620,8 @@ def validate_command(
     }
     if collision_guard_proof is not None:
         normalized["collision_guard_proof"] = collision_guard_proof
+    if guidance is not None:
+        normalized["hand_guidance"] = guidance
     if trajectory is not None:
         normalized["plan_token_id"] = plan_token_id
         normalized["trajectory"] = trajectory
@@ -2622,13 +2662,15 @@ def payload_for_domain(normalized: dict, domain: str) -> bytes:
         for index in DOMAIN_JOINT_INDICES[domain]
     ):
         domain_command = dict(worker_command)
-        domain_command["schema"] = GUI_COMMAND_SCHEMA_V12
+        domain_command["schema"] = GUI_COMMAND_SCHEMA_V15 if worker_command["schema"] == GUI_COMMAND_SCHEMA_V15 else GUI_COMMAND_SCHEMA_V12
         domain_command["mode"] = "hold"
         domain_command["moving_joint_mask"] = [False] * 6
+        if domain_command["schema"] == GUI_COMMAND_SCHEMA_V15:
+            domain_command["hand_guidance"] = {**worker_command["hand_guidance"], "velocity_rad_s": [0.0] * 6}
         domain_command.pop("plan_token_id", None)
         domain_command.pop("trajectory", None)
         domain_command.pop("plan_manifest", None)
-    if domain_command["mode"] != "teach" and isinstance(domain_command.get("gravity_authority"), dict):
+    if domain_command["mode"] != "teach" and domain_command["schema"] != GUI_COMMAND_SCHEMA_V15 and isinstance(domain_command.get("gravity_authority"), dict):
         domain_command = dict(domain_command)
         domain_command["gravity_authority"] = {
             key: value for key, value in domain_command["gravity_authority"].items()

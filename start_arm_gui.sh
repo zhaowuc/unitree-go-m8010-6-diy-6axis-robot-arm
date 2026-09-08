@@ -2581,6 +2581,11 @@ if [[ "${DOMAIN_READY[J345]}" -eq 1 ]]; then
     --expected-thermal-config-sha256 "$THERMAL_CONFIG_SHA256"
 fi
 if [[ "${DOMAIN_READY[J6]}" -eq 1 ]]; then
+  J6_TORQUE_OBSERVATION_ARGS=()
+  if [[ "${J6_OBSERVE_PROTOCOL_TORQUE:-0}" == 1 ]]; then
+    [[ -f "${J6_PROTOCOL_TORQUE_READBACK_FILE:-}" && "${J6_PROTOCOL_TORQUE_READBACK_SHA256:-}" =~ ^[0-9a-f]{64}$ ]] || fail "J6 力矩观察需要明确的只读参数记录及 SHA"
+    J6_TORQUE_OBSERVATION_ARGS=(--observe-protocol-torque --protocol-torque-readback "$J6_PROTOCOL_TORQUE_READBACK_FILE" --expected-protocol-torque-readback-sha256 "$J6_PROTOCOL_TORQUE_READBACK_SHA256")
+  fi
   start_worker J6 "$RUN_DIR/j6_controller.log" 15311 env \
     LD_LIBRARY_PATH="$J6_LD_LIBRARY_PATH" \
     "$J6_PY" "$REPO_ROOT/tools/hardware/j6_dm_g6220/v15_30a_gui_j6_controller.py" \
@@ -2595,7 +2600,7 @@ if [[ "${DOMAIN_READY[J6]}" -eq 1 ]]; then
     --feedback-session-id "$J6_FEEDBACK_SESSION_ID" \
     --feedback-state-instance-id "$J6_FEEDBACK_STATE_INSTANCE_ID" \
     --feedback-handoff-file "$J6_FEEDBACK_HANDOFF" \
-    --thermal-config "$THERMAL_CONFIG"
+    --thermal-config "$THERMAL_CONFIG" "${J6_TORQUE_OBSERVATION_ARGS[@]}"
 fi
 
 wait_workers_bounded

@@ -419,7 +419,8 @@ class J1Demo:
 
 
 def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
-             excursion_deg=1.0, symmetric=False, speed_deg_s=1.0, return_center=False, interactive_teach=False, teach_observe=False):
+             excursion_deg=1.0, symmetric=False, speed_deg_s=1.0, return_center=False, interactive_teach=False, teach_observe=False,
+             hand_guidance=False, guidance_shadow=False, guide_speed_deg_s=30.0):
     root = Path(__file__).resolve().parents[2]
     sys.path.insert(0, str(root / "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui"))
     from go_m8010_arm_gui import main_window as gui
@@ -444,11 +445,18 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
                 super().closeEvent(event)
 
     class DemoDialog(ActionGroupDialog):
+        def start(self):
+            if hand_guidance and demo is not None and demo.guidance_phase != "returning":
+                window._notify("手导会话可记录姿态；请结束手导后在常规控制中执行动作组。", "info")
+                return
+            return super().start()
+
         def _move_status(self):
             if not self.submitted and self.window._preview_approval_matches_candidate():
                 recipe = self.window.workflow_contract.q_plan_trajectory
                 recovering = demo.stage == "recover_initial"
-                segments = check_recipe(recipe, demo.origin, recover_initial=recovering)
+                segments = (demo.check_return_recipe(recipe) if hand_guidance
+                            else check_recipe(recipe, demo.origin, recover_initial=recovering))
                 center = demo.stage == "return_center"
                 demo.events.append({"event": "checked_recovery_recipe_before_submit" if recovering else "checked_center_recipe_before_submit" if center else "checked_recipe_before_submit",
                                     "cycle": None if center else 0 if recovering else demo.cycle_number, "step": self.runner.index,
@@ -505,7 +513,13 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
             return False
         if not empirical_binding_matches(node.latest_gravity_status or {}, binding):
             raise RuntimeError("live gravity envelope/anchor differs from the supplied binding")
-        publisher.publish(gui.String(data=json.dumps(sequence.confirmation(level))))
+        confirmation = sequence.confirmation(level)
+        if hand_guidance:
+            confirmation.pop("j2_j3_support_reliable")
+            confirmation.update(schema="go-m8010-empirical-stage-confirmation/1.1",
+                base_fixed=True, external_arm_support=False,
+                established_position_hold=all(mode == "hold" for mode in hardware["controller_mode_by_motor"].values()))
+        publisher.publish(gui.String(data=json.dumps(confirmation)))
         return True
 
     def set_scale(level):
@@ -593,11 +607,17 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
         dialog.start()
         return dialog
 
-    demo = J1Demo(window, observe, confirm, set_scale, start_group, cycles=cycles,
+    demo_type, guidance_options = J1Demo, {}
+    if hand_guidance:
+        from v15_31f_gui_hand_guidance import GuidanceDemo
+        demo_type = GuidanceDemo
+        guidance_options = {"gui": gui, "shadow_only": guidance_shadow, "guide_speed_deg_s": guide_speed_deg_s}
+    demo = demo_type(window, observe, confirm, set_scale, start_group, cycles=cycles,
                   excursion_deg=excursion_deg, symmetric=symmetric, speed_deg_s=speed_deg_s,
                   return_center=return_center, start_center=start_center,
                   recover_initial_first=recover_initial_first, start_recovery=start_recovery,
-                  validate_recovery_start=read_initial_reference, interactive_teach=interactive_teach, teach_observe=teach_observe)
+                  validate_recovery_start=read_initial_reference, interactive_teach=interactive_teach, teach_observe=teach_observe,
+                  **guidance_options)
     timer = gui.QTimer(window)
     def tick():
         try:
@@ -624,6 +644,9 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
     if interactive_teach:
         window.setWindowTitle("选轴辅助示教：J1–J5 单轴可拖动，其余保持；松键锁定；10分钟自动结束")
         stop.setText("结束示教并制动（Esc）")
+    if hand_guidance:
+        window.setWindowTitle("整臂柔顺：施力移动，撤力停住；结束会话先回起始姿态")
+        stop.setText("回起始姿态并结束（Esc）")
     if interactive_teach:
         window.showMaximized()
     else:
@@ -637,7 +660,12 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
     finally:
         if not demo.done:
             demo.stop("event loop ended before terminal verification")
+            if hand_guidance:
+                timer.stop()
+                window.timer.stop()
             while not demo.done:
+                if hand_guidance:
+                    app.processEvents()
                 try:
                     window._tick()
                 except Exception:
@@ -670,12 +698,21 @@ def main(argv=None):
     parser.add_argument("--return-center", action="store_true")
     parser.add_argument("--recover-initial-first", action="store_true")
     parser.add_argument("--interactive-teach", action="store_true")
+    parser.add_argument("--hand-guidance", action="store_true")
+    parser.add_argument("--guidance-shadow", action="store_true", help="observe proposed references while physical targets remain held")
+    parser.add_argument("--guide-speed-deg-s", type=float, default=30.0)
     parser.add_argument("--teach-observe", action="store_true", help="enable J1 assisted teaching for 20 seconds without a position move, then release to HOLD")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--envelope", type=Path)
     parser.add_argument("--anchor-validation", type=Path)
     parser.add_argument("--expected-envelope-sha256")
     args = parser.parse_args(values[:split])
+    if args.hand_guidance:
+        args.interactive_teach = True
+    if args.guidance_shadow and not args.hand_guidance:
+        parser.error("--guidance-shadow requires --hand-guidance")
+    if not math.isfinite(args.guide_speed_deg_s) or not 0 < args.guide_speed_deg_s <= 30:
+        parser.error("guidance speed must be within (0, 30] deg/s")
     if args.teach_observe and not args.interactive_teach:
         parser.error("--teach-observe requires --interactive-teach")
     try:
@@ -704,7 +741,8 @@ def main(argv=None):
         stream.flush()
         result = run_live(values[split:], binding, args.cycles, args.recover_initial_first,
                           excursion_deg=args.excursion_deg, symmetric=args.symmetric,
-                          speed_deg_s=args.speed_deg_s, return_center=args.return_center, interactive_teach=args.interactive_teach, teach_observe=args.teach_observe)
+                          speed_deg_s=args.speed_deg_s, return_center=args.return_center, interactive_teach=args.interactive_teach, teach_observe=args.teach_observe,
+                          hand_guidance=args.hand_guidance, guidance_shadow=args.guidance_shadow, guide_speed_deg_s=args.guide_speed_deg_s)
         stream.seek(0)
         json.dump(result, stream, ensure_ascii=False, allow_nan=False, indent=2)
         stream.write("\n")

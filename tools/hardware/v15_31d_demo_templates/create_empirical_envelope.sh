@@ -37,6 +37,7 @@ state_id=${values[4]}
 [[ ! -e "$output" && ! -e "$result" ]]
 teach_args=()
 if [[ "${GO_ASSISTED_TEACH:-0}" == 1 ]]; then teach_args+=(--assisted-teach); fi
+if [[ -f "$scripts/hand_guidance_settings.json" ]]; then teach_args+=(--hand-guidance); fi
 "$py" tools/hardware/v15_31b_create_empirical_validation_envelope.py \
   --power-on-readonly "$power" \
   --expected-power-on-sha256 "$power_sha" \

@@ -36,6 +36,9 @@ from v15_30a_profile import (
     thermal_derating_factor,
     update_posvel_speed_limit,
 )
+from j6_protocol_torque import QUERY_RIDS, qualify_readback
+from j6_hand_guidance import (is_guidance, validate_guidance_shape,
+    stage_guidance_candidate, runtime_guidance_command, guidance_feedback_velocity_is_safe)
 
 
 GATE = "V15_30A_GUI_J6_CONTROL_AUTHORIZED=YES"
@@ -161,6 +164,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--feedback-session-id", default="")
     parser.add_argument("--feedback-state-instance-id", default="")
     parser.add_argument("--feedback-handoff-file", type=Path)
+    parser.add_argument("--observe-protocol-torque", action="store_true",
+                        help="Expose raw protocol motor-torque diagnostics; does not enable torque control or claim external force/current.")
+    parser.add_argument("--protocol-torque-readback", type=Path)
+    parser.add_argument("--expected-protocol-torque-readback-sha256", default="")
     return parser.parse_args()
 
 
@@ -665,10 +672,15 @@ def parse_command(
         "go-m8010-gui-command/1.1",
         "go-m8010-gui-command/1.2",
         "go-m8010-gui-command/1.3",
+        "go-m8010-gui-command/1.5",
     }:
         raise ValueError("命令格式不匹配")
-    if value.get("mode") not in {"brake", "drag", "hold", "position"}:
+    if value.get("mode") not in {"brake", "drag", "hold", "position", "teach"}:
         raise ValueError("模式不允许")
+    if ((value.get("mode") == "teach" and schema != "go-m8010-gui-command/1.5")
+            or (schema == "go-m8010-gui-command/1.5" and value.get("mode") not in {"teach", "hold", "brake"})):
+        raise ValueError("J6_GUIDANCE_SCHEMA_MODE_INVALID")
+    value.pop("_guidance_paused", None)
     if schema in {
         "go-m8010-gui-command/1.0",
         "go-m8010-gui-command/1.1",
@@ -734,7 +746,7 @@ def parse_command(
         if "moving_joint_mask" not in value:
             moving_joint_mask = (
                 list(active_joint_mask)
-                if value["mode"] == "position"
+                if value["mode"] in {"position", "teach"}
                 else [False] * 6
             )
         elif (
@@ -769,7 +781,7 @@ def parse_command(
     ):
         raise ValueError("激活纪元必须是非负整数")
     if (
-        value["mode"] in {"hold", "position"}
+        value["mode"] in {"hold", "position", "teach"}
         and active_joint_mask[5]
         and activation_epoch == 0
     ):
@@ -783,8 +795,10 @@ def parse_command(
     amax = float(amax)
     if not math.isfinite(vmax) or not math.isfinite(amax) or vmax <= 0.0 or amax <= 0.0:
         raise ValueError("速度或加速度无效")
-    value["maximum_velocity_rad_s"] = min(vmax, VMAX_LIMIT)
+    value["maximum_velocity_rad_s"] = min(vmax, math.radians(30.0) if schema == "go-m8010-gui-command/1.5" else VMAX_LIMIT)
     value["maximum_acceleration_rad_s2"] = min(amax, AMAX_LIMIT)
+    if schema == "go-m8010-gui-command/1.5":
+        validate_guidance_shape(value)
     if schema == "go-m8010-gui-command/1.3" and value["mode"] == "position":
         plan_token_id = value.get("plan_token_id")
         if not valid_lower_sha256(plan_token_id):
@@ -938,6 +952,9 @@ def validate_empirical_command_authority(
     )[5]:
         return None
     authority = command.get("gravity_authority")
+    if command.get("schema") == "go-m8010-gui-command/1.5" and (
+            not isinstance(authority, dict) or authority.get("schema") != "go-m8010-gravity-command-authority/1.1"):
+        raise GravityAuthorityStartupBindingError("J6_GUIDANCE_EMPIRICAL_AUTHORITY_REQUIRED")
     common = {
         "schema", "source_instance_id", "sequence", "source_monotonic_ns",
         "model_sha256", "gravity_config_sha256", "session_id",
@@ -994,10 +1011,29 @@ def validate_empirical_command_authority(
         "empirical_maximum_position_segment_seconds",
         "empirical_maximum_abs_position_segment_deg",
     }
+    guided = command.get("schema") == "go-m8010-gui-command/1.5"
+    if guided:
+        required |= {"empirical_assisted_teach_authorized", "empirical_maximum_teach_excursion_deg",
+                     "empirical_maximum_teach_seconds", "empirical_maximum_teach_velocity_deg_s",
+                     "empirical_allowed_teach_joints"}
     if not isinstance(authority, dict) or set(authority) != required:
         raise GravityAuthorityStartupBindingError(
             "J6 empirical authority is missing or incomplete"
         )
+    if guided and (
+            authority.get("empirical_assisted_teach_authorized") is not True
+            or authority.get("empirical_allowed_teach_joints") != ["J1", "J2", "J3", "J4", "J5", "J6"]
+            or type(authority.get("empirical_maximum_teach_excursion_deg")) not in (int, float)
+            or authority.get("empirical_maximum_teach_excursion_deg") != 10.0
+            or type(authority.get("empirical_maximum_teach_seconds")) not in (int, float)
+            or authority.get("empirical_maximum_teach_seconds") != 600.0
+            or type(authority.get("empirical_maximum_teach_velocity_deg_s")) not in (int, float)
+            or authority.get("empirical_maximum_teach_velocity_deg_s") != 30.0
+            or authority.get("empirical_stage_index") != 4
+            or authority.get("gravity_scale") != 1.0
+            or authority.get("gravity_scale_target") != 1.0
+            or authority.get("empirical_position_validation_authorized") is not True):
+        raise GravityAuthorityStartupBindingError("J6_GUIDANCE_AUTHORITY_SCOPE_INVALID")
     if (
         authority.get("schema")
         != "go-m8010-gravity-command-authority/1.1"
@@ -1377,7 +1413,8 @@ def trajectory_feedback_status(
 def command_requests_j6_active(command: dict | None) -> bool:
     return bool(
         command is not None
-        and command["mode"] in {"hold", "position"}
+        and (command["mode"] in {"hold", "position"} or
+             (command["mode"] == "teach" and command.get("schema") == "go-m8010-gui-command/1.5"))
         and command["active_joint_mask"][5]
     )
 
@@ -1385,7 +1422,7 @@ def command_requests_j6_active(command: dict | None) -> bool:
 def command_requests_j6_fixed_hold(command: dict | None) -> bool:
     if not command_requests_j6_active(command):
         return False
-    if command["mode"] == "hold":
+    if command["mode"] == "hold" or command.get("_guidance_paused") is True:
         return True
     moving_mask = command.get("moving_joint_mask")
     # A legacy position packet without the field means moving=active.
@@ -2552,6 +2589,7 @@ def receive_latest(
     source_replay_state: dict | None = None,
     receive_events: dict | None = None,
     require_empirical_authority: bool = False,
+    guidance_context: dict | None = None,
 ) -> tuple[dict | None, int, int]:
     if rejection_state is None:
         rejection_state = make_command_rejection_state()
@@ -2606,6 +2644,12 @@ def receive_latest(
                 received_monotonic_ns,
                 source_replay_state,
             )
+            pending_guidance_state = None
+            guidance_touched = candidate.get("schema") == "go-m8010-gui-command/1.5" or source_replay_state.get("hand_guidance_state") is not None
+            if guidance_touched:
+                candidate, pending_guidance_state = stage_guidance_candidate(
+                    candidate, source_replay_state.get("hand_guidance_state"),
+                    guidance_context, current, received_monotonic_ns)
             if (
                 require_empirical_authority
                 and not command_requests_j6_active(candidate)
@@ -2636,6 +2680,8 @@ def receive_latest(
                 candidate
             ):
                 receive_events["domain_release_received"] = True
+            if guidance_touched:
+                source_replay_state["hand_guidance_state"] = pending_guidance_state
             current = candidate
         except GravityAuthorityStartupBindingError as exc:
             # A packet that omits or changes the launch-bound proof is not a
@@ -2679,6 +2725,9 @@ def send_feedback(
     thermal_status: dict | None = None,
     no_progress_status: dict | None = None,
     last_valid_feedback_monotonic_ns: int | None = None,
+    observe_protocol_torque: bool = False,
+    protocol_torque_qualification: dict | None = None,
+    guidance_status: dict | None = None,
 ) -> None:
     global J6_FEEDBACK_SEQUENCE
     J6_FEEDBACK_SEQUENCE += 1
@@ -2838,9 +2887,33 @@ def send_feedback(
         else "brake"
         if mode == "brake" and state == 0
         else mode
-        if mode in {"hold", "position"} and state == 1
+        if mode in {"hold", "position", "teach"} and state == 1
         else "unknown"
     )
+    protocol_observation = {}
+    if observe_protocol_torque:
+        protocol_torque = getattr(decoded, "torque", None)
+        valid_protocol_torque = (
+            communication_ok and state in {0, 1}
+            and type(last_valid_feedback_monotonic_ns) is int
+            and last_valid_feedback_monotonic_ns > 0
+            and type(protocol_torque) in {int, float}
+            and math.isfinite(protocol_torque) and abs(protocol_torque) <= 10.0
+        )
+        protocol_observation = {
+            "protocol_torque": float(protocol_torque) if valid_protocol_torque else None,
+            "protocol_torque_scale": "NOMINAL_TMAX_10_REQUIRES_RID23_READBACK",
+            "protocol_torque_source_monotonic_ns": last_valid_feedback_monotonic_ns,
+            "protocol_torque_is_external_measurement": False,
+        }
+        if protocol_torque_qualification is not None:
+            protocol_observation.update({
+                "motor_torque_estimated_nm": float(protocol_torque) if valid_protocol_torque else None,
+                "joint_motor_torque_estimated_nm": -float(protocol_torque) if valid_protocol_torque else None,
+                "motor_torque_source_monotonic_ns": last_valid_feedback_monotonic_ns,
+                "motor_torque_qualification_sha256": protocol_torque_qualification["readback_sha256"],
+                "motor_torque_estimate_accuracy_not_physically_calibrated": True,
+            })
     payload = {
         "schema": "go-m8010-motor-feedback/1.0",
         "source_instance_id": J6_FEEDBACK_SOURCE_INSTANCE_ID,
@@ -2852,9 +2925,11 @@ def send_feedback(
             "motor": "J6",
             "position_rad": position,
             "velocity_rad_s": velocity,
-            # POS_VEL mode exposes no authoritative torque command or torque
-            # feedback channel.  Explicit nulls keep the three physical
-            # torque semantics distinct instead of manufacturing estimates.
+            **protocol_observation,
+            **(guidance_status if guidance_status is not None and communication_ok and state == 1 and mode in {"hold", "teach"} else {}),
+            # Preserve the legacy physical-torque fields. POS_VEL has no
+            # torque-command input; its optional protocol observation above
+            # needs matching RID readback before the guided profile uses Nm.
             "tau_cmd_rotor_nm": None,
             "tau_feedback_rotor_nm": None,
             "tau_joint_estimated_nm": None,
@@ -2932,6 +3007,17 @@ def run(args: argparse.Namespace) -> int:
     global J6_FEEDBACK_SEQUENCE
     thermal_limits = load_thermal_limits(args.thermal_config)
     ACTIVE_THERMAL_LIMITS = thermal_limits
+    protocol_torque_qualification = None
+    if getattr(args, "observe_protocol_torque", False):
+        readback_path = getattr(args, "protocol_torque_readback", None)
+        if readback_path is None or readback_path.is_symlink() or not readback_path.is_file() or readback_path.stat().st_size > 4_194_304:
+            raise RuntimeError("J6_PROTOCOL_TORQUE_READBACK_FILE_REQUIRED")
+        readback_report = json.loads(readback_path.read_bytes())
+        if (readback_report.get("schema") != "go-m8010-j6-protocol-torque-readonly/1.0"
+                or readback_report.get("status") != "PASS"):
+            raise RuntimeError("J6_PROTOCOL_TORQUE_READBACK_REPORT_INVALID")
+        protocol_torque_qualification = qualify_readback(readback_report["readback"],
+            expected_sha256=args.expected_protocol_torque_readback_sha256)
     if not args.execute:
         print(
             "DRY_RUN=YES\nCAN_OPENED=NO\nDEFAULT_STATE=DISABLED\n"
@@ -2983,6 +3069,11 @@ def run(args: argparse.Namespace) -> int:
             raise RuntimeError("J6电机ID不匹配")
         if int(read_parameter(logger, 10)) != CTRL_MODE_POS_VEL:
             raise RuntimeError("J6当前不是已验证的POS_VEL模式；本任务禁止自动改写")
+        if protocol_torque_qualification is not None:
+            live_readback = {str(rid): read_parameter(logger, rid) for rid in QUERY_RIDS}
+            for rid in (7, 8, 10): live_readback[str(rid)] = int(live_readback[str(rid)])
+            protocol_torque_qualification = qualify_readback(live_readback,
+                expected_sha256=args.expected_protocol_torque_readback_sha256)
         transport = DmG6220PosVelTransport(master_id, logger=logger)
         capture = []
         latest = None
@@ -3257,7 +3348,21 @@ def run(args: argparse.Namespace) -> int:
                 command_source_replay_state,
                 command_receive_events,
                 True,
+                guidance_context={
+                    "torque_qualified": protocol_torque_qualification is not None,
+                    "healthy_foc": enabled_feedback_is_healthy(latest, latest_at, reference,
+                        fault_latched, enabled, enabled_confirmed, time.monotonic()),
+                    "actual_rad": None if latest is None else -(latest.position - reference),
+                    "actual_velocity_rad_s": None if latest is None else -latest.velocity,
+                },
             )
+            old_guidance_state = command_source_replay_state.get("hand_guidance_state")
+            if old_guidance_state is not None:
+                command, new_guidance_state = runtime_guidance_command(
+                    command, old_guidance_state, time.monotonic_ns())
+                command_source_replay_state["hand_guidance_state"] = new_guidance_state
+                if new_guidance_state.paused and not old_guidance_state.paused:
+                    print(f"J6_GUIDANCE_PAUSED reason={new_guidance_state.paused_reason}; last accepted target retained", flush=True)
             if communication_fault_latched and command is not None:
                 rejected_epoch = command["activation_epoch"]
                 highest_rejected_active_epoch = max(
@@ -3476,6 +3581,12 @@ def run(args: argparse.Namespace) -> int:
                     command, highest_rejected_active_epoch
                 )
             )
+            guided_packet = is_guidance(command) and command_source_replay_state.get("hand_guidance_state") is not None
+            if guided_packet and mode == "hold":
+                # Native pause and the higher-epoch ACK both refer to the
+                # already accepted reference, never a fresh measured-angle capture.
+                last_accepted_hold_target = command_source_replay_state["hand_guidance_state"].targets[5]
+                last_accepted_hold_epoch = command["activation_epoch"]
             unauthorized_position_target = bool(
                 not lease_safe_hold_active
                 and not fault_latched
@@ -3496,6 +3607,7 @@ def run(args: argparse.Namespace) -> int:
                     or unauthorized_position_target
                     or (
                         mode == "hold"
+                        and not guided_packet
                         and not hold_command_entry_is_authorized(
                             command,
                             highest_rejected_active_epoch,
@@ -3572,7 +3684,7 @@ def run(args: argparse.Namespace) -> int:
                         last_accepted_hold_target
                     )
             if (
-                mode in {"hold", "position"}
+                mode in {"hold", "position", "teach"}
                 and enabled
                 and enabled_confirmed
                 and not enabled_feedback_is_healthy(
@@ -3622,7 +3734,7 @@ def run(args: argparse.Namespace) -> int:
                         "policy=REPREVIEW_REQUIRED",
                         flush=True,
                     )
-            active = mode in {"hold", "position"}
+            active = mode in {"hold", "position", "teach"}
             if (
                 active
                 and mode == "position"
@@ -3872,6 +3984,15 @@ def run(args: argparse.Namespace) -> int:
                     )
                     if consume_transport_interlock("POSITION"):
                         continue
+            elif mode == "teach" and guided_packet and enabled:
+                # The outer loop supplies q_ref; POS_VEL retains its inner
+                # position/velocity/current loops and has no torque-command input.
+                q_command = command["targets_rad"][5]
+                transport.send_pos_vel_command(reference - q_command,
+                    min(command["maximum_velocity_rad_s"], math.radians(30.0)) * thermal_factor,
+                    "GUI_HAND_GUIDANCE_REFRESH")
+                if consume_transport_interlock("HAND_GUIDANCE"):
+                    continue
             elif mode == "hold" and enabled:
                 fixed_hold_target = (
                     lease_safe_hold_target
@@ -3922,6 +4043,10 @@ def run(args: argparse.Namespace) -> int:
                 ):
                     non_communication_fault_latched = True
                     fault_latched = True
+                if guided_packet and enabled and not guidance_feedback_velocity_is_safe(decoded.velocity):
+                    non_communication_fault_latched = True
+                    fault_latched = True
+                    print(f"J6_GUIDANCE_FEEDBACK_VELOCITY_LIMIT velocity_rad_s={decoded.velocity}", flush=True)
                 rapid_motion = bool(enabled and abs(decoded.velocity) > 0.7)
                 if rapid_motion and not rapid_motion_degraded:
                     print(
@@ -4277,6 +4402,15 @@ def run(args: argparse.Namespace) -> int:
                     "minimum_rearm_epoch"
                 ],
             }
+            guidance_state = command_source_replay_state.get("hand_guidance_state")
+            guidance_status = None
+            if guided_packet and guidance_state is not None and guidance_state.targets:
+                guidance_status = {
+                    "accepted_guidance_target_rad": guidance_state.targets[5],
+                    "accepted_guidance_activation_epoch": guidance_state.accepted_epoch,
+                }
+                if guidance_state.paused:
+                    guidance_status["guidance_paused_reason"] = guidance_state.paused_reason
             send_feedback(
                 feedback_socket, args.feedback_port, latest, fresh,
                 "brake" if fault_latched or software_interlock_latched else
@@ -4292,6 +4426,9 @@ def run(args: argparse.Namespace) -> int:
                     if latest_at is None
                     else int(latest_at * 1_000_000_000)
                 ),
+                observe_protocol_torque=getattr(args, "observe_protocol_torque", False),
+                protocol_torque_qualification=protocol_torque_qualification,
+                guidance_status=guidance_status,
             )
             # Use the lease decision made at the cycle boundary where this
             # external target was selected.  Re-reading the clock here can
@@ -4301,7 +4438,7 @@ def run(args: argparse.Namespace) -> int:
             external_active_confirmed_this_cycle = bool(
                 not lease_safe_hold_active
                 and command_lease_fresh
-                and mode in {"hold", "position"}
+                and mode in {"hold", "position", "teach"}
                 and enabled
                 and enabled_confirmed
                 and fresh

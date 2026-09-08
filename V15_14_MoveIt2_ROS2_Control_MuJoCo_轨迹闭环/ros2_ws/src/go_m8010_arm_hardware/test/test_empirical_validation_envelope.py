@@ -17,11 +17,13 @@ if str(TOOLS) not in sys.path:
 
 from go_m8010_arm_hardware.empirical_validation_envelope import (  # noqa: E402
     CONFIRMATION_SCHEMA,
+    HAND_GUIDANCE_CONFIRMATION_SCHEMA,
     EmpiricalEnvelopeError,
     EmpiricalStageGate,
     EmpiricalValidationEnvelope,
     live_hardware_blocker,
     select_runtime_torque_authority,
+    validate_stage_confirmation,
 )
 from v15_31b_create_empirical_validation_envelope import (  # noqa: E402
     build_envelope,
@@ -32,7 +34,7 @@ from v15_31b_create_empirical_validation_envelope import (  # noqa: E402
 MOTORS = ("J1", "J2A", "J2B", "J3", "J4", "J5", "J6")
 
 
-def _envelope_file(tmp_path: Path, now: datetime, *, assisted_teach=False) -> tuple[Path, str]:
+def _envelope_file(tmp_path: Path, now: datetime, *, assisted_teach=False, hand_guidance=False) -> tuple[Path, str]:
     document = build_envelope(
         session_id="session-31b",
         state_instance_id="state-31b",
@@ -52,6 +54,7 @@ def _envelope_file(tmp_path: Path, now: datetime, *, assisted_teach=False) -> tu
         lifetime_seconds=300,
         created_at=now,
         assisted_teach=assisted_teach,
+        hand_guidance=hand_guidance,
     )
     data = json_bytes(document)
     path = tmp_path / "envelope.json"
@@ -104,7 +107,7 @@ def _hardware(now_ns: int, *, mode: str = "hold") -> dict:
 
 
 def _confirmation(envelope, now_ns: int, sequence: int, target: float) -> dict:
-    return {
+    value = {
         "schema": CONFIRMATION_SCHEMA,
         "source_instance_id": "4" * 32,
         "sequence": sequence,
@@ -119,6 +122,11 @@ def _confirmation(envelope, now_ns: int, sequence: int, target: float) -> dict:
         "clearance_confirmed": True,
         "no_person_contact": True,
     }
+    if envelope.hand_guidance_enabled:
+        value.pop("j2_j3_support_reliable")
+        value.update(schema=HAND_GUIDANCE_CONFIRMATION_SCHEMA, base_fixed=True,
+                     external_arm_support=False, established_position_hold=True)
+    return value
 
 
 def _step(gate, now, now_ns, requested, applied, mode="hold"):
@@ -422,6 +430,110 @@ def test_assisted_teach_requires_explicit_envelope_full_ladder_and_live_confirma
         assert gate.status()["assisted_teach_authorized"]
         assert not _step(gate, now, envelope.monotonic_deadline_ns, 1.0, 1.0)
         assert gate.invalidated and not gate.status()["assisted_teach_authorized"]
+
+
+def test_hand_guidance_full_ladder_then_multiple_joints_and_position_hold(tmp_path):
+    now = datetime.now(timezone.utc)
+    path, digest = _envelope_file(tmp_path, now, hand_guidance=True)
+    envelope = EmpiricalValidationEnvelope.from_path(path, digest, now_utc=now, now_monotonic_ns=1_000_000_000)
+    assert envelope.hand_guidance_enabled and not envelope.assisted_teach_enabled
+    gate = EmpiricalStageGate(envelope)
+    ns = 1_000_000_000
+    assert not gate.status()["hand_guidance_authorized"]
+    zero = _confirmation(envelope, ns, 1, 0.0)
+    zero["established_position_hold"] = False
+    validate_stage_confirmation(zero, envelope=envelope, target_scale=0.0, now_monotonic_ns=ns)
+    zero["target_gravity_scale"] = 0.25
+    with pytest.raises(EmpiricalEnvelopeError, match="POSITION_HOLD"):
+        validate_stage_confirmation(zero, envelope=envelope, target_scale=0.25, now_monotonic_ns=ns)
+    assert _step(gate, now, ns, 0.0, 0.0, mode="brake")
+    assert not gate.stage_complete and not gate.status()["hand_guidance_authorized"]
+    ns += 1_000_000
+    assert _step(gate, now, ns, 0.0, 0.0)
+    ns += 5_000_000_000
+    assert _step(gate, now, ns, 0.0, 0.0)
+    wrong = _confirmation(envelope, ns, 1, 0.25)
+    wrong["external_arm_support"] = True
+    assert not gate.observe_confirmation(wrong, now_monotonic_ns=ns)
+    for sequence, target in enumerate((0.25, 0.5, 0.75, 1.0), 1):
+        ns += 1_000_000
+        assert gate.observe_confirmation(_confirmation(envelope, ns, sequence, target), now_monotonic_ns=ns)
+        assert _step(gate, now, ns, target, target - 0.25)
+        ns += 2_000_000_000
+        assert _step(gate, now, ns, target, target)
+        ns += 5_000_000_000
+        assert _step(gate, now, ns, target, target)
+        assert not gate.status()["hand_guidance_authorized"]
+    ns += 1_000_000
+    assert gate.observe_confirmation(_confirmation(envelope, ns, 5, 1.0), now_monotonic_ns=ns)
+    assert _step(gate, now, ns, 1.0, 1.0)
+    status = gate.status()
+    assert status["hand_guidance_authorized"] and status["assisted_teach_authorized"]
+    assert (status["maximum_teach_excursion_deg"], status["maximum_teach_velocity_deg_s"], status["maximum_teach_seconds"]) == (10.0, 30.0, 600.0)
+    assert status["allowed_teach_joints"] == ["J1", "J2", "J3", "J4", "J5", "J6"]
+    hardware = _hardware(ns + 1, mode="teach")
+    hardware["velocity_rad_s"] = [math.radians(30)] * 6
+    assert gate.step(requested_scale=1.0, applied_scale=1.0, hardware_state=hardware,
+        session_id=envelope.session_id, state_instance_id=envelope.state_instance_id,
+        anchor_sha256=envelope.anchor_sha256, hardware_enable_requested=True,
+        now_monotonic_ns=ns + 1, now_utc=now)
+    ns += 31_000_000_000
+    assert _step(gate, now, ns, 1.0, 1.0)
+    assert gate.status()["hand_guidance_authorized"]
+    assert not _step(gate, now, envelope.monotonic_deadline_ns, 1.0, 1.0)
+
+
+def test_hand_guidance_scope_and_false_support_claims_are_rejected(tmp_path):
+    now = datetime.now(timezone.utc)
+    for section, field, value in (
+        ("hand_guidance", "maximum_selected_joints", True),
+        ("hand_guidance", "maximum_velocity_deg_s", 30.01),
+        ("hand_guidance", "maximum_press_seconds", 601),
+        ("hand_guidance", "maximum_excursion_from_press_deg", 10.01),
+        ("hand_guidance", "reference_lead_deg", 2.01),
+        ("hand_guidance", "normal_exit_action", "BRAKE"),
+        ("hand_guidance", "unexpected", True),
+        ("physical_support", "external_arm_support", True),
+        ("physical_support", "established_position_hold_required", False),
+    ):
+        path, _ = _envelope_file(tmp_path, now, hand_guidance=True)
+        document = json.loads(path.read_bytes())
+        target = document[section] if section == "hand_guidance" else document["live_gates"][section]
+        target[field] = value
+        data = json_bytes(document)
+        path.write_bytes(data)
+        with pytest.raises(EmpiricalEnvelopeError, match="HAND_GUIDANCE"):
+            EmpiricalValidationEnvelope.from_path(path, hashlib.sha256(data).hexdigest(), now_utc=now)
+    path, _ = _envelope_file(tmp_path, now, hand_guidance=True)
+    document = json.loads(path.read_bytes())
+    document["assisted_teach"] = {}
+    data = json_bytes(document)
+    path.write_bytes(data)
+    with pytest.raises(EmpiricalEnvelopeError, match="MUTUALLY_EXCLUSIVE"):
+        EmpiricalValidationEnvelope.from_path(path, hashlib.sha256(data).hexdigest(), now_utc=now)
+
+
+def test_hand_guidance_live_gate_allows_paired_multijoint_and_keeps_hard_checks():
+    ns = 1_000_000_000
+    kwargs = dict(session_id="session-31b", state_instance_id="state-31b", now_monotonic_ns=ns,
+                  require_current_position_hold=True, allow_hand_guidance=True)
+    for taught, allowed in (((), True), (("J6",), True), (("J1", "J2A", "J2B", "J3", "J6"), True),
+                            (("J2A", "J3"), False), (("J2B",), False)):
+        hardware = _hardware(ns)
+        hardware["velocity_rad_s"] = [math.radians(30)] * 6
+        hardware["controller_mode_by_motor"].update({name: "teach" for name in taught})
+        assert (not live_hardware_blocker(hardware, **kwargs)[0]) is allowed
+    for mutation in (
+        lambda h: h["velocity_rad_s"].__setitem__(2, math.radians(30.01)),
+        lambda h: h["controller_mode_by_motor"].update(J1="teach", J3="position"),
+        lambda h: h["per_motor"]["J6"].update(fresh=False),
+        lambda h: h.update(j2_e_sync_rad=math.radians(0.251)),
+        lambda h: h["per_motor"]["J3"].update(temperature_c=60.0),
+        lambda h: h.update(source_monotonic_ns=ns - 250_000_001),
+    ):
+        hardware = _hardware(ns)
+        mutation(hardware)
+        assert live_hardware_blocker(hardware, **kwargs)[0]
 
 
 @pytest.mark.parametrize("field,value", [

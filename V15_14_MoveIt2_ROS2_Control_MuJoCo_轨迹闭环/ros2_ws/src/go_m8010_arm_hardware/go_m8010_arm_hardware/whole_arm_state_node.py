@@ -181,8 +181,18 @@ def controller_metadata_for_hardware_state(
         and record.get("receipt_monotonic_ns")
         == motor_state.get("feedback_receipt_monotonic_ns")
     )
+    guidance = {key: value for key, value in (record.items() if isinstance(record, dict) else ())
+                if key.startswith("accepted_guidance_") or key == "guidance_paused_reason"}
+    if guidance.get("accepted_guidance_metadata_status") == "OBSERVED":
+        if not current:
+            guidance["accepted_guidance_metadata_status"] = "STALE"
+        elif (record["controller_mode"] not in ("hold", "teach")
+              or motor_state.get("communication_ok") is not True
+              or motor_state.get("merror") != 0 or record["domain_fault"] is not False):
+            guidance["accepted_guidance_metadata_status"] = "INVALID"
     if not current:
         return {
+            **guidance,
             "metadata_status": "UNKNOWN",
             "controller_mode": "unknown",
             "domain_fault": None,
@@ -286,6 +296,7 @@ def controller_metadata_for_hardware_state(
     )
     return {
         "metadata_status": "OBSERVED",
+        **guidance,
         **{key: value for key, value in record.items()
            if key.startswith("assisted_teach_exit_hold")},
         "controller_mode": mode,
@@ -1111,6 +1122,8 @@ class WholeArmStateNode(Node):
             no_progress = metadata["no_progress"]
             gravity = metadata["gravity"]
             snapshot["per_motor"][name].update({
+                **{key: value for key, value in metadata.items()
+                   if key.startswith("accepted_guidance_") or key == "guidance_paused_reason"},
                 "controller_metadata_status": metadata["metadata_status"],
                 "thermal_metadata_status": thermal["metadata_status"],
                 "thermal_state": thermal["state"],

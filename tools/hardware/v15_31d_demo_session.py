@@ -98,7 +98,7 @@ def idle_demo_cores():
     return cores
 
 
-def run_stage(command, log, timeout):
+def run_stage(command, log, timeout, *, keep_hold_until_exit=False):
     print(f"RUNNING {log.name}", flush=True)
     with log.open("x", encoding="utf-8") as stream:
         process = subprocess.Popen(command, cwd=ROOT, stdout=stream, stderr=subprocess.STDOUT, start_new_session=True)
@@ -123,6 +123,13 @@ def run_stage(command, log, timeout):
                     os.killpg(process.pid, signal.SIGTERM)
                 except ProcessLookupError:
                     pass
+                if keep_hold_until_exit and process.poll() is None:
+                    # The guided GUI owns the return-to-vertical protocol.
+                    # A launcher timeout/cancel must not kill it mid-return
+                    # and remove the unsupported arm's holding torque.
+                    stream.write("GUIDANCE_CONTROLLED_RETURN_WAIT=YES\n")
+                    stream.flush()
+                    process.wait()
                 deadline = time.monotonic() + 25
                 while group_alive() and time.monotonic() < deadline:
                     time.sleep(0.05)
@@ -231,6 +238,12 @@ def main(argv=None):
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--teach-observe", action="store_true", help="after bootstrap, enable J1 teaching for a bounded 20-second posture observation")
     parser.add_argument("--assisted-teach", action="store_true", help="open a bounded interactive single-axis teaching GUI after the normal HOLD ladder")
+    parser.add_argument("--hand-guidance", action="store_true", help="whole-arm outer admittance; normal end returns to the initial vertical pose")
+    parser.add_argument("--guidance-shadow", action="store_true")
+    parser.add_argument("--guide-speed-deg-s", type=float, default=30.0)
+    parser.add_argument("--base-fixed", action="store_true")
+    parser.add_argument("--j6-torque-readback", type=Path)
+    parser.add_argument("--expected-j6-torque-readback-sha256")
     parser.add_argument("--power-cycled", action="store_true",
                         help="attest an actual J6 24V power cycle since the prior commissioning session")
     parser.add_argument("--supported-near-vertical-recovery", action="store_true",
@@ -240,6 +253,15 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.failure_notice is not None:
         return show_failure_notice(args.failure_notice)
+    if args.hand_guidance and args.assisted_teach:
+        parser.error("hand guidance and legacy single-axis teaching use separate profiles")
+    if args.guidance_shadow and not args.hand_guidance:
+        parser.error("--guidance-shadow requires --hand-guidance")
+    if not 0 < args.guide_speed_deg_s <= 30:
+        parser.error("guidance reference speed must be in (0, 30] deg/s")
+    if args.hand_guidance and (args.j6_torque_readback is None or not args.j6_torque_readback.is_file()
+            or not re.fullmatch(r"[0-9a-f]{64}", args.expected_j6_torque_readback_sha256 or "")):
+        parser.error("hand guidance requires an explicit J6 torque readback report and parameter SHA")
     if args.teach_observe and not args.assisted_teach:
         parser.error("--teach-observe requires --assisted-teach")
     if not 0 < args.excursion_deg <= 10 or not 0 < args.speed_deg_s <= 3:
@@ -278,8 +300,10 @@ def main(argv=None):
     plan = {"mode": "EXECUTE" if args.execute else "DRY_RUN", "cycles": args.cycles,
             "excursion_deg": args.excursion_deg, "speed_deg_s": args.speed_deg_s,
             "symmetric": args.symmetric, "return_center": args.return_center,
-            "maximum_demo_seconds": 600.0 if args.assisted_teach else maximum_demo_seconds(args.cycles, args.excursion_deg, args.symmetric),
+            "maximum_demo_seconds": 600.0 if args.assisted_teach or args.hand_guidance else maximum_demo_seconds(args.cycles, args.excursion_deg, args.symmetric),
             "assisted_teach": args.assisted_teach, "teach_observe": args.teach_observe,
+            "hand_guidance": args.hand_guidance, "guidance_shadow": args.guidance_shadow,
+            "physical_scene": {"base_fixed": args.base_fixed, "external_arm_support": False} if args.hand_guidance else None,
             "j6_power_cycle_attested": args.power_cycled,
             "supported_near_vertical_recovery": args.supported_near_vertical_recovery,
             "repo": str(ROOT), "session": str(session), "scripts": str(scripts), "unit_prefix": unit,
@@ -288,8 +312,9 @@ def main(argv=None):
     print(json.dumps(plan, ensure_ascii=False, indent=2), flush=True)
     if not args.execute:
         return 0
-    if sys.platform != "linux" or not all((args.supported, args.vertical, args.hands_off, args.clearance)):
-        parser.error("Linux execution requires --supported --vertical --hands-off --clearance")
+    support = args.base_fixed if args.hand_guidance else args.supported
+    if sys.platform != "linux" or not all((support, args.vertical, args.hands_off, args.clearance)):
+        parser.error("Linux execution requires the applicable support/base-fixed flag plus --vertical --hands-off --clearance")
     if problems:
         parser.error("required preserved inputs unavailable: " + "; ".join(problems))
     runtime = Path(os.environ.setdefault("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"))
@@ -322,6 +347,13 @@ def execute(args, bodies, plan, session, scripts, unit):
     for name, body in bodies.items():
         (scripts / name).write_text(body, encoding="utf-8", newline="\n")
     shutil.copyfile(TEMPLATES / "fastdds_udp_only.xml", scripts / "fastdds_udp_only.xml")
+    guided = getattr(args, "hand_guidance", False)
+    if guided:
+        settings = {"speed_deg_s": args.guide_speed_deg_s, "shadow_only": args.guidance_shadow,
+                    "j6_torque_readback": str(args.j6_torque_readback.resolve()),
+                    "j6_torque_readback_sha256": args.expected_j6_torque_readback_sha256,
+                    "base_fixed": True, "external_arm_support": False}
+        (scripts / "hand_guidance_settings.json").write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
     result = {"status": "FAIL", "plan": plan}
     def stop_requested(*_):
         raise KeyboardInterrupt("SIGTERM")
@@ -342,7 +374,10 @@ def execute(args, bodies, plan, session, scripts, unit):
                 command += [str(args.excursion_deg), str(args.speed_deg_s),
                             str(args.symmetric).lower(), str(args.return_center).lower()]
                 timeout = max(timeout, plan["maximum_demo_seconds"] + 30)
-            run_stage(command, scripts / (name + ".log"), timeout)
+            if guided and name == "start_bounded_j1_demo.sh":
+                run_stage(command, scripts / (name + ".log"), None, keep_hold_until_exit=True)
+            else:
+                run_stage(command, scripts / (name + ".log"), timeout)
         demo_path = session / "evidence/j1_action_group_demo.json"
         demo = json.loads(demo_path.read_text(encoding="utf-8"))
         result["demo"] = {key: demo.get(key) for key in ("status", "requested_cycles", "completed_cycles", "failure")}
@@ -368,7 +403,7 @@ def execute(args, bodies, plan, session, scripts, unit):
         summary.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(json.dumps({"status": result["status"], "summary": str(summary),
                           "evidence": str(session / "evidence"), "terminal": result["controller_terminal_confirmed"]}, ensure_ascii=False))
-    if args.assisted_teach and result["status"] == "FAIL" and result.get("demo"):
+    if (args.assisted_teach or guided) and result["status"] == "FAIL" and result.get("demo"):
         try:
             launch_failure_notice(summary)
         except OSError as error:

@@ -3615,6 +3615,7 @@ struct GravityCommandAuthority {
   double empirical_maximum_position_segment_seconds = 0.0;
   double empirical_maximum_abs_position_segment_deg = 0.0;
   bool empirical_assisted_teach_authorized = false;
+  bool hand_guidance_profile = false;
   double empirical_maximum_teach_excursion_deg = 0.0;
   double empirical_maximum_teach_seconds = 0.0;
   double empirical_maximum_teach_velocity_deg_s = 0.0;
@@ -3641,6 +3642,17 @@ bool empirical_expiry_is_future(const std::string& value) {
   return expires > 0 && std::time(nullptr) < expires;
 }
 
+struct HandGuidanceReference {
+  bool present = false;
+  bool freeze_reference = false;
+  std::array<double, 6> origin_rad{};
+  std::array<double, 6> velocity_rad_s{};
+};
+
+struct GuidanceReferenceRejected : std::runtime_error {
+  using std::runtime_error::runtime_error;
+};
+
 struct GuiCommand {
   std::string schema = "go-m8010-gui-command/1.0";
   std::string mode = "brake";
@@ -3655,6 +3667,7 @@ struct GuiCommand {
   std::array<double, 6> kd{{0.05, 0.10, 0.05, 0.05, 0.05, 0.0}};
   std::array<double, 6> feedforward_nm{};
   GravityCommandAuthority gravity_authority;
+  HandGuidanceReference hand_guidance;
   bool recovery = false;
   double vmax = 5.0 * kPi / 180.0;
   double amax = 20.0 * kPi / 180.0;
@@ -3799,9 +3812,11 @@ GravityCommandAuthority parse_gravity_command_authority(
     for (const char* field : kTeachFields)
       if (!authority.contains(field))
         throw std::runtime_error("COMMAND_GRAVITY_TEACH_FIELDS_INVALID");
+    result.hand_guidance_profile = authority.at("empirical_allowed_teach_joints") ==
+        nlohmann::json::array({"J1", "J2", "J3", "J4", "J5", "J6"});
     if (!authority.at("empirical_assisted_teach_authorized").is_boolean() ||
-        authority.at("empirical_allowed_teach_joints") !=
-            nlohmann::json::array({"J1", "J2", "J3", "J4", "J5"}))
+        (!result.hand_guidance_profile && authority.at("empirical_allowed_teach_joints") !=
+            nlohmann::json::array({"J1", "J2", "J3", "J4", "J5"})))
       throw std::runtime_error("COMMAND_GRAVITY_TEACH_SCOPE_INVALID");
     result.empirical_assisted_teach_authorized =
         authority.at("empirical_assisted_teach_authorized").get<bool>();
@@ -3812,8 +3827,13 @@ GravityCommandAuthority parse_gravity_command_authority(
       if (!authority.at(field.first).is_number())
         throw std::runtime_error("COMMAND_GRAVITY_TEACH_BOUND_INVALID");
       *field.second = authority.at(field.first).get<double>();
-      const double hard = std::string(field.first) == "empirical_maximum_teach_seconds" ? 30.0 : 5.0;
-      if (!std::isfinite(*field.second) || *field.second <= 0.0 || *field.second > hard)
+      const std::string name(field.first);
+      const double hard = result.hand_guidance_profile
+          ? name == "empirical_maximum_teach_seconds" ? 600.0
+            : name == "empirical_maximum_teach_excursion_deg" ? 10.0 : 30.0
+          : name == "empirical_maximum_teach_seconds" ? 30.0 : 5.0;
+      if (!std::isfinite(*field.second) || *field.second <= 0.0 || *field.second > hard ||
+          (result.hand_guidance_profile && *field.second != hard))
         throw std::runtime_error("COMMAND_GRAVITY_TEACH_BOUND_INVALID");
     }
   }
@@ -4127,26 +4147,54 @@ void parse_command(
       schema != "go-m8010-gui-command/1.1" &&
       schema != "go-m8010-gui-command/1.2" &&
       schema != "go-m8010-gui-command/1.3" &&
-      schema != "go-m8010-gui-command/1.4")
+      schema != "go-m8010-gui-command/1.4" &&
+      schema != "go-m8010-gui-command/1.5")
     throw std::runtime_error("COMMAND_SCHEMA_MISMATCH");
   const std::string mode = value.at("mode").get<std::string>();
   if (mode != "brake" && mode != "drag" && mode != "hold" && mode != "position" && mode != "teach")
     throw std::runtime_error("COMMAND_MODE_INVALID");
   if (schema != "go-m8010-gui-command/1.2" &&
       schema != "go-m8010-gui-command/1.3" &&
-      schema != "go-m8010-gui-command/1.4" && mode != "brake")
+      schema != "go-m8010-gui-command/1.4" &&
+      schema != "go-m8010-gui-command/1.5" && mode != "brake")
     throw std::runtime_error("COMMAND_LEGACY_ACTIVE_REJECTED");
   if (schema == "go-m8010-gui-command/1.3" &&
       mode != "position" && mode != "brake")
     throw std::runtime_error("COMMAND_V13_MODE_INVALID");
-  if ((mode == "teach" && schema != "go-m8010-gui-command/1.4") ||
+  if ((mode == "teach" && schema != "go-m8010-gui-command/1.4" && schema != "go-m8010-gui-command/1.5") ||
       (schema == "go-m8010-gui-command/1.4" && mode != "teach" && mode != "brake"))
     throw std::runtime_error("COMMAND_TEACH_SCHEMA_MODE_INVALID");
+  if (schema == "go-m8010-gui-command/1.5" && mode != "teach" && mode != "hold" && mode != "brake")
+    throw std::runtime_error("COMMAND_GUIDANCE_MODE_INVALID");
   GuiCommand candidate = command;
   candidate.schema = schema;
   candidate.mode = mode;
   candidate.quintic = QuinticTrajectoryDescriptor{};
   candidate.gravity_authority = GravityCommandAuthority{};
+  candidate.hand_guidance = HandGuidanceReference{};
+  if (schema == "go-m8010-gui-command/1.5" && mode != "brake") {
+    const auto& reference = value.at("hand_guidance");
+    const std::array<const char*, 7> fields{{"schema", "origin_rad", "velocity_rad_s",
+        "maximum_velocity_deg_s", "maximum_excursion_deg", "maximum_reference_error_deg", "freeze_reference"}};
+    if (!reference.is_object() || reference.size() != fields.size())
+      throw std::runtime_error("COMMAND_GUIDANCE_FIELDS_INVALID");
+    for (const auto* field : fields)
+      if (!reference.contains(field)) throw std::runtime_error("COMMAND_GUIDANCE_FIELDS_INVALID");
+    if (reference.at("schema") != "go-m8010-hand-guidance-reference/1.0")
+      throw std::runtime_error("COMMAND_GUIDANCE_SCHEMA_INVALID");
+    if (!reference.at("freeze_reference").is_boolean())
+      throw std::runtime_error("COMMAND_GUIDANCE_FREEZE_INVALID");
+    candidate.hand_guidance.freeze_reference = reference.at("freeze_reference").get<bool>();
+    for (const auto& bound : std::array<std::pair<const char*, double>, 3>{{
+        {"maximum_velocity_deg_s", 30.0}, {"maximum_excursion_deg", 10.0}, {"maximum_reference_error_deg", 2.0}}})
+      if (!reference.at(bound.first).is_number() || reference.at(bound.first).get<double>() != bound.second)
+        throw std::runtime_error("COMMAND_GUIDANCE_PROFILE_INVALID");
+    candidate.hand_guidance.origin_rad = strict_finite_six_vector(reference.at("origin_rad"), "COMMAND_GUIDANCE_ORIGIN_INVALID", "COMMAND_GUIDANCE_ORIGIN_INVALID");
+    candidate.hand_guidance.velocity_rad_s = strict_finite_six_vector(reference.at("velocity_rad_s"), "COMMAND_GUIDANCE_VELOCITY_INVALID", "COMMAND_GUIDANCE_VELOCITY_INVALID");
+    candidate.hand_guidance.present = true;
+  } else if (mode != "brake" && value.contains("hand_guidance")) {
+    throw std::runtime_error("COMMAND_GUIDANCE_LEGACY_SCHEMA_REJECTED");
+  }
   const auto targets = value.at("targets_rad").get<std::vector<double>>();
   const auto kp = value.at("kp").get<std::vector<double>>();
   const auto kd = value.at("kd").get<std::vector<double>>();
@@ -4197,12 +4245,23 @@ void parse_command(
     if (candidate.moving_joint_mask[i] && mode != "position" && mode != "teach")
       throw std::runtime_error("COMMAND_MOVING_MASK_MODE_INVALID");
   }
-  candidate.gravity_authority = parse_gravity_command_authority(
-      value, candidate, received_at);
-  if (mode == "teach" &&
+  if (schema == "go-m8010-gui-command/1.5" && mode == "brake") {
+    candidate.feedforward_nm.fill(0.0);
+  } else {
+    candidate.gravity_authority = parse_gravity_command_authority(value, candidate, received_at);
+  }
+  if (mode == "teach" && !candidate.hand_guidance.present &&
       (std::count(candidate.moving_joint_mask.begin(), candidate.moving_joint_mask.end(), true) != 1 ||
-       candidate.moving_joint_mask[5] || !candidate.gravity_authority.present))
+       candidate.moving_joint_mask[5] || !candidate.gravity_authority.present || candidate.gravity_authority.hand_guidance_profile))
     throw std::runtime_error("COMMAND_GRAVITY_TEACH_SCOPE_INVALID");
+  if (candidate.hand_guidance.present &&
+      (!candidate.gravity_authority.present || !candidate.gravity_authority.hand_guidance_profile ||
+       !std::all_of(candidate.active_joint_mask.begin(), candidate.active_joint_mask.end(), [](bool active) { return active; }) ||
+       (mode == "teach" && (!candidate.gravity_authority.empirical_assisted_teach_authorized ||
+        !candidate.gravity_authority.empirical_position_validation_authorized || candidate.gravity_authority.empirical_stage_index != 4U ||
+        candidate.gravity_authority.gravity_scale != 1.0 || candidate.gravity_authority.gravity_scale_target != 1.0 ||
+        std::none_of(candidate.moving_joint_mask.begin(), candidate.moving_joint_mask.end(), [](bool moving) { return moving; })))))
+    throw std::runtime_error("COMMAND_GRAVITY_GUIDANCE_SCOPE_INVALID");
   if (schema == "go-m8010-gui-command/1.3" && mode == "position" &&
       !candidate.gravity_authority.present)
     throw std::runtime_error("COMMAND_GRAVITY_AUTHORITY_MISSING");
@@ -4221,7 +4280,7 @@ void parse_command(
   if (!std::isfinite(requested_vmax) || requested_vmax <= 0.0 ||
       !std::isfinite(requested_amax) || requested_amax <= 0.0)
     throw std::runtime_error("COMMAND_PROFILE_INVALID");
-  candidate.vmax = std::min(requested_vmax, 5.0 * kPi / 180.0);
+  candidate.vmax = std::min(requested_vmax, (candidate.hand_guidance.present ? 30.0 : 5.0) * kPi / 180.0);
   candidate.amax = std::min(requested_amax, 20.0 * kPi / 180.0);
   if (schema == "go-m8010-gui-command/1.3" && mode == "position")
     candidate.quintic = parse_quintic_trajectory_descriptor(value, candidate);
@@ -4332,6 +4391,13 @@ struct CommandSafetyState {
   std::uint64_t teach_started_monotonic_ns = 0;
   bool teach_active = false;
   AssistedTeachExitHold teach_exit_hold;
+  bool guidance_bound = false;
+  bool guidance_active = false;
+  bool guidance_paused = false;
+  std::string guidance_paused_reason;
+  std::uint64_t guidance_started_ns = 0;
+  GuiCommand guidance_press;
+  GuiCommand guidance_reference;
   std::uint64_t minimum_activation_epoch = 0;
   std::uint64_t last_seen_activation_epoch = 0;
   // Incoming active commands at this epoch or below remain rejected.  This is
@@ -4800,7 +4866,7 @@ void validate_command_for_owned_domain(
     // POSITION, its non-moving support axes, HOLD and signed recovery all use
     // the same model-derived session envelope.  A rejected candidate never
     // replaces the previously accepted FOC command in receive_latest().
-    if (!within_model_command_envelope(
+    if (!command.hand_guidance.present && !within_model_command_envelope(
             joint_index, command.targets[joint]))
       throw std::runtime_error("COMMAND_TARGET_MODEL_ENVELOPE");
     if (command.quintic.present &&
@@ -4989,6 +5055,154 @@ bool healthy_logical_position_for_joint(
       positions.begin(), positions.end(), 0.0) /
       static_cast<double>(positions.size());
   return std::isfinite(logical_position);
+}
+
+void validate_and_observe_hand_guidance(
+    GuiCommand& command, const std::vector<MotorRuntime>& motors, CommandSafetyState& safety) {
+  if (command_releases_owned_domain(command, motors)) {
+    safety.guidance_bound = safety.guidance_active = safety.guidance_paused = false;
+    safety.guidance_paused_reason.clear();
+    return;
+  }
+  if (!command.hand_guidance.present) {
+    if (safety.guidance_active)
+      throw std::runtime_error("COMMAND_GUIDANCE_EXIT_REQUIRES_V15_HOLD");
+    safety.guidance_bound = safety.guidance_paused = false;
+    safety.guidance_paused_reason.clear();
+    return;
+  }
+  const bool entering = command.mode == "teach" && !safety.guidance_active;
+  if (entering) {
+    if (command.hand_guidance.freeze_reference)
+      throw std::runtime_error("COMMAND_GUIDANCE_FREEZE_REQUIRES_ACTIVE_PRESS");
+    const auto& previous = safety.last_accepted_command;
+    if (previous.mode != "hold" || command.activation_epoch <= previous.activation_epoch ||
+        command.active_joint_mask != previous.active_joint_mask || command.kp != previous.kp || command.kd != previous.kd ||
+        (safety.teach_exit_hold.present && !safety.teach_exit_hold.completed) ||
+        !all_motor_feedback_healthy(motors))
+      throw std::runtime_error("COMMAND_GUIDANCE_ENTRY_REQUIRES_FRESH_HOLD");
+    for (const auto& motor : motors) {
+      if (!motor.last_frame_valid || motor.returned_mode != kFocMode ||
+          std::chrono::duration<double>(command.received_at - motor.previous_feedback_at).count() < 0.0 ||
+          std::chrono::duration<double>(command.received_at - motor.previous_feedback_at).count() > kFixedHoldFeedbackFreshSeconds)
+        throw std::runtime_error("COMMAND_GUIDANCE_ENTRY_REQUIRES_FRESH_HOLD");
+    }
+    safety.guidance_press = command;
+    safety.guidance_reference = previous;
+    safety.guidance_bound = safety.guidance_active = true;
+    safety.guidance_paused = false;
+    safety.guidance_paused_reason.clear();
+    safety.guidance_started_ns = monotonic_ns_at(command.received_at);
+  } else {
+    if (!safety.guidance_bound ||
+        command.source_instance_id != safety.guidance_press.source_instance_id ||
+        command.hand_guidance.origin_rad != safety.guidance_press.hand_guidance.origin_rad ||
+        command.active_joint_mask != safety.guidance_press.active_joint_mask ||
+        command.kp != safety.guidance_press.kp || command.kd != safety.guidance_press.kd)
+      throw std::runtime_error("COMMAND_GUIDANCE_PRESS_CONTEXT_CHANGED");
+    if (command.mode == "teach" &&
+        (command.activation_epoch != safety.guidance_press.activation_epoch ||
+         command.moving_joint_mask != safety.guidance_press.moving_joint_mask))
+      throw std::runtime_error("COMMAND_GUIDANCE_PRESS_CONTEXT_CHANGED");
+    if (command.mode == "hold" && command.activation_epoch <= safety.guidance_press.activation_epoch)
+      throw std::runtime_error("COMMAND_GUIDANCE_HOLD_REQUIRES_HIGHER_EPOCH");
+  }
+  const auto& previous = safety.guidance_reference;
+  const auto received_ns = monotonic_ns_at(command.received_at);
+  if (command.mode == "teach" && command.hand_guidance.freeze_reference) {
+    if (std::any_of(command.hand_guidance.velocity_rad_s.begin(), command.hand_guidance.velocity_rad_s.end(),
+                    [](double value) { return value != 0.0; }))
+      throw GuidanceReferenceRejected("COMMAND_GUIDANCE_FREEZE_REQUIRES_ZERO_VELOCITY");
+    if (!safety.guidance_paused) {
+      safety.guidance_paused = true;
+      safety.guidance_paused_reason = "GUI_RELEASE";
+    }
+  }
+  if (safety.guidance_active && !safety.guidance_paused && received_ns >= safety.guidance_started_ns &&
+      received_ns - safety.guidance_started_ns >= 600000000000ULL) {
+    safety.guidance_paused = true;
+    safety.guidance_paused_reason = "DEADMAN_TIMEOUT";
+  }
+  if (command.mode == "teach" && safety.guidance_paused) {
+    // Fresh source/authority/profile were still checked. Freeze and queued
+    // heartbeats cannot move the last accepted goal or restart its clock.
+    command.targets = previous.targets;
+    command.hand_guidance.velocity_rad_s.fill(0.0);
+  }
+  const double source_dt = command.source_monotonic_ns > previous.source_monotonic_ns
+      ? static_cast<double>(command.source_monotonic_ns - previous.source_monotonic_ns) * 1e-9 : 0.0;
+  const bool frozen_owned_refresh = std::all_of(motors.begin(), motors.end(), [&](const MotorRuntime& motor) {
+    const auto joint = static_cast<std::size_t>(motor.joint_index);
+    return command.targets[joint] == previous.targets[joint] && command.hand_guidance.velocity_rad_s[joint] == 0.0;
+  });
+  std::set<int> checked;
+  for (const auto& motor : motors) {
+    const auto joint = static_cast<std::size_t>(motor.joint_index);
+    if (!checked.insert(motor.joint_index).second) continue;
+    double actual = 0.0;
+    if (!motor.last_frame_valid || !healthy_logical_position_for_joint(motors, motor.joint_index, actual))
+      throw std::runtime_error("COMMAND_GUIDANCE_FEEDBACK_UNHEALTHY");
+    if (entering && std::abs(command.hand_guidance.origin_rad[joint] - actual) > 2.0 * kPi / 180.0)
+      throw std::runtime_error("COMMAND_GUIDANCE_ORIGIN_NOT_CURRENT");
+    if (!within_model_command_envelope(motor.joint_index, command.targets[joint]) ||
+        !within_model_command_envelope(motor.joint_index, command.hand_guidance.origin_rad[joint]))
+      throw GuidanceReferenceRejected("COMMAND_GUIDANCE_REF_MODEL_LIMIT");
+    if (command.mode == "hold") {
+      if (command.targets[joint] != previous.targets[joint] || command.hand_guidance.velocity_rad_s[joint] != 0.0)
+        throw GuidanceReferenceRejected("COMMAND_GUIDANCE_REF_HOLD_ACK_MISMATCH");
+      safety.fixed_target_valid[joint] = true;
+      safety.fixed_target_epoch[joint] = command.activation_epoch;
+      safety.fixed_target[joint] = command.targets[joint];
+      continue;
+    }
+    if (!command.moving_joint_mask[joint] &&
+        (command.targets[joint] != safety.last_accepted_command.targets[joint] ||
+         command.hand_guidance.velocity_rad_s[joint] != 0.0))
+      throw std::runtime_error("COMMAND_GUIDANCE_UNSELECTED_HOLD_CHANGED");
+    if (std::abs(command.targets[joint] - command.hand_guidance.origin_rad[joint]) > 10.0 * kPi / 180.0 + 1e-12 ||
+        std::abs(command.hand_guidance.velocity_rad_s[joint]) > 30.0 * kPi / 180.0 + 1e-12)
+      throw GuidanceReferenceRejected("COMMAND_GUIDANCE_REF_PROFILE_LIMIT");
+    if (!frozen_owned_refresh && !safety.guidance_paused &&
+        (std::abs(command.targets[joint] - actual) > 2.0 * kPi / 180.0 + 1e-12 ||
+         source_dt <= 0.0 ||
+         std::abs(command.targets[joint] - previous.targets[joint]) > 30.0 * kPi / 180.0 * source_dt + 1e-9))
+      throw GuidanceReferenceRejected("COMMAND_GUIDANCE_REF_ACTUAL_OR_STEP_LIMIT");
+  }
+  safety.guidance_reference = command;
+  if (command.mode == "hold") {
+    safety.guidance_active = safety.guidance_paused = false;
+    safety.guidance_paused_reason.clear();
+  }
+}
+
+std::string hand_guidance_runtime_blocker(
+    GuiCommand& command, CommandSafetyState& safety, const std::vector<MotorRuntime>& motors,
+    double j2_velocity, std::uint64_t now_ns) {
+  if (!safety.guidance_bound)
+    return "ASSISTED_TEACH_PRESS_STATE_INVALID";
+  for (const auto& motor : motors) {
+    const auto joint = static_cast<std::size_t>(motor.joint_index);
+    double actual = 0.0;
+    if (!motor.last_frame_valid || !healthy_logical_position_for_joint(motors, motor.joint_index, actual))
+      return "ASSISTED_TEACH_FEEDBACK_UNHEALTHY";
+    if (!within_mechanical_feedback_envelope(motor.joint_index, actual))
+      return "ASSISTED_TEACH_MODEL_BOUND";
+    const double velocity = joint == 1U ? j2_velocity : motor.integral_encoder_velocity;
+    if (!std::isfinite(velocity)) return "ASSISTED_TEACH_ENCODER_VELOCITY_UNAVAILABLE";
+    if (std::abs(velocity) > 30.0 * kPi / 180.0) return "HAND_GUIDANCE_ACTUAL_VELOCITY_LIMIT";
+  }
+  if (safety.guidance_active && !safety.guidance_paused && now_ns >= safety.guidance_started_ns &&
+      now_ns - safety.guidance_started_ns >= 600000000000ULL) {
+    safety.guidance_paused = true;
+    safety.guidance_paused_reason = "DEADMAN_TIMEOUT";
+  }
+  if (safety.guidance_paused) {
+    command.mode = "hold";
+    command.targets = safety.guidance_reference.targets;
+    command.moving_joint_mask.fill(false);
+    command.hand_guidance.velocity_rad_s.fill(0.0);
+  }
+  return "";
 }
 
 void validate_and_observe_assisted_teach(
@@ -5228,7 +5442,8 @@ std::string assisted_teach_runtime_blocker(
 bool uses_assisted_teach_damping(
     const GuiCommand& command, const std::string& mode, std::size_t joint,
     const AssistedTeachExitHold& exit_hold, std::uint64_t now_ns) {
-  return joint_is_assisted_teach(command, mode, joint) ||
+  return (command.hand_guidance.present && (mode == "teach" || mode == "hold") && command.active_joint_mask[joint]) ||
+      joint_is_assisted_teach(command, mode, joint) ||
       (mode == "hold" && exit_hold.present && !exit_hold.completed &&
        exit_hold.joint_index == joint && command.targets == exit_hold.targets_rad &&
        now_ns >= exit_hold.started_monotonic_ns && now_ns < exit_hold.deadline_monotonic_ns);
@@ -5252,6 +5467,16 @@ void apply_assisted_teach_reference(
       throw std::runtime_error("ASSISTED_TEACH_REFERENCE_FEEDBACK_UNHEALTHY");
     q[joint] = actual;
     dq[joint] = 0.0;
+  }
+}
+
+void apply_hand_guidance_reference(
+    const GuiCommand& command, const std::vector<MotorRuntime>& motors,
+    std::array<double, 6>& q, std::array<double, 6>& dq) {
+  for (const auto& motor : motors) {
+    const auto joint = static_cast<std::size_t>(motor.joint_index);
+    q[joint] = command.targets[joint];
+    dq[joint] = command.mode == "teach" ? command.hand_guidance.velocity_rad_s[joint] : 0.0;
   }
 }
 
@@ -5470,6 +5695,8 @@ int enforce_brake_only_wire_mode(bool brake_only, int requested_mode) {
   return requested_mode;
 }
 
+void hand_guidance_self_test(const nlohmann::json& legacy_packet);
+
 void assisted_teach_self_test() {
   const auto now = Clock::now();
   const auto ns = monotonic_ns_at(now);
@@ -5507,6 +5734,7 @@ void assisted_teach_self_test() {
           {"empirical_allowed_teach_joints", {"J1", "J2", "J3", "J4", "J5"}}}}};
   GuiCommand teach;
   parse_command(packet.dump(), teach, now);
+  hand_guidance_self_test(packet);
   auto require_rejected = [](const auto& action) {
     bool rejected = false;
     try { action(); } catch (const std::runtime_error&) { rejected = true; }
@@ -7457,9 +7685,11 @@ CommandReceiveResult receive_latest(
       CommandSafetyState candidate_safety = safety;
       try {
         validate_command_for_owned_domain(candidate, motors);
-        validate_and_observe_assisted_teach(candidate, motors, candidate_safety);
         validate_and_observe_gravity_policy(
             candidate, motors, candidate_safety);
+        validate_and_observe_hand_guidance(candidate, motors, candidate_safety);
+        if (!candidate.hand_guidance.present)
+          validate_and_observe_assisted_teach(candidate, motors, candidate_safety);
         validate_and_observe_position_authority(
             candidate, motors, candidate_safety);
         validate_and_observe_fixed_hold_targets(
@@ -7467,6 +7697,10 @@ CommandReceiveResult receive_latest(
             &position_arrived_once, &position_endpoint_reached,
             &position_tracking, &position_tracking_epoch,
             &position_tracking_target);
+      } catch (const GuidanceReferenceRejected&) {
+        // An otherwise authorized 1.5 reference can be corrected next frame;
+        // no goal, accepted-source state, lease or epoch is committed here.
+        throw;
       } catch (...) {
         // Do not commit the candidate or its target, but permanently fence its
         // active epoch. The already accepted older command remains untouched.
@@ -7626,7 +7860,10 @@ std::string feedback_payload(const std::vector<MotorRuntime>& motors,
                              double no_progress_position_error_rad,
                              bool software_saturation_observed,
                              double thermal_derating_factor,
-                             const AssistedTeachExitHold& teach_exit_hold) {
+                             const AssistedTeachExitHold& teach_exit_hold,
+                             const GuiCommand* accepted_guidance = nullptr,
+                             bool guidance_paused = false,
+                             const std::string& guidance_paused_reason = "DEADMAN_TIMEOUT") {
   nlohmann::json samples = nlohmann::json::array();
   nlohmann::json controller_mode_by_motor = nlohmann::json::object();
   nlohmann::json thermal_state_by_motor = nlohmann::json::object();
@@ -7676,6 +7913,11 @@ std::string feedback_payload(const std::vector<MotorRuntime>& motors,
         {"power_session_reference_raw_rad", motor.session_reference},
         {"power_session_logical_position_rad",
          motor.session_logical_position}});
+    if (accepted_guidance != nullptr && accepted_guidance->hand_guidance.present) {
+      samples.back()["accepted_guidance_target_rad"] = accepted_guidance->targets[static_cast<std::size_t>(motor.joint_index)];
+      samples.back()["accepted_guidance_activation_epoch"] = accepted_guidance->activation_epoch;
+      if (guidance_paused) samples.back()["guidance_paused_reason"] = guidance_paused_reason;
+    }
     controller_mode_by_motor[motor.name] =
         !motor.last_frame_valid || !motor.valid || motor.fault_latched
             ? "unknown"
@@ -7849,6 +8091,196 @@ std::string feedback_payload(const std::vector<MotorRuntime>& motors,
       payload["assisted_teach_exit_hold"]["restricted"] = true;
   }
   return payload.dump();
+}
+
+void hand_guidance_self_test(const nlohmann::json& legacy_packet) {
+  for (const std::string bus : {"j1", "j2", "j345"}) {
+    const auto now = Clock::now();
+    const auto ns = monotonic_ns_at(now);
+    auto packet = legacy_packet;
+    packet["schema"] = "go-m8010-gui-command/1.5";
+    packet["source_monotonic_ns"] = ns - 90000000ULL;
+    packet["moving_joint_mask"] = {true, true, true, true, true, true};
+    packet["maximum_velocity_rad_s"] = 30.0 * kPi / 180.0;
+    packet["hand_guidance"] = {{"schema", "go-m8010-hand-guidance-reference/1.0"},
+        {"origin_rad", {0.0, 0.0, 0.0, 0.0, 0.0, 0.0}},
+        {"velocity_rad_s", {0.0, 0.0, 0.0, 0.0, 0.0, 0.0}},
+        {"maximum_velocity_deg_s", 30.0}, {"maximum_excursion_deg", 10.0}, {"maximum_reference_error_deg", 2.0},
+        {"freeze_reference", false}};
+    auto& authority = packet["gravity_authority"];
+    authority["source_monotonic_ns"] = ns;
+    authority["empirical_envelope_deadline_monotonic_ns"] = ns + 1000000000000ULL;
+    authority["empirical_allowed_teach_joints"] = {"J1", "J2", "J3", "J4", "J5", "J6"};
+    authority["empirical_maximum_teach_excursion_deg"] = 10.0;
+    authority["empirical_maximum_teach_seconds"] = 600.0;
+    authority["empirical_maximum_teach_velocity_deg_s"] = 30.0;
+    auto motors = make_motors(bus);
+    for (auto& motor : motors) {
+      motor.reference_ready = motor.valid = motor.last_frame_valid = motor.speed_ready = true;
+      motor.returned_mode = kFocMode; motor.merror = 0; motor.temperature = 30;
+      motor.previous_feedback_at = now - std::chrono::milliseconds(1);
+      motor.integral_encoder_velocity = 0.0;
+    }
+    auto hold_packet = packet;
+    hold_packet["schema"] = "go-m8010-gui-command/1.2"; hold_packet["mode"] = "hold";
+    hold_packet["activation_epoch"] = 1U; hold_packet["source_monotonic_ns"] = ns - 100000000ULL;
+    hold_packet["moving_joint_mask"] = {false, false, false, false, false, false};
+    hold_packet.erase("hand_guidance");
+    hold_packet["gravity_authority"]["empirical_stage_index"] = 0U;
+    hold_packet["gravity_authority"]["empirical_position_validation_authorized"] = false;
+    hold_packet["gravity_authority"]["gravity_scale"] = 0.0;
+    hold_packet["gravity_authority"]["gravity_scale_target"] = 0.0;
+    GuiCommand command;
+    parse_command(hold_packet.dump(), command, now);
+    CommandSafetyState safety;
+    CommandReceiveState receive_state;
+    validate_command_for_owned_domain(command, motors);
+    validate_and_observe_gravity_policy(command, motors, safety);
+    for (std::uint64_t stage = 1U; stage < 5U; ++stage) {
+      command.gravity_authority.empirical_stage_index = stage;
+      command.gravity_authority.gravity_scale = static_cast<double>(stage) * 0.25;
+      command.gravity_authority.gravity_scale_target = static_cast<double>(stage) * 0.25;
+      validate_and_observe_gravity_policy(command, motors, safety);
+    }
+    command.gravity_authority.empirical_position_validation_authorized = true;
+    validate_and_observe_gravity_policy(command, motors, safety);
+    validate_and_observe_fixed_hold_targets(command, motors, safety);
+    observe_valid_command(command, motors, safety);
+    observe_command_source(command, receive_state);
+    struct Pair { int fd[2]{-1, -1}; ~Pair() { for (int item : fd) if (item >= 0) ::close(item); } } sockets;
+    if (::socketpair(AF_UNIX, SOCK_DGRAM, 0, sockets.fd) != 0 ||
+        ::fcntl(sockets.fd[0], F_SETFL, O_NONBLOCK) != 0)
+      throw std::runtime_error("GUIDANCE_TEST_SOCKET_FAILED");
+    const std::array<bool, 6> no_flags{};
+    const std::array<std::uint64_t, 6> no_epochs{};
+    const std::array<double, 6> zero{};
+    auto send = [&](const nlohmann::json& value) {
+      const auto data = value.dump();
+      if (::send(sockets.fd[1], data.data(), data.size(), 0) != static_cast<ssize_t>(data.size()))
+        throw std::runtime_error("GUIDANCE_TEST_SEND_FAILED");
+      return receive_latest(sockets.fd[0], command, safety, motors, no_flags, no_flags, no_flags,
+                            no_epochs, zero, receive_state);
+    };
+    packet["sequence"] = 2U;
+    send(packet);
+    if (!command.hand_guidance.present || !safety.guidance_active || command.activation_epoch != 2U)
+      throw std::runtime_error("GUIDANCE_ENTRY_SELF_TEST_FAILED");
+    packet["sequence"] = 3U; packet["source_monotonic_ns"] = ns - 70000000ULL;
+    packet["targets_rad"] = std::vector<double>(6, 0.001);
+    packet["hand_guidance"]["velocity_rad_s"] = std::vector<double>(6, 0.02);
+    send(packet);
+    if (command.source_sequence != 3U) throw std::runtime_error("GUIDANCE_UPDATE_SELF_TEST_FAILED");
+    for (int bad_case = 0; bad_case < 4; ++bad_case) {
+      auto bad = packet;
+      bad["sequence"] = 100U + bad_case;
+      bad["source_monotonic_ns"] = ns - 60000000ULL + static_cast<std::uint64_t>(bad_case);
+      const auto joint = static_cast<std::size_t>(motors.front().joint_index);
+      if (bad_case == 0) bad["targets_rad"][joint] = 11.0 * kPi / 180.0;
+      if (bad_case == 1) bad["targets_rad"][joint] = 3.0 * kPi / 180.0;
+      if (bad_case == 2) bad["hand_guidance"]["velocity_rad_s"][joint] = 30.01 * kPi / 180.0;
+      if (bad_case == 3) { bad["source_monotonic_ns"] = ns - 70000000ULL + 1000U; bad["targets_rad"][joint] = 0.002; }
+      const auto receipt = command.received_at;
+      send(bad);
+      if (command.source_sequence != 3U || command.received_at != receipt ||
+          command.targets != safety.guidance_reference.targets || safety.highest_rejected_active_epoch != 0U ||
+          receive_state.accepted_sources[command.source_instance_id].last_sequence != 3U)
+        throw std::runtime_error("GUIDANCE_SOFT_REJECT_CHANGED_GOAL_LEASE_OR_EPOCH");
+    }
+    packet["sequence"] = 4U; packet["source_monotonic_ns"] = ns - 20000000ULL;
+    packet["targets_rad"] = std::vector<double>(6, 0.0015);
+    send(packet);
+    if (command.source_sequence != 4U) throw std::runtime_error("GUIDANCE_RETRY_SELF_TEST_FAILED");
+    auto q = zero, dq = zero;
+    apply_hand_guidance_reference(command, motors, q, dq);
+    for (const auto& motor : motors) {
+      const auto joint = static_cast<std::size_t>(motor.joint_index);
+      if (q[joint] != 0.0015 || dq[joint] != 0.02)
+        throw std::runtime_error("GUIDANCE_REFERENCE_WAS_RECAPTURED");
+    }
+    auto displaced = motors;
+    for (auto& motor : displaced)
+      motor.unwrapped = motor.reference + motor.sign * kGear * (0.0015 + 2.5 * kPi / 180.0);
+    auto keep_goal = command;
+    keep_goal.hand_guidance.velocity_rad_s.fill(0.0);
+    auto keep_safety = safety;
+    validate_and_observe_hand_guidance(keep_goal, displaced, keep_safety);
+    bool moving_refresh_rejected = false;
+    try {
+      auto moving_refresh = command;
+      auto moving_safety = safety;
+      validate_and_observe_hand_guidance(moving_refresh, displaced, moving_safety);
+    } catch (const GuidanceReferenceRejected&) { moving_refresh_rejected = true; }
+    if (keep_goal.targets != command.targets || !moving_refresh_rejected)
+      throw std::runtime_error("GUIDANCE_FROZEN_ONLY_LEAD_EXCEPTION_FAILED");
+    auto deadline_safety = safety;
+    auto deadline_candidate = command;
+    deadline_candidate.received_at += std::chrono::seconds(600);
+    deadline_candidate.targets.fill(0.02);
+    validate_and_observe_hand_guidance(deadline_candidate, motors, deadline_safety);
+    if (!deadline_safety.guidance_paused || deadline_safety.guidance_paused_reason != "DEADMAN_TIMEOUT" ||
+        deadline_candidate.targets != command.targets)
+      throw std::runtime_error("GUIDANCE_RECEIVE_DEADLINE_CHANGED_GOAL");
+    auto runtime_command = command;
+    auto runtime_safety = safety;
+    motors.front().integral_encoder_velocity = 30.01 * kPi / 180.0;
+    if (hand_guidance_runtime_blocker(runtime_command, runtime_safety, motors,
+            bus == "j2" ? motors.front().integral_encoder_velocity : 0.0, ns) != "HAND_GUIDANCE_ACTUAL_VELOCITY_LIMIT")
+      throw std::runtime_error("GUIDANCE_ACTUAL_SPEED_SELF_TEST_FAILED");
+    motors.front().integral_encoder_velocity = 0.0;
+    if (!hand_guidance_runtime_blocker(runtime_command, runtime_safety, motors, 0.0,
+            safety.guidance_started_ns + 600000000000ULL).empty() || runtime_command.mode != "hold" ||
+        runtime_command.targets != command.targets || !runtime_safety.guidance_paused || safety.teach_exit_hold.present)
+      throw std::runtime_error("GUIDANCE_TIMEOUT_MUST_RETAIN_HOLD");
+    // Release uses no feedback-derived target: freeze the native accepted goal,
+    // then ignore an already queued moving reference until exact owned ACK.
+    const auto press_started = safety.guidance_started_ns;
+    packet["sequence"] = 5U; packet["source_monotonic_ns"] = ns - 15000000ULL;
+    packet["targets_rad"] = std::vector<double>(6, -0.08);
+    packet["hand_guidance"]["freeze_reference"] = true;
+    packet["hand_guidance"]["velocity_rad_s"] = std::vector<double>(6, 0.0);
+    send(packet);
+    if (command.source_sequence != 5U || !safety.guidance_paused ||
+        safety.guidance_paused_reason != "GUI_RELEASE" || safety.guidance_started_ns != press_started)
+      throw std::runtime_error("GUIDANCE_RELEASE_FREEZE_SELF_TEST_FAILED");
+    for (const auto& motor : motors)
+      if (command.targets[static_cast<std::size_t>(motor.joint_index)] != 0.0015)
+        throw std::runtime_error("GUIDANCE_RELEASE_USED_STALE_TARGET");
+    packet["sequence"] = 6U; packet["source_monotonic_ns"] = ns - 10000000ULL;
+    packet["hand_guidance"]["freeze_reference"] = false;
+    packet["hand_guidance"]["velocity_rad_s"] = std::vector<double>(6, 0.02);
+    packet["targets_rad"] = std::vector<double>(6, 0.08);
+    send(packet);
+    for (const auto& motor : motors)
+      if (command.source_sequence != 6U || command.targets[static_cast<std::size_t>(motor.joint_index)] != 0.0015 ||
+          command.hand_guidance.velocity_rad_s[static_cast<std::size_t>(motor.joint_index)] != 0.0)
+        throw std::runtime_error("GUIDANCE_PAUSED_HEARTBEAT_CHANGED_TARGET");
+    runtime_command = command;
+    if (!hand_guidance_runtime_blocker(runtime_command, safety, motors, 0.0, ns).empty() ||
+        runtime_command.mode != "hold" || safety.guidance_started_ns != press_started)
+      throw std::runtime_error("GUIDANCE_RELEASE_DID_NOT_RETAIN_HOLD");
+    const auto raw = nlohmann::json::parse(feedback_payload(motors, ns, "hold", J2SyncFaultFilter{}, false,
+        false, runtime_command, zero, "INACTIVE", 0, ThermalInterlockState{}, NoProgressWatchdogState{},
+        false, 0.0, false, 1.0, AssistedTeachExitHold{}, &safety.last_accepted_command, true, safety.guidance_paused_reason));
+    for (const auto& sample : raw.at("samples"))
+      if (sample.at("accepted_guidance_target_rad").get<double>() != 0.0015 ||
+          sample.at("accepted_guidance_activation_epoch").get<std::uint64_t>() != 2U ||
+          sample.at("guidance_paused_reason") != "GUI_RELEASE")
+        throw std::runtime_error("GUIDANCE_RAW_ACK_SELF_TEST_FAILED");
+    packet["mode"] = "hold"; packet["activation_epoch"] = 3U; packet["sequence"] = 7U;
+    packet["source_monotonic_ns"] = ns - 1000000ULL;
+    packet["moving_joint_mask"] = {false, false, false, false, false, false};
+    packet["hand_guidance"]["velocity_rad_s"] = std::vector<double>(6, 0.0);
+    packet["targets_rad"] = std::vector<double>(6, 0.003);  // Other domains may ACK different last samples.
+    for (const auto& motor : motors) packet["targets_rad"][motor.joint_index] = 0.0015;
+    send(packet);
+    if (command.mode != "hold" || command.activation_epoch != 3U || safety.guidance_active || safety.guidance_paused)
+      throw std::runtime_error("GUIDANCE_OWNED_HOLD_ACK_SELF_TEST_FAILED");
+    packet["mode"] = "brake"; packet["active_joint_mask"] = {false, false, false, false, false, false};
+    packet["hand_guidance"] = "malformed-but-brake-must-exit";
+    send(packet);
+    if (command.mode != "brake" || safety.guidance_bound)
+      throw std::runtime_error("GUIDANCE_BRAKE_EXIT_SELF_TEST_FAILED");
+  }
 }
 
 bool send_terminal_brake(SerialPort& serial, std::vector<MotorRuntime>& motors,
@@ -8769,11 +9201,11 @@ int run(const Options& options) {
     // authorized teach mode follows one joint with bounded gravity support.
     if (effective_mode == "drag")
       effective_mode = "brake";
-    if (effective_mode == "teach" ||
+    if ((control_command.hand_guidance.present && is_position_holding_mode(effective_mode)) || effective_mode == "teach" ||
         (effective_mode == "hold" && command_safety.teach_exit_hold.present)) {
-      const std::string teach_blocker = assisted_teach_runtime_blocker(
-          control_command, command_safety, motors,
-          j2_derived_velocity_filtered, monotonic_ns());
+      const std::string teach_blocker = control_command.hand_guidance.present
+          ? hand_guidance_runtime_blocker(control_command, command_safety, motors, j2_derived_velocity_filtered, monotonic_ns())
+          : assisted_teach_runtime_blocker(control_command, command_safety, motors, j2_derived_velocity_filtered, monotonic_ns());
       if (!teach_blocker.empty()) {
         latch_position_safety_watchdog(
             no_progress_watchdog, 0.0, teach_blocker.c_str(),
@@ -8796,7 +9228,8 @@ int run(const Options& options) {
     const bool teach_stopping_hold = effective_mode == "hold" &&
         command_safety.teach_exit_hold.present && !command_safety.teach_exit_hold.completed;
     std::array<double, 6> teach_damping_nm{};
-    if (effective_mode == "teach" || teach_stopping_hold) {
+    if (effective_mode == "teach" || teach_stopping_hold ||
+        (control_command.hand_guidance.present && effective_mode == "hold")) {
       std::set<int> damped_joints;
       for (const auto& motor : motors) {
         const auto joint = static_cast<std::size_t>(motor.joint_index);
@@ -8804,7 +9237,9 @@ int run(const Options& options) {
                 command_safety.teach_exit_hold, teach_cycle_ns) ||
             !damped_joints.insert(motor.joint_index).second) continue;
         const double velocity = joint == 1U ? j2_derived_velocity_filtered : motor.integral_encoder_velocity;
-        teach_damping_nm[joint] = -std::min(thermally_derated_command.kd[joint], motor.kd_limit) * kGear * velocity;
+        const double reference_velocity = control_command.hand_guidance.present && effective_mode == "teach"
+            ? control_command.hand_guidance.velocity_rad_s[joint] : 0.0;
+        teach_damping_nm[joint] = std::min(thermally_derated_command.kd[joint], motor.kd_limit) * kGear * (reference_velocity - velocity);
         // Vendor velocity has proven stationary noise. Apply damping from the
         // encoder observer as explicit torque and disable only selected KD.
         thermally_derated_command.kd[joint] = 0.0;
@@ -8960,7 +9395,7 @@ int run(const Options& options) {
         dq_command[joint] = 0.0;
       }
     }
-    if (effective_mode == "teach")
+    if (effective_mode == "teach" && !control_command.hand_guidance.present)
       apply_assisted_teach_reference(control_command, motors, q_command, dq_command);
     std::set<int> planned;
     if (effective_mode == "position" && j2_pair_ready) {
@@ -8984,6 +9419,9 @@ int run(const Options& options) {
       }
     } else {
       dq_command.fill(0.0);
+    }
+    if (effective_mode == "teach" && control_command.hand_guidance.present) {
+      apply_hand_guidance_reference(control_command, motors, q_command, dq_command);
     }
     // Keep the trajectory generator state independent from the governed wire
     // reference.  Under a heavy load the J2 governor may legitimately limit
@@ -9127,8 +9565,8 @@ int run(const Options& options) {
         if ((effective_mode == "teach" || teach_stopping_hold) && !governed.feasible)
           teach_governor_infeasible = true;
         if (governed.feasible) {
-          const bool exact_recipe = effective_mode == "position" &&
-              control_command.quintic.present;
+          const bool exact_recipe = (effective_mode == "position" && control_command.quintic.present) ||
+              control_command.hand_guidance.present;
           // alpha==1 authorizes the original signed planner sample. Avoid
           // rebuilding it as measured + (target - measured), which can differ
           // from the hashed target by one floating-point rounding step.
@@ -9270,8 +9708,8 @@ int run(const Options& options) {
           if ((effective_mode == "teach" || teach_stopping_hold) && !governed.feasible)
             teach_governor_infeasible = true;
           if (governed.feasible) {
-            const bool exact_recipe = effective_mode == "position" &&
-                control_command.quintic.present;
+            const bool exact_recipe = (effective_mode == "position" && control_command.quintic.present) ||
+                control_command.hand_guidance.present;
             aux_wire_q_command[joint] =
                 exact_recipe && governed.alpha == 1.0
                 ? q_command[joint] : governed.q;
@@ -10332,7 +10770,8 @@ int run(const Options& options) {
         no_progress_watchdog, no_progress_observation_valid,
         no_progress_position_error_rad,
         software_saturation_observed_this_cycle,
-        thermal_derating_factor, command_safety.teach_exit_hold);
+        thermal_derating_factor, command_safety.teach_exit_hold,
+        &command_safety.last_accepted_command, command_safety.guidance_paused, command_safety.guidance_paused_reason);
     (void)::sendto(feedback_socket, payload.data(), payload.size(), 0,
                    reinterpret_cast<const sockaddr*>(&feedback_address),
                    sizeof(feedback_address));

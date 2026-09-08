@@ -446,6 +446,92 @@ def test_assisted_teach_single_axis_authority_and_domain_hold_compatibility(join
         production_validate_command(json.dumps({**document, "schema": GUI_COMMAND_SCHEMA_V12}), now_ns=now_ns)
 
 
+def test_whole_arm_guidance_requires_separate_scope_and_preserves_hold_ack():
+    now = time.monotonic_ns()
+    document = json.loads(command(mode="hold"))
+    reference = {"schema": "go-m8010-hand-guidance-reference/1.0", "origin_rad": [0.0] * 6,
+        "velocity_rad_s": [math.radians(3.0)] * 6, "freeze_reference": False, "maximum_velocity_deg_s": 30.0,
+        "maximum_excursion_deg": 10.0, "maximum_reference_error_deg": 2.0}
+    document.update(schema="go-m8010-gui-command/1.5", mode="teach", moving_joint_mask=[True] * 6,
+        targets_rad=[0.001] * 6, maximum_velocity_rad_s=math.radians(30.0), hand_guidance=reference)
+    normalized, _ = production_validate_command(json.dumps(document), now_ns=now)
+    assert normalized["maximum_velocity_rad_s"] == math.radians(30.0)
+    gate = GravityAuthorityGate()
+    gate._latest = _empirical_latest(now, deadline_ns=now + 60_000_000_000)
+    gate._latest.update(empirical_assisted_teach_authorized=True,
+        empirical_allowed_teach_joints=["J1", "J2", "J3", "J4", "J5"],
+        empirical_maximum_teach_excursion_deg=5.0, empirical_maximum_teach_seconds=30.0,
+        empirical_maximum_teach_velocity_deg_s=5.0)
+    with pytest.raises(ValueError, match="未授权"):
+        gate.authorize(deepcopy(normalized), now_ns=now)
+    gate._latest.update(empirical_allowed_teach_joints=["J1", "J2", "J3", "J4", "J5", "J6"],
+        empirical_maximum_teach_excursion_deg=10.0, empirical_maximum_teach_seconds=600.0,
+        empirical_maximum_teach_velocity_deg_s=30.0)
+    for mode in ("teach", "hold"):
+        request = deepcopy(document)
+        request.update(mode=mode, moving_joint_mask=[mode == "teach"] * 6)
+        if mode == "hold":
+            request["hand_guidance"]["velocity_rad_s"] = [0.0] * 6
+            request["activation_epoch"] += 1
+        command_value, _ = production_validate_command(json.dumps(request), now_ns=now)
+        gate.authorize(command_value, now_ns=now)
+        for domain in ("J1", "J2", "J345", "J6"):
+            packet = json.loads(payload_for_domain(command_value, domain))
+            assert packet["schema"] == "go-m8010-gui-command/1.5" and packet["mode"] == mode
+            assert packet["targets_rad"] == request["targets_rad"]
+            assert packet["hand_guidance"] == request["hand_guidance"]
+            assert len(packet["gravity_authority"]) == 27
+    for field, value in (("maximum_velocity_deg_s", 30.01), ("origin_rad", [False] * 6)):
+        invalid = deepcopy(document)
+        invalid["hand_guidance"][field] = value
+        with pytest.raises(ValueError):
+            production_validate_command(json.dumps(invalid), now_ns=now)
+    invalid = deepcopy(document)
+    invalid["targets_rad"][1] = math.radians(10.01)
+    with pytest.raises(ValueError):
+        production_validate_command(json.dumps(invalid), now_ns=now)
+
+
+def test_guidance_gui_has_one_reference_clock_and_brake_bypasses_owner_gate():
+    from test_main_window_logic import load_class_method, load_main_window_method, load_function
+    packets, calls = [], []
+    namespace = {"String": lambda **kwargs: SimpleNamespace(**kwargs),
+        "Float64MultiArray": lambda **kwargs: SimpleNamespace(**kwargs), "RAD": math.pi/180,
+        "__package__": "go_m8010_arm_gui"}
+    publish = load_class_method("ArmGuiNode", "publish_command", namespace)
+    node = SimpleNamespace(command_source_instance_id=COMMAND_SOURCE,
+        command_publisher=SimpleNamespace(publish=lambda message: packets.append(json.loads(message.data))),
+        target_publisher=SimpleNamespace(publish=lambda *_: None))
+    config = {"控制": {"最大速度_度每秒": 3, "最大加速度_度每二次方秒": 10},
+        "关节": {f"J{i+1}": {"Kp": KP_LIMITS[i], "Kd": KD_LIMITS[i]} for i in range(6)}}
+    reference = {"schema": "go-m8010-hand-guidance-reference/1.0", "origin_rad": [0.0]*6,
+        "velocity_rad_s": [0.0]*6, "freeze_reference": False, "maximum_velocity_deg_s": 30.0,
+        "maximum_excursion_deg": 10.0, "maximum_reference_error_deg": 2.0}
+    generated_ns = time.monotonic_ns()-1_000_000
+    publish(node, 1, "teach", [0.0]*6, [0.0]*6, [True]*6, [True]*6, 3, config,
+            hand_guidance=reference, command_source_monotonic_ns=generated_ns)
+    assert packets[-1]["source_monotonic_ns"] == generated_ns and packets[-1]["schema"].endswith("/1.5")
+    publish(node, 2, "brake", [0.0]*6, [0.0]*6, [True]*6, [True]*6, 3, config,
+            hand_guidance={"bad": True}, command_source_monotonic_ns=-1)
+    assert packets[-1]["mode"] == "brake" and "hand_guidance" not in packets[-1]
+    gate = load_main_window_method("_publish_command", {**namespace,
+        "effective_active_joint_mask": load_function("effective_active_joint_mask")})
+    node.mode_publisher = SimpleNamespace(publish=lambda *_: None)
+    node.publish_command = lambda *args, **kwargs: calls.append((args, kwargs))
+    window = SimpleNamespace(node=node, requested_active_joint_mask=[True]*6, connected=[True]*6,
+        hardware_mode="teach", direction=SimpleNamespace(value="sim_to_real"), moving_joint_mask=[True]*6,
+        pending_target_joint_mask=[False]*6, faulted=[False]*6, activation_epoch=3,
+        command_stream_suspended=False, command_stream_suspended_reason=None, targets=[0.0]*6,
+        command_targets=[0.0]*6, command_sequence=0, config=config, task_id=None,
+        active_collision_proof=None, active_trajectory_descriptor=None, active_plan_manifest=None,
+        hand_guidance_reference=reference, hand_guidance_source_monotonic_ns=generated_ns)
+    assert gate(window) is False and not calls and window.command_sequence == 0
+    assert gate(window, guidance_owner=True) is True and len(calls) == 1
+    assert calls[-1][1]["command_source_monotonic_ns"] == generated_ns
+    window.hardware_mode = "brake"
+    assert gate(window) is True and len(calls) == 2 and calls[-1][0][1] == "brake"
+
+
 def test_teach_exit_keeps_normal_hold_authority_and_never_broadcasts_brake(monkeypatch):
     clock = [10_000_000_000]
     monkeypatch.setattr(time, "monotonic_ns", lambda: clock[0])

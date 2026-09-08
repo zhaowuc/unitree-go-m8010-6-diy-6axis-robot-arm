@@ -685,8 +685,11 @@ def build_envelope(
     lifetime_seconds: int,
     created_at: datetime,
     assisted_teach: bool = False,
+    hand_guidance: bool = False,
 ) -> dict[str, Any]:
     _require(type(assisted_teach) is bool, "assisted_teach must be boolean")
+    _require(type(hand_guidance) is bool, "hand_guidance must be boolean")
+    _require(not (assisted_teach and hand_guidance), "hand_guidance and assisted_teach are mutually exclusive")
     session = nonempty_text(session_id, "session_id")
     instance = nonempty_text(state_instance_id, "state_instance_id")
     normalized_sha256(anchor_sha256, "anchor SHA-256")
@@ -723,7 +726,8 @@ def build_envelope(
             "hold_seconds": hold,
             "entry_requires_previous_stage_pass": index > 0,
             "operator_stop_reconfirmation_required": index > 0,
-            "support_reconfirmation_required": index > 0,
+            "support_reconfirmation_required": index > 0 and not hand_guidance,
+            **({"position_hold_reconfirmation_required": index > 0} if hand_guidance else {}),
         })
     envelope: dict[str, Any] = {
         "schema": ENVELOPE_SCHEMA,
@@ -927,6 +931,31 @@ def build_envelope(
         envelope["assisted_teach"]["final_confirmation_policy"] = (
             "ONCE_AFTER_LADDER_THEN_LIVE_GATES_FOR_MANUAL_SESSION"
         )
+    if hand_guidance:
+        envelope["hand_guidance"] = {
+            "schema": "go-m8010-hand-guidance-envelope/1.0",
+            "enabled": True,
+            "allowed_joints": ["J1", "J2", "J3", "J4", "J5", "J6"],
+            "maximum_selected_joints": 6,
+            "maximum_excursion_from_press_deg": 10.0,
+            "maximum_press_seconds": 600.0,
+            "maximum_velocity_deg_s": 30.0,
+            "reference_lead_deg": 2.0,
+            "control_semantics": "POSITION_OUTER_ADMITTANCE",
+            "unlock_requires_completed_gravity_ladder": True,
+            "allowed_after_scale": 1.0,
+            "nonselected_joints_fixed_hold_required": True,
+            "continuous_operation_authorized": False,
+            "final_confirmation_policy": "ONCE_AFTER_LADDER_THEN_LIVE_GATES_FOR_MANUAL_SESSION",
+            "normal_exit_action": "KEEP_POSITION_HOLD",
+            "time_limit_action": "KEEP_POSITION_HOLD",
+            "drive_release_requires": "VERIFIED_VERTICAL_POSE",
+        }
+        envelope["live_gates"]["physical_support"] = {
+            "base_fixed": True,
+            "external_arm_support": False,
+            "established_position_hold_required": True,
+        }
     identity_seed = json.dumps(
         envelope, ensure_ascii=True, allow_nan=False, sort_keys=True,
         separators=(",", ":"),
@@ -1008,9 +1037,14 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--expected-session-id", required=True)
     parser.add_argument("--expected-state-instance-id", required=True)
     parser.add_argument("--hold-seconds", type=float, default=MINIMUM_HOLD_SECONDS)
-    parser.add_argument(
+    profile = parser.add_mutually_exclusive_group()
+    profile.add_argument(
         "--assisted-teach", action="store_true",
         help="Explicitly permit one J1-J5 joint at a time after the full gravity ladder, at most 5 degrees and 30 seconds per press; J6 remains HOLD.",
+    )
+    profile.add_argument(
+        "--hand-guidance", action="store_true",
+        help="Explicit six-joint outer-admittance profile after full gravity ladder; fixed base without external arm support; normal exit keeps position HOLD.",
     )
     parser.add_argument(
         "--lifetime-seconds", type=int, default=DEFAULT_LIFETIME_SECONDS
@@ -1072,6 +1106,7 @@ def run(args: argparse.Namespace, *, now: datetime | None = None) -> dict[str, A
         lifetime_seconds=args.lifetime_seconds,
         created_at=created_at,
         assisted_teach=getattr(args, "assisted_teach", False),
+        hand_guidance=getattr(args, "hand_guidance", False),
     )
     data = json_bytes(envelope)
     if args.apply:

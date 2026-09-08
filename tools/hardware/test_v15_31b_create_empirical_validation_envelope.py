@@ -249,6 +249,33 @@ def test_assisted_teach_cli_opt_in_is_separate_and_changes_bound_identity(tmp_pa
     assert opted["hardware_accessed"] is False and opted["applied"] is False
 
 
+def test_hand_guidance_cli_is_distinct_and_records_unsupported_arm_hold_policy(tmp_path):
+    ordinary = _run(tmp_path)["envelope"]
+    result = _run(tmp_path, extra=["--hand-guidance"])
+    envelope = result["envelope"]
+    guidance = envelope["hand_guidance"]
+    assert "assisted_teach" not in envelope
+    assert guidance["schema"] == "go-m8010-hand-guidance-envelope/1.0"
+    assert guidance["allowed_joints"] == ["J1", "J2", "J3", "J4", "J5", "J6"]
+    assert guidance["maximum_selected_joints"] == 6
+    assert guidance["maximum_excursion_from_press_deg"] == 10.0
+    assert guidance["maximum_press_seconds"] == 600.0
+    assert guidance["maximum_velocity_deg_s"] == 30.0
+    assert guidance["reference_lead_deg"] == 2.0
+    assert guidance["normal_exit_action"] == guidance["time_limit_action"] == "KEEP_POSITION_HOLD"
+    assert guidance["drive_release_requires"] == "VERIFIED_VERTICAL_POSE"
+    assert envelope["live_gates"]["physical_support"] == {
+        "base_fixed": True, "external_arm_support": False,
+        "established_position_hold_required": True,
+    }
+    assert all(stage["support_reconfirmation_required"] is False for stage in envelope["staged_activation"]["stages"])
+    assert envelope["torque_basis"] == ordinary["torque_basis"]
+    assert envelope["position_validation"] == ordinary["position_validation"]
+    assert result["hardware_accessed"] is False and result["applied"] is False
+    with pytest.raises(SystemExit):
+        tool.parse_args(_arguments(tmp_path, extra=["--hand-guidance", "--assisted-teach"]))
+
+
 def test_default_is_validate_only_and_builds_exact_bounded_ladder(
     tmp_path: Path,
 ) -> None:

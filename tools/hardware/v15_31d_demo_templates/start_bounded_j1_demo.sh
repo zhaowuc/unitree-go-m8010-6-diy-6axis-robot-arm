@@ -35,6 +35,15 @@ with (s/'j1_demo_gui_params.yaml').open('x',encoding='utf-8') as f:
     yaml.safe_dump(data,f,allow_unicode=True)
 PY
 sha=$(sha256sum "$session/empirical_validation_envelope.json" | cut -d ' ' -f1)
+if [[ -f "$scripts/hand_guidance_settings.json" ]]; then
+  readarray -t guidance_values < <(python3 - "$scripts/hand_guidance_settings.json" <<'PY'
+import json,sys
+v=json.load(open(sys.argv[1]));print(v['speed_deg_s']);print('1' if v['shadow_only'] else '0')
+PY
+  )
+  motion_args+=(--hand-guidance --guide-speed-deg-s "${guidance_values[0]}")
+  if [[ "${guidance_values[1]}" == 1 ]]; then motion_args+=(--guidance-shadow); fi
+fi
 exec "$repo/.venv/arm-gui/bin/python" "$repo/tools/hardware/v15_31d_gui_j1_demo.py" \
  "${recovery_args[@]}" \
  "${motion_args[@]}" \

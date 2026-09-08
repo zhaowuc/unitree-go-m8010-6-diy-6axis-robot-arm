@@ -1999,6 +1999,7 @@ def test_j6_fault_dominates_rejected_target_fallback_before_active_send():
     assert fallback_target == 0.20
     assert dominate("hold", True) == "brake"
     assert dominate("position", True) == "brake"
+    assert dominate("teach", True) == "brake"
     assert dominate("hold", False) == "hold"
 
     source = CONTROLLER.read_text(encoding="utf-8")
@@ -2008,7 +2009,7 @@ def test_j6_fault_dominates_rejected_target_fallback_before_active_send():
         unsafe_start,
     )
     active_decision = source.index(
-        '            active = mode in {"hold", "position"}',
+        '            active = mode in {"hold", "position", "teach"}',
         final_fault_gate,
     )
     active_send = source.index(
