@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=六轴机械臂控制
+Comment=打开机械臂控制窗口，查看连接和关节状态
+Exec=/usr/bin/bash "@LAUNCHER@"
+Icon=applications-engineering
+Terminal=false
+Categories=Science;Robotics;
+Keywords=机械臂;机器人;Robot;Arm;
+StartupNotify=true
