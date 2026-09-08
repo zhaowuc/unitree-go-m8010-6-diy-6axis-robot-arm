@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import ast
 import hashlib
 import importlib.util
 import json
@@ -382,6 +383,64 @@ def test_creator_rejects_tampered_embedded_anchor_with_retained_sha(
         match="anchor SHA-256 does not match the embedded runtime anchor",
     ):
         tool.run(tool.parse_args(arguments), now=NOW)
+
+
+def test_real_hand_guidance_package_reaches_binding_and_both_confirmation_readers(tmp_path):
+    now = datetime.now(timezone.utc)
+    result = tool.run(tool.parse_args(_arguments(tmp_path, extra=["--hand-guidance"])), now=now)
+    envelope = result["envelope"]
+    envelope_path = tmp_path / "hand_guidance_envelope.json"
+    envelope_path.write_bytes(tool.json_bytes(envelope))
+    bound = runner_mod.EvidenceBinding.from_paths(envelope_path,
+        tmp_path / "model_session_anchor_validation.json", result["envelope_sha256"])
+    assert bound.hand_guidance_enabled
+    hardware_source = CONFIG_ROOT.parent
+    sys.path.insert(0, str(hardware_source))
+    from go_m8010_arm_hardware.empirical_validation_envelope import (
+        EmpiricalValidationEnvelope, EmpiricalEnvelopeError, validate_stage_confirmation,
+    )
+    from v15_31b_acceptance_signal import SignalPayloadSequence
+
+    runtime = EmpiricalValidationEnvelope.from_path(envelope_path,
+        result["envelope_sha256"], now_utc=now, now_monotonic_ns=5_000_000_000)
+    run = runner_mod.ActiveAcceptanceRunner(bound)
+    source_clock = [5_000_000_000]
+    sequence = SignalPayloadSequence(bound, monotonic_ns=lambda: source_clock[0])
+    # Execute the actual demo conversion, which keeps the generic signal
+    # client's old supported-arm schema away from the hand-guidance topic.
+    demo_path = SCRIPT.with_name("v15_31d_gui_j1_demo.py")
+    tree = ast.parse(demo_path.read_text(encoding="utf-8"))
+    live = next(item for item in tree.body if isinstance(item, ast.FunctionDef) and item.name == "run_live")
+    confirm = next(item for item in live.body if isinstance(item, ast.FunctionDef) and item.name == "confirm")
+    conversion = next(item for item in confirm.body if isinstance(item, ast.If)
+                      and isinstance(item.test, ast.Name) and item.test.id == "hand_guidance")
+    for target, mode, valid in ((0.0, "brake", True), (0.25, "brake", False), (0.25, "hold", True)):
+        source_clock[0] += 1_000_000
+        confirmation = sequence.confirmation(target)
+        assert not run.observe_confirmation(confirmation, now_ns=source_clock[0])
+        context = {"hand_guidance": True, "confirmation": confirmation,
+                   "hardware": {"controller_mode_by_motor": {name: mode for name in tool.MOTOR_NAMES}}}
+        exec(compile(ast.Module(body=[conversion], type_ignores=[]), str(demo_path), "exec"), context)
+        assert confirmation["schema"] == "go-m8010-empirical-stage-confirmation/1.1"
+        assert "j2_j3_support_reliable" not in confirmation
+        assert confirmation["external_arm_support"] is False
+        assert run.observe_confirmation(confirmation, now_ns=source_clock[0]) is valid
+        if valid:
+            validate_stage_confirmation(confirmation, envelope=runtime, target_scale=target,
+                                        now_monotonic_ns=source_clock[0])
+        else:
+            with pytest.raises(EmpiricalEnvelopeError, match="POSITION_HOLD"):
+                validate_stage_confirmation(confirmation, envelope=runtime, target_scale=target,
+                                            now_monotonic_ns=source_clock[0])
+    anchor = json.loads((tmp_path / "model_session_anchor_validation.json").read_bytes())
+    for invalid in ({"foo": True}, {**envelope["hand_guidance"], "maximum_selected_joints": True}):
+        malformed = {**envelope, "hand_guidance": invalid}
+        with pytest.raises(runner_mod.AcceptanceError, match="HAND_GUIDANCE"):
+            runner_mod.EvidenceBinding.from_documents(malformed, anchor, result["envelope_sha256"])
+    unsupported_legacy = dict(envelope)
+    unsupported_legacy.pop("hand_guidance")
+    with pytest.raises(runner_mod.AcceptanceError, match="SUPPORT_GATE"):
+        runner_mod.EvidenceBinding.from_documents(unsupported_legacy, anchor, result["envelope_sha256"])
 
 
 def test_runner_rejects_replaced_anchor_validation_file_by_source_pin(

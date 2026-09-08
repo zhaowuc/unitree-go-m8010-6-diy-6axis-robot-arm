@@ -47,6 +47,7 @@ HARDWARE_STATE_SCHEMA = "go-m8010-hardware-state/1.1"
 GRAVITY_STATUS_SCHEMA = "go-m8010-gravity-status/1.1"
 ROUTER_STATUS_SCHEMA = "go-m8010-command-router-status/1.0"
 CONFIRMATION_SCHEMA = "go-m8010-empirical-stage-confirmation/1.0"
+HAND_GUIDANCE_CONFIRMATION_SCHEMA = "go-m8010-empirical-stage-confirmation/1.1"
 GUI_COMMAND_SCHEMA = "go-m8010-gui-command/1.3"
 CONTROL_SCHEMA = "go-m8010-v15-31b-acceptance-control/1.0"
 STATUS_SCHEMA = "go-m8010-v15-31b-acceptance-status/1.0"
@@ -597,6 +598,7 @@ class EvidenceBinding:
     maximum_segment_seconds: float
     maximum_segment_displacement_deg: float
     maximum_stage_temperature_rise_c: float
+    hand_guidance_enabled: bool = False
 
     @classmethod
     def from_paths(
@@ -759,11 +761,41 @@ class EvidenceBinding:
             == 30.0,
             "EMPIRICAL_OPERATOR_GATE_INVALID",
         )
-        _require(
-            isinstance(support, Mapping)
-            and support.get("j2_j3_reliable_support_required") is True,
-            "EMPIRICAL_SUPPORT_GATE_INVALID",
-        )
+        hand_guidance_enabled = "hand_guidance" in envelope
+        if hand_guidance_enabled:
+            expected = {
+                "schema": "go-m8010-hand-guidance-envelope/1.0", "enabled": True,
+                "allowed_joints": list(JOINT_NAMES), "maximum_selected_joints": 6,
+                "maximum_excursion_from_press_deg": 10.0, "maximum_press_seconds": 600.0,
+                "maximum_velocity_deg_s": 30.0, "reference_lead_deg": 2.0,
+                "control_semantics": "POSITION_OUTER_ADMITTANCE",
+                "unlock_requires_completed_gravity_ladder": True, "allowed_after_scale": 1.0,
+                "nonselected_joints_fixed_hold_required": True, "continuous_operation_authorized": False,
+                "final_confirmation_policy": "ONCE_AFTER_LADDER_THEN_LIVE_GATES_FOR_MANUAL_SESSION",
+                "normal_exit_action": "KEEP_POSITION_HOLD", "time_limit_action": "KEEP_POSITION_HOLD",
+                "drive_release_requires": "VERIFIED_VERTICAL_POSE",
+            }
+            guidance = envelope["hand_guidance"]
+            _require("assisted_teach" not in envelope and isinstance(guidance, Mapping)
+                     and set(guidance) == set(expected), "EMPIRICAL_HAND_GUIDANCE_FIELDS_INVALID")
+            for field, wanted in expected.items():
+                actual = guidance[field]
+                _require(
+                    (_finite(actual, "EMPIRICAL_HAND_GUIDANCE_BOUND_INVALID") == wanted
+                     if type(wanted) is float else type(actual) is type(wanted) and actual == wanted),
+                    "EMPIRICAL_HAND_GUIDANCE_PROFILE_INVALID",
+                )
+            _require(isinstance(support, Mapping)
+                     and set(support) == {"base_fixed", "external_arm_support", "established_position_hold_required"}
+                     and support["base_fixed"] is True and support["external_arm_support"] is False
+                     and support["established_position_hold_required"] is True,
+                     "EMPIRICAL_HAND_GUIDANCE_SUPPORT_GATE_INVALID")
+        else:
+            _require(
+                isinstance(support, Mapping)
+                and support.get("j2_j3_reliable_support_required") is True,
+                "EMPIRICAL_SUPPORT_GATE_INVALID",
+            )
         _require(
             isinstance(sync, Mapping)
             and _finite(sync.get("warning_above_deg"), "J2_SYNC_WARNING_INVALID")
@@ -813,6 +845,7 @@ class EvidenceBinding:
             maximum_segment_seconds=maximum_segment,
             maximum_segment_displacement_deg=maximum_displacement,
             maximum_stage_temperature_rise_c=maximum_rise,
+            hand_guidance_enabled=hand_guidance_enabled,
         )
 
     def ensure_not_expired(self, now_utc: Optional[datetime] = None) -> None:
@@ -1071,8 +1104,12 @@ class ActiveAcceptanceRunner:
                 "operator_stop_ready", "j2_j3_support_reliable",
                 "clearance_confirmed", "no_person_contact",
             }
+            if self.binding.hand_guidance_enabled:
+                required.remove("j2_j3_support_reliable")
+                required.update({"base_fixed", "external_arm_support", "established_position_hold"})
             _require(isinstance(value, Mapping) and set(value) == required, "CONFIRMATION_FIELDS_INVALID")
-            _require(value.get("schema") == CONFIRMATION_SCHEMA, "CONFIRMATION_SCHEMA_MISMATCH")
+            _require(value.get("schema") == (HAND_GUIDANCE_CONFIRMATION_SCHEMA
+                     if self.binding.hand_guidance_enabled else CONFIRMATION_SCHEMA), "CONFIRMATION_SCHEMA_MISMATCH")
             source = value.get("source_instance_id")
             sequence = value.get("sequence")
             source_ns = value.get("source_monotonic_ns")
@@ -1105,11 +1142,15 @@ class ActiveAcceptanceRunner:
                 target in GRAVITY_LADDER_LEVELS,
                 "CONFIRMATION_TARGET_NOT_APPROVED_LADDER_LEVEL",
             )
-            for field in (
-                "operator_stop_ready", "j2_j3_support_reliable",
-                "clearance_confirmed", "no_person_contact",
-            ):
+            for field in ("operator_stop_ready", "clearance_confirmed", "no_person_contact"):
                 _exact_bool(value, field, f"CONFIRMATION_{field.upper()}_FALSE")
+            if self.binding.hand_guidance_enabled:
+                _require(value["base_fixed"] is True and value["external_arm_support"] is False
+                         and (value["established_position_hold"] is True or
+                              (target == 0.0 and value["established_position_hold"] is False)),
+                         "CONFIRMATION_POSITION_HOLD_INVALID")
+            else:
+                _exact_bool(value, "j2_j3_support_reliable", "CONFIRMATION_J2_J3_SUPPORT_RELIABLE_FALSE")
             retained = dict(value)
             retained["observer_receipt_monotonic_ns"] = now_ns
             self.operator_confirmation_trace.append(retained)
