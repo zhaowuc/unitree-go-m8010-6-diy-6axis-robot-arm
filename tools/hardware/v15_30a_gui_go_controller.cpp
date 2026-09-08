@@ -5456,6 +5456,17 @@ bool freezes_restricted_hold_integral(
       exit_hold.joint_index == joint && command.targets == exit_hold.targets_rad;
 }
 
+bool freezes_assisted_teach_integral(
+    const GuiCommand& command, const std::string& mode, std::size_t joint,
+    const CommandSafetyState& safety, std::uint64_t now_ns) {
+  // Encoder damping remains useful after the exact HOLD ACK. Integral learning
+  // is frozen only until that ACK has ended the guidance press.
+  return (command.hand_guidance.present
+      ? safety.guidance_active && command.active_joint_mask[joint]
+      : uses_assisted_teach_damping(command, mode, joint, safety.teach_exit_hold, now_ns)) ||
+      freezes_restricted_hold_integral(command, mode, joint, safety.teach_exit_hold);
+}
+
 void apply_assisted_teach_reference(
     const GuiCommand& command, const std::vector<MotorRuntime>& motors,
     std::array<double, 6>& q, std::array<double, 6>& dq) {
@@ -8165,6 +8176,9 @@ void hand_guidance_self_test(const nlohmann::json& legacy_packet) {
     send(packet);
     if (!command.hand_guidance.present || !safety.guidance_active || command.activation_epoch != 2U)
       throw std::runtime_error("GUIDANCE_ENTRY_SELF_TEST_FAILED");
+    for (const auto& motor : motors)
+      if (!freezes_assisted_teach_integral(command, "teach", motor.joint_index, safety, ns))
+        throw std::runtime_error("GUIDANCE_ACTIVE_INTEGRAL_NOT_FROZEN");
     packet["sequence"] = 3U; packet["source_monotonic_ns"] = ns - 70000000ULL;
     packet["targets_rad"] = std::vector<double>(6, 0.001);
     packet["hand_guidance"]["velocity_rad_s"] = std::vector<double>(6, 0.02);
@@ -8258,6 +8272,9 @@ void hand_guidance_self_test(const nlohmann::json& legacy_packet) {
     if (!hand_guidance_runtime_blocker(runtime_command, safety, motors, 0.0, ns).empty() ||
         runtime_command.mode != "hold" || safety.guidance_started_ns != press_started)
       throw std::runtime_error("GUIDANCE_RELEASE_DID_NOT_RETAIN_HOLD");
+    for (const auto& motor : motors)
+      if (!freezes_assisted_teach_integral(runtime_command, "hold", motor.joint_index, safety, ns))
+        throw std::runtime_error("GUIDANCE_UNACKED_FREEZE_INTEGRAL_NOT_FROZEN");
     const auto raw = nlohmann::json::parse(feedback_payload(motors, ns, "hold", J2SyncFaultFilter{}, false,
         false, runtime_command, zero, "INACTIVE", 0, ThermalInterlockState{}, NoProgressWatchdogState{},
         false, 0.0, false, 1.0, AssistedTeachExitHold{}, &safety.last_accepted_command, true, safety.guidance_paused_reason));
@@ -8275,6 +8292,25 @@ void hand_guidance_self_test(const nlohmann::json& legacy_packet) {
     send(packet);
     if (command.mode != "hold" || command.activation_epoch != 3U || safety.guidance_active || safety.guidance_paused)
       throw std::runtime_error("GUIDANCE_OWNED_HOLD_ACK_SELF_TEST_FAILED");
+    for (const auto& motor : motors) {
+      const auto joint = static_cast<std::size_t>(motor.joint_index);
+      if (freezes_assisted_teach_integral(command, "hold", joint, safety, ns) ||
+          !uses_assisted_teach_damping(command, "hold", joint, safety.teach_exit_hold, ns))
+        throw std::runtime_error("GUIDANCE_ACK_MUST_RESTORE_INTEGRAL_KEEP_ENCODER_DAMPING");
+      BoundedHoldIntegralState integral;
+      for (int frame = 0; frame < 100; ++frame)
+        (void)update_bounded_hold_integral(integral, true,
+            !freezes_assisted_teach_integral(command, "hold", joint, safety, ns),
+            1.1 * kPi / 180.0, 0.0, kHoldIntegralRotorHardNm[joint],
+            joint == 1U ? kJ2IntegralKiPerRotorRadS : kAuxIntegralKiPerRotorRadS,
+            joint == 1U ? kJ2IntegralRateHardNmS : kAuxIntegralRateHardNmS,
+            joint == 1U ? kJ2IntegralEnterError : kAuxIntegralEnterError,
+            joint == 1U ? kJ2IntegralEnterVelocity : kAuxIntegralEnterVelocity,
+            joint == 1U ? kJ2IntegralDeadband : kAuxIntegralDeadband,
+            joint == 1U ? kJ2IntegralDwellFrames : kAuxIntegralDwellFrames);
+      if (!(integral.accumulator_nm > 0.0 && integral.accumulator_nm <= kHoldIntegralRotorHardNm[joint]))
+        throw std::runtime_error("GUIDANCE_ACK_BOUNDED_INTEGRAL_DID_NOT_LEARN");
+    }
     packet["mode"] = "brake"; packet["active_joint_mask"] = {false, false, false, false, false, false};
     packet["hand_guidance"] = "malformed-but-brake-must-exit";
     send(packet);
@@ -9518,9 +9554,8 @@ int run(const Options& options) {
             position_arrived_once[1];
         if (control_command.recovery)
           reset_bounded_hold_integral(hold_integral_states[1]);
-        j2_integral_wire_nm = (uses_assisted_teach_damping(control_command, effective_mode, 1U,
-                command_safety.teach_exit_hold, teach_cycle_ns) ||
-            freezes_restricted_hold_integral(control_command, effective_mode, 1U, command_safety.teach_exit_hold))
+        j2_integral_wire_nm = freezes_assisted_teach_integral(
+                control_command, effective_mode, 1U, command_safety, teach_cycle_ns)
             ? frozen_hold_integral_wire(hold_integral_states[1], kJ2IntegralRotorHardNm)
             : update_bounded_hold_integral(
             hold_integral_states[1], true,
@@ -9675,9 +9710,8 @@ int run(const Options& options) {
             position_arrived_once[joint];
         if (control_command.recovery)
           reset_bounded_hold_integral(hold_integral_states[joint]);
-        hold_integral_wire_nm[joint] = integral_active && (uses_assisted_teach_damping(
-                control_command, effective_mode, joint, command_safety.teach_exit_hold, teach_cycle_ns) ||
-            freezes_restricted_hold_integral(control_command, effective_mode, joint, command_safety.teach_exit_hold))
+        hold_integral_wire_nm[joint] = integral_active && freezes_assisted_teach_integral(
+                control_command, effective_mode, joint, command_safety, teach_cycle_ns)
             ? frozen_hold_integral_wire(hold_integral_states[joint], kHoldIntegralRotorHardNm[joint])
             : update_bounded_hold_integral(
             hold_integral_states[joint], integral_active,

@@ -7299,6 +7299,8 @@ class MainWindow(QMainWindow):
         self.log_writer.writeheader()
 
     def _write_log(self) -> None:
+        if self.log_stream.closed:
+            return
         now = time.monotonic()
         frequency = float(self.config["界面"]["日志频率_赫兹"])
         if now - self.last_log_at < 1.0 / frequency:
