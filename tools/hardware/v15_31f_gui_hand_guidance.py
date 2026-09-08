@@ -229,8 +229,10 @@ class GuidanceDemo(J1Demo):
             if now - self.started >= 550 and not self.ending:
                 self.stop()
             if self.shadow_started_at is not None and now - self.shadow_started_at >= 15.0 and not self.ending:
-                if not self.guidance_trace or max(abs(q-start) for row in self.guidance_trace
-                        for q,start in zip(row["q_reference"], self.origin)) > math.radians(0.25):
+                if not self.guidance_trace:
+                    self.guidance_fault = self.guidance_fault or "shadow observation produced no reference samples"
+                elif max(abs(q-start) for row in self.guidance_trace
+                         for q,start in zip(row["q_reference"], self.origin)) > math.radians(0.25):
                     self.guidance_fault = "unforced shadow reference drift exceeded 0.25 degrees"
                 self.stop()
             if self.guidance_phase in {"guiding", "engaging_guidance"} and (
@@ -315,8 +317,12 @@ class GuidanceDemo(J1Demo):
             self.last_observation_at = now
             if output.fault:
                 self.guidance_fault = output.fault
+                self.guidance_events.append({"event": "guidance_fault", "reason": output.fault, "at_monotonic_s": now})
+                print("HAND_GUIDANCE_FAULT=" + output.fault, flush=True)
                 self.release_guidance()
                 self.status.setText("手导暂停并保持：" + output.fault)
+                if self.shadow_only:
+                    self.stop(output.fault)
                 return
             if any(abs(target-origin) > math.radians(10.0) for target,origin in zip(output.q_ref, self.origin)):
                 self.release_guidance()
@@ -337,8 +343,12 @@ class GuidanceDemo(J1Demo):
         except (ValueError, RuntimeError) as error:
             if self.guidance_phase == "guiding":
                 self.guidance_fault = str(error)
+                self.guidance_events.append({"event": "guidance_fault", "reason": str(error), "at_monotonic_s": now})
+                print("HAND_GUIDANCE_FAULT=" + str(error), flush=True)
             self.release_guidance()
             self.status.setText("等待或保持：" + str(error))
+            if self.shadow_only and self.guidance_fault:
+                self.stop(self.guidance_fault)
         finally:
             if getattr(self.window, "hand_guidance_reference", None) is not None and self.terminal is None:
                 # The generated reference and its source clock share the same
