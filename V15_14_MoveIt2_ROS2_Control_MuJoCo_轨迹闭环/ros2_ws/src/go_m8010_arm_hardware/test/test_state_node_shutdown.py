@@ -513,6 +513,56 @@ def test_teach_feedback_stays_observed_without_weakening_freshness_or_faults():
     assert result["domain_fault"] is None
 
 
+def test_native_exit_hold_aggregation_requires_fresh_paired_session_and_one_proof():
+    module, _no_signal_handlers = load_with_ros_stubs([], {
+        "ok": False, "on_spin": lambda: None,
+    })
+    proof = {
+        "schema": "go-m8010-teach-exit-hold/1.0", "joint_index": 1,
+        "press_activation_epoch": 7, "started_monotonic_ns": 10,
+        "deadline_monotonic_ns": 1_000_000_010, "reason": "TIME_LIMIT",
+        "targets_rad": [0.0] * 6, "initial_velocity_rad_s": 0.05,
+    }
+    metadata = _observed_thermal_metadata("NORMAL", mode="hold")
+    metadata.update({
+        "assisted_teach_exit_hold": proof,
+        "assisted_teach_exit_hold_validated": True,
+        "assisted_teach_exit_hold_source_monotonic_ns": 10,
+    })
+    metadata["gravity"].update({
+        "session_id": "session", "state_instance_id": "state",
+        "source_instance_id": "a" * 32,
+    })
+    paired = module.controller_metadata_for_hardware_state(
+        metadata, _fresh_motor_state(25.0), TEST_THERMAL_LIMITS
+    )
+    assert paired["assisted_teach_exit_hold"] == proof
+    aggregate = module.assisted_teach_exit_hold_for_hardware_state
+    assert aggregate({}, "session", "state") == {}
+    both = {"J2A": paired, "J2B": dict(paired)}
+    result = aggregate(both, "session", "state")
+    assert result["assisted_teach_exit_hold_validated"] is True
+    assert result["assisted_teach_exit_hold"] == proof
+    assert result["assisted_teach_exit_hold_source_monotonic_ns"] == 10
+    for changed in (
+        {"assisted_teach_exit_hold_validated": False, "assisted_teach_exit_hold": None},
+        {"assisted_teach_exit_hold": {**proof, "press_activation_epoch": 8}},
+        {"assisted_teach_exit_hold_source_monotonic_ns": 12},
+        {"controller_mode": "teach"},
+        {"domain_fault": True},
+    ):
+        result = aggregate({"J2A": paired, "J2B": {**paired, **changed}}, "session", "state")
+        assert result["assisted_teach_exit_hold_validated"] is False
+        assert result["assisted_teach_exit_hold"] is None
+    assert aggregate(both, "other-session", "state")["assisted_teach_exit_hold_validated"] is False
+    assert aggregate(both, "session", "other-state")["assisted_teach_exit_hold_validated"] is False
+    stale = module.controller_metadata_for_hardware_state(
+        metadata, {**_fresh_motor_state(25.0), "fresh": False}, TEST_THERMAL_LIMITS
+    )
+    assert aggregate({"J2A": paired, "J2B": stale}, "session", "state")["assisted_teach_exit_hold_validated"] is False
+    assert aggregate({"J2A": stale, "J2B": stale}, "session", "state") == {}
+
+
 def test_exact_55c_boundary_is_derating_not_unknown():
     module, _no_signal_handlers = load_with_ros_stubs([], {
         "ok": False, "on_spin": lambda: None,

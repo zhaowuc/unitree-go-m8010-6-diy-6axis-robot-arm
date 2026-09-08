@@ -2,6 +2,7 @@ import json
 import math
 import time
 from copy import deepcopy
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -443,6 +444,55 @@ def test_assisted_teach_single_axis_authority_and_domain_hold_compatibility(join
             production_validate_command(json.dumps(candidate), now_ns=now_ns)
     with pytest.raises(ValueError, match="1.4"):
         production_validate_command(json.dumps({**document, "schema": GUI_COMMAND_SCHEMA_V12}), now_ns=now_ns)
+
+
+def test_teach_exit_keeps_normal_hold_authority_and_never_broadcasts_brake(monkeypatch):
+    clock = [10_000_000_000]
+    monkeypatch.setattr(time, "monotonic_ns", lambda: clock[0])
+    sent, revoked = [], []
+    router = SimpleNamespace(gravity_authority_gate=GravityAuthorityGate(), last_command=None,
+        empirical_zero_hold_transition_started_ns=None,
+        _send_empirical_revocation_brake=revoked.append)
+    expires = (datetime.now(timezone.utc) + timedelta(seconds=120)).isoformat().replace("+00:00", "Z")
+    # Observe the actual status schema through all stages; do not seed _latest.
+    for index, level in enumerate((0.0, 0.25, 0.5, 0.75, 1.0)):
+        clock[0] += 1_000_000
+        status = gravity_status(now_ns=time.monotonic_ns(), sequence=index + 1, scale=level, target=level)
+        status.update(continuous_rotor_limits_authoritative=False, empirical_validation_authoritative=True,
+                      planned_trajectory_feasibility=None, feedforward_nm=[0.0] * 6)
+        status["empirical_validation"] = {
+            "authority_class": "EMPIRICAL_VALIDATION_ENVELOPE", "rating_classification": "NOT_OFFICIAL_CONTINUOUS_RATING",
+            "envelope_id": "v15-31b-empirical-" + "1" * 20, "envelope_sha256": "2" * 64, "anchor_sha256": "3" * 64,
+            "stage_index": index, "stage_level": level, "stage_complete": True, "invalidated": False,
+            "continuous_operation_authorized": False, "official_continuous_rating_claimed": False,
+            "position_validation_authorized": index == 4, "phase": "POSITION_VALIDATION" if index == 4 else "HOLDING",
+            "maximum_position_segment_seconds": 15.0, "maximum_abs_position_segment_deg": 5.0,
+            "maximum_cumulative_position_trajectory_seconds": 600.0, "expires_at_utc": expires,
+            "assisted_teach_authorized": index == 4, "maximum_teach_excursion_deg": 5.0,
+            "maximum_teach_seconds": 30.0, "maximum_teach_velocity_deg_s": 5.0,
+            "allowed_teach_joints": ["J1", "J2", "J3", "J4", "J5"]}
+        CommandRouter.on_gravity_status(router, SimpleNamespace(data=json.dumps(status)))
+        assert router.gravity_authority_gate.available and not revoked
+    # A native exit revokes teaching eligibility while normal fresh HOLD remains valid.
+    status = deepcopy(status)
+    clock[0] += 1_000_000
+    now_ns = time.monotonic_ns()
+    status.update(sequence=6, source_monotonic_ns=now_ns, hardware_state_source_monotonic_ns=now_ns - 1)
+    status["empirical_validation"]["assisted_teach_authorized"] = False
+    CommandRouter.on_gravity_status(router, SimpleNamespace(data=json.dumps(status)))
+    assert router.gravity_authority_gate.available and not revoked
+    router.replay_guard, router.collision_guard_gate, router.plan_manifest_gate = CommandReplayGuard(), CollisionGuardProofGate(), PlanManifestGate()
+    router.allow_legacy_v12_position = False
+    router.rejection_tracker, router.rejected = RejectionTracker(), 0
+    router._log_rejection_reports = lambda _: None
+    router.socket = SimpleNamespace(sendto=lambda payload, destination: sent.append(json.loads(payload)))
+    router.destinations = [(domain, domain) for domain in ("J1", "J2", "J345", "J6")]
+    native_targets = [0.02, 0.01, 0.03, 0.04, 0.05, 0.06]
+    acknowledge = json.loads(command(mode="hold"))
+    acknowledge.update(targets_rad=native_targets, activation_epoch=8)
+    CommandRouter.on_command(router, SimpleNamespace(data=json.dumps(acknowledge)))
+    assert router.rejected == 0 and len(sent) == 4 and not revoked
+    assert all(message["mode"] == "hold" and message["targets_rad"] == native_targets for message in sent)
 
 
 def test_empirical_authority_stale_or_deadline_revokes_once():

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -427,6 +428,8 @@ def test_assisted_teach_requires_explicit_envelope_full_ladder_and_live_confirma
     ("maximum_press_seconds", 30.01), ("maximum_excursion_from_press_deg", 5.01),
     ("maximum_velocity_deg_s", 5.01), ("allowed_after_scale", True),
     ("maximum_selected_joints", True), ("allowed_joints", ["J1", "J6"]),
+    ("stopping_hold_seconds", 1.01), ("max_stopping_error_deg", 2.01),
+    ("soft_limit_action", "ignore_speed"),
     ("j6_fixed_hold_required", False), ("unexpected", True),
 ])
 def test_assisted_teach_rejects_widened_or_malformed_opt_in(tmp_path, field, value):
@@ -457,3 +460,49 @@ def test_assisted_teach_keeps_one_joint_other_holds_and_velocity_gate(taught, al
     if allowed:
         hardware["velocity_rad_s"][0] = 0.087267
         assert live_hardware_blocker(hardware, allow_assisted_teach=True, **kwargs)[0] == "EMPIRICAL_ABNORMAL_VELOCITY"
+
+
+def test_native_stopping_hold_grace_is_one_joint_one_second_and_two_degrees():
+    ns = 2_000_000_000
+    hardware = _hardware(ns)
+    hardware["position_rad"] = [math.radians(-1.08)] + [0.0] * 5
+    hardware["velocity_rad_s"][0] = math.radians(-8.6)
+    hardware.update(assisted_teach_exit_hold_validated=True,
+        assisted_teach_exit_hold_source_monotonic_ns=ns,
+        assisted_teach_exit_hold={
+            "schema": "go-m8010-teach-exit-hold/1.0", "joint_index": 0,
+            "press_activation_epoch": 123, "started_monotonic_ns": ns,
+            "deadline_monotonic_ns": ns + 1_000_000_000,
+            "reason": "VELOCITY_LIMIT", "targets_rad": list(hardware["position_rad"]),
+            "initial_velocity_rad_s": math.radians(-8.6),
+        })
+    kwargs = dict(session_id="session-31b", state_instance_id="state-31b",
+        now_monotonic_ns=ns, require_current_position_hold=True)
+    assert not live_hardware_blocker(hardware, allow_assisted_teach=True, **kwargs)[0]
+    assert live_hardware_blocker(hardware, **kwargs)[0] == "EMPIRICAL_ABNORMAL_VELOCITY"
+    hardware["velocity_rad_s"][1] = math.radians(5.01)
+    assert live_hardware_blocker(hardware, allow_assisted_teach=True, **kwargs)[0] == "EMPIRICAL_ABNORMAL_VELOCITY"
+    hardware["velocity_rad_s"][1] = 0.0
+    hardware["position_rad"][0] += math.radians(2.01)
+    assert live_hardware_blocker(hardware, allow_assisted_teach=True, **kwargs)[0] == "EMPIRICAL_ABNORMAL_VELOCITY"
+    hardware["position_rad"][0] = hardware["assisted_teach_exit_hold"]["targets_rad"][0]
+    hardware["per_motor"]["J3"]["communication_ok"] = False
+    assert live_hardware_blocker(hardware, allow_assisted_teach=True, **kwargs)[0] == "EMPIRICAL_J3_FEEDBACK_INVALID"
+    hardware["per_motor"]["J3"]["communication_ok"] = True
+    hardware["assisted_teach_exit_hold_validated"] = False
+    assert live_hardware_blocker(hardware, allow_assisted_teach=True, **kwargs)[0] == "EMPIRICAL_ASSISTED_TEACH_EXIT_PROOF_INVALID"
+    hardware["assisted_teach_exit_hold_validated"] = True
+    hardware["velocity_rad_s"][0] = float("nan")
+    assert live_hardware_blocker(hardware, allow_assisted_teach=True, **kwargs)[0] == "EMPIRICAL_ABNORMAL_VELOCITY"
+    hardware["velocity_rad_s"][0] = math.radians(8.6)
+    expired = ns + 1_000_000_000
+    hardware["source_monotonic_ns"] = expired
+    hardware["assisted_teach_exit_hold_source_monotonic_ns"] = expired
+    kwargs["now_monotonic_ns"] = expired
+    assert live_hardware_blocker(hardware, allow_assisted_teach=True, **kwargs)[0] == "EMPIRICAL_ABNORMAL_VELOCITY"
+    # Expired metadata is still valid history. Healthy ordinary HOLD remains
+    # authorized and may ACK its exact native target without renewing grace.
+    hardware["velocity_rad_s"][0] = 0.0
+    assert not live_hardware_blocker(hardware, allow_assisted_teach=True, **kwargs)[0]
+    hardware["source_monotonic_ns"] = ns
+    assert live_hardware_blocker(hardware, allow_assisted_teach=True, **kwargs)[0] == "EMPIRICAL_HARDWARE_STATE_STALE"

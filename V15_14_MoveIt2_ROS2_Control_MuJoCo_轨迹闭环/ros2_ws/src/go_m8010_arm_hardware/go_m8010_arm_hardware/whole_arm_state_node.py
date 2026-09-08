@@ -286,6 +286,8 @@ def controller_metadata_for_hardware_state(
     )
     return {
         "metadata_status": "OBSERVED",
+        **{key: value for key, value in record.items()
+           if key.startswith("assisted_teach_exit_hold")},
         "controller_mode": mode,
         "domain_fault": record["domain_fault"],
         "lease_safe_hold": record["lease_safe_hold"],
@@ -300,6 +302,47 @@ def controller_metadata_for_hardware_state(
                 else list(record["gravity"]["feedforward_nm"])
             ),
         },
+    }
+
+
+def assisted_teach_exit_hold_for_hardware_state(
+    metadata_by_motor: dict, session_id: str, state_instance_id: str,
+) -> dict:
+    """Publish only one fresh, session-paired native stop proof."""
+    records = {name: record for name, record in metadata_by_motor.items()
+               if "assisted_teach_exit_hold" in record}
+    if not records:
+        return {}
+    first = next(iter(records.values()))
+    proof = first["assisted_teach_exit_hold"]
+    source_ns = first["assisted_teach_exit_hold_source_monotonic_ns"]
+    invalid = {
+        "assisted_teach_exit_hold": None,
+        "assisted_teach_exit_hold_validated": False,
+        "assisted_teach_exit_hold_source_monotonic_ns": source_ns,
+        "assisted_teach_exit_hold_error": "INVALID_OR_CONFLICTING_EXIT_HOLD",
+    }
+    for record in records.values():
+        if (
+            record.get("assisted_teach_exit_hold_validated") is not True
+            or record["assisted_teach_exit_hold"] != proof
+            or record["assisted_teach_exit_hold_source_monotonic_ns"] != source_ns
+            or record["metadata_status"] != "OBSERVED"
+            or record["controller_mode"] != "hold"
+            or record["domain_fault"] is not False
+            or record["gravity"].get("session_id") != session_id
+            or record["gravity"].get("state_instance_id") != state_instance_id
+            or record["gravity"].get("source_instance_id")
+            != first["gravity"].get("source_instance_id")
+        ):
+            return invalid
+    selected = {"J2A", "J2B"} if proof["joint_index"] == 1 else {f"J{proof['joint_index'] + 1}"}
+    if not selected.issubset(records):
+        return invalid
+    return {
+        "assisted_teach_exit_hold": proof,
+        "assisted_teach_exit_hold_validated": True,
+        "assisted_teach_exit_hold_source_monotonic_ns": source_ns,
     }
 
 
@@ -1221,6 +1264,9 @@ class WholeArmStateNode(Node):
             name: controller_metadata[name]["controller_mode"]
             for name in MOTOR_NAMES
         }
+        snapshot.update(assisted_teach_exit_hold_for_hardware_state(
+            controller_metadata, self.session_id, self.state_instance_id
+        ))
         snapshot["controller_fault_by_motor"] = {
             # Compatibility bool for GUI/1.1.  The parallel observation map is
             # authoritative about UNKNOWN; callers must not treat False as a

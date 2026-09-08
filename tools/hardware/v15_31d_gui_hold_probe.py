@@ -287,10 +287,13 @@ def observe_gui(window, gui, raw_j6, binding):
                                   and router.get("last_active_joint_mask") == [True] * 6
                                   and router.get("last_moving_joint_mask") == [False] * 6
                                   and type(router_age) in (int, float) and 0 <= router_age < 250),
+        "assisted_teach_exit_hold": hardware.get("assisted_teach_exit_hold"),
+        "assisted_teach_exit_hold_validated": hardware.get("assisted_teach_exit_hold_validated"),
+        "assisted_teach_exit_hold_source_monotonic_ns": hardware.get("assisted_teach_exit_hold_source_monotonic_ns"),
         "actual_rad": hardware.get("position_rad"),
         "velocity_rad_s": hardware.get("velocity_rad_s"),
         "motor_tracking": {name: {key: item.get(key) for key in (
-            "tau_cmd_rotor_nm", "tau_feedback_rotor_nm", "gravity_feedforward_rotor_nm", "dq_joint_rad_s",
+            "tau_cmd_rotor_nm", "tau_feedback_rotor_nm", "gravity_feedforward_rotor_nm", "dq_joint_rad_s", "feedback_source_monotonic_ns",
             "trajectory_state", "trajectory_sample_index", "trajectory_interval_count")}
             for name, item in hardware.get("per_motor", {}).items()},
         "temperature_c": {name: item.get("temperature_c") for name, item in hardware.get("per_motor", {}).items()},

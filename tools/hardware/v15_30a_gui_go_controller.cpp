@@ -4302,11 +4302,30 @@ std::uint64_t minimum_epoch_after_lease(
   return std::max(current_minimum, command_epoch + 1U);
 }
 
+// Staged software stopping bounds, not a measured braking-distance guarantee
+// or a motor continuous rating. They do not widen the ordinary 5 deg/s gate.
+constexpr std::uint64_t kTeachStoppingHoldNs = 1000000000ULL;
+constexpr double kTeachStoppingErrorRad = 2.0 * kPi / 180.0;
+
+struct AssistedTeachExitHold {
+  bool present = false;
+  bool acknowledged = false;
+  bool completed = false;
+  std::size_t joint_index = 0;
+  std::uint64_t press_activation_epoch = 0;
+  std::uint64_t started_monotonic_ns = 0;
+  std::uint64_t deadline_monotonic_ns = 0;
+  std::string reason;
+  std::array<double, 6> targets_rad{};
+  double initial_velocity_rad_s = 0.0;
+};
+
 struct CommandSafetyState {
   GuiCommand last_accepted_command;
   GuiCommand teach_command;
   std::uint64_t teach_started_monotonic_ns = 0;
   bool teach_active = false;
+  AssistedTeachExitHold teach_exit_hold;
   std::uint64_t minimum_activation_epoch = 0;
   std::uint64_t last_seen_activation_epoch = 0;
   // Incoming active commands at this epoch or below remain rejected.  This is
@@ -4969,6 +4988,32 @@ bool healthy_logical_position_for_joint(
 void validate_and_observe_assisted_teach(
     const GuiCommand& command, const std::vector<MotorRuntime>& motors,
     CommandSafetyState& safety) {
+  auto& exit_hold = safety.teach_exit_hold;
+  if (exit_hold.present && command_releases_owned_domain(command, motors)) {
+    exit_hold = AssistedTeachExitHold{};
+  } else if (exit_hold.present && command.mode != "teach") {
+    if (!exit_hold.completed) {
+      if (command.mode != "hold" ||
+          command.activation_epoch <= exit_hold.press_activation_epoch ||
+          command.targets != exit_hold.targets_rad ||
+          command.active_joint_mask != safety.teach_command.active_joint_mask ||
+          command.kp != safety.teach_command.kp || command.kd != safety.teach_command.kd)
+        throw std::runtime_error("COMMAND_TEACH_EXIT_HOLD_ACK_MISMATCH");
+      exit_hold.acknowledged = true;
+      safety.teach_active = false;
+      // This is an acknowledgement of a native captured target, not another
+      // moving-angle capture. Bind the normal HOLD record to that exact goal.
+      for (const auto& motor : motors) {
+        const auto joint = static_cast<std::size_t>(motor.joint_index);
+        safety.fixed_target_valid[joint] = true;
+        safety.fixed_target_epoch[joint] = command.activation_epoch;
+        safety.fixed_target[joint] = exit_hold.targets_rad[joint];
+      }
+      return;
+    }
+    if (command.targets != exit_hold.targets_rad || command.mode != "hold")
+      exit_hold = AssistedTeachExitHold{};
+  }
   if (safety.teach_active && command.mode != "teach") {
     if (!command_releases_owned_domain(command, motors)) {
       if (command.mode != "hold" ||
@@ -4992,6 +5037,8 @@ void validate_and_observe_assisted_teach(
     return;
   }
   if (command.mode != "teach") return;
+  if (exit_hold.present && exit_hold.acknowledged && !exit_hold.completed)
+    throw std::runtime_error("COMMAND_TEACH_EXIT_HOLD_STILL_STOPPING");
   if (!std::all_of(command.active_joint_mask.begin(), command.active_joint_mask.end(), [](bool active) { return active; }) ||
       std::count(command.moving_joint_mask.begin(), command.moving_joint_mask.end(), true) != 1 ||
       command.moving_joint_mask[5] ||
@@ -5054,36 +5101,86 @@ void validate_and_observe_assisted_teach(
   safety.teach_command = command;
   safety.teach_started_monotonic_ns = monotonic_ns_at(command.received_at);
   safety.teach_active = true;
+  safety.teach_exit_hold = AssistedTeachExitHold{};
 }
 
 std::string assisted_teach_runtime_blocker(
-    const GuiCommand& command, const CommandSafetyState& safety,
+    GuiCommand& command, CommandSafetyState& safety,
     const std::vector<MotorRuntime>& motors, double j2_encoder_velocity,
     std::uint64_t now_ns) {
-  if (command.mode != "teach") return "";
-  if (!safety.teach_active || command.activation_epoch != safety.teach_command.activation_epoch ||
+  auto& exit_hold = safety.teach_exit_hold;
+  if (command.mode != "teach" && !exit_hold.present) return "";
+  if (exit_hold.completed && command.mode != "teach") return "";
+  if (command.mode == "teach" && (!safety.teach_active || command.activation_epoch != safety.teach_command.activation_epoch ||
       safety.teach_started_monotonic_ns == 0U || now_ns < safety.teach_started_monotonic_ns)
+      )
     return "ASSISTED_TEACH_PRESS_STATE_INVALID";
   const auto& authority = safety.teach_command.gravity_authority;
-  if (static_cast<double>(now_ns - safety.teach_started_monotonic_ns) * 1e-9 >=
-      authority.empirical_maximum_teach_seconds)
-    return "ASSISTED_TEACH_PRESS_TIMEOUT";
   for (const auto& motor : motors) {
     const auto joint = static_cast<std::size_t>(motor.joint_index);
-    if (!joint_is_assisted_teach(command, command.mode, joint)) continue;
+    if (!safety.teach_command.moving_joint_mask[joint]) continue;
     double actual = 0.0;
     if (!motor.last_frame_valid || !healthy_logical_position_for_joint(motors, motor.joint_index, actual))
       return "ASSISTED_TEACH_FEEDBACK_UNHEALTHY";
-    if (!within_model_command_envelope(motor.joint_index, actual) ||
-        std::abs(actual - safety.teach_command.targets[joint]) >
-            authority.empirical_maximum_teach_excursion_deg * kPi / 180.0)
-      return "ASSISTED_TEACH_EXCURSION_LIMIT";
+    if (!within_model_command_envelope(motor.joint_index, actual))
+      return "ASSISTED_TEACH_MODEL_BOUND";
     const double velocity = joint == 1U ? j2_encoder_velocity : motor.integral_encoder_velocity;
-    if (!std::isfinite(velocity) || std::abs(velocity) >
-        authority.empirical_maximum_teach_velocity_deg_s * kPi / 180.0)
-      return "ASSISTED_TEACH_ENCODER_VELOCITY_LIMIT";
+    if (!std::isfinite(velocity))
+      return "ASSISTED_TEACH_ENCODER_VELOCITY_UNAVAILABLE";
+    if (!exit_hold.present) {
+      std::string reason;
+      if (static_cast<double>(now_ns - safety.teach_started_monotonic_ns) * 1e-9 >= authority.empirical_maximum_teach_seconds)
+        reason = "TIME_LIMIT";
+      else if (std::abs(actual - safety.teach_command.targets[joint]) > authority.empirical_maximum_teach_excursion_deg * kPi / 180.0)
+        reason = "EXCURSION_LIMIT";
+      else if (std::abs(velocity) > authority.empirical_maximum_teach_velocity_deg_s * kPi / 180.0)
+        reason = "VELOCITY_LIMIT";
+      if (!reason.empty()) {
+        exit_hold.present = true;
+        exit_hold.joint_index = joint;
+        exit_hold.press_activation_epoch = safety.teach_command.activation_epoch;
+        exit_hold.started_monotonic_ns = now_ns;
+        exit_hold.deadline_monotonic_ns = now_ns + kTeachStoppingHoldNs;
+        exit_hold.reason = reason;
+        exit_hold.targets_rad = safety.teach_command.targets;
+        exit_hold.targets_rad[joint] = actual;
+        exit_hold.initial_velocity_rad_s = velocity;
+        std::cerr << "ASSISTED_TEACH_EXIT_HOLD reason=" << reason
+                  << " joint=J" << joint + 1U
+                  << " press_epoch=" << exit_hold.press_activation_epoch
+                  << " started_monotonic_ns=" << now_ns
+                  << " deadline_monotonic_ns=" << exit_hold.deadline_monotonic_ns
+                  << " captured_target_rad=" << actual
+                  << " initial_encoder_velocity_rad_s=" << velocity << std::endl;
+      }
+    }
+    if (exit_hold.present && !exit_hold.completed) {
+      if (now_ns < exit_hold.started_monotonic_ns)
+        return "ASSISTED_TEACH_PRESS_STATE_INVALID";
+      if (std::abs(actual - exit_hold.targets_rad[joint]) > kTeachStoppingErrorRad)
+        return "ASSISTED_TEACH_STOP_ERROR_LIMIT";
+      if (now_ns >= exit_hold.deadline_monotonic_ns) {
+        if (std::abs(velocity) > authority.empirical_maximum_teach_velocity_deg_s * kPi / 180.0)
+          return "ASSISTED_TEACH_STOP_VELOCITY_TIMEOUT";
+        exit_hold.completed = exit_hold.acknowledged;
+      }
+    }
+  }
+  if (exit_hold.present && command.mode == "teach") {
+    command.mode = "hold";
+    command.targets = exit_hold.targets_rad;
+    command.moving_joint_mask.fill(false);
   }
   return "";
+}
+
+bool uses_assisted_teach_damping(
+    const GuiCommand& command, const std::string& mode, std::size_t joint,
+    const AssistedTeachExitHold& exit_hold, std::uint64_t now_ns) {
+  return joint_is_assisted_teach(command, mode, joint) ||
+      (mode == "hold" && exit_hold.present && !exit_hold.completed &&
+       exit_hold.joint_index == joint && command.targets == exit_hold.targets_rad &&
+       now_ns >= exit_hold.started_monotonic_ns && now_ns < exit_hold.deadline_monotonic_ns);
 }
 
 void apply_assisted_teach_reference(
@@ -5410,18 +5507,11 @@ void assisted_teach_self_test() {
     if (case_index == 3) bad.kd[3] = 0.01;
     require_rejected([&] { auto candidate = safety; validate_and_observe_assisted_teach(bad, motors, candidate); });
   }
-  if (!assisted_teach_runtime_blocker(teach, safety, motors, 0.0, first_press_ns + 1000U).empty() ||
-      assisted_teach_runtime_blocker(teach, safety, motors, 0.0, first_press_ns + 30000000000ULL) != "ASSISTED_TEACH_PRESS_TIMEOUT")
-    throw std::runtime_error("ASSISTED_TEACH_DEADLINE_SELF_TEST_FAILED");
-  motors[1].unwrapped = motors[1].sign * kGear * (5.01 * kPi / 180.0);
-  if (assisted_teach_runtime_blocker(teach, safety, motors, 0.0, ns + 1000U) != "ASSISTED_TEACH_EXCURSION_LIMIT")
-    throw std::runtime_error("ASSISTED_TEACH_EXCURSION_SELF_TEST_FAILED");
+  if (!assisted_teach_runtime_blocker(teach, safety, motors, 0.0, first_press_ns + 1000U).empty())
+    throw std::runtime_error("ASSISTED_TEACH_RUNNING_SELF_TEST_FAILED");
   motors[1].unwrapped = motors[1].sign * kGear * 0.01;
-  motors[1].integral_encoder_velocity = 5.01 * kPi / 180.0;
-  if (assisted_teach_runtime_blocker(teach, safety, motors, 0.0, ns + 1000U) != "ASSISTED_TEACH_ENCODER_VELOCITY_LIMIT")
-    throw std::runtime_error("ASSISTED_TEACH_SPEED_SELF_TEST_FAILED");
   motors[1].integral_encoder_velocity = std::numeric_limits<double>::quiet_NaN();
-  if (assisted_teach_runtime_blocker(teach, safety, motors, 0.0, ns + 1000U) != "ASSISTED_TEACH_ENCODER_VELOCITY_LIMIT")
+  if (assisted_teach_runtime_blocker(teach, safety, motors, 0.0, ns + 1000U) != "ASSISTED_TEACH_ENCODER_VELOCITY_UNAVAILABLE")
     throw std::runtime_error("ASSISTED_TEACH_UNKNOWN_SPEED_SELF_TEST_FAILED");
   motors[1].integral_encoder_velocity = 0.0;
   auto q = teach.targets; std::array<double, 6> dq{};
@@ -5451,6 +5541,89 @@ void assisted_teach_self_test() {
   if (std::abs(q[1] - 0.011) > 1e-12 || pair[0].reference != 0.0 || pair[1].reference != 0.0 ||
       !use_j2_hold_protection_limits(pair_teach, "teach"))
     throw std::runtime_error("ASSISTED_TEACH_J2_COMMON_REFERENCE_SELF_TEST_FAILED");
+
+  // Replay the observed manual event (8.6 deg/s at 1.08 deg displacement).
+  // Finite manual limits capture one loaded HOLD; they never create a fault
+  // or discard the other five immutable goals or the short-lived authority.
+  for (const std::string reason : {"TIME_LIMIT", "EXCURSION_LIMIT", "VELOCITY_LIMIT"}) {
+    auto event_motors = make_motors("j1");
+    auto& motor = event_motors[0];
+    motor.reference_ready = motor.valid = motor.last_frame_valid = motor.speed_ready = true;
+    motor.previous_feedback_at = Clock::now(); motor.merror = 0; motor.temperature = 30;
+    motor.returned_mode = kFocMode;
+    const double position = (reason == "EXCURSION_LIMIT" ? -5.01 : -1.08) * kPi / 180.0;
+    motor.unwrapped = motor.sign * kGear * position;
+    motor.integral_encoder_velocity = reason == "VELOCITY_LIMIT" ? -8.6 * kPi / 180.0 : 0.0;
+    GuiCommand event_command = teach;
+    event_command.moving_joint_mask.fill(false); event_command.moving_joint_mask[0] = true;
+    CommandSafetyState event_safety;
+    event_safety.teach_active = true; event_safety.teach_command = event_command;
+    event_safety.teach_started_monotonic_ns = ns;
+    event_safety.gravity_empirical_active = true;
+    event_safety.gravity_empirical_envelope_sha256 = std::string(64U, 'a');
+    const auto event_ns = ns + (reason == "TIME_LIMIT" ? 30000000000ULL : 10000000ULL);
+    GuiCommand controlled = event_command;
+    if (!assisted_teach_runtime_blocker(controlled, event_safety, event_motors, 0.0, event_ns).empty() ||
+        controlled.mode != "hold" || controlled.targets[0] != position ||
+        !is_position_holding_mode(controlled.mode) || !selected_owned_motors_confirmed_foc(controlled, event_motors) ||
+        !event_safety.gravity_empirical_active || !event_safety.spent_gravity_empirical_envelope_sha256.empty() ||
+        event_safety.teach_exit_hold.reason != reason)
+      throw std::runtime_error("ASSISTED_TEACH_SOFT_EXIT_SELF_TEST_FAILED");
+    for (std::size_t joint = 1; joint < 6U; ++joint)
+      if (controlled.targets[joint] != event_command.targets[joint])
+        throw std::runtime_error("ASSISTED_TEACH_SOFT_EXIT_MOVED_OTHER_GOAL");
+    const auto captured = event_safety.teach_exit_hold;
+    motor.unwrapped += motor.sign * kGear * 0.3 * kPi / 180.0;
+    GuiCommand old_heartbeat = event_command;
+    validate_and_observe_assisted_teach(old_heartbeat, event_motors, event_safety);
+    if (!assisted_teach_runtime_blocker(old_heartbeat, event_safety, event_motors, 0.0, event_ns + 100000000ULL).empty() ||
+        old_heartbeat.targets != captured.targets_rad || old_heartbeat.mode != "hold" ||
+        event_safety.teach_exit_hold.started_monotonic_ns != captured.started_monotonic_ns ||
+        event_safety.teach_exit_hold.deadline_monotonic_ns != captured.deadline_monotonic_ns)
+      throw std::runtime_error("ASSISTED_TEACH_SOFT_EXIT_HEARTBEAT_RECAPTURED");
+    GuiCommand ack = controlled; ++ack.activation_epoch;
+    GuiCommand bad_ack = ack; bad_ack.targets[0] += 0.001;
+    require_rejected([&] { auto state = event_safety; validate_and_observe_assisted_teach(bad_ack, event_motors, state); });
+    validate_and_observe_assisted_teach(ack, event_motors, event_safety);
+    validate_and_observe_fixed_hold_targets(ack, event_motors, event_safety);
+    if (!event_safety.teach_exit_hold.acknowledged ||
+        event_safety.teach_exit_hold.started_monotonic_ns != captured.started_monotonic_ns ||
+        event_safety.fixed_target[0] != position || !uses_assisted_teach_damping(ack, "hold", 0U, captured, event_ns + 100000000ULL))
+      throw std::runtime_error("ASSISTED_TEACH_SOFT_EXIT_ACK_RECAPTURED");
+    GuiCommand restart = event_command; restart.activation_epoch += 2;
+    require_rejected([&] { auto state = event_safety; validate_and_observe_assisted_teach(restart, event_motors, state); });
+    auto expired_state = event_safety;
+    motor.integral_encoder_velocity = -8.6 * kPi / 180.0;
+    if (assisted_teach_runtime_blocker(ack, expired_state, event_motors, 0.0, captured.deadline_monotonic_ns) != "ASSISTED_TEACH_STOP_VELOCITY_TIMEOUT")
+      throw std::runtime_error("ASSISTED_TEACH_STOP_DEADLINE_NOT_ENFORCED");
+    motor.integral_encoder_velocity = std::numeric_limits<double>::quiet_NaN();
+    if (assisted_teach_runtime_blocker(ack, expired_state, event_motors, 0.0, event_ns + 1U) != "ASSISTED_TEACH_ENCODER_VELOCITY_UNAVAILABLE")
+      throw std::runtime_error("ASSISTED_TEACH_STOP_ACCEPTED_UNKNOWN_SPEED");
+    motor.integral_encoder_velocity = 0.0;
+    motor.previous_feedback_at = Clock::now() - std::chrono::milliseconds(101);
+    if (assisted_teach_runtime_blocker(ack, expired_state, event_motors, 0.0, event_ns + 1U) != "ASSISTED_TEACH_FEEDBACK_UNHEALTHY")
+      throw std::runtime_error("ASSISTED_TEACH_STOP_ACCEPTED_STALE_FEEDBACK");
+    motor.previous_feedback_at = Clock::now();
+    motor.unwrapped = motor.sign * kGear * (position + 2.01 * kPi / 180.0);
+    if (assisted_teach_runtime_blocker(ack, expired_state, event_motors, 0.0, event_ns + 1U) != "ASSISTED_TEACH_STOP_ERROR_LIMIT")
+      throw std::runtime_error("ASSISTED_TEACH_STOP_ERROR_NOT_ENFORCED");
+    motor.unwrapped = motor.sign * kGear * position;
+    if (!assisted_teach_runtime_blocker(ack, event_safety, event_motors, 0.0, captured.deadline_monotonic_ns).empty() ||
+        !event_safety.teach_exit_hold.completed || uses_assisted_teach_damping(ack, "hold", 0U, captured, captured.deadline_monotonic_ns))
+      throw std::runtime_error("ASSISTED_TEACH_STOP_GRACE_NOT_FINITE");
+    // A delayed ACK is still valid once healthy, using the same frozen target.
+    auto late_state = expired_state;
+    late_state.teach_exit_hold.acknowledged = false;
+    late_state.teach_active = true;
+    ack.received_at = Clock::now();
+    validate_and_observe_assisted_teach(ack, event_motors, late_state);
+    if (!assisted_teach_runtime_blocker(ack, late_state, event_motors, 0.0, captured.deadline_monotonic_ns + 1U).empty() ||
+        late_state.teach_exit_hold.deadline_monotonic_ns != captured.deadline_monotonic_ns)
+      throw std::runtime_error("ASSISTED_TEACH_LATE_ACK_RESET_DEADLINE");
+  }
+  auto stale_authority = packet;
+  stale_authority["gravity_authority"]["source_monotonic_ns"] = ns - kMaximumGravityAuthorityAgeNs - 1U;
+  require_rejected([&] { GuiCommand parsed; parse_command(stale_authority.dump(), parsed, now); });
 }
 
 void command_mask_self_test() {
@@ -7337,7 +7510,8 @@ std::string feedback_payload(const std::vector<MotorRuntime>& motors,
                              bool no_progress_observation_valid,
                              double no_progress_position_error_rad,
                              bool software_saturation_observed,
-                             double thermal_derating_factor) {
+                             double thermal_derating_factor,
+                             const AssistedTeachExitHold& teach_exit_hold) {
   nlohmann::json samples = nlohmann::json::array();
   nlohmann::json controller_mode_by_motor = nlohmann::json::object();
   nlohmann::json thermal_state_by_motor = nlohmann::json::object();
@@ -7408,7 +7582,7 @@ std::string feedback_payload(const std::vector<MotorRuntime>& motors,
   }
   const std::string thermal_state = thermal_state_for_raw_temperature(
       maximum_raw_temperature_c, thermal_interlock);
-  return nlohmann::json({
+  nlohmann::json payload = {
       {"schema", "go-m8010-motor-feedback/1.0"},
       {"source_monotonic_ns", stamp}, {"samples", samples},
       {"tau_j2_logical_total_nm", tau_j2_logical_total_nm},
@@ -7543,7 +7717,21 @@ std::string feedback_payload(const std::vector<MotorRuntime>& motors,
       {"no_progress_trip_activation_epoch",
        no_progress_watchdog.trip_activation_epoch},
       {"no_progress_minimum_rearm_epoch",
-       no_progress_watchdog.minimum_rearm_epoch}}).dump();
+       no_progress_watchdog.minimum_rearm_epoch}};
+  if (teach_exit_hold.present && !teach_exit_hold.completed && mode == "hold" &&
+      control_command.targets == teach_exit_hold.targets_rad) {
+    payload["controller_activation_epoch"] = control_command.activation_epoch;
+    payload["assisted_teach_exit_hold"] = {
+        {"schema", "go-m8010-teach-exit-hold/1.0"},
+        {"joint_index", teach_exit_hold.joint_index},
+        {"press_activation_epoch", teach_exit_hold.press_activation_epoch},
+        {"started_monotonic_ns", teach_exit_hold.started_monotonic_ns},
+        {"deadline_monotonic_ns", teach_exit_hold.deadline_monotonic_ns},
+        {"reason", teach_exit_hold.reason},
+        {"targets_rad", teach_exit_hold.targets_rad},
+        {"initial_velocity_rad_s", teach_exit_hold.initial_velocity_rad_s}};
+  }
+  return payload.dump();
 }
 
 bool send_terminal_brake(SerialPort& serial, std::vector<MotorRuntime>& motors,
@@ -7875,7 +8063,7 @@ int run(const Options& options) {
     std::cout << "DRY_RUN=YES\nSERIAL_OPENED=NO\nDEFAULT_MODE=BRAKE\n"
                  "BRAKE_ONLY_CAPABILITY=YES\n"
                  "ASSISTED_TEACH_CAPABILITY=SINGLE_GO_JOINT_AFTER_CONFIRMED_HOLD\n"
-                 "ASSISTED_TEACH_PRESS_HARD_LIMITS=30_SECONDS_5_DEGREES_5_DEG_S\n"
+                 "ASSISTED_TEACH_PRESS_LIMITS=30_SECONDS_5_DEGREES_5_DEG_S\nASSISTED_TEACH_SOFT_LIMIT_ACTION=CAPTURE_SELECTED_HOLD\nASSISTED_TEACH_STOPPING_HOLD_LIMITS=1_SECOND_2_DEGREE_ERROR\n"
                  "ASSISTED_TEACH_EMPIRICAL_LEASE_EXPIRY=BRAKE\n"
                  "CONTROL_LOOP_HZ=100\n"
                  "COMMAND_TARGET_POLICY=MODEL_SESSION_ENVELOPE_FULL_ENDPOINTS\n"
@@ -8414,7 +8602,7 @@ int run(const Options& options) {
         std::cerr << std::endl;
       }
     }
-    const GuiCommand& control_command = lease_safe_hold_active
+    GuiCommand control_command = lease_safe_hold_active
         ? lease_safe_hold_command : command;
     const bool empirical_authority_expired =
         !empirical_gravity_authority_is_current(control_command);
@@ -8464,7 +8652,8 @@ int run(const Options& options) {
     // authorized teach mode follows one joint with bounded gravity support.
     if (effective_mode == "drag")
       effective_mode = "brake";
-    if (effective_mode == "teach") {
+    if (effective_mode == "teach" ||
+        (effective_mode == "hold" && command_safety.teach_exit_hold.present)) {
       const std::string teach_blocker = assisted_teach_runtime_blocker(
           control_command, command_safety, motors,
           j2_derived_velocity_filtered, monotonic_ns());
@@ -8479,14 +8668,23 @@ int run(const Options& options) {
         effective_mode = "brake";
         prior_external_hold_confirmed = false;
         std::cerr << teach_blocker << " bus=" << options.bus << std::endl;
+      } else {
+        effective_mode = control_command.mode;
+        thermally_derated_command.mode = control_command.mode;
+        thermally_derated_command.targets = control_command.targets;
+        thermally_derated_command.moving_joint_mask = control_command.moving_joint_mask;
       }
     }
+    const auto teach_cycle_ns = monotonic_ns();
+    const bool teach_stopping_hold = effective_mode == "hold" &&
+        command_safety.teach_exit_hold.present && !command_safety.teach_exit_hold.completed;
     std::array<double, 6> teach_damping_nm{};
-    if (effective_mode == "teach") {
+    if (effective_mode == "teach" || teach_stopping_hold) {
       std::set<int> damped_joints;
       for (const auto& motor : motors) {
         const auto joint = static_cast<std::size_t>(motor.joint_index);
-        if (!joint_is_assisted_teach(control_command, effective_mode, joint) ||
+        if (!uses_assisted_teach_damping(control_command, effective_mode, joint,
+                command_safety.teach_exit_hold, teach_cycle_ns) ||
             !damped_joints.insert(motor.joint_index).second) continue;
         const double velocity = joint == 1U ? j2_derived_velocity_filtered : motor.integral_encoder_velocity;
         teach_damping_nm[joint] = -std::min(thermally_derated_command.kd[joint], motor.kd_limit) * kGear * velocity;
@@ -8765,7 +8963,8 @@ int run(const Options& options) {
             position_arrived_once[1];
         if (control_command.recovery)
           reset_bounded_hold_integral(hold_integral_states[1]);
-        j2_integral_wire_nm = joint_is_assisted_teach(control_command, effective_mode, 1U)
+        j2_integral_wire_nm = uses_assisted_teach_damping(control_command, effective_mode, 1U,
+                command_safety.teach_exit_hold, teach_cycle_ns)
             ? frozen_hold_integral_wire(hold_integral_states[1], kJ2IntegralRotorHardNm)
             : update_bounded_hold_integral(
             hold_integral_states[1], true,
@@ -8807,7 +9006,7 @@ int run(const Options& options) {
               predicted_work_limit, predicted_pd_limit);
           internal_fallback = true;
         }
-        if (effective_mode == "teach" && !governed.feasible)
+        if ((effective_mode == "teach" || teach_stopping_hold) && !governed.feasible)
           teach_governor_infeasible = true;
         if (governed.feasible) {
           const bool exact_recipe = effective_mode == "position" &&
@@ -8920,7 +9119,8 @@ int run(const Options& options) {
             position_arrived_once[joint];
         if (control_command.recovery)
           reset_bounded_hold_integral(hold_integral_states[joint]);
-        hold_integral_wire_nm[joint] = integral_active && joint_is_assisted_teach(control_command, effective_mode, joint)
+        hold_integral_wire_nm[joint] = integral_active && uses_assisted_teach_damping(
+                control_command, effective_mode, joint, command_safety.teach_exit_hold, teach_cycle_ns)
             ? frozen_hold_integral_wire(hold_integral_states[joint], kHoldIntegralRotorHardNm[joint])
             : update_bounded_hold_integral(
             hold_integral_states[joint], integral_active,
@@ -8948,7 +9148,7 @@ int run(const Options& options) {
                       hold_integral_wire_nm[joint] + teach_damping_nm[joint],
                   kAuxPredictedRotorWorkNm[joint],
                   kAuxPredictedRotorPdHardNm[joint]);
-          if (effective_mode == "teach" && !governed.feasible)
+          if ((effective_mode == "teach" || teach_stopping_hold) && !governed.feasible)
             teach_governor_infeasible = true;
           if (governed.feasible) {
             const bool exact_recipe = effective_mode == "position" &&
@@ -9001,7 +9201,7 @@ int run(const Options& options) {
           software_saturation_joint_mask.end(),
           [](bool saturated) { return saturated; });
     }
-    if (effective_mode == "teach" && teach_governor_infeasible) {
+    if ((effective_mode == "teach" || teach_stopping_hold) && teach_governor_infeasible) {
       latch_position_safety_watchdog(
           no_progress_watchdog, 0.0, "ASSISTED_TEACH_LOAD_GOVERNOR_ABORT",
           control_command.activation_epoch, command_safety.minimum_activation_epoch,
@@ -10013,7 +10213,7 @@ int run(const Options& options) {
         no_progress_watchdog, no_progress_observation_valid,
         no_progress_position_error_rad,
         software_saturation_observed_this_cycle,
-        thermal_derating_factor);
+        thermal_derating_factor, command_safety.teach_exit_hold);
     (void)::sendto(feedback_socket, payload.data(), payload.size(), 0,
                    reinterpret_cast<const sockaddr*>(&feedback_address),
                    sizeof(feedback_address));

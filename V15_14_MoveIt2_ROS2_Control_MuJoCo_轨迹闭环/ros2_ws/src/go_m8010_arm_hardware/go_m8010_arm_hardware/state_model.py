@@ -1444,6 +1444,73 @@ def _optional_finite_float(value: object, field_name: str) -> Optional[float]:
     return _finite_float(value, field_name)
 
 
+def parse_assisted_teach_exit_hold(payload, samples, modes, gravity) -> dict:
+    """Validate optional stop evidence without rejecting encoder data.
+
+    A past deadline remains valid history; consumers decide exit permission.
+    """
+    if "assisted_teach_exit_hold" not in payload:
+        return {}
+    source_ns = payload["source_monotonic_ns"]
+    result = {
+        "assisted_teach_exit_hold": None,
+        "assisted_teach_exit_hold_validated": False,
+        "assisted_teach_exit_hold_source_monotonic_ns": source_ns,
+        "assisted_teach_exit_hold_error": "INVALID_NATIVE_EXIT_HOLD",
+    }
+    proof = payload["assisted_teach_exit_hold"]
+    if not isinstance(proof, dict) or set(proof) != {
+        "schema", "joint_index", "press_activation_epoch",
+        "started_monotonic_ns", "deadline_monotonic_ns", "reason",
+        "targets_rad", "initial_velocity_rad_s",
+    }:
+        return result
+    joint = proof["joint_index"]
+    press = proof["press_activation_epoch"]
+    started = proof["started_monotonic_ns"]
+    deadline = proof["deadline_monotonic_ns"]
+    epoch = payload.get("controller_activation_epoch")
+    targets = proof["targets_rad"]
+    velocity = proof["initial_velocity_rad_s"]
+    try:
+        finite_values = isinstance(targets, list) and len(targets) == 6 and all(
+            type(value) in (int, float) and math.isfinite(value)
+            for value in [*targets, velocity]
+        )
+    except (TypeError, OverflowError):
+        return result
+    if (
+        proof["schema"] != "go-m8010-teach-exit-hold/1.0"
+        or type(joint) is not int or not 0 <= joint <= 4
+        or type(press) is not int or press <= 0
+        or type(epoch) is not int or epoch < press
+        or type(started) is not int or not 0 < started <= source_ns
+        or type(deadline) is not int or deadline != started + 1_000_000_000
+        or proof["reason"] not in ("TIME_LIMIT", "EXCURSION_LIMIT", "VELOCITY_LIMIT")
+        or not finite_values
+    ):
+        return result
+    owned = {"J1"} if joint == 0 else {"J2A", "J2B"} if joint == 1 else {"J3", "J4", "J5"}
+    if (
+        set(modes) != owned or any(mode != "hold" for mode in modes.values())
+        or payload.get("controller_mode") != "hold"
+        or payload.get("domain_fault") is not False
+        or payload.get("thermal_fault_latched") is not False
+        or payload.get("no_progress_fault") is not False
+        or (joint == 1 and payload.get("j2_sync_fault") is not False)
+        or any(sample.communication_ok is not True or sample.merror != 0
+               for sample in samples)
+        or gravity["policy_identity_status"] != "ECHOED"
+        or gravity["authority_present"] is not True
+    ):
+        return result
+    return {
+        "assisted_teach_exit_hold": {**proof, "targets_rad": list(targets)},
+        "assisted_teach_exit_hold_validated": True,
+        "assisted_teach_exit_hold_source_monotonic_ns": source_ns,
+    }
+
+
 def parse_controller_feedback_metadata(
     payload: Mapping, feedbacks: Iterable[MotorFeedback]
 ) -> dict[str, dict]:
@@ -1729,6 +1796,16 @@ def parse_controller_feedback_metadata(
                 "LOAD_LIMIT_NO_PROGRESS",
                 "POSITION_ARRIVAL_TIMEOUT",
                 "EXACT_TRAJECTORY_LOAD_GOVERNOR_ABORT",
+                "ASSISTED_TEACH_PRESS_STATE_INVALID",
+                "ASSISTED_TEACH_FEEDBACK_UNHEALTHY",
+                "ASSISTED_TEACH_MODEL_BOUND",
+                "ASSISTED_TEACH_ENCODER_VELOCITY_UNAVAILABLE",
+                "ASSISTED_TEACH_STOP_ERROR_LIMIT",
+                "ASSISTED_TEACH_STOP_VELOCITY_TIMEOUT",
+                "ASSISTED_TEACH_LOAD_GOVERNOR_ABORT",
+                "ASSISTED_TEACH_PRESS_TIMEOUT",
+                "ASSISTED_TEACH_EXCURSION_LIMIT",
+                "ASSISTED_TEACH_ENCODER_VELOCITY_LIMIT",
             }:
                 raise ValueError("position safety trip reason is invalid")
             if bool(trip_reason) is not no_progress_fault:
@@ -2043,6 +2120,9 @@ def parse_controller_feedback_metadata(
             "empirical_position_validation_authorized": None,
         }
 
+    exit_hold = parse_assisted_teach_exit_hold(
+        payload, samples, normalized_modes, gravity
+    )
     by_motor = {}
     for sample in samples:
         if sample.thermal_fault_latched is not None:
@@ -2088,6 +2168,7 @@ def parse_controller_feedback_metadata(
             if thermal_observed else None
         )
         by_motor[sample.motor] = {
+            **exit_hold,
             "source_monotonic_ns": sample.source_monotonic_ns,
             "receipt_monotonic_ns": sample.receipt_monotonic_ns,
             "controller_mode": normalized_modes[sample.motor],

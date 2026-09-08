@@ -1675,6 +1675,41 @@ def assisted_teach_authorized(status: dict) -> bool:
                                     ("maximum_teach_velocity_deg_s", 5.0))))
 
 
+def native_teach_exit_hold_targets(hardware: dict, selected: int, press_epoch: int,
+                                  entry_targets: list[float], now_ns: Optional[int] = None) -> Optional[list[float]]:
+    """ACK an observed native capture; never turn it into a second capture."""
+    proof = hardware.get("assisted_teach_exit_hold")
+    if proof is None:
+        if hardware.get("assisted_teach_exit_hold_validated") is False:
+            raise RuntimeError("原生退出保持证据未通过验证")
+        return None
+    checked_ns = time.monotonic_ns() if now_ns is None else now_ns
+    source_ns = hardware.get("assisted_teach_exit_hold_source_monotonic_ns")
+    if not isinstance(proof, dict):
+        raise RuntimeError("原生退出保持证据格式无效")
+    started, deadline = proof.get("started_monotonic_ns"), proof.get("deadline_monotonic_ns")
+    targets, modes = proof.get("targets_rad"), hardware.get("controller_mode_by_motor")
+    if (hardware.get("assisted_teach_exit_hold_validated") is not True
+            or proof.get("schema") != "go-m8010-teach-exit-hold/1.0"
+            or type(proof.get("joint_index")) is not int or proof["joint_index"] != selected
+            or type(proof.get("press_activation_epoch")) is not int or proof["press_activation_epoch"] != press_epoch
+            or any(type(value) is not int for value in (started, deadline, source_ns))
+            or not 0 < started <= source_ns <= checked_ns or not 0 < deadline - started <= 1_000_000_000
+            or checked_ns - source_ns > HARDWARE_STATE_SOURCE_MAX_AGE_NS
+            or proof.get("reason") not in {"TIME_LIMIT", "EXCURSION_LIMIT", "VELOCITY_LIMIT"}
+            or type(proof.get("initial_velocity_rad_s")) not in {int, float}
+            or not math.isfinite(proof["initial_velocity_rad_s"])
+            or not isinstance(targets, list) or len(targets) != 6
+            or any(type(value) not in {int, float} or not math.isfinite(value) for value in targets)
+            or len(entry_targets) != 6
+            or any(target != entry_targets[index] for index, target in enumerate(targets) if index != selected)
+            or not isinstance(modes, dict) or set(modes) != set(MOTOR_NAMES)
+            or any(mode != "hold" for mode in modes.values())
+            or abs(hardware["position_rad"][selected] - targets[selected]) > math.radians(2.0)):
+        raise RuntimeError("原生退出保持证据与本次按压／当前HOLD不匹配或反馈已过期")
+    return list(targets)
+
+
 def parse_pose_degrees(value: str) -> np.ndarray:
     fields = [field.strip() for field in value.split(",")]
     if len(fields) != 6:
@@ -2795,6 +2830,7 @@ class MainWindow(QMainWindow):
         self.teach_rejected_commands = None
         self.teach_acknowledged = False
         self.teach_record_target = None
+        self.teach_release_pending = None
         self.teach_events = []
         # The candidate is the final, operator-visible virtual pose.  ``targets``
         # remains the exact target of the current physical segment.  Keeping the
@@ -3041,6 +3077,9 @@ class MainWindow(QMainWindow):
     def _start_assisted_teach(self) -> None:
         if self.teach_joint is not None:
             return
+        if getattr(self, "teach_release_pending", None) is not None:
+            self.teach_status.setText("正在确认上一次退出的原生HOLD目标，请稍候。")
+            return
         try:
             if ((self.action_group_dialog is not None and self.action_group_dialog.active)
                     or self.queued_pose_target is not None or self.pending_collision_execute_sequence is not None):
@@ -3093,23 +3132,25 @@ class MainWindow(QMainWindow):
                 button.setEnabled(True)
         self._refresh_virtual_editability()
 
-    def _release_assisted_teach(self, reason="松开按钮") -> None:
-        if self.teach_joint is None:
+    def _release_assisted_teach(self, reason="松开按钮", *, pending=False) -> None:
+        context = getattr(self, "teach_release_pending", None) if pending else None
+        if self.teach_joint is None and context is None:
             return
-        selected = self.teach_joint
+        selected = context["joint_index"] if context is not None else self.teach_joint
+        press_epoch = context["press_epoch"] if context is not None else self.activation_epoch
         try:
             self._action_group_health(self.teach_binding, self.teach_rejected_commands,
                                       allowed_modes=("hold", "teach"))
             hardware = self.node.latest_hardware
             gravity = self.node.latest_gravity_status or {}
             empirical = gravity.get("empirical_validation", {})
-            if (not assisted_teach_authorized(gravity)
-                    or self.teach_authority_binding != (gravity.get("source_instance_id"),
+            if (self.teach_authority_binding != (gravity.get("source_instance_id"),
                         empirical.get("envelope_sha256"), empirical.get("anchor_sha256"))):
                 raise RuntimeError("示教authority已变化或过期")
-            self.command_targets = fixed_hold_targets_after_position_stop(
-                self.teach_entry_targets, hardware["position_rad"], [True] * 6,
-                [i == selected for i in range(6)])
+            native_targets = native_teach_exit_hold_targets(
+                hardware, selected, press_epoch, self.teach_entry_targets)
+            self.command_targets = native_targets if native_targets is not None else fixed_hold_targets_after_position_stop(
+                self.teach_entry_targets, hardware["position_rad"], [True] * 6, [i == selected for i in range(6)])
             self.targets = self.candidate_targets = list(self.command_targets)
             self.moving_joint_mask = self.pending_target_joint_mask = [False] * 6
             self.active_collision_proof = self.active_trajectory_descriptor = self.active_plan_manifest = None
@@ -3118,13 +3159,18 @@ class MainWindow(QMainWindow):
             self.hardware_mode = "hold"
             self.arrival.start(time.monotonic())
             self.teach_record_target = tuple(self.command_targets)
+            self.teach_release_pending = {"joint_index": selected, "press_epoch": press_epoch,
+                "released_at_ns": time.monotonic_ns(), "native_ack": native_targets is not None}
             self.teach_events.append({"event": "teach_release_requested", "joint": selected + 1,
                 "reason": reason, "at_monotonic_s": time.monotonic(), "activation_epoch": self.activation_epoch,
+                "native_exit_hold_ack": native_targets is not None,
+                "native_exit_hold": hardware.get("assisted_teach_exit_hold") if native_targets is not None else None,
                 "source_monotonic_ns": hardware["source_monotonic_ns"], "actual_rad": list(hardware["position_rad"]),
                 "frozen_targets_rad": list(self.teach_entry_targets), "hold_targets_rad": list(self.command_targets)})
             self.teach_status.setText(f"{reason}：已请求J{selected + 1}保持当前角度，其他目标不变；等待真实HOLD确认。")
         except (ValueError, RuntimeError, KeyError) as error:
             self.teach_record_target = None
+            self.teach_release_pending = None
             self.teach_events.append({"event": "teach_refresh_stopped", "joint": selected + 1,
                 "reason": str(error), "at_monotonic_s": time.monotonic(), "activation_epoch": self.activation_epoch,
                 "fresh_actual_confirmed": False, "actual_rad": None,
@@ -3135,6 +3181,24 @@ class MainWindow(QMainWindow):
             self._clear_assisted_teach()
         self._publish_command()
 
+    def _tick_pending_teach_exit(self) -> None:
+        context = getattr(self, "teach_release_pending", None)
+        if context is None or self.command_stream_suspended:
+            return
+        hardware = self.node.latest_hardware or {}
+        proof = hardware.get("assisted_teach_exit_hold")
+        if not context["native_ack"] and (proof is not None or hardware.get("assisted_teach_exit_hold_validated") is False):
+            self._release_assisted_teach("原生退出保持补充确认", pending=True)
+            return
+        # A normal release can race the native boundary. Retain its press
+        # identity until post-release HOLD feedback arrives, so a later native
+        # capture is ACKed exactly instead of refreshing a rejected new target.
+        if proof is None and self._action_group_hold_ready(self.command_targets):
+            sources = [hardware.get("per_motor", {}).get(name, {}).get("feedback_source_monotonic_ns")
+                       for name in MOTOR_GROUPS[context["joint_index"]]]
+            if all(type(source) is int and source > context["released_at_ns"] for source in sources):
+                self.teach_release_pending = None
+
     def _tick_assisted_teach(self, now: float) -> None:
         if self.teach_joint is None:
             return
@@ -3144,6 +3208,9 @@ class MainWindow(QMainWindow):
             hardware = self.node.latest_hardware
             gravity = self.node.latest_gravity_status or {}
             empirical = gravity.get("empirical_validation", {})
+            if hardware.get("assisted_teach_exit_hold") is not None or hardware.get("assisted_teach_exit_hold_validated") is False:
+                self._release_assisted_teach("原生边界退出保持")
+                return
             if (not assisted_teach_authorized(gravity) or self.teach_authority_binding !=
                     (gravity.get("source_instance_id"), empirical.get("envelope_sha256"), empirical.get("anchor_sha256"))):
                 raise RuntimeError("示教authority变化或过期")
@@ -3167,7 +3234,7 @@ class MainWindow(QMainWindow):
                 self._release_assisted_teach("示教边界／原生停止")
                 return
             if confirmed and not self.teach_acknowledged:
-                self.teach_events.append({"event": "teach_hardware_confirmed", "joint": selected,
+                self.teach_events.append({"event": "teach_hardware_confirmed", "joint": selected + 1,
                     "source_monotonic_ns": hardware["source_monotonic_ns"],
                     "actual_rad": list(hardware["position_rad"]),
                     "controller_mode_by_motor": dict(modes), "activation_epoch": self.activation_epoch})
@@ -5296,6 +5363,7 @@ class MainWindow(QMainWindow):
         if getattr(self, "teach_joint", None) is not None:
             self._clear_assisted_teach()
         self.teach_record_target = None
+        self.teach_release_pending = None
         if getattr(self, "action_group_dialog", None) is not None:
             self.action_group_dialog.stop()
 
@@ -5336,6 +5404,9 @@ class MainWindow(QMainWindow):
         self._publish_command()
 
     def _hold_current(self) -> None:
+        if getattr(self, "teach_release_pending", None) is not None:
+            self._tick_pending_teach_exit()
+            return
         if getattr(self, "teach_joint", None) is not None:
             self._release_assisted_teach("请求保持")
             return
@@ -6512,6 +6583,8 @@ class MainWindow(QMainWindow):
             self._suspend_command_stream(
                 "重力authority失效或过期；停止刷新命令并保留底层租约安全保持"
             )
+        if getattr(self, "teach_release_pending", None) is not None:
+            self._tick_pending_teach_exit()
         if getattr(self, "teach_joint", None) is not None:
             self._tick_assisted_teach(now)
         self._refresh_joint_widgets()

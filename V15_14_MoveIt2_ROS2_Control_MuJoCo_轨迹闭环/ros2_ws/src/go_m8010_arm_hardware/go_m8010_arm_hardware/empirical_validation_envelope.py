@@ -57,6 +57,8 @@ ASSISTED_TEACH_JOINTS = ("J1", "J2", "J3", "J4", "J5")
 MAXIMUM_TEACH_EXCURSION_DEG = 5.0
 MAXIMUM_TEACH_SECONDS = 30.0
 MAXIMUM_TEACH_VELOCITY_DEG_S = 5.0
+TEACH_STOPPING_HOLD_NS = 1_000_000_000
+TEACH_STOPPING_ERROR_RAD = math.radians(2.0)
 MAXIMUM_SCHEDULER_TRANSITION_SLACK_SECONDS = 1.0
 POSITION_PRECISION_CONTRACT_ID = "go-m8010-position-accuracy/0.1deg-v1"
 POSITION_ENDPOINT_ERROR_DEG = 0.1
@@ -431,6 +433,7 @@ class EmpiricalValidationEnvelope:
                 "allowed_after_scale", "nonselected_joints_fixed_hold_required",
                 "j6_fixed_hold_required", "continuous_operation_authorized",
                 "final_confirmation_policy",
+                "soft_limit_action", "stopping_hold_seconds", "max_stopping_error_deg",
             }, "ASSISTED_TEACH")
             _require(
                 teach["schema"] == "go-m8010-assisted-teach-envelope/1.0"
@@ -444,6 +447,7 @@ class EmpiricalValidationEnvelope:
                 and teach["continuous_operation_authorized"] is False,
                 "ASSISTED_TEACH_SCOPE_INVALID",
             )
+            _require(teach["soft_limit_action"] == "capture_selected_hold", "ASSISTED_TEACH_SCOPE_INVALID")
             _require(
                 teach["final_confirmation_policy"] ==
                 "ONCE_AFTER_LADDER_THEN_LIVE_GATES_FOR_MANUAL_SESSION",
@@ -454,6 +458,8 @@ class EmpiricalValidationEnvelope:
                 ("maximum_press_seconds", MAXIMUM_TEACH_SECONDS),
                 ("maximum_velocity_deg_s", MAXIMUM_TEACH_VELOCITY_DEG_S),
                 ("allowed_after_scale", 1.0),
+                ("stopping_hold_seconds", 1.0),
+                ("max_stopping_error_deg", 2.0),
             ):
                 _require(_finite(teach[field], "ASSISTED_TEACH_" + field.upper()) == expected,
                          "ASSISTED_TEACH_BOUNDS_INVALID")
@@ -617,6 +623,38 @@ def validate_stage_confirmation(
     return source, sequence, source_ns
 
 
+def assisted_teach_stopping_joint(hardware_state: Mapping, now_monotonic_ns: int) -> Optional[int]:
+    """One fresh native HOLD proof grants only its selected-axis stop window.
+
+    A historical expired proof remains useful evidence; it grants no velocity
+    exemption. The raw-state decoder independently binds ownership and epoch.
+    """
+    if hardware_state.get("assisted_teach_exit_hold_validated") is not True:
+        return None
+    proof = hardware_state.get("assisted_teach_exit_hold")
+    source_ns = hardware_state.get("assisted_teach_exit_hold_source_monotonic_ns")
+    if not isinstance(proof, Mapping) or proof.get("schema") != "go-m8010-teach-exit-hold/1.0":
+        return None
+    joint = proof.get("joint_index")
+    started, deadline = proof.get("started_monotonic_ns"), proof.get("deadline_monotonic_ns")
+    if (type(joint) is not int or not 0 <= joint < 5 or type(started) is not int
+            or type(deadline) is not int or type(source_ns) is not int
+            or not 0 < started <= source_ns <= hardware_state.get("source_monotonic_ns", 0) <= now_monotonic_ns
+            or deadline - started != TEACH_STOPPING_HOLD_NS
+            or not now_monotonic_ns < deadline
+            or now_monotonic_ns - source_ns > int(MAXIMUM_FEEDBACK_AGE_MS * 1e6)):
+        return None
+    modes = hardware_state.get("controller_mode_by_motor")
+    if not isinstance(modes, Mapping) or set(modes) != set(MOTOR_NAMES) or any(mode != "hold" for mode in modes.values()):
+        return None
+    actual, targets = hardware_state.get("position_rad"), proof.get("targets_rad")
+    if (not isinstance(actual, list) or len(actual) != 6 or not isinstance(targets, list) or len(targets) != 6
+            or any(type(x) not in {int, float} or not math.isfinite(float(x)) for x in actual + targets)
+            or abs(actual[joint] - targets[joint]) > TEACH_STOPPING_ERROR_RAD):
+        return None
+    return joint
+
+
 def live_hardware_blocker(
     hardware_state: object,
     *,
@@ -643,7 +681,10 @@ def live_hardware_blocker(
     if type(sync) not in {int, float} or not math.isfinite(float(sync)) or abs(math.degrees(float(sync))) > J2_SYNC_WARNING_DEG:
         return "EMPIRICAL_J2_SYNC_WARNING", None
     velocities = hardware_state.get("velocity_rad_s")
-    if not isinstance(velocities, list) or len(velocities) != 6 or any(type(v) not in {int, float} or not math.isfinite(float(v)) or abs(float(v)) > MAXIMUM_HOLD_VELOCITY_RAD_S for v in velocities):
+    if hardware_state.get("assisted_teach_exit_hold_validated") is False:
+        return "EMPIRICAL_ASSISTED_TEACH_EXIT_PROOF_INVALID", None
+    stopping_joint = assisted_teach_stopping_joint(hardware_state, now_monotonic_ns) if allow_assisted_teach else None
+    if not isinstance(velocities, list) or len(velocities) != 6 or any(type(v) not in {int, float} or not math.isfinite(float(v)) or (index != stopping_joint and abs(float(v)) > MAXIMUM_HOLD_VELOCITY_RAD_S) for index, v in enumerate(velocities)):
         return "EMPIRICAL_ABNORMAL_VELOCITY", None
     per_motor = hardware_state.get("per_motor")
     if not isinstance(per_motor, Mapping) or set(per_motor) != set(MOTOR_NAMES):

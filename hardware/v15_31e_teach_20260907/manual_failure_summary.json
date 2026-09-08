@@ -1,0 +1,93 @@
+{
+  "schema": "go-m8010-manual-teach-failure/1.0",
+  "status": "FAIL",
+  "code_commit": "d254e6bf795f82d59e5df08693441d49396bd69f",
+  "session": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T123937-4ee7a5",
+  "operator_report": "Dragging J1 caused other axes to unload rather than hold.",
+  "failure": "feedback, authority, session or command-router health changed",
+  "elapsed_s": 485.42804913409054,
+  "last_press": {
+    "event": "teach_requested",
+    "joint": 1,
+    "at_monotonic_s": 3198152.099625045,
+    "activation_epoch": 3198152099618645,
+    "source_monotonic_ns": 3198152073244948,
+    "actual_rad": [
+      0.000980705444974463,
+      0.0003998729338186982,
+      -0.0010909615720683568,
+      -0.0045324437570827235,
+      0.00032671767593932385,
+      0.00036240177004653873
+    ],
+    "frozen_targets_rad": [
+      0.000980705444974463,
+      0.00039991059868156955,
+      -0.0011212535380325786,
+      -0.0037751540241928914,
+      -0.0001579537794882281,
+      0.00036240177004653873
+    ]
+  },
+  "peak_adjacent_encoder_velocity_deg_s": 8.606076557955713,
+  "max_j1_displacement_from_press_deg": 1.0795443214061993,
+  "native_reason": "ASSISTED_TEACH_ENCODER_VELOCITY_LIMIT",
+  "native_trigger_measurement": "Not logged; this legacy reason covered both finite excess speed and unavailable/nonfinite velocity. The adjacent encoder samples independently show a speed excursion.",
+  "receiver_defect": "state_model rejected ASSISTED_TEACH_* position_safety_trip_reason, causing J1 feedback loss and subsequent global gravity-authority revocation.",
+  "original_terminal": {
+    "paired_gui": false,
+    "J1": "PASS",
+    "J2": "PASS",
+    "J345": "UNCONFIRMED/FAIL",
+    "J6": "PASS"
+  },
+  "later_j345_brake_only_followup": {
+    "final_brake": "PASS",
+    "foc_tx_count": 0,
+    "completed_cycles": 301,
+    "note": "Later stop confirmation; original failed terminal report is preserved."
+  },
+  "fix_validation": "PENDING; no new physical enablement authorized by this report",
+  "artifacts": [
+    {
+      "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T123937-4ee7a5/evidence/j1_action_group_demo.json",
+      "bytes": 121687560,
+      "sha256": "ac9b8db25bfa1ef9a7225649fb327203750508e7bb4d9faa4377079f6320ced6"
+    },
+    {
+      "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T123937-4ee7a5_scripts/session_result.json",
+      "bytes": 1594,
+      "sha256": "1a58652ade1e1ba492f8746b36dc7e4340d9913ca13ee4e4d27c82ad1d2c5255"
+    },
+    {
+      "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T123937-4ee7a5/core.log",
+      "bytes": 392837,
+      "sha256": "fc188b6dd7b976e9d23d0452eb523e5f8cc8ac43fe759c50ad3b115242c592e3"
+    },
+    {
+      "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T123937-4ee7a5/evidence/j345_brake_after_manual_fault.log",
+      "bytes": 1242,
+      "sha256": "4a58b7b3314b96b410ebcbd16b6fc7c3f03892d7833ea1f749a47e47acb34d0b"
+    },
+    {
+      "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T123937-4ee7a5/run/j1_controller.log",
+      "bytes": 1734,
+      "sha256": "1449b4bb6b943f1784609e449ffa6e9bcd2bf87c0a50a59a0376d4c33ad0ca1d"
+    },
+    {
+      "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T123937-4ee7a5/run/j2_controller.log",
+      "bytes": 2321,
+      "sha256": "e98e3af3592bfe64d9d49abcaa0f2defb01ca5d6648109cd9ca91a4a13f87bfa"
+    },
+    {
+      "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T123937-4ee7a5/run/j345_controller.log",
+      "bytes": 1798,
+      "sha256": "18ae117e6d604c8d6a3e64ec53da647dcb7928e2763e806346246d7a233cf7ca"
+    },
+    {
+      "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260907T123937-4ee7a5/run/j6_controller.log",
+      "bytes": 333,
+      "sha256": "71647f474acce4c288d9b46662e85e47c8670762a9b32c97d3cd4941b3edeb4b"
+    }
+  ]
+}

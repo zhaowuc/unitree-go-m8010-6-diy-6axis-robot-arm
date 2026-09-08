@@ -234,6 +234,69 @@ class ControllerFeedbackMetadataTest(unittest.TestCase):
             "feedforward_nm": logical_feedforward,
         }
 
+    @staticmethod
+    def exit_payload(joint=0, now=5_000_000_000):
+        motors = ("J1",) if joint == 0 else ("J2A", "J2B") if joint == 1 else ("J3", "J4", "J5")
+        payload = ControllerFeedbackMetadataTest.payload(motors, now)
+        payload.update({
+            "controller_activation_epoch": 7,
+            "j2_sync_fault": False,
+            "assisted_teach_exit_hold": {
+                "schema": "go-m8010-teach-exit-hold/1.0",
+                "joint_index": joint,
+                "press_activation_epoch": 7,
+                "started_monotonic_ns": now - 100_000_000,
+                "deadline_monotonic_ns": now + 900_000_000,
+                "reason": "VELOCITY_LIMIT",
+                "targets_rad": [0.0] * 6,
+                "initial_velocity_rad_s": 0.05,
+            },
+        })
+        return payload
+
+    def test_native_exit_hold_is_distinct_from_absence_and_survives_deadline(self):
+        self.assertNotIn("assisted_teach_exit_hold", self.parse(self.payload())["J1"])
+        for joint in range(5):
+            for expired in (False, True):
+                payload = self.exit_payload(joint)
+                if expired:
+                    payload["assisted_teach_exit_hold"]["started_monotonic_ns"] -= 2_000_000_000
+                    payload["assisted_teach_exit_hold"]["deadline_monotonic_ns"] -= 2_000_000_000
+                    payload["controller_activation_epoch"] = 8
+                for record in self.parse(payload).values():
+                    self.assertTrue(record["assisted_teach_exit_hold_validated"])
+                    self.assertEqual(record["assisted_teach_exit_hold"], payload["assisted_teach_exit_hold"])
+                    self.assertEqual(record["assisted_teach_exit_hold_source_monotonic_ns"], 5_000_000_000)
+                    self.assertEqual(record["controller_mode"], "hold")
+                    self.assertFalse(record["domain_fault"])
+
+    def test_bad_exit_proof_denies_permission_without_discarding_sensor_packet(self):
+        for field, value in (
+            ("schema", "unknown"), ("joint_index", True), ("joint_index", 1),
+            ("press_activation_epoch", 8), ("started_monotonic_ns", True),
+            ("deadline_monotonic_ns", 6_000_000_000), ("reason", "FAULT"),
+            ("targets_rad", [0.0] * 5), ("targets_rad", [float("nan")] * 6),
+            ("initial_velocity_rad_s", True), ("initial_velocity_rad_s", 10 ** 400),
+            ("unexpected", 1),
+        ):
+            payload = self.exit_payload()
+            payload["assisted_teach_exit_hold"][field] = value
+            record = self.parse(payload)["J1"]
+            self.assertFalse(record["assisted_teach_exit_hold_validated"])
+            self.assertIsNone(record["assisted_teach_exit_hold"])
+            self.assertFalse(record["domain_fault"])
+            self.assertEqual(record["controller_mode"], "hold")
+        for value in (None, [], "invalid"):
+            payload = self.exit_payload()
+            payload["assisted_teach_exit_hold"] = value
+            self.assertFalse(self.parse(payload)["J1"]["assisted_teach_exit_hold_validated"])
+        payload = self.exit_payload(1)
+        payload["controller_mode_by_motor"]["J2B"] = "teach"
+        self.assertFalse(self.parse(payload)["J2A"]["assisted_teach_exit_hold_validated"])
+        payload = self.exit_payload()
+        payload.pop("controller_activation_epoch")
+        self.assertFalse(self.parse(payload)["J1"]["assisted_teach_exit_hold_validated"])
+
     def test_j6_raw_identity_is_session_bound_and_strictly_increasing(self):
         now = 5_000_000_000
         payload = self.payload(("J6",), now)
@@ -374,9 +437,22 @@ class ControllerFeedbackMetadataTest(unittest.TestCase):
         for reason in (
             "POSITION_ARRIVAL_TIMEOUT",
             "EXACT_TRAJECTORY_LOAD_GOVERNOR_ABORT",
+            "ASSISTED_TEACH_PRESS_STATE_INVALID",
+            "ASSISTED_TEACH_FEEDBACK_UNHEALTHY",
+            "ASSISTED_TEACH_MODEL_BOUND",
+            "ASSISTED_TEACH_ENCODER_VELOCITY_UNAVAILABLE",
+            "ASSISTED_TEACH_STOP_ERROR_LIMIT",
+            "ASSISTED_TEACH_STOP_VELOCITY_TIMEOUT",
+            "ASSISTED_TEACH_LOAD_GOVERNOR_ABORT",
+            "ASSISTED_TEACH_PRESS_TIMEOUT",
+            "ASSISTED_TEACH_EXCURSION_LIMIT",
+            "ASSISTED_TEACH_ENCODER_VELOCITY_LIMIT",
         ):
             payload = self.payload()
             payload.update({
+                "controller_mode": "brake",
+                "controller_mode_by_motor": {"J1": "brake"},
+                "domain_fault": True,
                 "no_progress_fault": True,
                 "load_limit_fault": True,
                 "load_limit_no_progress": True,
@@ -387,7 +463,10 @@ class ControllerFeedbackMetadataTest(unittest.TestCase):
             })
             for sample in payload["samples"]:
                 sample["load_limit_no_progress"] = True
-            record = self.parse(payload)["J1"]["no_progress"]
+            metadata = self.parse(payload)["J1"]
+            self.assertEqual(metadata["controller_mode"], "brake")
+            self.assertTrue(metadata["domain_fault"])
+            record = metadata["no_progress"]
             self.assertTrue(record["fault_latched"])
             self.assertEqual(record["trip_reason"], reason)
             self.assertEqual(record["trip_position_error_rad"], 0.25)

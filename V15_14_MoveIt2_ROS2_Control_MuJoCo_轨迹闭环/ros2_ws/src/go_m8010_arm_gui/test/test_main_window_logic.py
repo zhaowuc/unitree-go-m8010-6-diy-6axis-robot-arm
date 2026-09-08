@@ -1900,13 +1900,18 @@ def test_latest_state_subscriptions_and_bounded_callback_pump_avoid_backlog():
 def test_selective_teach_freezes_other_targets_releases_and_records_actual(selected):
     clock = [100.0]
     groups = (("J1",), ("J2A", "J2B"), ("J3",), ("J4",), ("J5",), ("J6",))
-    namespace = {"time": SimpleNamespace(monotonic=lambda: clock[0]), "MOTOR_GROUPS": groups,
+    fake_time = SimpleNamespace(monotonic=lambda: clock[0], monotonic_ns=lambda: int(clock[0] * 1e9))
+    namespace = {"time": fake_time, "MOTOR_GROUPS": groups,
         "assisted_teach_authorized": load_function("assisted_teach_authorized"),
+        "native_teach_exit_hold_targets": load_function("native_teach_exit_hold_targets", {
+            "time": fake_time, "MOTOR_NAMES": tuple(name for group in groups for name in group),
+            "HARDWARE_STATE_SOURCE_MAX_AGE_NS": 250_000_000}),
         "fixed_hold_targets_after_position_stop": load_function("fixed_hold_targets_after_position_stop")}
     methods = {name: load_main_window_method(name, namespace) for name in (
         "_start_assisted_teach", "_release_assisted_teach", "_clear_assisted_teach",
-        "_tick_assisted_teach", "_record_teach_point")}
-    for stop_reason in ("release", "stale", "duration", "other_axis_drift"):
+        "_tick_assisted_teach", "_tick_pending_teach_exit", "_record_teach_point")}
+    for stop_reason in ("release", "stale", "duration", "other_axis_drift", "native_exit",
+                        "expired_native_exit", "late_native_exit", "bad_exit_target", "bad_exit_epoch", "bad_exit_validation"):
         original = [math.radians(value) for value in (1, 2, 3, 4, 5, 6)]
         hardware = hardware_state()
         hardware["position_rad"] = original[:]
@@ -1946,7 +1951,7 @@ def test_selective_teach_freezes_other_targets_releases_and_records_actual(selec
         window._suspend_command_stream = lambda _: setattr(window, "command_stream_suspended", True)
         window._show_action_groups = lambda: None
         for name, method in methods.items():
-            setattr(window, name, lambda *args, fn=method: fn(window, *args))
+            setattr(window, name, lambda *args, fn=method, **kwargs: fn(window, *args, **kwargs))
         window._start_assisted_teach()
         assert window.teach_joint == selected and published[-1][0] == "teach"
         frozen = tuple(window.command_targets)
@@ -1958,7 +1963,39 @@ def test_selective_teach_freezes_other_targets_releases_and_records_actual(selec
         clock[0] += 0.2
         window._tick_assisted_teach(clock[0])
         assert tuple(window.command_targets) == frozen
-        if stop_reason == "release":
+        native_targets = None
+        if "exit" in stop_reason:
+            press_epoch = window.activation_epoch
+            if stop_reason == "late_native_exit":
+                window._release_assisted_teach("松开按钮")
+                assert window.teach_joint is None and window.teach_release_pending["press_epoch"] == press_epoch
+                assert window.command_targets[selected] == hardware["position_rad"][selected]
+            now_ns = fake_time.monotonic_ns()
+            started = now_ns - (2_000_000_000 if stop_reason == "expired_native_exit" else 50_000_000)
+            native_targets = list(frozen)
+            native_targets[selected] += math.radians(0.7)
+            proof = {"schema": "go-m8010-teach-exit-hold/1.0", "joint_index": selected,
+                "press_activation_epoch": press_epoch, "started_monotonic_ns": started,
+                "deadline_monotonic_ns": started + 1_000_000_000, "reason": "VELOCITY_LIMIT",
+                "targets_rad": native_targets[:], "initial_velocity_rad_s": math.radians(5.1)}
+            hardware.update(assisted_teach_exit_hold=proof, assisted_teach_exit_hold_validated=True,
+                assisted_teach_exit_hold_source_monotonic_ns=now_ns - 10_000_000)
+            hardware["controller_mode_by_motor"] = dict.fromkeys(hardware["controller_mode_by_motor"], "hold")
+            gravity["empirical_validation"]["assisted_teach_authorized"] = False
+            if stop_reason == "bad_exit_target":
+                proof["targets_rad"][(selected + 1) % 6] += 0.001
+            elif stop_reason == "bad_exit_epoch":
+                proof["press_activation_epoch"] += 1
+            elif stop_reason == "bad_exit_validation":
+                hardware["assisted_teach_exit_hold_validated"] = False
+            if stop_reason == "late_native_exit":
+                window._tick_pending_teach_exit()
+                assert len(published) == 3 and window.activation_epoch > press_epoch + 1
+                window._tick_pending_teach_exit()
+                assert len(published) == 3
+            else:
+                window._tick_assisted_teach(clock[0])
+        elif stop_reason == "release":
             window._release_assisted_teach("失焦／松开")
         elif stop_reason == "stale":
             window.fresh = False
@@ -1971,14 +2008,17 @@ def test_selective_teach_freezes_other_targets_releases_and_records_actual(selec
             hardware["position_rad"][other] += math.radians(0.26)
             window._tick_assisted_teach(clock[0])
         assert window.teach_joint is None
-        if stop_reason == "stale":
+        if stop_reason == "stale" or stop_reason.startswith("bad_exit"):
             assert window.command_stream_suspended and len(published) == 1 and window.teach_record_target is None
             assert window.teach_events[-1]["fresh_actual_confirmed"] is False
         else:
             assert published[-1][0] == "hold" and published[-1][1] > published[0][1]
-            assert window.command_targets[selected] == hardware["position_rad"][selected]
+            assert window.command_targets[selected] == (native_targets[selected] if native_targets else hardware["position_rad"][selected])
             assert all(window.command_targets[i] == original[i] for i in range(6) if i != selected)
             assert window.teach_events[-1]["event"] == "teach_release_requested"
+            assert window.teach_events[-1]["native_exit_hold_ack"] is (native_targets is not None)
+            if native_targets is not None:
+                assert window.teach_events[-1]["native_exit_hold"] == proof
             window.action_group_dialog = SimpleNamespace(_edit=lambda callback: callback(), capture=points.append)
             window.held = False
             window._record_teach_point()
@@ -1989,6 +2029,7 @@ def test_selective_teach_freezes_other_targets_releases_and_records_actual(selec
         count = len(published)
         window._release_assisted_teach()
         assert len(published) == count
+        assert all(event["joint"] == selected + 1 for event in window.teach_events)
 
 
 def test_change_only_widget_helpers_suppress_redundant_qt_writes():
