@@ -4024,6 +4024,14 @@ def run(args: argparse.Namespace) -> int:
                 if consume_transport_interlock("DISABLED_REFRESH"):
                     continue
 
+            if enabled and getattr(args, "observe_protocol_torque", False):
+                # POS_VEL writes do not request a fresh feedback frame. Query
+                # explicitly at this loop's cadence, as the read-only capture
+                # does, instead of relying on the drive's slower auto report.
+                logger.send(0x7FF, refresh_request(), "GUI_PROTOCOL_TORQUE_REFRESH")
+                if consume_transport_interlock("PROTOCOL_TORQUE_REFRESH"):
+                    continue
+
             decoded_events, fatal_event = drain_feedback_batch(logger)
             if fatal_event:
                 latch_communication_loss("CAN_ERROR_EVENT")

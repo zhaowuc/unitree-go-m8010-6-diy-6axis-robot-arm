@@ -1,6 +1,8 @@
 import math
 import json
+import ast
 import sys
+import threading
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -108,3 +110,49 @@ def test_readonly_wire_allowlist_and_pinned_motor_torque_scale():
     malformed = parse_feedback_payload(payload, receipt)[0]
     assert malformed.position_rad == decoded.position and malformed.communication_ok
     assert malformed.j6_motor_torque_observation["motor_torque_estimate_metadata_status"] == "INVALID"
+
+
+def test_active_optin_requests_feedback_each_cycle_and_keeps_identical_real_frames():
+    # Execute the production branch and production strict drain, with the
+    # logger's real queue/classifier but without constructing any CAN device.
+    from j6_raw_can_diagnostic import RawCanLogger, RawEvent, refresh_request, strict_decode
+    path = Path(__file__).with_name("v15_30a_gui_j6_controller.py")
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    branch = next(node for node in ast.walk(tree) if isinstance(node, ast.If)
+        and any(isinstance(child, ast.Constant) and child.value == "GUI_PROTOCOL_TORQUE_REFRESH"
+                for statement in node.body for child in ast.walk(statement))
+        and "observe_protocol_torque" in ast.unparse(node.test))
+    drain = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "drain_feedback_batch")
+    logger = RawCanLogger.__new__(RawCanLogger)
+    logger.channel, logger.motor_id, logger.master_id = 0, 1, 0
+    logger._events, logger._lock = [], threading.Lock()
+    requests = []
+    def send(can_id, payload, label):
+        validate_readonly_request(can_id, payload)
+        requests.append((can_id, payload, label))
+        logger._events.append(RawEvent(
+            event_monotonic_s=1.0 + (len(requests)-1)*.01, event_kind="RX_CALLBACK",
+            sdk_timestamp=len(requests), direction=0, channel=0, can_id=0,
+            dlc=8, data_length=8, extended=False, canfd=False, rtr=False, brs=False,
+            ack=False, esi=False, payload=bytes.fromhex("1180007ff7ff2020")))
+    logger.send = send
+    namespace = dict(RawCanLogger=RawCanLogger, strict_decode=strict_decode,
+        refresh_request=refresh_request, logger=logger, enabled=True,
+        args=SimpleNamespace(observe_protocol_torque=True),
+        consume_transport_interlock=lambda _: False, received=[])
+    loop = ast.parse("for _ in range(100):\n    pass\n    received.extend(drain_feedback_batch(logger)[0])").body[0]
+    loop.body[0] = branch
+    executable = compile(ast.fix_missing_locations(ast.Module(body=[drain, loop], type_ignores=[])), str(path), "exec")
+    exec(executable, namespace)
+    assert len(requests) == len(namespace["received"]) == 100
+    assert {request[:2] for request in requests} == {(0x7FF, bytes((1,0,0xCC,0,0,0,0,0)))}
+    received = namespace["received"]
+    assert len({sample for sample, _ in received}) == 1  # No fabricated changes.
+    assert len({stamp for _, stamp in received}) == 100  # Identical frames are not deduplicated.
+    assert received[-1][1] - received[0][1] == pytest.approx(.99)
+    namespace["args"].observe_protocol_torque = False
+    exec(executable, namespace)
+    namespace["args"].observe_protocol_torque = True
+    namespace["enabled"] = False
+    exec(executable, namespace)
+    assert len(requests) == 100  # Legacy/default and disabled paths are unchanged.

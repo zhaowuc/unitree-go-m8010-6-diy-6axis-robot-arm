@@ -1,0 +1,89 @@
+{
+  "schema": "go-m8010-hand-guidance-shadow-evidence/1.0",
+  "session": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T120824-545985",
+  "commit": "da2e81f",
+  "source_report_sha256": "51829d026c7fd4e87874bc39739c3358c03d883fd209254ff073cc9a7b6ecfbe",
+  "launcher_result": {
+    "status": "PASS",
+    "plan": {
+      "mode": "EXECUTE",
+      "cycles": 1,
+      "excursion_deg": 1.0,
+      "speed_deg_s": 1.0,
+      "symmetric": false,
+      "return_center": false,
+      "maximum_demo_seconds": 600.0,
+      "assisted_teach": false,
+      "teach_observe": false,
+      "hand_guidance": true,
+      "guidance_shadow": true,
+      "physical_scene": {
+        "base_fixed": true,
+        "external_arm_support": false
+      },
+      "j6_power_cycle_attested": false,
+      "supported_near_vertical_recovery": false,
+      "repo": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d",
+      "session": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T120824-545985",
+      "scripts": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T120824-545985_scripts",
+      "unit_prefix": "v15-31d-demo-20260908T120824-545985",
+      "missing_or_mismatched_inputs": [],
+      "bash_syntax": "PASS",
+      "order": [
+        "prebuild-only",
+        "j6_posvel_preflight",
+        "stage_readonly",
+        "stage_active",
+        "bounded_j1_demo",
+        "stop_owned_units"
+      ]
+    },
+    "demo": {
+      "status": "PASS",
+      "requested_cycles": null,
+      "completed_cycles": null,
+      "failure": null,
+      "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T120824-545985/evidence/j1_action_group_demo.json"
+    },
+    "controller_terminal_confirmed": {
+      "J1": true,
+      "J2": true,
+      "J345": true,
+      "J6": true
+    },
+    "stop_errors": []
+  },
+  "status": "PASS",
+  "scope": "REAL_HOLD_WITH_SHADOW_REFERENCES_ONLY; frequent input gaps still interrupt the proposed controller",
+  "physical_scene": {
+    "base_fixed": true,
+    "external_arm_support": false
+  },
+  "trace_count": 150,
+  "trace_span_s": 14.976706834044307,
+  "initial_hold_target_rad": [
+    -0.010469657689501451,
+    0.00285240666881579,
+    0.03092997163048125,
+    0.0004027932680713503,
+    0.00038493876463793845,
+    0.05567635614557087
+  ],
+  "maximum_reference_drift_deg": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "guidance_input_qualified": true,
+  "initial_vertical_return_verified": true,
+  "terminal_brake_and_j6_disabled_confirmed": true,
+  "input_wait_reason_counts": {
+    "J6_MEASUREMENT_WAITING_FOR_NEW_MEASUREMENT": 149
+  },
+  "maximum_measurement_age_ms": 69.58967773243785,
+  "actual_admittance_references_transmitted": false,
+  "human_hand_guiding_validated": false
+}
