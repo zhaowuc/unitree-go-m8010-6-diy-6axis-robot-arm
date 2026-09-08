@@ -1,0 +1,37 @@
+{
+  "schema": "go-m8010-hand-guidance-shadow-evidence/1.0",
+  "session": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T130651-e98499",
+  "commit": "f7d21c1",
+  "status": "PASS",
+  "scope": "REAL_HOLD_WITH_CONTINUOUS_SHADOW_REFERENCES_ONLY; no human hand guidance validated",
+  "source_report": {
+    "path": ".runtime/v15_31d_demo_20260908T130651-e98499/evidence/j1_action_group_demo.json",
+    "sha256": "ab8ce080654e2222d764a62fa4e76bb2fa8dfee9588f2afeccae3ba8c97a996f"
+  },
+  "launcher_result": {
+    "path": ".runtime/v15_31d_demo_20260908T130651-e98499_scripts/session_result.json",
+    "sha256": "44c8ac9f65e860593e001f1d02bc968c216aac4f8457d855ea17be2efb466b8f",
+    "status": "PASS",
+    "controller_terminal_confirmed": {"J1": true, "J2": true, "J345": true, "J6": true},
+    "stop_errors": []
+  },
+  "private_runtime": {
+    "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31f_guidance_20260908/sdk/libdm_device_notify_1ms.so",
+    "sha256": "6723c21c2eec34f5a17baebe4a3dde68f518782d941c416a025e41247838f755",
+    "startup_log": ".runtime/v15_31d_demo_20260908T130651-e98499/run/j6_controller.log",
+    "startup_log_sha256": "8e6276552ea9bb07710fa7ba3d5704787563e692590f935c8a2464760e711fd6",
+    "private_path_and_hash_confirmed_in_worker_log": true
+  },
+  "elapsed_s": 76.25188638828695,
+  "trace_count": 250,
+  "trace_span_s": 14.941816485952586,
+  "initial_hold_target_rad": [-0.010469657689501451, 0.0028372277290786667, 0.030960254180229754, 0.00043311348268272576, 0.00041523073060216047, 0.05567635614557087],
+  "maximum_reference_drift_deg": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  "input_wait_count": 0,
+  "maximum_measurement_age_ms": 51.229671,
+  "guidance_input_qualified": true,
+  "initial_vertical_return_verified": true,
+  "terminal_brake_and_j6_disabled_confirmed": true,
+  "actual_admittance_references_transmitted": false,
+  "human_hand_guiding_validated": false
+}
