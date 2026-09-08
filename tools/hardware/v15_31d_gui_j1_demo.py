@@ -160,6 +160,16 @@ class J1Demo:
                               if event.get("event") == "checked_recipe_before_submit"
                               and event.get("cycle") == self.cycle_number]})
 
+    def _enter_interactive_teach(self, sample, now):
+        if not sample.get("assisted_teach_authorized"):
+            raise RuntimeError("explicit teaching authority is unavailable")
+        self.stage, self.interactive_ready = "interactive_teach", True
+        self.window.centralWidget().setEnabled(True)
+        if hasattr(self.window, "teach_toolbar"):
+            self.window.teach_toolbar.setEnabled(True)
+        self.events.append({"event": "interactive_teach_ready", "at_monotonic_s": now})
+        print(f"INTERACTIVE_TEACH_READY remaining_seconds={self.maximum_seconds - (now - self.started):.1f}", flush=True)
+
     def tick(self):
         if self.done:
             return
@@ -282,19 +292,12 @@ class J1Demo:
                         self.last_confirmation = now
                     elif sample["position_authorized"]:
                         self.window._tick()
-                        if self.interactive_teach:
-                            if not sample.get("assisted_teach_authorized"):
-                                raise RuntimeError("explicit single-axis teaching authority is unavailable")
-                            self.stage, self.interactive_ready = "interactive_teach", True
-                            self.window.centralWidget().setEnabled(True)
-                            if hasattr(self.window, "teach_toolbar"):
-                                self.window.teach_toolbar.setEnabled(True)
-                            self.events.append({"event": "interactive_teach_ready", "at_monotonic_s": now})
-                            print(f"INTERACTIVE_TEACH_READY remaining_seconds={self.maximum_seconds - (now - self.started):.1f}", flush=True)
-                        elif self.recover_initial_first:
+                        if self.recover_initial_first:
                             self.stage, self.recovery_started = "recover_initial", now
                             self.recovery_result = {"status": "RUNNING", "initial_hold_target_rad": list(self.origin)}
                             self.dialog = self.start_recovery(self.origin)
+                        elif self.interactive_teach:
+                            self._enter_interactive_teach(sample, now)
                         else:
                             self.stage = "action_group"
                             self.dialog = self.start_group(self.origin)
@@ -304,8 +307,12 @@ class J1Demo:
                         and type(sample["j6_drive_state"]) is int and sample["j6_drive_state"] == 1
                         and max(abs(math.degrees(a-b)) for a,b in zip(sample["actual_rad"], self.origin)) <= 0.25):
                     self._record_recovery("PASS", action_group_origin_rad=list(self.origin))
-                    self.stage, self.dialog = "action_group", None
-                    self.dialog = self.start_group(self.origin)
+                    self.dialog = None
+                    if self.interactive_teach:
+                        self._enter_interactive_teach(sample, now)
+                    else:
+                        self.stage = "action_group"
+                        self.dialog = self.start_group(self.origin)
                 return
             runner = self.dialog.runner
             if runner is None or runner.state in {"failed", "stopped"}:
@@ -446,7 +453,8 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
 
     class DemoDialog(ActionGroupDialog):
         def start(self):
-            if hand_guidance and demo is not None and demo.guidance_phase != "returning":
+            if (hand_guidance and demo is not None and demo.stage != "recover_initial"
+                    and demo.guidance_phase != "returning"):
                 window._notify("手导会话可记录姿态；请结束手导后在常规控制中执行动作组。", "info")
                 return
             return super().start()
@@ -455,7 +463,7 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
             if not self.submitted and self.window._preview_approval_matches_candidate():
                 recipe = self.window.workflow_contract.q_plan_trajectory
                 recovering = demo.stage == "recover_initial"
-                segments = (demo.check_return_recipe(recipe) if hand_guidance
+                segments = (demo.check_return_recipe(recipe) if hand_guidance and not recovering
                             else check_recipe(recipe, demo.origin, recover_initial=recovering))
                 center = demo.stage == "return_center"
                 demo.events.append({"event": "checked_recovery_recipe_before_submit" if recovering else "checked_center_recipe_before_submit" if center else "checked_recipe_before_submit",

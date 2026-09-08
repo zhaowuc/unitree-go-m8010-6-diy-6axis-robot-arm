@@ -21,17 +21,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] /
 from go_m8010_arm_gui.action_groups import ActionGroup, ActionStep, PRODUCTION_ABSOLUTE_JOINT_LIMITS_DEG
 
 
-def harness(cycles=1, **options):
+def harness(cycles=1, demo_type=J1Demo, **options):
     clock, commands, state = [0.0], [], {"index": 0, "entered": 0.0, "confirmed": -1.0}
     override = {}
     binding = SimpleNamespace(envelope_id="envelope", envelope_sha256="a" * 64, sha256="a" * 64,
                               session_id="session", state_instance_id="state")
     sequence = SignalPayloadSequence(binding, source_instance_id="c" * 32,
                                      monotonic_ns=lambda: int(clock[0] * 1e9))
-    window = SimpleNamespace(actual=[0.0] * 6, command_targets=[0.0] * 6,
+    window = SimpleNamespace(node=SimpleNamespace(), actual=[0.0] * 6, command_targets=[0.0] * 6,
                              session_pose_deg=[0.0] * 6, activation_epoch=0,
                              hardware_mode="brake", command_stream_suspended=True)
     window._tick = lambda: None
+    window.teach_toolbar = SimpleNamespace(actions=lambda: [], addWidget=lambda *_: None, setEnabled=lambda *_: None)
     def hold():
         commands.append("hold")
         window.activation_epoch += 1
@@ -77,7 +78,7 @@ def harness(cycles=1, **options):
         assert observe()["position_authorized"]
         commands.append("action_group")
         return SimpleNamespace(runner=SimpleNamespace(state="moving", detail="waiting", events=[]))
-    demo = J1Demo(window, observe, confirm, scale, start_group, cycles=cycles, now=lambda: clock[0], **options)
+    demo = demo_type(window, observe, confirm, scale, start_group, cycles=cycles, now=lambda: clock[0], **options)
     def tick(seconds=0.1):
         clock[0] = round(clock[0] + seconds, 6)
         demo.tick()
@@ -357,6 +358,9 @@ def test_ten_symmetric_cycles_keep_midpoint_file_and_return_center():
 
 
 def test_initial_recovery_uses_original_file_and_checks_all_axes_before_hold():
+    from v15_31f_gui_hand_guidance import GuidanceDemo
+    from test_v15_31f_gui_hand_guidance import Widget
+    from go_m8010_arm_gui.workflow_contract import generate_segmented_quintic_recipe
     source = Path(__file__).with_name("v15_31d_gui_j1_demo.py")
     run_live = next(node for node in ast.parse(source.read_text(encoding="utf-8")).body
                     if isinstance(node, ast.FunctionDef) and node.name == "run_live")
@@ -367,9 +371,15 @@ def test_initial_recovery_uses_original_file_and_checks_all_axes_before_hold():
                if isinstance(node, ast.FunctionDef) and node.name in {"optional_sha256_valid", "initial_pose_binding_valid"}]
     validation = {"hashlib": hashlib}
     exec(compile(ast.Module(body=helpers, type_ignores=[]), str(gui_source), "exec"), validation)
-    for fault in (None, "health", "j6_too_far"):
+    for fault in (None, "health", "j6_too_far", "interactive_guidance"):
         with tempfile.TemporaryDirectory() as directory:
-            demo, commands, override, tick = harness()
+            interactive = fault == "interactive_guidance"
+            options = {"interactive_teach": True, "demo_type": GuidanceDemo,
+                       "gui": SimpleNamespace(QPushButton=Widget, QLabel=Widget)} if interactive else {}
+            demo, commands, override, tick = harness(**options)
+            enabled = []
+            demo.window.centralWidget = lambda: SimpleNamespace(setEnabled=enabled.append)
+            override["assisted_teach_authorized"] = True
             demo.recover_initial_first = True
             demo.window.actual = [math.radians(value) for value in (1.629, -0.06, -0.055, 2.067, -1.554, 0.64)]
             if fault == "j6_too_far":
@@ -387,7 +397,7 @@ def test_initial_recovery_uses_original_file_and_checks_all_axes_before_hold():
                 log_path=Path(directory) / "recovery.jsonl")
             def start_dialog():
                 commands.append("recover_initial")
-                dialog.runner = SimpleNamespace(state="moving", detail="recovering", events=[])
+                dialog.runner = SimpleNamespace(state="moving", detail="recovering", events=[], index=0)
                 demo.events.append({"event": "checked_recovery_recipe_before_submit", "plan_token_id": "b" * 64,
                                     "segments": [f"J{i}" for i in range(1, 7)]})
             dialog.start = start_dialog
@@ -396,6 +406,25 @@ def test_initial_recovery_uses_original_file_and_checks_all_axes_before_hold():
             namespace = dict(window=demo.window, node=SimpleNamespace(initial_pose_path=path, latest_hardware=hardware),
                 demo=demo, ActionGroup=ActionGroup, ActionStep=ActionStep, math=math, hashlib=hashlib, json=json,
                 gui=SimpleNamespace(initial_pose_binding_valid=validation["initial_pose_binding_valid"]))
+            if interactive:
+                class BaseDialog(SimpleNamespace):
+                    def start(self):
+                        start_dialog()
+                        demo.window.workflow_contract.q_plan_trajectory = generate_segmented_quintic_recipe(
+                            demo.origin, (0.0,) * 6, ((-math.pi, math.pi),) * 6,
+                            maximum_velocity_rad_s=math.radians(1), maximum_acceleration_rad_s2=math.radians(15),
+                            maximum_segment_delta_rad=math.radians(5))
+                        self._move_status()
+                    def _move_status(self):
+                        return "running"
+                dialog_node = next(item for item in run_live.body if isinstance(item, ast.ClassDef) and item.name == "DemoDialog")
+                namespace.update(ActionGroupDialog=BaseDialog, hand_guidance=True, check_recipe=check_recipe)
+                exec(compile(ast.Module(body=[dialog_node], type_ignores=[]), str(source), "exec"), namespace)
+                dialog = namespace["DemoDialog"](**{key: value for key, value in vars(dialog).items() if key != "start"},
+                                                  window=demo.window, submitted=False)
+                demo.window.action_group_dialog = dialog
+                demo.window._preview_approval_matches_candidate = lambda: True
+                demo.window.workflow_contract.current_plan_token = SimpleNamespace(token_id="b" * 64)
             exec(compile(ast.Module(body=[read, start], type_ignores=[]), str(source), "exec"), namespace)
             demo.start_recovery = namespace["start_recovery"]
             def validate_start(sample):
@@ -414,6 +443,7 @@ def test_initial_recovery_uses_original_file_and_checks_all_axes_before_hold():
                 continue
             assert len(rows) == 1 and rows[0].target_deg == (0.0,) * 6
             assert demo.recovery_target == (0.0,) * 6 and "action_group" not in commands
+            assert not demo.interactive_ready and not enabled
             if fault == "health":
                 override["healthy"] = False
                 tick()
@@ -434,9 +464,18 @@ def test_initial_recovery_uses_original_file_and_checks_all_axes_before_hold():
                 tick()
                 assert "action_group" not in commands
                 override.clear()
+                override["assisted_teach_authorized"] = True
                 tick()
-                assert demo.recovery_result["status"] == "PASS" and commands.count("action_group") == 1
-                demo.stop("end offline recovery scenario")
+                assert demo.recovery_result["status"] == "PASS"
+                if interactive:
+                    assert demo.interactive_ready and demo.stage == "interactive_teach" and enabled == [True]
+                    assert "action_group" not in commands and commands.count("recover_initial") == 1
+                    assert demo.guidance_phase == "calibrating" and demo.bias is None and demo.core is None
+                    assert demo.origin == tuple(demo.window.actual) and demo.origin != demo.initial_hold_target
+                    assert demo.reference([0.0] * 6)["origin_rad"] == list(demo.origin)
+                else:
+                    assert commands.count("action_group") == 1
+                    demo.stop("end offline recovery scenario")
             assert path.read_bytes() == data
     from go_m8010_arm_gui.workflow_contract import generate_segmented_quintic_recipe
     origin = tuple(math.radians(value) for value in (1.629, -0.06, -0.055, 2.067, -1.554, 0.64))
