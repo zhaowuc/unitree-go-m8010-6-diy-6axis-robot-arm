@@ -385,6 +385,7 @@ class GuidanceDemo(J1Demo):
             if self.guidance_phase == "guiding":
                 self.guidance_fault = str(error)
                 self.guidance_events.append({"event": "guidance_fault", "reason": str(error), "at_monotonic_s": now,
+                    "gravity_status": self.window.node.latest_gravity_status,
                     "j6_feedback": (self.window.node.latest_hardware or {}).get("per_motor", {}).get("J6")})
                 print("HAND_GUIDANCE_FAULT=" + str(error), flush=True)
             self.release_guidance()

@@ -28,6 +28,9 @@ def test_paired_gravity_motor_units_frozen_bias_and_stale_rejection():
     assert sample.motor_torque_nm == (0, 3, 4, -0.5, 0.1, -0.02)
     assert sample.residual_nm == pytest.approx((0, 0.1, 0, 0, 0, 0.05))
     assert sample.source_monotonic_ns == now - 20_000_000
+    for mirror_crosscheck in (False, None):
+        assert matched_observation([hardware], dict(gravity, joint_state_crosscheck=mirror_crosscheck),
+                                   now_ns=now) == sample
     samples = [replace(sample, source_monotonic_ns=now + i * 20_000_000) for i in range(51)]
     bias, noise = stationary_bias(samples, operator_hands_off=True)
     assert bias == sample.residual_nm and noise == (0.0,) * 6

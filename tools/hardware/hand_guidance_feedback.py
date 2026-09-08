@@ -71,9 +71,10 @@ def matched_observation(hardware_history, gravity, *, now_ns, maximum_age_ns=100
             or abs(_number(hardware.get("j2_e_sync_rad"), "J2_SYNC")) > math.radians(0.25)):
         raise ValueError("GUIDANCE_HARDWARE_UNHEALTHY")
     if (gravity.get("anchor_valid") is not True or gravity.get("production_model_hash_match") is not True
-            or gravity.get("joint_state_crosscheck") is not True
             or gravity.get("finite_bounded") is not True or gravity.get("pose_feasibility") != "PASS"):
         raise ValueError("GUIDANCE_GRAVITY_MAPPING_INVALID")
+    # /joint_states is an asynchronous UI mirror, not the atomic pose paired
+    # above by hardware sequence/source. Its diagnostic cross-check is no gate.
     q, dq = _six(hardware.get("position_rad"), "Q"), _six(hardware.get("velocity_rad_s"), "DQ")
     predicted = _six(gravity.get("gravity_joint_nm"), "GRAVITY")
     modes, per_motor = hardware.get("controller_mode_by_motor", {}), hardware.get("per_motor", {})
