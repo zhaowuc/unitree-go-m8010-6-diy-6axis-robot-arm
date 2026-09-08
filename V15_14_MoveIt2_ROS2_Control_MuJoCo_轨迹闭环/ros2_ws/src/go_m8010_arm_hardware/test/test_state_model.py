@@ -270,6 +270,31 @@ class ControllerFeedbackMetadataTest(unittest.TestCase):
                     self.assertEqual(record["controller_mode"], "hold")
                     self.assertFalse(record["domain_fault"])
 
+    def test_native_exit_hold_optional_restricted_is_strict_bool_and_preserved(self):
+        for restricted in (False, True):
+            for expired in (False, True):
+                payload = self.exit_payload()
+                proof = payload["assisted_teach_exit_hold"]
+                proof["restricted"] = restricted
+                if expired:
+                    proof["started_monotonic_ns"] -= 2_000_000_000
+                    proof["deadline_monotonic_ns"] -= 2_000_000_000
+                record = self.parse(payload)["J1"]
+                self.assertTrue(record["assisted_teach_exit_hold_validated"])
+                self.assertEqual(record["assisted_teach_exit_hold"], proof)
+                self.assertIs(record["assisted_teach_exit_hold"]["restricted"], restricted)
+                self.assertFalse(record["domain_fault"])
+        for invalid in (None, 0, 1, "true", [], {}):
+            payload = self.exit_payload()
+            payload["assisted_teach_exit_hold"]["restricted"] = invalid
+            record = self.parse(payload)["J1"]
+            self.assertFalse(record["assisted_teach_exit_hold_validated"])
+            self.assertIsNone(record["assisted_teach_exit_hold"])
+            self.assertEqual(record["controller_mode"], "hold")
+        payload = self.exit_payload()
+        payload["assisted_teach_exit_hold"].update(restricted=True, unexpected=True)
+        self.assertFalse(self.parse(payload)["J1"]["assisted_teach_exit_hold_validated"])
+
     def test_bad_exit_proof_denies_permission_without_discarding_sensor_packet(self):
         for field, value in (
             ("schema", "unknown"), ("joint_index", True), ("joint_index", 1),
@@ -443,6 +468,7 @@ class ControllerFeedbackMetadataTest(unittest.TestCase):
             "ASSISTED_TEACH_ENCODER_VELOCITY_UNAVAILABLE",
             "ASSISTED_TEACH_STOP_ERROR_LIMIT",
             "ASSISTED_TEACH_STOP_VELOCITY_TIMEOUT",
+            "ASSISTED_TEACH_RESTRICTED_VELOCITY_LIMIT",
             "ASSISTED_TEACH_LOAD_GOVERNOR_ABORT",
             "ASSISTED_TEACH_PRESS_TIMEOUT",
             "ASSISTED_TEACH_EXCURSION_LIMIT",

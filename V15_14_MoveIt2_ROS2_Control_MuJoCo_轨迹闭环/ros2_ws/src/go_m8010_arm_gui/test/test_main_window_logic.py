@@ -1587,6 +1587,18 @@ def test_virtual_preview_editing_is_not_blocked_by_vendor_velocity_noise():
     assert not edit_ready(document, active, "hold")
 
 
+def test_pending_native_teach_hold_cannot_authorize_another_move():
+    ready = load_collision_motion_state_ready()
+    document = hardware_state()
+    active = [True] * 6
+    assert ready(document, [0.0] * 6, active, "hold")
+    document["assisted_teach_exit_hold"] = {"restricted": True}
+    document["assisted_teach_exit_hold_validated"] = True
+    assert not ready(document, [0.0] * 6, active, "hold")
+    document.pop("assisted_teach_exit_hold")
+    assert ready(document, [0.0] * 6, active, "hold")
+
+
 def test_virtual_preview_does_not_flash_at_execution_source_age_boundary():
     edit_ready = load_virtual_target_edit_state_ready()
     execute_ready = load_collision_motion_state_ready()
@@ -1911,7 +1923,7 @@ def test_selective_teach_freezes_other_targets_releases_and_records_actual(selec
         "_start_assisted_teach", "_release_assisted_teach", "_clear_assisted_teach",
         "_tick_assisted_teach", "_tick_pending_teach_exit", "_record_teach_point")}
     for stop_reason in ("release", "stale", "duration", "other_axis_drift", "native_exit",
-                        "expired_native_exit", "late_native_exit", "bad_exit_target", "bad_exit_epoch", "bad_exit_validation"):
+                        "expired_native_exit", "late_native_exit", "restricted_native_exit", "bad_exit_target", "bad_exit_epoch", "bad_exit_validation"):
         original = [math.radians(value) for value in (1, 2, 3, 4, 5, 6)]
         hardware = hardware_state()
         hardware["position_rad"] = original[:]
@@ -1980,6 +1992,8 @@ def test_selective_teach_freezes_other_targets_releases_and_records_actual(selec
                 "targets_rad": native_targets[:], "initial_velocity_rad_s": math.radians(5.1)}
             hardware.update(assisted_teach_exit_hold=proof, assisted_teach_exit_hold_validated=True,
                 assisted_teach_exit_hold_source_monotonic_ns=now_ns - 10_000_000)
+            if stop_reason == "restricted_native_exit":
+                proof["restricted"] = True
             hardware["controller_mode_by_motor"] = dict.fromkeys(hardware["controller_mode_by_motor"], "hold")
             gravity["empirical_validation"]["assisted_teach_authorized"] = False
             if stop_reason == "bad_exit_target":
@@ -2024,6 +2038,20 @@ def test_selective_teach_freezes_other_targets_releases_and_records_actual(selec
             window._record_teach_point()
             assert not points
             window.held = True
+            window._record_teach_point()
+            assert not points  # The native settling proof must clear first.
+            count = len(published)
+            window._start_assisted_teach()
+            assert len(published) == count
+            if stop_reason == "restricted_native_exit":
+                window._tick_pending_teach_exit()
+                assert window.teach_release_pending is not None and "保持受扰" in status[-1]
+                assert not window.command_stream_suspended and tuple(window.command_targets) == tuple(native_targets)
+            hardware.pop("assisted_teach_exit_hold", None)
+            for name in groups[selected]:
+                hardware["per_motor"][name]["feedback_source_monotonic_ns"] = window.teach_release_pending["released_at_ns"] + 1
+            window._tick_pending_teach_exit()
+            assert window.teach_release_pending is None
             window._record_teach_point()
             assert points == [True] and window.actual == hardware["position_rad"]
         count = len(published)

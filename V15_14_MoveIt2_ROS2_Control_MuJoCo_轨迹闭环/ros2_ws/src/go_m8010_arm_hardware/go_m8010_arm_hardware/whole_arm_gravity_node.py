@@ -910,6 +910,18 @@ class WholeArmGravityNode(Node):
             ),
             "planned_trajectory_feasibility": planned_proof,
         }
+        hardware = self.latest_hardware_state or {}
+        exit_hold = hardware.get("assisted_teach_exit_hold")
+        if ((isinstance(exit_hold, dict) and exit_hold.get("restricted") is True)
+                or hardware.get("assisted_teach_exit_hold_validated") is False):
+            # Non-authority diagnostic from the very snapshot used above.
+            status["assisted_teach_exit_hold"] = exit_hold
+            status["assisted_teach_exit_hold_source_monotonic_ns"] = hardware.get("assisted_teach_exit_hold_source_monotonic_ns")
+            status["assisted_teach_exit_hold_validated"] = bool(
+                hardware.get("assisted_teach_exit_hold_validated") is True
+                and all(hardware.get(key) == status.get(key) for key in ("session_id", "state_instance_id"))
+                and hardware.get("sequence") == status["hardware_state_sequence"]
+                and hardware.get("source_monotonic_ns") == status["hardware_state_source_monotonic_ns"])
         self.status_publisher.publish(
             String(data=json.dumps(status, ensure_ascii=False))
         )

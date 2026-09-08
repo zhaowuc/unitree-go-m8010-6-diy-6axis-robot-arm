@@ -522,6 +522,7 @@ def test_native_exit_hold_aggregation_requires_fresh_paired_session_and_one_proo
         "press_activation_epoch": 7, "started_monotonic_ns": 10,
         "deadline_monotonic_ns": 1_000_000_010, "reason": "TIME_LIMIT",
         "targets_rad": [0.0] * 6, "initial_velocity_rad_s": 0.05,
+        "restricted": True,
     }
     metadata = _observed_thermal_metadata("NORMAL", mode="hold")
     metadata.update({
@@ -543,6 +544,7 @@ def test_native_exit_hold_aggregation_requires_fresh_paired_session_and_one_proo
     result = aggregate(both, "session", "state")
     assert result["assisted_teach_exit_hold_validated"] is True
     assert result["assisted_teach_exit_hold"] == proof
+    assert result["assisted_teach_exit_hold"]["restricted"] is True
     assert result["assisted_teach_exit_hold_source_monotonic_ns"] == 10
     for changed in (
         {"assisted_teach_exit_hold_validated": False, "assisted_teach_exit_hold": None},

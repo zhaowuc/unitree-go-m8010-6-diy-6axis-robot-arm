@@ -1,0 +1,831 @@
+{
+  "schema": "go-m8010-manual-teach-failure/1.0",
+  "status": "FAIL",
+  "code_commit": "c8058f8178146ac2695212ac51b82b752880b694",
+  "session": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T051622-091a01",
+  "operator_report": "使用较小的力推动J1，J1推不动，然后所有关节失力，GUI界面退出。",
+  "failure": "feedback, authority, session or command-router health changed",
+  "native_reason": "ASSISTED_TEACH_STOP_ERROR_LIMIT",
+  "elapsed_s": 443.0959565159865,
+  "interactive_ready": true,
+  "paired_terminal_confirmed": true,
+  "session_result": {
+    "status": "FAIL",
+    "plan": {
+      "mode": "EXECUTE",
+      "cycles": 1,
+      "excursion_deg": 1.0,
+      "speed_deg_s": 1.0,
+      "symmetric": false,
+      "return_center": false,
+      "maximum_demo_seconds": 600.0,
+      "assisted_teach": true,
+      "teach_observe": false,
+      "j6_power_cycle_attested": true,
+      "supported_near_vertical_recovery": false,
+      "repo": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d",
+      "session": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T051622-091a01",
+      "scripts": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T051622-091a01_scripts",
+      "unit_prefix": "v15-31d-demo-20260908T051622-091a01",
+      "missing_or_mismatched_inputs": [],
+      "bash_syntax": "PASS",
+      "order": [
+        "prebuild-only",
+        "j6_posvel_preflight",
+        "stage_readonly",
+        "stage_active",
+        "bounded_j1_demo",
+        "stop_owned_units"
+      ]
+    },
+    "failure": "RuntimeError: exit 1; ; see /home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T051622-091a01_scripts/start_bounded_j1_demo.sh.log",
+    "demo": {
+      "status": "FAIL",
+      "requested_cycles": null,
+      "completed_cycles": null,
+      "failure": "feedback, authority, session or command-router health changed",
+      "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T051622-091a01/evidence/j1_action_group_demo.json"
+    },
+    "controller_terminal_confirmed": {
+      "J1": true,
+      "J2": true,
+      "J345": true,
+      "J6": true
+    },
+    "stop_errors": []
+  },
+  "teach_events": [
+    {
+      "event": "teach_requested",
+      "joint": 1,
+      "at_monotonic_s": 3257914.54111122,
+      "activation_epoch": 3257914541104097,
+      "source_monotonic_ns": 3257914509762039,
+      "actual_rad": [
+        0.004797493156466434,
+        0.005260585006216427,
+        -0.0005433904225611205,
+        0.014852051616789525,
+        0.004019974680344578,
+        0.05987258716716415
+      ],
+      "frozen_targets_rad": [
+        0.004797493156466434,
+        0.006078477503466137,
+        -0.0005736729723096246,
+        0.015336723072217076,
+        0.003474719292988582,
+        0.05987258716716415
+      ]
+    },
+    {
+      "event": "teach_hardware_confirmed",
+      "joint": 1,
+      "source_monotonic_ns": 3257914589780135,
+      "actual_rad": [
+        0.004585439978501162,
+        0.005230302456467922,
+        -0.0005433904225611205,
+        0.0148823718314009,
+        0.0040502666463088,
+        0.05987258716716415
+      ],
+      "controller_mode_by_motor": {
+        "J1": "teach",
+        "J2A": "hold",
+        "J2B": "hold",
+        "J3": "hold",
+        "J4": "hold",
+        "J5": "hold",
+        "J6": "hold"
+      },
+      "activation_epoch": 3257914541104097
+    },
+    {
+      "event": "teach_release_requested",
+      "joint": 1,
+      "reason": "原生边界退出保持",
+      "at_monotonic_s": 3257916.815705513,
+      "activation_epoch": 3257916815689649,
+      "native_exit_hold_ack": true,
+      "native_exit_hold": {
+        "deadline_monotonic_ns": 3257917748185733,
+        "initial_velocity_rad_s": 0.08785856665166278,
+        "joint_index": 0,
+        "press_activation_epoch": 3257914541104097,
+        "reason": "VELOCITY_LIMIT",
+        "schema": "go-m8010-teach-exit-hold/1.0",
+        "started_monotonic_ns": 3257916748185733,
+        "targets_rad": [
+          0.021609524850393923,
+          0.006078477503466137,
+          -0.0005736729723096246,
+          0.015336723072217076,
+          0.003474719292988582,
+          0.05987258716716415
+        ]
+      },
+      "source_monotonic_ns": 3257916789583996,
+      "actual_rad": [
+        0.025638346907419732,
+        0.005411997754958948,
+        -0.0005736729723096246,
+        0.0148823718314009,
+        0.004080558612273022,
+        0.05949111161974674
+      ],
+      "frozen_targets_rad": [
+        0.004797493156466434,
+        0.006078477503466137,
+        -0.0005736729723096246,
+        0.015336723072217076,
+        0.003474719292988582,
+        0.05987258716716415
+      ],
+      "hold_targets_rad": [
+        0.021609524850393923,
+        0.006078477503466137,
+        -0.0005736729723096246,
+        0.015336723072217076,
+        0.003474719292988582,
+        0.05987258716716415
+      ]
+    },
+    {
+      "event": "teach_requested",
+      "joint": 1,
+      "at_monotonic_s": 3257918.959305156,
+      "activation_epoch": 3257918959295700,
+      "source_monotonic_ns": 3257918929598972,
+      "actual_rad": [
+        0.025214259383920624,
+        0.00697207637508711,
+        -0.0005736729723096246,
+        0.014973219480646413,
+        0.004080558612273022,
+        0.05987258716716415
+      ],
+      "frozen_targets_rad": [
+        0.025214259383920624,
+        0.006078477503466137,
+        -0.0005736729723096246,
+        0.015336723072217076,
+        0.003474719292988582,
+        0.05987258716716415
+      ]
+    },
+    {
+      "event": "teach_hardware_confirmed",
+      "joint": 1,
+      "source_monotonic_ns": 3257918989658913,
+      "actual_rad": [
+        0.025396011179705955,
+        0.006987217649961362,
+        -0.0005736729723096246,
+        0.014973219480646413,
+        0.004080558612273022,
+        0.06025406271458156
+      ],
+      "controller_mode_by_motor": {
+        "J1": "teach",
+        "J2A": "hold",
+        "J2B": "hold",
+        "J3": "hold",
+        "J4": "hold",
+        "J5": "hold",
+        "J6": "hold"
+      },
+      "activation_epoch": 3257918959295700
+    },
+    {
+      "event": "teach_release_requested",
+      "joint": 1,
+      "reason": "原生边界退出保持",
+      "at_monotonic_s": 3257919.566562577,
+      "activation_epoch": 3257919566535522,
+      "native_exit_hold_ack": true,
+      "native_exit_hold": {
+        "deadline_monotonic_ns": 3257920538188046,
+        "initial_velocity_rad_s": 0.08805365762055126,
+        "joint_index": 0,
+        "press_activation_epoch": 3257918959295700,
+        "reason": "VELOCITY_LIMIT",
+        "schema": "go-m8010-teach-exit-hold/1.0",
+        "started_monotonic_ns": 3257919538188046,
+        "targets_rad": [
+          0.042783599643169384,
+          0.006078477503466137,
+          -0.0005736729723096246,
+          0.015336723072217076,
+          0.003474719292988582,
+          0.05987258716716415
+        ]
+      },
+      "source_monotonic_ns": 3257919549750465,
+      "actual_rad": [
+        0.04563102561137481,
+        0.006578290233767942,
+        -0.0005433904225611205,
+        0.014912654381149405,
+        0.004110850578237244,
+        0.061017013809416376
+      ],
+      "frozen_targets_rad": [
+        0.025214259383920624,
+        0.006078477503466137,
+        -0.0005736729723096246,
+        0.015336723072217076,
+        0.003474719292988582,
+        0.05987258716716415
+      ],
+      "hold_targets_rad": [
+        0.042783599643169384,
+        0.006078477503466137,
+        -0.0005736729723096246,
+        0.015336723072217076,
+        0.003474719292988582,
+        0.05987258716716415
+      ]
+    }
+  ],
+  "exit_windows": [
+    {
+      "native_proof": {
+        "deadline_monotonic_ns": 3257917748185733,
+        "initial_velocity_rad_s": 0.08785856665166278,
+        "joint_index": 0,
+        "press_activation_epoch": 3257914541104097,
+        "reason": "VELOCITY_LIMIT",
+        "schema": "go-m8010-teach-exit-hold/1.0",
+        "started_monotonic_ns": 3257916748185733,
+        "targets_rad": [
+          0.021609524850393923,
+          0.006078477503466137,
+          -0.0005736729723096246,
+          0.015336723072217076,
+          0.003474719292988582,
+          0.05987258716716415
+        ]
+      },
+      "gui_ack_delay_ms": 67.51978024840355,
+      "exact_target_ack": true,
+      "holding_samples": 108,
+      "max_selected_hold_error_deg": 0.9424312394673751,
+      "max_other_hold_error_deg": [
+        0.12496332980907786,
+        0.015619876716715102,
+        0.027769628846461645,
+        0.036447637860981,
+        0.13114163312676155
+      ],
+      "last_hold_sample": {
+        "at_monotonic_s": 3257918.951538881,
+        "source_monotonic_ns": 3257918929598972,
+        "identity": [
+          "persistent:4a74e16f9e3ad6e1:j2session:0135793804e4f00b:goauxsession:beaa9087461dfc38",
+          "1a10d691bbbdce5a3702fc2440127e2a",
+          "3fe8eed1d13370842f79b057f4e05189",
+          "6b45348565df8d56293051da25bc2d62013402a5f31e46399efe796a1e80d2f6",
+          "14498d6367c29b725ff95a12a64c089e64d7ac2c0b124d6b4d5ab5261020ada7"
+        ],
+        "feedback_fresh": true,
+        "healthy": true,
+        "zero_ff_authority": false,
+        "stationary_hold_ready": true,
+        "modes": {
+          "J1": "hold",
+          "J2A": "hold",
+          "J2B": "hold",
+          "J3": "hold",
+          "J4": "hold",
+          "J5": "hold",
+          "J6": "hold"
+        },
+        "j6_drive_state": 1,
+        "j6_raw_sequence": 45195,
+        "router_ready": true,
+        "router_rejected_commands": 0,
+        "router_status": "收到=是，拒绝=0，最近拒绝=无，命令年龄=33毫秒，最近模式=hold，J2转发模式=hold",
+        "router_hold_fresh": true,
+        "assisted_teach_exit_hold": null,
+        "assisted_teach_exit_hold_validated": null,
+        "assisted_teach_exit_hold_source_monotonic_ns": null,
+        "actual_rad": [
+          0.025214259383920624,
+          0.00697207637508711,
+          -0.0005736729723096246,
+          0.014973219480646413,
+          0.004080558612273022,
+          0.05987258716716415
+        ],
+        "velocity_rad_s": [
+          -0.000908709913134903,
+          -0.002877534313057266,
+          -0.0006058066087566,
+          -0.00015140457365256594,
+          0.0002271774782837236,
+          -0.0028609121306800724
+        ],
+        "motor_tracking": {
+          "J1": {
+            "tau_cmd_rotor_nm": -0.015625,
+            "tau_feedback_rotor_nm": -0.02734375,
+            "gravity_feedforward_rotor_nm": 5.712314009450801e-19,
+            "dq_joint_rad_s": 0.007754739167246455,
+            "feedback_source_monotonic_ns": 3257918918561496,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          },
+          "J2A": {
+            "tau_cmd_rotor_nm": -0.005829515815333695,
+            "tau_feedback_rotor_nm": 0.0546875,
+            "gravity_feedforward_rotor_nm": 0.009795484184666305,
+            "dq_joint_rad_s": -0.007754739167246455,
+            "feedback_source_monotonic_ns": 3257918926556930,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          },
+          "J2B": {
+            "tau_cmd_rotor_nm": 0.005829515815333695,
+            "tau_feedback_rotor_nm": 0.00390625,
+            "gravity_feedforward_rotor_nm": -0.009795484184666305,
+            "dq_joint_rad_s": -0.05816054640265908,
+            "feedback_source_monotonic_ns": 3257918926556930,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          },
+          "J3": {
+            "tau_cmd_rotor_nm": -0.01114688887239376,
+            "tau_feedback_rotor_nm": 0.0,
+            "gravity_feedforward_rotor_nm": -0.01114688887239376,
+            "dq_joint_rad_s": -0.06979265662481246,
+            "feedback_source_monotonic_ns": 3257918919604707,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          },
+          "J4": {
+            "tau_cmd_rotor_nm": -0.028423794544366356,
+            "tau_feedback_rotor_nm": -0.0078125,
+            "gravity_feedforward_rotor_nm": 0.006732455455633643,
+            "dq_joint_rad_s": 0.05428317475923866,
+            "feedback_source_monotonic_ns": 3257918919604707,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          },
+          "J5": {
+            "tau_cmd_rotor_nm": -0.00013902869253080595,
+            "tau_feedback_rotor_nm": 0.0078125,
+            "gravity_feedforward_rotor_nm": -0.00013902869253080595,
+            "dq_joint_rad_s": -0.03877369760177272,
+            "feedback_source_monotonic_ns": 3257918919604707,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          },
+          "J6": {
+            "tau_cmd_rotor_nm": null,
+            "tau_feedback_rotor_nm": null,
+            "gravity_feedforward_rotor_nm": null,
+            "dq_joint_rad_s": 0.010989010989007397,
+            "feedback_source_monotonic_ns": 3257918925969311,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          }
+        },
+        "temperature_c": {
+          "J1": 31.0,
+          "J2A": 32.0,
+          "J2B": 31.0,
+          "J3": 31.0,
+          "J4": 31.0,
+          "J5": 31.0,
+          "J6": 36.0
+        },
+        "j2_sync_error_rad": -0.001221806970461702,
+        "controller_faults": {
+          "J1": false,
+          "J2A": false,
+          "J2B": false,
+          "J3": false,
+          "J4": false,
+          "J5": false,
+          "J6": false
+        },
+        "source_age_ms": 21.940919,
+        "gravity_blocker": null,
+        "command_targets_rad": [
+          0.021609524850393923,
+          0.006078477503466137,
+          -0.0005736729723096246,
+          0.015336723072217076,
+          0.003474719292988582,
+          0.05987258716716415
+        ],
+        "teach_joint": null,
+        "authority": true,
+        "thermal_ready": true,
+        "stage_index": 4,
+        "stage_level": 1.0,
+        "stage_complete": true,
+        "position_authorized": true,
+        "assisted_teach_authorized": true,
+        "stage": "interactive_teach",
+        "cycle": null
+      },
+      "first_brake_sample": null
+    },
+    {
+      "native_proof": {
+        "deadline_monotonic_ns": 3257920538188046,
+        "initial_velocity_rad_s": 0.08805365762055126,
+        "joint_index": 0,
+        "press_activation_epoch": 3257918959295700,
+        "reason": "VELOCITY_LIMIT",
+        "schema": "go-m8010-teach-exit-hold/1.0",
+        "started_monotonic_ns": 3257919538188046,
+        "targets_rad": [
+          0.042783599643169384,
+          0.006078477503466137,
+          -0.0005736729723096246,
+          0.015336723072217076,
+          0.003474719292988582,
+          0.05987258716716415
+        ]
+      },
+      "gui_ack_delay_ms": 28.37453130632639,
+      "exact_target_ack": true,
+      "holding_samples": 32,
+      "max_selected_hold_error_deg": 1.9716425690799426,
+      "max_other_hold_error_deg": [
+        0.03558172524249767,
+        0.003470124586968483,
+        0.027769628846461645,
+        0.03818323966388485,
+        0.06557081656338078
+      ],
+      "last_hold_sample": {
+        "at_monotonic_s": 3257920.193701044,
+        "source_monotonic_ns": 3257920169590307,
+        "identity": [
+          "persistent:4a74e16f9e3ad6e1:j2session:0135793804e4f00b:goauxsession:beaa9087461dfc38",
+          "1a10d691bbbdce5a3702fc2440127e2a",
+          "3fe8eed1d13370842f79b057f4e05189",
+          "6b45348565df8d56293051da25bc2d62013402a5f31e46399efe796a1e80d2f6",
+          "14498d6367c29b725ff95a12a64c089e64d7ac2c0b124d6b4d5ab5261020ada7"
+        ],
+        "feedback_fresh": true,
+        "healthy": true,
+        "zero_ff_authority": false,
+        "stationary_hold_ready": false,
+        "modes": {
+          "J1": "hold",
+          "J2A": "hold",
+          "J2B": "hold",
+          "J3": "hold",
+          "J4": "hold",
+          "J5": "hold",
+          "J6": "hold"
+        },
+        "j6_drive_state": 1,
+        "j6_raw_sequence": 45319,
+        "router_ready": true,
+        "router_rejected_commands": 0,
+        "router_status": "收到=是，拒绝=0，最近拒绝=无，命令年龄=32毫秒，最近模式=hold，J2转发模式=hold",
+        "router_hold_fresh": true,
+        "assisted_teach_exit_hold": {
+          "deadline_monotonic_ns": 3257920538188046,
+          "initial_velocity_rad_s": 0.08805365762055126,
+          "joint_index": 0,
+          "press_activation_epoch": 3257918959295700,
+          "reason": "VELOCITY_LIMIT",
+          "schema": "go-m8010-teach-exit-hold/1.0",
+          "started_monotonic_ns": 3257919538188046,
+          "targets_rad": [
+            0.042783599643169384,
+            0.006078477503466137,
+            -0.0005736729723096246,
+            0.015336723072217076,
+            0.003474719292988582,
+            0.05987258716716415
+          ]
+        },
+        "assisted_teach_exit_hold_validated": true,
+        "assisted_teach_exit_hold_source_monotonic_ns": 3257920159333615,
+        "actual_rad": [
+          0.07719525414609413,
+          0.005518024343941583,
+          -0.0005433904225611205,
+          0.015003539695257789,
+          0.004080558612273022,
+          0.05987258716716415
+        ],
+        "velocity_rad_s": [
+          0.040818687474461456,
+          -0.0009392589281999136,
+          0.00028889218755651514,
+          0.00036129489376626294,
+          -0.00021673651291261744,
+          0.0036392346849253715
+        ],
+        "motor_tracking": {
+          "J1": {
+            "tau_cmd_rotor_nm": -0.0414231451492301,
+            "tau_feedback_rotor_nm": -0.37890625,
+            "gravity_feedforward_rotor_nm": 5.379357960340394e-19,
+            "dq_joint_rad_s": 0.0,
+            "feedback_source_monotonic_ns": 3257920159333615,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          },
+          "J2A": {
+            "tau_cmd_rotor_nm": -0.007411510356134909,
+            "tau_feedback_rotor_nm": -0.01953125,
+            "gravity_feedforward_rotor_nm": 0.00821348964386509,
+            "dq_joint_rad_s": 0.08530212907417055,
+            "feedback_source_monotonic_ns": 3257920167213252,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          },
+          "J2B": {
+            "tau_cmd_rotor_nm": 0.007411510356134909,
+            "tau_feedback_rotor_nm": 0.02734375,
+            "gravity_feedforward_rotor_nm": -0.00821348964386509,
+            "dq_joint_rad_s": -0.011632109045126423,
+            "feedback_source_monotonic_ns": 3257920167213252,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          },
+          "J3": {
+            "tau_cmd_rotor_nm": -0.009673397918921618,
+            "tau_feedback_rotor_nm": 0.01953125,
+            "gravity_feedforward_rotor_nm": -0.009673397918921618,
+            "dq_joint_rad_s": -0.042651064537085275,
+            "feedback_source_monotonic_ns": 3257920160205237,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          },
+          "J4": {
+            "tau_cmd_rotor_nm": -0.028898112018477966,
+            "tau_feedback_rotor_nm": -0.0078125,
+            "gravity_feedforward_rotor_nm": 0.006258137981522034,
+            "dq_joint_rad_s": 0.10468897787505692,
+            "feedback_source_monotonic_ns": 3257920160205237,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          },
+          "J5": {
+            "tau_cmd_rotor_nm": -0.00013844667949257163,
+            "tau_feedback_rotor_nm": 0.0,
+            "gravity_feedforward_rotor_nm": -0.00013844667949257163,
+            "dq_joint_rad_s": -0.011632109045126423,
+            "feedback_source_monotonic_ns": 3257920160205237,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          },
+          "J6": {
+            "tau_cmd_rotor_nm": null,
+            "tau_feedback_rotor_nm": null,
+            "gravity_feedforward_rotor_nm": null,
+            "dq_joint_rad_s": 0.0329670329670364,
+            "feedback_source_monotonic_ns": 3257920165885152,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          }
+        },
+        "temperature_c": {
+          "J1": 31.0,
+          "J2A": 31.0,
+          "J2B": 31.0,
+          "J3": 31.0,
+          "J4": 31.0,
+          "J5": 31.0,
+          "J6": 36.0
+        },
+        "j2_sync_error_rad": -0.002554615808024599,
+        "controller_faults": {
+          "J1": false,
+          "J2A": false,
+          "J2B": false,
+          "J3": false,
+          "J4": false,
+          "J5": false,
+          "J6": false
+        },
+        "source_age_ms": 24.111652,
+        "gravity_blocker": null,
+        "command_targets_rad": [
+          0.042783599643169384,
+          0.006078477503466137,
+          -0.0005736729723096246,
+          0.015336723072217076,
+          0.003474719292988582,
+          0.05987258716716415
+        ],
+        "teach_joint": null,
+        "authority": true,
+        "thermal_ready": true,
+        "stage_index": 4,
+        "stage_level": 1.0,
+        "stage_complete": true,
+        "position_authorized": true,
+        "assisted_teach_authorized": true,
+        "stage": "interactive_teach",
+        "cycle": null
+      },
+      "first_brake_sample": {
+        "at_monotonic_s": 3257920.225298381,
+        "source_monotonic_ns": 3257920209612748,
+        "identity": [
+          "persistent:4a74e16f9e3ad6e1:j2session:0135793804e4f00b:goauxsession:beaa9087461dfc38",
+          "1a10d691bbbdce5a3702fc2440127e2a",
+          "3fe8eed1d13370842f79b057f4e05189",
+          "6b45348565df8d56293051da25bc2d62013402a5f31e46399efe796a1e80d2f6",
+          null
+        ],
+        "feedback_fresh": true,
+        "healthy": true,
+        "zero_ff_authority": false,
+        "stationary_hold_ready": false,
+        "modes": {
+          "J1": "brake",
+          "J2A": "brake",
+          "J2B": "brake",
+          "J3": "hold",
+          "J4": "hold",
+          "J5": "hold",
+          "J6": "hold"
+        },
+        "j6_drive_state": 1,
+        "j6_raw_sequence": 45322,
+        "router_ready": true,
+        "router_rejected_commands": 0,
+        "router_status": "收到=是，拒绝=0，最近拒绝=无，命令年龄=32毫秒，最近模式=hold，J2转发模式=hold",
+        "router_hold_fresh": true,
+        "assisted_teach_exit_hold": null,
+        "assisted_teach_exit_hold_validated": null,
+        "assisted_teach_exit_hold_source_monotonic_ns": null,
+        "actual_rad": [
+          0.09509779661473361,
+          0.005412035419821819,
+          -0.0005433904225611205,
+          0.014973219480646413,
+          0.0040502666463088,
+          0.05987258716716415
+        ],
+        "velocity_rad_s": [
+          0.08063583392839932,
+          -0.0005770906013886983,
+          0.0002884107807406456,
+          0.00021639776552462054,
+          -0.0002163753455323347,
+          0.0036331703036186626
+        ],
+        "motor_tracking": {
+          "J1": {
+            "tau_cmd_rotor_nm": 0.0,
+            "tau_feedback_rotor_nm": 0.0,
+            "gravity_feedforward_rotor_nm": 0.0,
+            "dq_joint_rad_s": 0.8801629110780799,
+            "feedback_source_monotonic_ns": 3257920200268323,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          },
+          "J2A": {
+            "tau_cmd_rotor_nm": 0.0,
+            "tau_feedback_rotor_nm": -0.0234375,
+            "gravity_feedforward_rotor_nm": -0.0,
+            "dq_joint_rad_s": 0.0038773695836232273,
+            "feedback_source_monotonic_ns": 3257920207190559,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          },
+          "J2B": {
+            "tau_cmd_rotor_nm": 0.0,
+            "tau_feedback_rotor_nm": 0.0390625,
+            "gravity_feedforward_rotor_nm": 0.0,
+            "dq_joint_rad_s": 0.023264218090252847,
+            "feedback_source_monotonic_ns": 3257920207190559,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          },
+          "J3": {
+            "tau_cmd_rotor_nm": -0.009588897845584273,
+            "tau_feedback_rotor_nm": 0.01953125,
+            "gravity_feedforward_rotor_nm": -0.009588897845584273,
+            "dq_joint_rad_s": -0.05428317475923866,
+            "feedback_source_monotonic_ns": 3257920200275320,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          },
+          "J4": {
+            "tau_cmd_rotor_nm": -0.02894055577600824,
+            "tau_feedback_rotor_nm": -0.0078125,
+            "gravity_feedforward_rotor_nm": 0.006215694223991759,
+            "dq_joint_rad_s": -0.01550947833449291,
+            "feedback_source_monotonic_ns": 3257920200275320,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          },
+          "J5": {
+            "tau_cmd_rotor_nm": -0.00014299360980174394,
+            "tau_feedback_rotor_nm": 0.0078125,
+            "gravity_feedforward_rotor_nm": -0.00014299360980174394,
+            "dq_joint_rad_s": 0.0038773695836232273,
+            "feedback_source_monotonic_ns": 3257920200275320,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          },
+          "J6": {
+            "tau_cmd_rotor_nm": null,
+            "tau_feedback_rotor_nm": null,
+            "gravity_feedforward_rotor_nm": null,
+            "dq_joint_rad_s": 0.0329670329670364,
+            "feedback_source_monotonic_ns": 3257920196054550,
+            "trajectory_state": "INACTIVE",
+            "trajectory_sample_index": 0,
+            "trajectory_interval_count": 0
+          }
+        },
+        "temperature_c": {
+          "J1": 31.0,
+          "J2A": 32.0,
+          "J2B": 31.0,
+          "J3": 31.0,
+          "J4": 31.0,
+          "J5": 31.0,
+          "J6": 36.0
+        },
+        "j2_sync_error_rad": -0.0026454634572701113,
+        "controller_faults": {
+          "J1": false,
+          "J2A": false,
+          "J2B": false,
+          "J3": false,
+          "J4": false,
+          "J5": false,
+          "J6": false
+        },
+        "source_age_ms": 15.686662,
+        "gravity_blocker": null,
+        "command_targets_rad": [
+          0.042783599643169384,
+          0.006078477503466137,
+          -0.0005736729723096246,
+          0.015336723072217076,
+          0.003474719292988582,
+          0.05987258716716415
+        ],
+        "teach_joint": null,
+        "authority": false,
+        "thermal_ready": true,
+        "stage_index": null,
+        "stage_level": null,
+        "stage_complete": false,
+        "position_authorized": false,
+        "assisted_teach_authorized": false,
+        "stage": "interactive_teach",
+        "cycle": null
+      }
+    }
+  ],
+  "maximum_router_rejected_commands": 0,
+  "gui_traceback_count": 0,
+  "interpretation": "Both native velocity exits and exact GUI HOLD ACK succeeded. During second exit the selected joint exceeded the 2 degree stopping error bound before 1 second, causing native BRAKE, whole-arm authority revocation and runner shutdown. Other joints held before that transition. Positive movement despite opposing measured torque does not independently identify manual force versus inertia.",
+  "source_files": [
+    {
+      "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T051622-091a01/evidence/j1_action_group_demo.json",
+      "sha256": "0ed36cdf679efd4cd2a93e09fa0a056c97c5ee8db788180e54bd5a66379396db"
+    },
+    {
+      "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T051622-091a01/run/j1_controller.log",
+      "sha256": "b713ff42c25f0c61d86ecb018f1e1d8bad7b49b37369731f1efa040dcc7281ef"
+    },
+    {
+      "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T051622-091a01_scripts/start_bounded_j1_demo.sh.log",
+      "sha256": "db2d941270d8d1030fb727fb0d1b4dff7268459110ff853c3b072c519ae3d627"
+    },
+    {
+      "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T051622-091a01_scripts/session_result.json",
+      "sha256": "55d320a08e1c971c9c89aac27edc26624e349101dcec80815a2a92a48a06c0d1"
+    }
+  ]
+}

@@ -166,8 +166,62 @@ def cleanup(unit, session):
     return {"controller_terminal_confirmed": terminal, "stop_errors": errors}
 
 
+def native_failure_reasons(session):
+    failures = []
+    for domain, stem in (("J1", "j1"), ("J2", "j2"), ("J345", "j345"), ("J6", "j6")):
+        path = session / "run" / f"{stem}_controller.log"
+        if path.is_file():
+            reasons = re.findall(r"(?m)^(ASSISTED_TEACH_[A-Z_]+)(?:\s|$)", path.read_text(encoding="utf-8", errors="replace"))
+            for reason in dict.fromkeys(reasons):
+                if reason.endswith(("_LIMIT", "_TIMEOUT", "_UNAVAILABLE", "_UNHEALTHY", "_INVALID", "_ABORT", "_BOUND")):
+                    failures.append({"domain": domain, "reason": reason, "log": str(path)})
+    return failures
+
+
+def show_failure_notice(summary):
+    # This entry imports no ROS modules and owns no controller or transport.
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QApplication, QMessageBox
+    result = json.loads(summary.read_text(encoding="utf-8"))
+    descriptions = {"ASSISTED_TEACH_STOP_ERROR_LIMIT": "退出保持时的位置误差超限",
+                    "ASSISTED_TEACH_STOP_VELOCITY_TIMEOUT": "退出保持后速度未在限定时间内下降"}
+    details = [f"{item['domain']}：{descriptions.get(item['reason'], item['reason'])} [{item['reason']}]"
+               for item in result.get("native_failures", [])]
+    if not details:
+        details = [str(result.get("demo", {}).get("failure") or result.get("failure") or "未提供具体原因")]
+    terminal = result.get("controller_terminal_confirmed", {})
+    confirmed = set(terminal) == {"J1", "J2", "J345", "J6"} and all(value is True for value in terminal.values())
+    terminal_text = ("四个控制域的最终制动／禁用均已确认。" if confirmed else
+                     "最终状态未全部确认：" + "、".join(name for name in ("J1", "J2", "J345", "J6") if terminal.get(name) is not True))
+    app = QApplication.instance() or QApplication([sys.argv[0]])
+    box = QMessageBox()
+    box.setWindowTitle("辅助示教失败：会话已结束")
+    box.setIcon(QMessageBox.Critical)
+    box.setTextFormat(Qt.PlainText)
+    box.setText("\n".join(details) + "\n\n" + terminal_text + "\n此窗口仅显示结果，不发送控制命令。")
+    box.setDetailedText("证据：" + str(summary) + "\n" + str(result.get("failure", "")))
+    box.setStandardButtons(QMessageBox.Close)
+    box.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+    box.exec()
+    return 0
+
+
+def launch_failure_notice(summary):
+    python = ROOT / ".venv/arm-gui/bin/python"
+    env = dict(os.environ)
+    runtime = Path(env.get("XDG_RUNTIME_DIR", "/nonexistent"))
+    if (runtime / env.get("WAYLAND_DISPLAY", "wayland-0")).is_socket():
+        env.setdefault("WAYLAND_DISPLAY", "wayland-0")
+        env.setdefault("QT_QPA_PLATFORM", "wayland")
+    with summary.with_name("failure_notice.log").open("a", encoding="utf-8") as log:
+        subprocess.Popen([str(python) if python.is_file() else sys.executable, str(Path(__file__).resolve()),
+                          "--failure-notice", str(summary)], env=env, stdin=subprocess.DEVNULL,
+                         stdout=log, stderr=subprocess.STDOUT, start_new_session=True, close_fds=True)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--failure-notice", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--cycles", type=int, choices=range(1, 11), default=1)
     parser.add_argument("--excursion-deg", type=float, default=1.0)
@@ -185,6 +239,8 @@ def main(argv=None):
     for flag in ("supported", "vertical", "hands-off", "clearance"):
         parser.add_argument("--" + flag, action="store_true")
     args = parser.parse_args(argv)
+    if args.failure_notice is not None:
+        return show_failure_notice(args.failure_notice)
     if args.teach_observe and not args.assisted_teach:
         parser.error("--teach-observe requires --assisted-teach")
     if not 0 < args.excursion_deg <= 10 or not 0 < args.speed_deg_s <= 3:
@@ -307,10 +363,17 @@ def execute(args, bodies, plan, session, scripts, unit):
         result.update(cleanup(unit, session))
         if result["stop_errors"] or not all(result["controller_terminal_confirmed"].values()):
             result["status"] = "FAIL"
+        if result["status"] == "FAIL":
+            result["native_failures"] = native_failure_reasons(session)
         summary = scripts / "session_result.json"
         summary.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(json.dumps({"status": result["status"], "summary": str(summary),
                           "evidence": str(session / "evidence"), "terminal": result["controller_terminal_confirmed"]}, ensure_ascii=False))
+    if args.assisted_teach and result["status"] == "FAIL" and result.get("demo"):
+        try:
+            launch_failure_notice(summary)
+        except OSError as error:
+            print(f"FAILURE_NOTICE_UNAVAILABLE: {error}; evidence={summary}", file=sys.stderr)
     return 0 if result["status"] == "PASS" else 1
 
 

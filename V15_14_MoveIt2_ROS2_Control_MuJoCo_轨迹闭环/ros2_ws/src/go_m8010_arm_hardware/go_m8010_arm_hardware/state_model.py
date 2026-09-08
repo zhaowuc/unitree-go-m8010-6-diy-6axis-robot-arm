@@ -1459,11 +1459,11 @@ def parse_assisted_teach_exit_hold(payload, samples, modes, gravity) -> dict:
         "assisted_teach_exit_hold_error": "INVALID_NATIVE_EXIT_HOLD",
     }
     proof = payload["assisted_teach_exit_hold"]
-    if not isinstance(proof, dict) or set(proof) != {
+    if not isinstance(proof, dict) or set(proof) - {"restricted"} != {
         "schema", "joint_index", "press_activation_epoch",
         "started_monotonic_ns", "deadline_monotonic_ns", "reason",
         "targets_rad", "initial_velocity_rad_s",
-    }:
+    } or ("restricted" in proof and type(proof["restricted"]) is not bool):
         return result
     joint = proof["joint_index"]
     press = proof["press_activation_epoch"]
@@ -1802,6 +1802,7 @@ def parse_controller_feedback_metadata(
                 "ASSISTED_TEACH_ENCODER_VELOCITY_UNAVAILABLE",
                 "ASSISTED_TEACH_STOP_ERROR_LIMIT",
                 "ASSISTED_TEACH_STOP_VELOCITY_TIMEOUT",
+                "ASSISTED_TEACH_RESTRICTED_VELOCITY_LIMIT",
                 "ASSISTED_TEACH_LOAD_GOVERNOR_ABORT",
                 "ASSISTED_TEACH_PRESS_TIMEOUT",
                 "ASSISTED_TEACH_EXCURSION_LIMIT",

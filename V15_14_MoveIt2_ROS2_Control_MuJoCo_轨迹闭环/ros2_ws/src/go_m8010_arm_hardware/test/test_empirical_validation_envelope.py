@@ -430,6 +430,10 @@ def test_assisted_teach_requires_explicit_envelope_full_ladder_and_live_confirma
     ("maximum_selected_joints", True), ("allowed_joints", ["J1", "J6"]),
     ("stopping_hold_seconds", 1.01), ("max_stopping_error_deg", 2.01),
     ("soft_limit_action", "ignore_speed"),
+    ("low_speed_stopping_error_action", "ignore_all_errors"),
+    ("restricted_hold_rearm_error_deg", 0.5),
+    ("restricted_hold_rearm_velocity_deg_s", 5.0),
+    ("restricted_hold_minimum_stable_seconds", 0.1),
     ("j6_fixed_hold_required", False), ("unexpected", True),
 ])
 def test_assisted_teach_rejects_widened_or_malformed_opt_in(tmp_path, field, value):
@@ -480,6 +484,14 @@ def test_native_stopping_hold_grace_is_one_joint_one_second_and_two_degrees():
         now_monotonic_ns=ns, require_current_position_hold=True)
     assert not live_hardware_blocker(hardware, allow_assisted_teach=True, **kwargs)[0]
     assert live_hardware_blocker(hardware, **kwargs)[0] == "EMPIRICAL_ABNORMAL_VELOCITY"
+    hardware["assisted_teach_exit_hold"]["restricted"] = True
+    assert live_hardware_blocker(hardware, allow_assisted_teach=True, **kwargs)[0] == "EMPIRICAL_ABNORMAL_VELOCITY"
+    hardware["velocity_rad_s"][0] = math.radians(1.6)
+    hardware["position_rad"][0] += math.radians(2.01)
+    assert not live_hardware_blocker(hardware, allow_assisted_teach=True, **kwargs)[0]
+    hardware["position_rad"][0] = hardware["assisted_teach_exit_hold"]["targets_rad"][0]
+    hardware["velocity_rad_s"][0] = math.radians(8.6)
+    hardware["assisted_teach_exit_hold"].pop("restricted")
     hardware["velocity_rad_s"][1] = math.radians(5.01)
     assert live_hardware_blocker(hardware, allow_assisted_teach=True, **kwargs)[0] == "EMPIRICAL_ABNORMAL_VELOCITY"
     hardware["velocity_rad_s"][1] = 0.0

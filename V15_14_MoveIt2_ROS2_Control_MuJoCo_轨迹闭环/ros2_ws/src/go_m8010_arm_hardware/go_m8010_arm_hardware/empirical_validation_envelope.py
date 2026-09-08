@@ -434,6 +434,8 @@ class EmpiricalValidationEnvelope:
                 "j6_fixed_hold_required", "continuous_operation_authorized",
                 "final_confirmation_policy",
                 "soft_limit_action", "stopping_hold_seconds", "max_stopping_error_deg",
+                "low_speed_stopping_error_action", "restricted_hold_rearm_error_deg",
+                "restricted_hold_rearm_velocity_deg_s", "restricted_hold_minimum_stable_seconds",
             }, "ASSISTED_TEACH")
             _require(
                 teach["schema"] == "go-m8010-assisted-teach-envelope/1.0"
@@ -448,6 +450,7 @@ class EmpiricalValidationEnvelope:
                 "ASSISTED_TEACH_SCOPE_INVALID",
             )
             _require(teach["soft_limit_action"] == "capture_selected_hold", "ASSISTED_TEACH_SCOPE_INVALID")
+            _require(teach["low_speed_stopping_error_action"] == "restricted_fixed_hold", "ASSISTED_TEACH_SCOPE_INVALID")
             _require(
                 teach["final_confirmation_policy"] ==
                 "ONCE_AFTER_LADDER_THEN_LIVE_GATES_FOR_MANUAL_SESSION",
@@ -460,6 +463,9 @@ class EmpiricalValidationEnvelope:
                 ("allowed_after_scale", 1.0),
                 ("stopping_hold_seconds", 1.0),
                 ("max_stopping_error_deg", 2.0),
+                ("restricted_hold_rearm_error_deg", 0.25),
+                ("restricted_hold_rearm_velocity_deg_s", 0.25),
+                ("restricted_hold_minimum_stable_seconds", 0.5),
             ):
                 _require(_finite(teach[field], "ASSISTED_TEACH_" + field.upper()) == expected,
                          "ASSISTED_TEACH_BOUNDS_INVALID")
@@ -635,6 +641,8 @@ def assisted_teach_stopping_joint(hardware_state: Mapping, now_monotonic_ns: int
     source_ns = hardware_state.get("assisted_teach_exit_hold_source_monotonic_ns")
     if not isinstance(proof, Mapping) or proof.get("schema") != "go-m8010-teach-exit-hold/1.0":
         return None
+    if proof.get("restricted") is True:
+        return None  # Restricted HOLD never extends the ordinary speed gate.
     joint = proof.get("joint_index")
     started, deadline = proof.get("started_monotonic_ns"), proof.get("deadline_monotonic_ns")
     if (type(joint) is not int or not 0 <= joint < 5 or type(started) is not int

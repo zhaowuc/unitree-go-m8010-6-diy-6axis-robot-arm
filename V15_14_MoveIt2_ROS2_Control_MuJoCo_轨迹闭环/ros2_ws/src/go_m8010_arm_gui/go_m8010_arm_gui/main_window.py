@@ -814,6 +814,8 @@ def collision_motion_state_ready(
         hardware_mode != "hold"
         or not hardware_state_contract_valid(hardware)
         or not hardware_state_source_is_fresh(hardware, checked_ns)
+        or hardware.get("assisted_teach_exit_hold") is not None
+        or hardware.get("assisted_teach_exit_hold_validated") is False
         or len(command_targets) != 6
         or len(requested_active_joint_mask) != 6
         or not all(type(value) is bool and value for value in requested_active_joint_mask)
@@ -3126,10 +3128,11 @@ class MainWindow(QMainWindow):
 
     def _clear_assisted_teach(self) -> None:
         self.teach_joint = None
-        self.teach_joint_selector.setEnabled(True)
+        pending = getattr(self, "teach_release_pending", None) is not None
+        self.teach_joint_selector.setEnabled(not pending)
         for button in self.action_group_manual_buttons:
             if button is not self.acceptance_target_button:
-                button.setEnabled(True)
+                button.setEnabled(not pending)
         self._refresh_virtual_editability()
 
     def _release_assisted_teach(self, reason="松开按钮", *, pending=False) -> None:
@@ -3187,6 +3190,10 @@ class MainWindow(QMainWindow):
             return
         hardware = self.node.latest_hardware or {}
         proof = hardware.get("assisted_teach_exit_hold")
+        if (hardware.get("assisted_teach_exit_hold_validated") is True
+                and isinstance(proof, dict) and proof.get("restricted") is True):
+            self.teach_status.setText(
+                f"J{context['joint_index'] + 1}保持受扰，请松手；保持目标不变，待本轴恢复静止后才可再次拖动或记录。")
         if not context["native_ack"] and (proof is not None or hardware.get("assisted_teach_exit_hold_validated") is False):
             self._release_assisted_teach("原生退出保持补充确认", pending=True)
             return
@@ -3198,6 +3205,8 @@ class MainWindow(QMainWindow):
                        for name in MOTOR_GROUPS[context["joint_index"]]]
             if all(type(source) is int and source > context["released_at_ns"] for source in sources):
                 self.teach_release_pending = None
+                self._clear_assisted_teach()
+                self.teach_status.setText("六轴静止HOLD已确认；可以再次选轴拖动或记录实姿。")
 
     def _tick_assisted_teach(self, now: float) -> None:
         if self.teach_joint is None:
@@ -3246,6 +3255,7 @@ class MainWindow(QMainWindow):
 
     def _record_teach_point(self) -> None:
         if (self.teach_joint is not None or self.teach_record_target is None
+                or getattr(self, "teach_release_pending", None) is not None
                 or not self._action_group_hold_ready(self.teach_record_target)):
             self.teach_status.setText("先松开按钮并等待新鲜、静止的六轴HOLD，再记录实姿。")
             return
@@ -4024,6 +4034,7 @@ class MainWindow(QMainWindow):
         # _new_collision_request("execute"), and again at commit time.
         edit_blocked = bool(
             self.hardware_mode in {"position", "teach"}
+            or getattr(self, "teach_release_pending", None) is not None
             or (getattr(self, "action_group_dialog", None) is not None and self.action_group_dialog.active)
             or self.pending_collision_execute_sequence is not None
             or self.queued_pose_target is not None

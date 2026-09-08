@@ -1743,6 +1743,30 @@ class GravityAuthorityGate:
             for field in ("assisted_teach_authorized", "maximum_teach_excursion_deg",
                           "maximum_teach_seconds", "maximum_teach_velocity_deg_s", "allowed_teach_joints"):
                 self._latest["empirical_" + field] = deepcopy(empirical.get(field))
+            # Keep the diagnostic outside _latest: its fields must never enter
+            # the immutable 22/27-field worker gravity authority.
+            self.restricted_hold_targets = None
+            proof = value.get("assisted_teach_exit_hold")
+            if proof is not None or value.get("assisted_teach_exit_hold_validated") is False:
+                self.restricted_hold_targets = ()  # Invalid proof grants no new target.
+                proof_source = value.get("assisted_teach_exit_hold_source_monotonic_ns")
+                if (isinstance(proof, dict) and proof.get("restricted") is True
+                        and proof.get("schema") == "go-m8010-teach-exit-hold/1.0"
+                        and value.get("assisted_teach_exit_hold_validated") is True
+                        and type(proof_source) is int and 0 < proof_source <= hardware_source_ns
+                        and observed_ns - proof_source <= self.maximum_age_ns
+                        and type(proof.get("started_monotonic_ns")) is int
+                        and proof["started_monotonic_ns"] <= proof_source
+                        and type(proof.get("deadline_monotonic_ns")) is int
+                        and 0 < proof["deadline_monotonic_ns"] - proof["started_monotonic_ns"] <= 1_000_000_000
+                        and proof.get("reason") in {"TIME_LIMIT", "EXCURSION_LIMIT", "VELOCITY_LIMIT"}
+                        and type(proof.get("initial_velocity_rad_s")) in {int, float}
+                        and math.isfinite(proof["initial_velocity_rad_s"])
+                        and type(proof.get("joint_index")) is int and 0 <= proof["joint_index"] < 5
+                        and type(proof.get("press_activation_epoch")) is int and proof["press_activation_epoch"] > 0
+                        and isinstance(proof.get("targets_rad"), list) and len(proof["targets_rad"]) == 6
+                        and all(type(item) in {int, float} and math.isfinite(item) for item in proof["targets_rad"])):
+                    self.restricted_hold_targets = tuple(proof["targets_rad"])
             return True
         except (KeyError, TypeError, ValueError, OverflowError):
             self._latest = None
@@ -2776,6 +2800,26 @@ class CommandRouter(Node):
     def on_command(self, message: String) -> None:
         try:
             now_ns = time.monotonic_ns()
+            restricted = getattr(self.gravity_authority_gate, "restricted_hold_targets", None)
+            if restricted is not None:
+                request = json.loads(message.data)
+                if not isinstance(request, dict):
+                    raise ValueError("命令字段类型或数值无效")
+                expected = restricted or tuple((self.last_command or {}).get("targets_rad", ()))
+                allowed = request.get("mode") == "brake" or (
+                    request.get("mode") == "hold" and len(expected) == 6
+                    and request.get("targets_rad") == list(expected)
+                    and request.get("active_joint_mask") == [True] * 6
+                    and (not self.last_command or (
+                        request.get("kp", list(DEFAULT_KP)) == self.last_command.get("kp")
+                        and request.get("kd", list(DEFAULT_KD)) == self.last_command.get("kd")))
+                    and (bool(restricted) or (self.last_command or {}).get("mode") == "hold"))
+                if not allowed:
+                    # Expected restricted-mode refusal is not a transport fault:
+                    # do not spend authority, send BRAKE, or trip the GUI's
+                    # fatal rejection counter while healthy HOLD continues.
+                    self.restricted_hold_blocked_commands = getattr(self, "restricted_hold_blocked_commands", 0) + 1
+                    return
             previous_mode = (
                 None if self.last_command is None else self.last_command.get("mode")
             )
@@ -2875,6 +2919,8 @@ class CommandRouter(Node):
             "tracked_plan_tokens": self.plan_manifest_gate.tracked_token_count,
             "completed_plan_tokens": self.plan_manifest_gate.completed_token_count,
             "gravity_authority_available": self.gravity_authority_gate.available,
+            "restricted_hold_active": getattr(self.gravity_authority_gate, "restricted_hold_targets", None) is not None,
+            "restricted_hold_blocked_commands": getattr(self, "restricted_hold_blocked_commands", 0),
             "empirical_revocation_brakes": self.empirical_revocation_brakes,
             "last_empirical_revocation_reason": (
                 self.last_empirical_revocation_reason

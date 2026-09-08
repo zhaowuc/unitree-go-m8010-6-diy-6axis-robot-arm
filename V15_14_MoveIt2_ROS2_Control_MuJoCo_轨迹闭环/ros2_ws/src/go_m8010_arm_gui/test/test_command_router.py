@@ -493,6 +493,38 @@ def test_teach_exit_keeps_normal_hold_authority_and_never_broadcasts_brake(monke
     CommandRouter.on_command(router, SimpleNamespace(data=json.dumps(acknowledge)))
     assert router.rejected == 0 and len(sent) == 4 and not revoked
     assert all(message["mode"] == "hold" and message["targets_rad"] == native_targets for message in sent)
+    # The fresh, same-snapshot restricted diagnostic blocks new motion without
+    # changing gravity authority or poisoning healthy-HOLD rejection counters.
+    clock[0] += 1_000_000
+    status.update(sequence=7, source_monotonic_ns=clock[0], hardware_state_source_monotonic_ns=clock[0] - 1)
+    status.update(assisted_teach_exit_hold_validated=True,
+                  assisted_teach_exit_hold_source_monotonic_ns=clock[0] - 2,
+                  assisted_teach_exit_hold={"schema": "go-m8010-teach-exit-hold/1.0", "restricted": True,
+                      "joint_index": 0, "press_activation_epoch": 7, "targets_rad": native_targets,
+                      "started_monotonic_ns": clock[0] - 100_000_000,
+                      "deadline_monotonic_ns": clock[0] + 900_000_000,
+                      "reason": "VELOCITY_LIMIT", "initial_velocity_rad_s": 0.09})
+    CommandRouter.on_gravity_status(router, SimpleNamespace(data=json.dumps(status)))
+    for mode in ("teach", "position"):
+        CommandRouter.on_command(router, SimpleNamespace(data=json.dumps({"mode": mode})))
+    assert len(sent) == 4 and router.rejected == 0 and not revoked
+    acknowledge.update(sequence=2, source_monotonic_ns=clock[0])
+    CommandRouter.on_command(router, SimpleNamespace(data=json.dumps(acknowledge)))
+    assert len(sent) == 8 and router.rejected == 0 and not revoked
+    clock[0] += 1_000_000
+    status.update(sequence=8, source_monotonic_ns=clock[0], hardware_state_source_monotonic_ns=clock[0] - 1,
+                  assisted_teach_exit_hold_source_monotonic_ns=clock[0] + 1)  # Does not match this snapshot.
+    CommandRouter.on_gravity_status(router, SimpleNamespace(data=json.dumps(status)))
+    bad_hold = {**acknowledge, "targets_rad": [value + 0.01 for value in native_targets]}
+    CommandRouter.on_command(router, SimpleNamespace(data=json.dumps(bad_hold)))
+    assert len(sent) == 8 and router.rejected == 0 and not revoked
+    acknowledge.update(sequence=3, source_monotonic_ns=clock[0])
+    CommandRouter.on_command(router, SimpleNamespace(data=json.dumps(acknowledge)))
+    assert len(sent) == 12 and all(message["mode"] == "hold" for message in sent)
+    assert router.restricted_hold_blocked_commands == 3 and not revoked
+    for invalid in ([], None):
+        CommandRouter.on_command(router, SimpleNamespace(data=json.dumps(invalid)))
+    assert router.rejected == 2 and len(sent) == 12 and not revoked
 
 
 def test_empirical_authority_stale_or_deadline_revokes_once():
