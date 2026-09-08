@@ -10,7 +10,8 @@ import math
 import time
 
 from hand_guidance import GuidanceProfile, HandGuidance
-from hand_guidance_feedback import MOTOR_GROUPS, matched_observation, stationary_bias
+from hand_guidance_feedback import (MOTOR_GROUPS, GuidanceMeasurementUnavailable,
+                                    matched_observation, stationary_bias)
 from v15_31d_gui_j1_demo import J1Demo
 
 
@@ -46,7 +47,7 @@ class GuidanceDemo(J1Demo):
         self.baseline = deque(maxlen=150)
         self.window.node.guidance_hardware_history = deque(maxlen=32)
         self.bias = self.filtered_residual = self.core = None
-        self.last_observation = None
+        self.input_wait_since = None
         self.last_trace_at = 0.0
         self.ending = False
         self.return_verified = False
@@ -91,6 +92,7 @@ class GuidanceDemo(J1Demo):
             if (self.window.node.latest_gravity_status or {}).get("empirical_validation", {}).get("hand_guidance_authorized") is not True:
                 raise RuntimeError("当前会话尚未开放整臂柔顺")
             self.filtered_residual = [0.0] * 6
+            self.input_wait_since = None
             self.pending_release = False
             self.guidance_phase, self.guidance_fault = "engaging_guidance", None
             if not self.shadow_only:
@@ -209,6 +211,31 @@ class GuidanceDemo(J1Demo):
             result.append({"moving_joints": [f"J{i+1}" for i in moving], "trajectory_sha256": segment.sha256})
         return result
 
+    def _pause_input(self, now, reason, diagnostics=None):
+        if self.guidance_phase != "guiding":
+            self.status.setText("等待新鲜力矩反馈：" + reason)
+            return
+        if self.input_wait_since is None:
+            self.input_wait_since = now
+            self.guidance_events.append({"event": "input_wait", "reason": reason,
+                "diagnostics": diagnostics, "at_monotonic_s": now})
+        output = self.core.pause(now)
+        self.filtered_residual = [0.0] * 6
+        self.last_observation_at = now
+        if not self.shadow_only:
+            self.window.command_targets = list(output.q_ref)
+            self.window.targets = self.window.candidate_targets = list(output.q_ref)
+            self.window.hand_guidance_reference = self.reference(output.dq_ref)
+        self.status.setText("保持当前目标，等待新鲜力矩反馈。")
+        if now - self.input_wait_since >= self.profile.max_feedback_age_s:
+            self.guidance_fault = "GUIDANCE_INPUT_GAP:" + reason
+            self.guidance_events.append({"event": "guidance_fault", "reason": self.guidance_fault,
+                "diagnostics": diagnostics, "at_monotonic_s": now})
+            print("HAND_GUIDANCE_FAULT=" + self.guidance_fault, flush=True)
+            self.release_guidance()
+            if self.shadow_only:
+                self.stop(self.guidance_fault)
+
     def tick(self):
         if not self.interactive_ready or self.terminal is not None:
             return super().tick()
@@ -276,13 +303,25 @@ class GuidanceDemo(J1Demo):
             if self.ending and self.guidance_phase in {"ready", "calibrating"}:
                 self._begin_return(sample)
                 return
-            observation = matched_observation(self.window.node.guidance_hardware_history,
-                self.window.node.latest_gravity_status, now_ns=time.monotonic_ns())
-            if observation is not None:
-                self.last_observation = observation
-            elif self.last_observation is not None and now - self.last_observation.source_monotonic_ns * 1e-9 <= self.profile.max_feedback_age_s:
-                observation = self.last_observation
+            diagnostics = None
+            reason = "MATCHING_SNAPSHOT_PENDING"
+            try:
+                observation = matched_observation(self.window.node.guidance_hardware_history,
+                    self.window.node.latest_gravity_status, now_ns=time.monotonic_ns())
+            except GuidanceMeasurementUnavailable as error:
+                observation, reason, diagnostics = None, error.reason, error.diagnostics
             if observation is None:
+                self._pause_input(now, reason, diagnostics)
+                return
+            if self.input_wait_since is not None:
+                if now - self.input_wait_since >= self.profile.max_feedback_age_s:
+                    self._pause_input(now, "RECOVERY_AFTER_INPUT_GAP_LIMIT")
+                    return
+                self.guidance_events.append({"event": "input_resumed", "wait_s": now-self.input_wait_since,
+                    "at_monotonic_s": now})
+                self.core.pause(now)
+                self.last_observation_at = now
+                self.input_wait_since = None
                 return
             if self.bias is None:
                 self.baseline.append(observation)
@@ -340,10 +379,13 @@ class GuidanceDemo(J1Demo):
                 self.last_trace_at = now
             label = {"guiding": "随你的施力移动", "settling": "撤力减速中", "holding": "已停住，再施力可继续"}[output.state]
             self.status.setText(("仅观察拟输出：" if self.shadow_only else "整臂柔顺：") + label)
+        except GuidanceMeasurementUnavailable as error:
+            self._pause_input(now, error.reason, error.diagnostics)
         except (ValueError, RuntimeError) as error:
             if self.guidance_phase == "guiding":
                 self.guidance_fault = str(error)
-                self.guidance_events.append({"event": "guidance_fault", "reason": str(error), "at_monotonic_s": now})
+                self.guidance_events.append({"event": "guidance_fault", "reason": str(error), "at_monotonic_s": now,
+                    "j6_feedback": (self.window.node.latest_hardware or {}).get("per_motor", {}).get("J6")})
                 print("HAND_GUIDANCE_FAULT=" + str(error), flush=True)
             self.release_guidance()
             self.status.setText("等待或保持：" + str(error))

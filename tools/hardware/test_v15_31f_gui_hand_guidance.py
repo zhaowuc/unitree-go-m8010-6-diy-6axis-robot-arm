@@ -60,6 +60,34 @@ def test_release_freezes_each_native_target_before_ack_and_return_before_brake(m
     feedback([0.0]*6, epoch, mode="teach")
     demo.tick()
     assert demo.guidance_phase == "guiding"
+    # A missing measurement must never renew yesterday's moving reference.
+    window.hand_guidance_reference = demo.reference([0.1]*6)
+    monkeypatch.setattr(runtime, "matched_observation", lambda *_, **__: None)
+    clock[0] += .02
+    demo.tick()
+    assert demo.guidance_phase == "guiding" and demo.input_wait_since == clock[0]
+    assert sent[-1][2] == (0.0,)*6
+    assert sent[-1][3]["velocity_rad_s"] == [0.0]*6
+    assert sent[-1][3]["freeze_reference"] is False
+    clock[0] += .06  # Longer than the core integration dt, still within gap budget.
+    observation = SimpleNamespace(source_monotonic_ns=int(clock[0]*1e9), q=(0.01,)*6,
+        dq=(0.0,)*6, residual_nm=(0.0,)*6)
+    monkeypatch.setattr(runtime, "matched_observation", lambda *_, **__: observation)
+    demo.tick()
+    assert demo.input_wait_since is None and window.command_targets == [0.0]*6
+    clock[0] += .02
+    demo.tick()
+    assert demo.guidance_phase == "guiding" and demo.guidance_fault is None
+    assert sent[-1][2] == (0.0,)*6  # Did not recapture displaced actual position.
+    monkeypatch.setattr(runtime, "matched_observation", lambda *_, **__: None)
+    clock[0] += .02
+    demo.tick()
+    clock[0] += .11
+    demo.tick()
+    assert demo.guidance_phase == "freezing" and sent[-1][3]["freeze_reference"] is True
+    assert demo.guidance_fault.startswith("GUIDANCE_INPUT_GAP:")
+    demo.guidance_fault = None
+    demo.guidance_phase = "guiding"  # Continue the existing native freeze/ACK check.
     # Last published reference can differ from a domain's last accepted one.
     window.command_targets = [0.02]*6
     clock[0] += .02

@@ -80,6 +80,27 @@ def test_readonly_wire_allowlist_and_pinned_motor_torque_scale():
     assert motor["motor_torque_source_monotonic_ns"] == native_stamp
     assert motor["motor_torque_estimate_metadata_status"] == "OBSERVED"
     assert motor["tau_feedback_rotor_nm"] is None
+    # Re-publishing the same CAN measurement must retain its true source
+    # stamp. UDP publication time is deliberately newer and is not equality-
+    # checked against the torque measurement timestamp.
+    sender.__globals__["time"] = SimpleNamespace(monotonic_ns=lambda: native_stamp + 40_000_000)
+    sender(sock, 15300, decoded, True, "hold", False, False,
+           last_valid_feedback_monotonic_ns=native_stamp, observe_protocol_torque=True,
+           protocol_torque_qualification=qualified)
+    repeated_payload = emitted[-1]
+    assert repeated_payload["source_monotonic_ns"] != native_stamp
+    repeated_receipt = native_stamp + 40_001_000
+    model.update(parse_feedback_payload(repeated_payload, repeated_receipt)[0])
+    retained = model.snapshot_available(repeated_receipt)["per_motor"]["J6"]
+    assert retained["motor_torque_estimate_metadata_status"] == "OBSERVED"
+    assert retained["motor_torque_source_monotonic_ns"] == native_stamp
+    assert retained["joint_motor_torque_estimated_nm"] == -protocol_value
+    # The same measurement genuinely expires at 100 ms even though the
+    # packet itself and the ordinary position feedback remain fresh.
+    expired = model.snapshot_available(native_stamp + 100_000_001)["per_motor"]["J6"]
+    assert expired["fresh"] and expired["communication_ok"]
+    assert expired["motor_torque_estimate_metadata_status"] == "STALE"
+    assert expired["joint_motor_torque_estimated_nm"] is None
     stale = model.snapshot_available(receipt + 100_000_001)["per_motor"]["J6"]
     assert stale["joint_motor_torque_estimated_nm"] is None
     assert stale["motor_torque_estimate_metadata_status"] == "STALE"

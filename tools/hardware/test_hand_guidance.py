@@ -70,6 +70,7 @@ def test_coupled_hand_force_release_jitter_stale_and_no_windup():
     now += 0.01
     failed = saturated.update(now, (0.0,)*6, (0.0,)*6, (100.0,)*6, source_time_s=now-0.101)
     assert "STALE" in failed.fault and failed.q_ref == out.q_ref and failed.dq_ref == (0.0,)*6
+    assert saturated.pause(now).fault == failed.fault  # A data-gap pause cannot clear a latched fault.
     assert saturated.update(now+0.01, (0.0,)*6, (0.0,)*6, (0.0,)*6, source_time_s=now+0.01).fault == failed.fault
     for now, stamp, torque in ((0.06, 0.06, (0.0,)*6), (0.01, 0.02, (0.0,)*6),
                                (0.01, 0.01, (0.0, 0.0, float("nan"), 0.0, 0.0, 0.0))):

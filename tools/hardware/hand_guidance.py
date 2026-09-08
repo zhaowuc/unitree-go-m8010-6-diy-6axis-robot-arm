@@ -151,3 +151,12 @@ class HandGuidance:
             self._fault = str(error)
             self._v = (0.0,) * 6
             return GuidanceOutput(self._q, self._v, "fault", self._fault, (False,) * 6)
+
+    def pause(self, now_s):
+        """Hold the previous reference during an input gap; never recapture q."""
+        self._time = _finite(now_s, "TIME")
+        self._v = (0.0,) * 6
+        self._active = (False,) * 6
+        self._quiet_since = (None,) * 6
+        return GuidanceOutput(self._q, self._v, "fault" if self._fault else "holding",
+                              self._fault, (False,) * 6)
