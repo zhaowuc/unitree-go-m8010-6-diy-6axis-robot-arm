@@ -124,6 +124,8 @@ def test_bounded_j1_action_group():
     assert demo.stage == "engaging" and not demo.done
     override.clear()
     tick()
+    assert demo.stage == "engaging"
+    tick(1.01)
     assert demo.stage == "ladder"
     demo.stop("end offline scenario")
 
@@ -151,6 +153,30 @@ def test_bounded_j1_action_group():
     with redirect_stdout(StringIO()) as output:
         assert main([]) == 0
     assert "OFFLINE_DESCRIPTION_ONLY" in output.getvalue()
+
+
+def test_engaging_waits_for_one_continuous_second_after_startup_transient():
+    demo, commands, override, tick = harness()
+    tick()
+    tick()
+    override["velocity_rad_s"] = [math.radians(0.22)] + [0.0] * 5
+    tick()
+    assert demo.stage == "engaging"
+    demo.window.actual[0] = math.radians(0.1007)
+    override.update(stationary_hold_ready=False,
+                    velocity_rad_s=[math.radians(0.2559)] + [0.0] * 5)
+    tick(0.3)
+    assert demo.stage == "engaging" and demo.engaging_ready_since is None
+    assert demo.failure is None and commands.count("hold") == 1
+    override.update(stationary_hold_ready=True, velocity_rad_s=[0.0] * 6)
+    tick()
+    for _ in range(9):
+        tick()
+    assert demo.stage == "engaging"  # Earlier brief readiness did not count.
+    tick(0.11)
+    assert demo.stage == "ladder" and demo.failure is None
+    assert demo.origin == (0.0,) * 6 and commands.count("hold") == 1
+    demo.stop("end offline startup replay")
 
 
 def test_initial_hold_waits_for_advancing_fresh_paired_brake_but_active_fault_stops():
@@ -430,6 +456,7 @@ def test_initial_recovery_uses_original_file_and_checks_all_axes_before_hold():
 
 if __name__ == "__main__":
     test_bounded_j1_action_group()
+    test_engaging_waits_for_one_continuous_second_after_startup_transient()
     test_initial_hold_waits_for_advancing_fresh_paired_brake_but_active_fault_stops()
     test_three_cycles_reuse_file_and_keep_completed_cycle_when_second_fails()
     test_ten_symmetric_cycles_keep_midpoint_file_and_return_center()

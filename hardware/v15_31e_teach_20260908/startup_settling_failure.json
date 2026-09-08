@@ -1,0 +1,96 @@
+{
+  "status": "FAIL",
+  "scope": "BOOTSTRAP_ONLY_NO_MANUAL_TEACH",
+  "code_commit": "93ceda1ed71623a54338851118ae1d81e762a585",
+  "session": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T055205-1920bb",
+  "failure": "ladder lost frozen-target stationary HOLD within 0.25 degrees",
+  "elapsed_s": 0.7300356030464172,
+  "interactive_ready": false,
+  "teach_event_count": 0,
+  "last_preterminal_sample": {
+    "at_monotonic_s": 3259619.345801356,
+    "source_monotonic_ns": 3259619333077386,
+    "stationary_hold_ready": false,
+    "healthy": true,
+    "feedback_fresh": true,
+    "authority": true,
+    "modes": {
+      "J1": "hold",
+      "J2A": "hold",
+      "J2B": "hold",
+      "J3": "hold",
+      "J4": "hold",
+      "J5": "hold",
+      "J6": "hold"
+    },
+    "router_hold_fresh": true,
+    "router_rejected_commands": 0,
+    "j6_drive_state": 1
+  },
+  "actual_error_deg": [
+    0.1006649045684239,
+    -0.000865373109063654,
+    0.0034744406623256592,
+    -0.02082722163484629,
+    0.031240832452269437,
+    0.02185693885446026
+  ],
+  "velocity_deg_s": [
+    0.2558886150444231,
+    0.008671448293849056,
+    0.01301795782422413,
+    -0.056385984676919,
+    0.08674144639711572,
+    0.054618014537584074
+  ],
+  "paired_terminal_confirmed": true,
+  "session_result": {
+    "status": "FAIL",
+    "plan": {
+      "mode": "EXECUTE",
+      "cycles": 1,
+      "excursion_deg": 1.0,
+      "speed_deg_s": 1.0,
+      "symmetric": false,
+      "return_center": false,
+      "maximum_demo_seconds": 600.0,
+      "assisted_teach": true,
+      "teach_observe": false,
+      "j6_power_cycle_attested": false,
+      "supported_near_vertical_recovery": false,
+      "repo": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d",
+      "session": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T055205-1920bb",
+      "scripts": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T055205-1920bb_scripts",
+      "unit_prefix": "v15-31d-demo-20260908T055205-1920bb",
+      "missing_or_mismatched_inputs": [],
+      "bash_syntax": "PASS",
+      "order": [
+        "prebuild-only",
+        "j6_posvel_preflight",
+        "stage_readonly",
+        "stage_active",
+        "bounded_j1_demo",
+        "stop_owned_units"
+      ]
+    },
+    "failure": "RuntimeError: exit 1; ; see /home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T055205-1920bb_scripts/start_bounded_j1_demo.sh.log",
+    "demo": {
+      "status": "FAIL",
+      "requested_cycles": null,
+      "completed_cycles": null,
+      "failure": "ladder lost frozen-target stationary HOLD within 0.25 degrees",
+      "path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T055205-1920bb/evidence/j1_action_group_demo.json"
+    },
+    "controller_terminal_confirmed": {
+      "J1": true,
+      "J2": true,
+      "J345": true,
+      "J6": true
+    },
+    "stop_errors": [],
+    "native_failures": []
+  },
+  "source_report": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T055205-1920bb/evidence/j1_action_group_demo.json",
+  "source_sha256": "f1db0b215c9688ed647ed7cf24d27882a7bf28ae516f430a9717d34c13df27d8",
+  "correction": "Require one continuous second of the existing stationary/HOLD/router/J6 conditions before entering the gravity ladder; retain existing thresholds and 20 second engagement budget."
+}

@@ -93,6 +93,7 @@ class J1Demo:
         self.stage, self.failure, self.origin, self.identity = "readiness", None, None, None
         self.rejected = None
         self.initial_ready_sample = None
+        self.engaging_ready_since = None
         self.pending_level, self.pending_since, self.future = None, 0.0, None
         self.last_confirmation = -float("inf")
         self.dialog, self.terminal = None, None
@@ -242,11 +243,16 @@ class J1Demo:
                 if self.confirm(level) is not False:
                     self.last_confirmation = now
             if self.stage == "engaging":
+                if now - self.started >= 20:
+                    raise RuntimeError("seven-motor stationary HOLD engagement timed out")
                 if (sample["stationary_hold_ready"] and sample["router_hold_fresh"]
                         and type(sample["j6_drive_state"]) is int and sample["j6_drive_state"] == 1):
-                    self.stage = "ladder"
-                elif now - self.started >= 20:
-                    raise RuntimeError("seven-motor stationary HOLD engagement timed out")
+                    if self.engaging_ready_since is None:
+                        self.engaging_ready_since = now
+                    if now - self.engaging_ready_since >= 1.0:
+                        self.stage = "ladder"
+                else:
+                    self.engaging_ready_since = None
                 return
             if self.stage == "ladder":
                 if (tuple(self.window.command_targets) != self.origin or not sample["stationary_hold_ready"]

@@ -201,7 +201,6 @@ def show_failure_notice(summary):
     box.setText("\n".join(details) + "\n\n" + terminal_text + "\n此窗口仅显示结果，不发送控制命令。")
     box.setDetailedText("证据：" + str(summary) + "\n" + str(result.get("failure", "")))
     box.setStandardButtons(QMessageBox.Close)
-    box.setWindowFlag(Qt.WindowStaysOnTopHint, True)
     box.exec()
     return 0
 
