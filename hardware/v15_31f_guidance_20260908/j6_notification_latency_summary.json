@@ -1,0 +1,50 @@
+{
+  "schema": "go-m8010-j6-notification-latency-evidence/1.0",
+  "status": "PASS",
+  "scope": "REAL_DISABLED_READONLY_FEEDBACK_DELIVERY; does not validate active hand guidance",
+  "created_at_utc": "2026-09-08T13:05:52.977511+00:00",
+  "report": {
+    "remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31f_guidance_20260908/j6_protocol_torque_low_latency_readonly.json",
+    "local_archive": ".codex-tmp/j6_sdk_20260908/j6_protocol_torque_low_latency_readonly.json",
+    "sha256": "6104608e0abd46166cdfc91001ff8317d9e41eed99ec4120decb0fbab01f64cb",
+    "raw_remote_path": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31f_guidance_20260908/j6_protocol_torque_low_latency_readonly.raw.json",
+    "raw_sha256": "0611562a436a53af7c0275a3074e0c7d9b6bdf975b62307eb9a7b85ff405750b"
+  },
+  "frames": 100,
+  "all_disabled": true,
+  "motor_control_commands_sent": 0,
+  "parameter_writes_sent": 0,
+  "mode_changed": false,
+  "readback_sha256": "43557b81753feb9b68d6e5794cdcd8ec7a62adad7b49a8f94c779935bb099905",
+  "callback_intervals": {
+    "count": 99,
+    "minimum_ms": 9.463803,
+    "median_ms": 9.642743,
+    "maximum_ms": 10.800702,
+    "below_1_ms": 0,
+    "above_30_ms": 0
+  },
+  "previous_readonly": {
+    "path": "hardware/v15_31f_guidance_20260908/j6_protocol_torque_readonly.json",
+    "sha256": "b4908e3bb6042495eb23da34ed0938aaa6582756b2022758dca3c4fbfaaac0cf",
+    "frames": 100,
+    "callback_intervals_below_1_ms": 90,
+    "callback_intervals_above_30_ms": 9,
+    "maximum_callback_interval_ms": 100.222231,
+    "interpretation": "SDK delivered queued frames in approximately 100 ms batches; 100 frames in 0.9 s did not demonstrate continuous 100 Hz callbacks"
+  },
+  "private_runtime": {
+    "upstream_commit": "36a8b3971dc35608701d128f353a32cad3ee6cdb",
+    "original_sha256": "bec4ca4421f5366c90fa11cc34f2f683ed71a6372e15c265e7e4b17e720607dd",
+    "patched_sha256": "6723c21c2eec34f5a17baebe4a3dde68f518782d941c416a025e41247838f755",
+    "elf_machine": "ELF64 little-endian x86_64",
+    "file_size_bytes": 132032,
+    "changed_file_offsets": ["0x151e8", "0x151e9", "0x151ea", "0x151eb"],
+    "notification_empty_queue_sleep_ms": {"before": 100, "after": 1},
+    "xref": "can_bus_box::notification_thread_func: 0x10318 loads timespec at 0x151e0; 0x10330 calls nanosleep; one disassembled reference",
+    "patcher": "tools/hardware/j6_dm_g6220/j6_sdk_notification_latency.py",
+    "offline_check": "tools/hardware/j6_dm_g6220/test_j6_sdk_notification_latency.py",
+    "installed_original_library_unchanged": true
+  },
+  "human_hand_guiding_validated": false
+}

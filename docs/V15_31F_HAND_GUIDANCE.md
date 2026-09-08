@@ -8,7 +8,8 @@
 
 ## 当前证据
 
-- 2026-09-08 实机静置观察：约 15 秒内六轴拟输出目标均无漂移，正常结束/四域停机确认通过；当时 J6 每约 100 毫秒才有新测量，出现 149 次等待，因此这轮不能证明连续拖动手感。见 [静置记录](../hardware/v15_31f_guidance_20260908/shadow_120824_summary.json)。缺少合格新测量时保持原参考并清零速度；不会把旧测量改成新时间。
+- 2026-09-08 实机静置观察：约 15 秒内六轴拟输出目标均无漂移，正常结束/四域停机确认通过；J6 当时每约 100 毫秒才收到一批反馈，出现 149 次等待，因此这轮不能证明连续拖动手感。见 [静置记录](../hardware/v15_31f_guidance_20260908/shadow_120824_summary.json)。后续已定位为 SDK 通知线程空队列睡眠 100ms 后批量交付，不能解释成电机只采样 10Hz；旧只读 100 帧中有 90 个回调间隔不足 1ms、9 个约 100ms。缺少合格新测量时保持原参考并清零速度，不改写旧测量时间。
+- 私有 SDK 副本的真实只读检查通过：100 帧全部 DISABLED，99 个回调间隔最小/中位/最大为 9.464/9.643/10.801ms，无小于 1ms 或超过 30ms 的间隔，未写参数、未使能。见 [时延证据及原报告 SHA](../hardware/v15_31f_guidance_20260908/j6_notification_latency_summary.json)。这验证了反馈交付时延，尚不验证实际承重拖动或撤力停止效果。
 - 真实 J6 只读检查：RID 7/8/10/21/22/23 为 0/1/2/12.5/45/10，KT_OUT=0、Gr=1；100 帧均失能，未写参数、未改变模式、未使能。见 [参数记录](../hardware/v15_31f_guidance_20260908/j6_protocol_torque_readonly.json)。力矩是按协议单位换算的电机估计，不是独立外力或电流测量。
 - 用冻结质量/惯量模型执行 MuJoCo `mj_step`，通过位置内环和延迟、量化的电机力矩估算外力；已覆盖多轴同时推动、撤力、再次推动。模型 J6 使用明确假设的有界 POS_VEL 代理；它不验证真实内部限矩，也不验证 J2 双电机差动同步。
 - 30°/秒配置的参考峰值仍受其他限制。突然撤力的模型试验中，J2/J3 约需 1 秒停稳，额外位移约 0.48°/1.10°；不能据末态收敛声称“瞬间停住”。实际手导效果尚待实机验证。
@@ -23,6 +24,16 @@ python3 tools/hardware/validate_hand_guidance_dynamics.py --speed-deg-s 30 --out
 
 先使用只读参数工具生成新的 J6 参数记录（使用工程现有 J6 Python/USB 库环境）：
 
+低时延副本由 [可复现修补程序](../tools/hardware/j6_dm_g6220/j6_sdk_notification_latency.py) 生成；仅把通知线程空队列等待的 timespec 从 100ms 改为 1ms。程序固定原/新 SHA、ELF 类型、文件长度、唯一引用和四字节差异，拒绝覆盖原库；[离线检查](../tools/hardware/j6_dm_g6220/test_j6_sdk_notification_latency.py) 同时验证错误哈希拒绝加载。原 SDK 无对应公开配置接口，当前官方版本只有预编译实现，故这是项目私有二进制副本，不是厂商发布的新版本。
+
+```bash
+python3 tools/hardware/j6_dm_g6220/j6_sdk_notification_latency.py --source /home/car/go-m8010-robot-arm-v15-20a/.venv/j6-dm313/lib/python3.13/site-packages/dmcan/dlls/libdm_device.so --output /tmp/j6-sdk-notification-1ms/libdm_device.so
+export DMCAN_RUNTIME_LIBRARY_PATH=/tmp/j6-sdk-notification-1ms/libdm_device.so
+export DMCAN_RUNTIME_LIBRARY_SHA256=6723c21c2eec34f5a17baebe4a3dde68f518782d941c416a025e41247838f755
+```
+
+这两个变量只选择当前进程的库路径，不覆盖原 venv、不使用 `LD_PRELOAD`；缺项或校验失败即拒绝加载，启动日志记录实际路径和 SHA。
+
 ```bash
 python tools/hardware/j6_dm_g6220/j6_protocol_torque_readonly.py --execute-readonly --samples 100 --output /tmp/j6_readback.json
 ```
@@ -30,7 +41,7 @@ python tools/hardware/j6_dm_g6220/j6_protocol_torque_readonly.py --execute-reado
 先观察实际 HOLD 下的拟输出，实际保持目标不变；准备阶段保持手离开机械臂。将参数 SHA 替换为只读报告打印的 `readback_sha256`：
 
 ```bash
-python3 tools/hardware/v15_31d_demo_session.py --execute --hand-guidance --guidance-shadow --guide-speed-deg-s 30 --base-fixed --vertical --hands-off --clearance --j6-torque-readback /tmp/j6_readback.json --expected-j6-torque-readback-sha256 <参数SHA>
+python3 tools/hardware/v15_31d_demo_session.py --execute --hand-guidance --guidance-shadow --guide-speed-deg-s 30 --base-fixed --vertical --hands-off --clearance --j6-torque-readback /tmp/j6_readback.json --expected-j6-torque-readback-sha256 <参数SHA> --j6-low-latency-library /tmp/j6-sdk-notification-1ms/libdm_device.so
 ```
 
 静置观察完成后正常回位/停机并保存报告。实际拖动入口去掉 `--guidance-shadow`；工具栏就绪后按住“整臂柔顺拖动”，撤去手力会减速保持，松开按钮触发原生参考冻结和全轴 HOLD 确认。记录姿态在静止 HOLD 后进行；本会话仅记录，动作组执行保留在常规控制入口。结束按钮和窗口关闭会先回本次起始姿态。
