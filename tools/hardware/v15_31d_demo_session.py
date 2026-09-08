@@ -244,6 +244,8 @@ def main(argv=None):
     parser.add_argument("--base-fixed", action="store_true")
     parser.add_argument("--j6-torque-readback", type=Path)
     parser.add_argument("--expected-j6-torque-readback-sha256")
+    parser.add_argument("--j6-low-latency-library", type=Path,
+                        help="explicit private SDK copy with the pinned 1ms notification wait")
     parser.add_argument("--power-cycled", action="store_true",
                         help="attest an actual J6 24V power cycle since the prior commissioning session")
     parser.add_argument("--supported-near-vertical-recovery", action="store_true",
@@ -257,6 +259,11 @@ def main(argv=None):
         parser.error("hand guidance and legacy single-axis teaching use separate profiles")
     if args.guidance_shadow and not args.hand_guidance:
         parser.error("--guidance-shadow requires --hand-guidance")
+    if args.j6_low_latency_library is not None:
+        if not args.hand_guidance:
+            parser.error("--j6-low-latency-library requires --hand-guidance")
+        from j6_dm_g6220.j6_sdk_notification_latency import PATCHED_SHA256, validate_runtime_library
+        args.j6_low_latency_library = validate_runtime_library(args.j6_low_latency_library, PATCHED_SHA256)
     if not 0 < args.guide_speed_deg_s <= 30:
         parser.error("guidance reference speed must be in (0, 30] deg/s")
     if args.hand_guidance and (args.j6_torque_readback is None or not args.j6_torque_readback.is_file()
@@ -291,6 +298,19 @@ def main(argv=None):
         assert not last_terminal_pass("FINAL_BRAKE=PASS\nFINAL_BRAKE=FAIL\n", "FINAL_BRAKE")
         assert not last_terminal_pass("FINAL_BRAKE=PASS\nFINAL_BRAKE=UNKNOWN\n", "FINAL_BRAKE")
         assert not last_terminal_pass("prefix J6_FINAL_DISABLED=PASS\n", "J6_FINAL_DISABLED")
+        import tempfile
+        with tempfile.TemporaryDirectory(prefix="guidance settings ") as directory:
+            folder = Path(directory)
+            selected = "/tmp/private sdk 'quoted'/libdm_device.so"
+            (folder / "hand_guidance_settings.json").write_text(json.dumps({
+                "j6_torque_readback": "/tmp/readback.json", "j6_torque_readback_sha256": "a"*64,
+                "dmcan_runtime_library_path": selected, "dmcan_runtime_library_sha256": "b"*64}), encoding="utf-8")
+            start = 'if [[ -f "$scripts/hand_guidance_settings.json" ]]; then'
+            block = start + bodies["v15_31b_start_active_supervisor.sh"].split(start, 1)[1].split('if [[ -z "${XAUTHORITY', 1)[0]
+            command = f"set -eu\npy={shlex.quote(Path(sys.executable).as_posix())}\nscripts={shlex.quote(folder.as_posix())}\n" + block
+            command += 'printf "%s\\n" "$DMCAN_RUNTIME_LIBRARY_PATH" "$DMCAN_RUNTIME_LIBRARY_SHA256"\n'
+            check = subprocess.run([args.bash], input=command, text=True, capture_output=True, encoding="utf-8", check=True)
+            assert check.stdout.splitlines() == [selected, "b"*64]
         print("DEMO_SESSION_DRY_RUN_SELF_TEST=PASS; no devices or services accessed")
         return 0
     problems = [str(ROOT / name) for name in REQUIRED if not (ROOT / name).is_file()]
@@ -303,6 +323,7 @@ def main(argv=None):
             "maximum_demo_seconds": 600.0 if args.assisted_teach or args.hand_guidance else maximum_demo_seconds(args.cycles, args.excursion_deg, args.symmetric),
             "assisted_teach": args.assisted_teach, "teach_observe": args.teach_observe,
             "hand_guidance": args.hand_guidance, "guidance_shadow": args.guidance_shadow,
+            "j6_low_latency_library": str(args.j6_low_latency_library) if args.j6_low_latency_library else None,
             "physical_scene": {"base_fixed": args.base_fixed, "external_arm_support": False} if args.hand_guidance else None,
             "j6_power_cycle_attested": args.power_cycled,
             "supported_near_vertical_recovery": args.supported_near_vertical_recovery,
@@ -353,6 +374,10 @@ def execute(args, bodies, plan, session, scripts, unit):
                     "j6_torque_readback": str(args.j6_torque_readback.resolve()),
                     "j6_torque_readback_sha256": args.expected_j6_torque_readback_sha256,
                     "base_fixed": True, "external_arm_support": False}
+        if args.j6_low_latency_library is not None:
+            from j6_dm_g6220.j6_sdk_notification_latency import PATCHED_SHA256
+            settings.update(dmcan_runtime_library_path=str(args.j6_low_latency_library),
+                            dmcan_runtime_library_sha256=PATCHED_SHA256)
         (scripts / "hand_guidance_settings.json").write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
     result = {"status": "FAIL", "plan": plan}
     def stop_requested(*_):

@@ -52,11 +52,16 @@ if [[ -f "$scripts/hand_guidance_settings.json" ]]; then
   readarray -t torque_values < <("$py" - "$scripts/hand_guidance_settings.json" <<'PY'
 import json,sys
 v=json.load(open(sys.argv[1]));print(v['j6_torque_readback']);print(v['j6_torque_readback_sha256'])
+print(v.get('dmcan_runtime_library_path',''));print(v.get('dmcan_runtime_library_sha256',''))
 PY
   )
   export J6_OBSERVE_PROTOCOL_TORQUE=1
   export J6_PROTOCOL_TORQUE_READBACK_FILE="${torque_values[0]}"
   export J6_PROTOCOL_TORQUE_READBACK_SHA256="${torque_values[1]}"
+  if [[ -n "${torque_values[2]}" ]]; then
+    export DMCAN_RUNTIME_LIBRARY_PATH="${torque_values[2]}"
+    export DMCAN_RUNTIME_LIBRARY_SHA256="${torque_values[3]}"
+  fi
 fi
 if [[ -z "${XAUTHORITY:-}" ]]; then
   for candidate in "$XDG_RUNTIME_DIR"/.mutter-Xwaylandauth.*; do

@@ -168,6 +168,7 @@ class RawCanLogger:
 
     def __init__(self) -> None:
         from dmcan import DmCanContext
+        from j6_sdk_notification_latency import runtime_context_type
 
         self.channel = EXPECTED_CHANNEL
         self.motor_id = EXPECTED_MOTOR_ID
@@ -176,7 +177,7 @@ class RawCanLogger:
         self._lock = threading.Lock()
         self.context = None
         self.device = None
-        self._context_type = DmCanContext
+        self._context_type = runtime_context_type(DmCanContext)
         self._closed = False
         self._last_send_delivered = False
         self._communication_interlock_pending = False
