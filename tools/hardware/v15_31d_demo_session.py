@@ -9,6 +9,7 @@ J6_PYTHON has the same optional override as start_arm_gui.sh.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -16,6 +17,7 @@ import os
 from pathlib import Path
 import re
 import secrets
+import select
 import shlex
 import shutil
 import signal
@@ -40,6 +42,55 @@ BUS_LOCKS = ("v15_30a_gui_j1.lock", "go_m8010_ftasqa6f_channel3.lock",
              "v15_30a_gui_j2.lock", "v15_23d_ft_j2_channel1.lock",
              "v15_30a_gui_j345.lock", "v15_23c_j3_bus.lock", "v15_22b_j4_bus.lock",
              "v15_22a_j5_bus.lock", "v15_30a_gui_j6.lock")
+
+_DESKTOP_INHIBITOR = """
+import sys
+from gi.repository import Gio, GLib
+bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+proxy = Gio.DBusProxy.new_sync(bus, Gio.DBusProxyFlags.DO_NOT_LOAD_PROPERTIES, None,
+    'org.gnome.SessionManager', '/org/gnome/SessionManager', 'org.gnome.SessionManager', None)
+cookie = proxy.call_sync('Inhibit', GLib.Variant('(susu)',
+    ('go-m8010-arm-session', 0, 'Attended robot arm session: keep USB and feedback available', 12)),
+    Gio.DBusCallFlags.NONE, 1500, None).unpack()[0]
+try:
+    print('READY', flush=True)
+    sys.stdin.read()
+finally:
+    proxy.call_sync('Uninhibit', GLib.Variant('(u)', (cookie,)), Gio.DBusCallFlags.NONE, 1500, None)
+"""
+
+
+@contextmanager
+def session_auto_sleep_inhibited():
+    """Hold a GNOME suspend/idle cookie until all owned hardware cleanup ends."""
+    # The desktop API is authorized for this user's session. Unlike logind's
+    # block-sleep policy, it is also available to the existing SSH launcher.
+    process = subprocess.Popen(["/usr/bin/python3", "-u", "-c", _DESKTOP_INHIBITOR],
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, close_fds=True, start_new_session=True)
+    try:
+        ready, _, _ = select.select([process.stdout], [], [], 2.0)
+        if not ready or process.stdout.readline().strip() != "READY":
+            detail = process.stderr.read().strip() if process.poll() is not None else "READY timeout (2 seconds)"
+            raise RuntimeError("desktop session auto-sleep inhibitor unavailable: " + detail)
+        print("SESSION_AUTO_SLEEP_INHIBITOR=GNOME_SUSPEND_IDLE", flush=True)
+        yield
+    finally:
+        # EOF also happens if the launcher dies: the child then releases its
+        # cookie; loss of its D-Bus connection releases it in GNOME as well.
+        process.stdin.close()
+        try:
+            process.wait(timeout=2.0)
+        except subprocess.TimeoutExpired:
+            process.terminate()
+            try:
+                process.wait(timeout=2.0)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=2.0)
+        finally:
+            process.stdout.close()
+            process.stderr.close()
 
 
 def rendered(repo, session, scripts, unit):
@@ -357,7 +408,8 @@ def main(argv=None):
             fcntl.flock(launcher_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             parser.error(f"another demo launcher owns {lock_path}; no existing core was stopped")
-        return execute(args, bodies, plan, session, scripts, unit)
+        with session_auto_sleep_inhibited():
+            return execute(args, bodies, plan, session, scripts, unit)
 
 
 def execute(args, bodies, plan, session, scripts, unit):
