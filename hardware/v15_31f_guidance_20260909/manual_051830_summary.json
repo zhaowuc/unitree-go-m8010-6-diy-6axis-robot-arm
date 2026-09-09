@@ -1,0 +1,63 @@
+{
+  "schema": "go-m8010-hand-guidance-manual-evidence/1.0",
+  "session": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260909T051830-5e4d14",
+  "status": "FAIL",
+  "scope": "REPEATED_GUIDANCE_ENTRY_FAULT; final actuator shutdown confirmed, hand-guidance task not completed",
+  "source_report": {
+    "path": ".runtime/v15_31d_demo_20260909T051830-5e4d14/evidence/j1_action_group_demo.json",
+    "sha256": "f069c84166632041c825d0e47b84a963718e2841b68087ec6d543dbe5eb2aa40"
+  },
+  "launcher_result": {
+    "path": ".runtime/v15_31d_demo_20260909T051830-5e4d14_scripts/session_result.json",
+    "sha256": "152ce4b179006294f698ab98cff8d179c6cbcb8e7c05cecfb0a69fc62c8241c5",
+    "status": "FAIL",
+    "controller_terminal_confirmed": {"J1": true, "J2": true, "J345": true, "J6": true},
+    "stop_errors": []
+  },
+  "native_logs": {
+    "base": ".runtime/v15_31d_demo_20260909T051830-5e4d14/run",
+    "j1_controller.log": "32fd66eff9ec230131cb8e8fc60e78b9f5c37b425a2e2104aacd6dbfa627658e",
+    "j2_controller.log": "6f2d521078d2fb3cc4aa1e00d89531d2babcdf3d676f9dca68bbb6767f14b617",
+    "j345_controller.log": "9a9e08381c3c133c609d8e9703cb2f0d4e582ff0b1f95a52f0c0c2d96ddd99d6",
+    "j6_controller.log": "73e76bac07549a93e77d5eef941437de499f1edbe3b139940ce4c5324ce08fe7"
+  },
+  "presses": [
+    {"press": 1, "activation_epoch": 3331005455812536, "started_monotonic_s": 3331005.456182732, "hardware_ack_monotonic_s": 3331005.526507313, "release_monotonic_s": 3331007.037636266},
+    {"press": 2, "activation_epoch": 3331007171259093, "started_monotonic_s": 3331007.171480605, "hardware_ack_monotonic_s": 3331007.214032352, "pause_reason": "J2_ACTUAL_OUTSIDE_REFERENCE_ENVELOPE", "pause_monotonic_s": 3331008.071504167, "release_monotonic_s": 3331008.072634919},
+    {"press": 3, "activation_epoch": 3331015083630788, "started_monotonic_s": 3331015.083883403, "hardware_ack_monotonic_s": 3331015.141051955, "pause_reason": "INVALID_DT:0.0549568", "pause_monotonic_s": 3331016.059351323, "release_monotonic_s": 3331016.060558941},
+    {"press": 4, "activation_epoch": 3331021294476012, "started_monotonic_s": 3331021.294879596, "hardware_ack_monotonic_s": null, "release_monotonic_s": null}
+  ],
+  "failure_sequence": [
+    "Second press crossed the existing two-degree actual/reference bound; reference release and HOLD followed",
+    "Third press had a 54.9568 ms outer-loop interval; reference release and HOLD followed",
+    "Fourth press: J2 and J345 rejected COMMAND_GUIDANCE_ORIGIN_NOT_CURRENT, followed by COMMAND_ACTIVATION_EPOCH_REPLAY",
+    "The old session origin was incorrectly compared against the moved actual position on every entry; healthy candidate rejection fenced the epoch",
+    "The prior command lease expired after approximately 500 ms; J345 reported BRAKE while J1 and J6 had entered TEACH",
+    "EMPIRICAL_ASSISTED_TEACH_MODE_SCOPE_INVALID withdrew gravity authority; GUI entered its fault-termination path"
+  ],
+  "last_observation": {
+    "at_monotonic_s": 3331021.827099491,
+    "modes": {"J1": "teach", "J2A": "hold", "J2B": "hold", "J3": "brake", "J4": "brake", "J5": "brake", "J6": "teach"},
+    "hardware_healthy": true,
+    "gravity_authority": false,
+    "gravity_blocker": "EMPIRICAL_ASSISTED_TEACH_MODE_SCOPE_INVALID"
+  },
+  "guidance_trace_count": 50,
+  "elapsed_s": 321.7253282223828,
+  "gui_paired_terminal_confirmed": true,
+  "initial_vertical_return_verified": false,
+  "gui_exit": {
+    "classification": "NORMAL_FAULT_TERMINATION_NOT_PYTHON_EXCEPTION_CRASH",
+    "log_path": ".runtime/v15_31d_demo_20260909T051830-5e4d14_scripts/start_bounded_j1_demo.sh.log",
+    "log_sha256": "83ee38d557bacd74329cde6c14cd6555597d19e056a3a958882cf20db13965b7",
+    "python_traceback_count": 0
+  },
+  "followup_fix": {
+    "commit": "d1442c4",
+    "deployed": true,
+    "scope": "GUI 150 ms admission abort and tick pause, aligned GO/J6 repeat entry and exact-HOLD abort, 60-second whole recovery budget",
+    "python_directed_checks_passed": 14,
+    "native_strict_checks": "PASS",
+    "physical_retest_completed_at_summary_creation": false
+  }
+}
