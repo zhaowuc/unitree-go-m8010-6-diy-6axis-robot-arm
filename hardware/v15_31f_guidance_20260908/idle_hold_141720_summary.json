@@ -1,0 +1,43 @@
+{
+  "schema": "go-m8010-hand-guidance-idle-hold-evidence/1.0",
+  "session": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31d_demo_20260908T141720-d6fb63",
+  "status": "PASS",
+  "scope": "BOOTSTRAP_NEAR_INITIAL_POSE_HOLD_AND_CONFIRMED_TERMINAL_ONLY; no manual guidance or post-guidance HOLD recovery exercised",
+  "source_report": {
+    "path": ".runtime/v15_31d_demo_20260908T141720-d6fb63/evidence/j1_action_group_demo.json",
+    "sha256": "6804f706c6f1129217385d6cf224944bcf3d29fb98b800165dcb6e97a170f9e8"
+  },
+  "launcher_result": {
+    "path": ".runtime/v15_31d_demo_20260908T141720-d6fb63_scripts/session_result.json",
+    "sha256": "54702429117a8fdd1fc84176b12bdcf7bf5397ad75333417c5bec81352f37780",
+    "status": "PASS",
+    "controller_terminal_confirmed": {"J1": true, "J2": true, "J345": true, "J6": true},
+    "stop_errors": []
+  },
+  "elapsed_s": 550.7433400857262,
+  "guidance_events": ["stationary_bias"],
+  "guidance_trace_count": 0,
+  "manual_press_count": 0,
+  "guidance_hardware_ack_count": 0,
+  "guidance_release_count": 0,
+  "guidance_input_qualified": true,
+  "initial_vertical_return_verified": true,
+  "gui_paired_terminal_confirmed": true,
+  "last_healthy_sample": {
+    "at_monotonic_s": 3290485.029489985,
+    "mode_by_motor": {"J1": "hold", "J2A": "hold", "J2B": "hold", "J3": "hold", "J4": "hold", "J5": "hold", "J6": "hold"},
+    "actual_rad": [0.0017077126281157908, 0.0005199347057864141, -0.00002843641738506436, -0.0003242139150699776, 0.00041523073060216047, 0.05224307621881419],
+    "targets_rad": [0.0009504040627945231, 0.000550179590672047, -0.00002843641738506436, -0.000021275422996321996, -0.00009973269078961347, 0.05224307621881419],
+    "authority": true,
+    "router_rejected_commands": 0,
+    "gravity_blocker": null,
+    "temperature_c": {"J1": 32.0, "J2A": 33.0, "J2B": 33.0, "J3": 31.0, "J4": 31.0, "J5": 32.0, "J6": 37.0}
+  },
+  "does_not_resolve": [
+    "Post-guidance HOLD integral recovery introduced in 6d034e2 was not exercised",
+    "Previous J2 residual around -7.92 degrees and its cause remain unverified",
+    "Self-weight support away from the initial pose and force-release stopping remain unverified",
+    "Not full six-axis zero-gravity or strict plus/minus 0.1-degree acceptance"
+  ],
+  "human_hand_guiding_validated": false
+}
