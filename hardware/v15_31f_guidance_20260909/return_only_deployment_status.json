@@ -1,0 +1,30 @@
+{
+  "code_commit": "0e8d5ce55e908860c6ca5c51e409f63ace4e0774",
+  "deployed_to": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d",
+  "git_branch": "agent/v15-31b-ft-powered-position-thermal-validation",
+  "pushed_to_origin": true,
+  "offline_validation": {
+    "empirical_gate_tests": "41 passed",
+    "router_tests": "219 passed",
+    "j6_profile_and_guidance_tests": "111 passed; final velocity guard change: 4 affected tests passed",
+    "gui_demo_guidance_tests": "13 passed; final GUI changes: 11 affected tests passed",
+    "launcher_dry_run": "PASS",
+    "native_strict_compile_and_self_tests": "PASS; SERIAL_OPENED=NO",
+    "native_test_source_sha256": "4b5adb56f5ffd85308344091caf3d1024477a78910f5284f8b40df9d017f7091"
+  },
+  "real_session": "v15_31d_demo_20260909T103943-7e30b3",
+  "real_status": "BLOCKED_BEFORE_ACTIVE_CONTROL",
+  "prebuild": "PASS",
+  "blocked_bus": "j345",
+  "unresponsive_motor_ids": [3, 4, 5],
+  "brake_tx_attempt_count": 210,
+  "foc_tx_attempt_count": 0,
+  "transport_reopen_attempts": 9,
+  "final_motor_mode": "UNCONFIRMED",
+  "usb_adapters_present": ["0403:6011 FT4232H", "34b7:6877 DM-USB2FDCAN"],
+  "serial_device_owners_after_stop": [],
+  "active_control_processes_after_stop": [],
+  "power_cycle_attestation_reused": false,
+  "next_required_input": "Operator reports completion of 24V power-off/on, or reports power is currently off. Then obtain fresh feedback before enabling.",
+  "repaired_hardware_guidance_or_return_pass": false
+}
