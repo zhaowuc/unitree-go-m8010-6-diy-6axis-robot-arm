@@ -1,0 +1,46 @@
+{
+  "session": "v15_31d_demo_20260909T122648-6ee1c8",
+  "report_sha256": "c13723ad8c21c55c5c851dbc9efd4cfcec8d2ff17a3e497876daf2db31d41df4",
+  "session_status": "FAIL",
+  "guidance_fault": "J2_ACTUAL_OUTSIDE_REFERENCE_ENVELOPE",
+  "software_failure": null,
+  "maximum_abs_excursion_deg": [
+    0.05901046129873116,
+    8.209393830188148,
+    1.662705717917766,
+    0.18744499471361664,
+    0.015619876716715102,
+    0.06557081656338078
+  ],
+  "j2_target_actual_error_at_pause_deg": -2.1098015878237315,
+  "return_verified": true,
+  "return_phase_duration_s": 45.72303847782314,
+  "post_return_hold_duration_s": 30.840008210856467,
+  "post_return_max_abs_error_deg": [
+    0.01388481442323086,
+    0.030372222286688084,
+    0.022562823437750148,
+    0.034712036058077156,
+    0.010414689836262377,
+    0.04371387770892052
+  ],
+  "healthy_through_drag_return_and_hold": true,
+  "gravity_authority_through_drag_return_and_hold": true,
+  "maximum_router_rejections": 0,
+  "hard_controller_faults_observed": false,
+  "event_counts": {
+    "stationary_bias": 1,
+    "guidance_started": 12,
+    "guidance_hardware_ack": 9,
+    "guidance_release": 9,
+    "initial_vertical_return_verified": 9,
+    "guidance_admission_cancelled": 3,
+    "input_wait": 2,
+    "input_resumed": 2,
+    "guidance_fault": 1
+  },
+  "elapsed_s": 550.237876676023,
+  "terminal_confirmed": true,
+  "limitation": "Human-applied force versus gravity-driven motion cannot be distinguished from this log alone; full zero-gravity behavior is not qualified.",
+  "last_guidance_duration_before_pause_s": 1.8212153613567352
+}
