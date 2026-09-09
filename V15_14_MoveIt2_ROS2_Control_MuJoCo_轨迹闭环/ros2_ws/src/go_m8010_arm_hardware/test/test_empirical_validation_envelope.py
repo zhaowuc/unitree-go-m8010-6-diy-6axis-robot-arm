@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import hashlib
+import ast
+import copy
 import json
 import math
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -481,6 +484,112 @@ def test_hand_guidance_full_ladder_then_multiple_joints_and_position_hold(tmp_pa
     assert _step(gate, now, ns, 1.0, 1.0)
     assert gate.status()["hand_guidance_authorized"]
     assert not _step(gate, now, envelope.monotonic_deadline_ns, 1.0, 1.0)
+
+
+def test_qualified_guidance_warnings_retain_return_authority_without_masking_hard_faults(tmp_path):
+    now = datetime.now(timezone.utc)
+
+    def completed(profile="guidance", final_confirmation=True):
+        directory = tmp_path / (profile + str(final_confirmation))
+        directory.mkdir(exist_ok=True)
+        path, digest = _envelope_file(directory, now, hand_guidance=profile == "guidance",
+                                      assisted_teach=profile == "assisted")
+        envelope = EmpiricalValidationEnvelope.from_path(path, digest, now_utc=now, now_monotonic_ns=1_000_000_000)
+        gate = EmpiricalStageGate(envelope)
+        ns = 1_000_000_000
+        assert _step(gate, now, ns, 0.0, 0.0)
+        ns += 5_000_000_000
+        assert _step(gate, now, ns, 0.0, 0.0)
+        for sequence, target in enumerate((.25, .5, .75, 1.0), 1):
+            ns += 1_000_000
+            assert gate.observe_confirmation(_confirmation(envelope, ns, sequence, target), now_monotonic_ns=ns)
+            assert _step(gate, now, ns, target, target)
+            ns += 5_000_000_000
+            assert _step(gate, now, ns, target, target)
+        if final_confirmation:
+            ns += 1_000_000
+            assert gate.observe_confirmation(_confirmation(envelope, ns, 5, 1.0), now_monotonic_ns=ns)
+            assert _step(gate, now, ns, 1.0, 1.0)
+        return gate, ns
+
+    base, ns = completed()
+    ns += 1_000_000
+    hardware = _hardware(ns)
+    hardware["j2_e_sync_rad"] = -math.radians(.2506)
+    hardware["per_motor"]["J2A"]["temperature_c"] = 43.0  # Original stage baseline remains 40 C.
+    expected_warnings = ["EMPIRICAL_J2_SYNC_WARNING", "EMPIRICAL_J2A_STAGE_TEMPERATURE_RISE"]
+
+    def step(gate, value, checked_ns=ns):
+        return gate.step(requested_scale=1.0, applied_scale=1.0, hardware_state=value,
+            session_id=gate.envelope.session_id, state_instance_id=gate.envelope.state_instance_id,
+            anchor_sha256=gate.envelope.anchor_sha256, hardware_enable_requested=True,
+            now_monotonic_ns=checked_ns, now_utc=now)
+
+    gate = copy.deepcopy(base)
+    deadline, temperature_baseline = gate.envelope.monotonic_deadline_ns, dict(gate.stage_start_temperature_c)
+    assert step(gate, hardware)
+    status = gate.status()
+    assert status["return_only"] and status["motion_warnings"] == expected_warnings
+    assert status["position_validation_authorized"] and status["stage_complete"]
+    assert not status["assisted_teach_authorized"] and not status["hand_guidance_authorized"]
+    assert not gate.invalidated and status["blocker"] is None
+    assert gate.stage_start_temperature_c == temperature_baseline and gate.envelope.monotonic_deadline_ns == deadline
+    clear = _hardware(ns + 1)
+    clear["j2_e_sync_rad"] = math.radians(.25)
+    clear["per_motor"]["J2A"]["temperature_c"] = 42.0
+    assert step(gate, clear, ns + 1)
+    assert not gate.status()["return_only"] and gate.status()["motion_warnings"] == []
+    assert gate.status()["hand_guidance_authorized"]
+    assert gate.stage_start_temperature_c == temperature_baseline and gate.envelope.monotonic_deadline_ns == deadline
+    boundary = copy.deepcopy(hardware)
+    boundary["j2_e_sync_rad"] = math.radians(.5)
+    assert step(copy.deepcopy(base), boundary)
+
+    for mutation in (
+        lambda h: h.update(j2_e_sync_rad=math.nan),
+        lambda h: h.pop("j2_e_sync_rad"),
+        lambda h: h.update(j2_e_sync_rad=math.radians(.5001)),
+        lambda h: h.update(j2_sync_fault=True),
+        lambda h: h.update(healthy=False),
+        lambda h: h.update(source_monotonic_ns=ns-250_000_001),
+        lambda h: h.update(session_id="different-session"),
+        lambda h: h["per_motor"]["J6"].update(communication_ok=False),
+        lambda h: h["per_motor"]["J5"].update(temperature_c=55.0),
+        lambda h: h["per_motor"]["J5"].update(temperature_c=60.0),
+        lambda h: h["per_motor"]["J6"].update(thermal_fault_latched=True),
+        lambda h: h["per_motor"]["J5"].update(load_limit_no_progress=True),
+        lambda h: h["velocity_rad_s"].__setitem__(1, math.radians(30.01)),
+    ):
+        hard = copy.deepcopy(hardware)
+        mutation(hard)
+        candidate = copy.deepcopy(base)
+        assert not step(candidate, hard) and candidate.invalidated
+        assert not candidate.status()["return_only"] and not candidate.status()["position_validation_authorized"]
+    expired = copy.deepcopy(base)
+    assert not step(expired, _hardware(deadline), deadline) and expired.invalidated
+    for profile, confirmed in (("ordinary", True), ("assisted", True), ("guidance", False)):
+        original, original_ns = completed(profile, confirmed)
+        warning = _hardware(original_ns + 1)
+        warning["j2_e_sync_rad"] = math.radians(.2506)
+        assert not step(original, warning, original_ns + 1) and original.invalidated
+        assert not original.status()["return_only"]
+
+    # Exercise the real node's final status clamping without ROS/device calls.
+    node_path = Path(__file__).resolve().parents[1] / "go_m8010_arm_hardware/whole_arm_gravity_node.py"
+    tree = ast.parse(node_path.read_text(encoding="utf-8"))
+    assignments = [item for item in ast.walk(tree) if isinstance(item, ast.Assign)
+        and len(item.targets) == 1 and isinstance(item.targets[0], ast.Subscript)
+        and isinstance(item.targets[0].value, ast.Name) and item.targets[0].value.id == "empirical_status"
+        and isinstance(item.targets[0].slice, ast.Constant)
+        and item.targets[0].slice.value in {"assisted_teach_authorized", "hand_guidance_authorized"}]
+    assert len(assignments) == 2
+    for initial_status, hard_authority in ((status, True), (gate.status(), False)):
+        namespace = dict(empirical_status=dict(initial_status), hardware_authority_ready=hard_authority,
+            selected_torque_authority="EMPIRICAL_VALIDATION_ENVELOPE", EMPIRICAL_AUTHORITY_CLASS="EMPIRICAL_VALIDATION_ENVELOPE",
+            self=SimpleNamespace(current_gravity_scale=1.0), gravity_scale_target=1.0)
+        exec(compile(ast.Module(body=assignments, type_ignores=[]), str(node_path), "exec"), namespace)
+        assert not namespace["empirical_status"]["assisted_teach_authorized"]
+        assert not namespace["empirical_status"]["hand_guidance_authorized"]
 
 
 def test_hand_guidance_scope_and_false_support_claims_are_rejected(tmp_path):

@@ -1,0 +1,19 @@
+{
+  "schema": "go-m8010-guidance-failure-evidence/1.0",
+  "session": "v15_31d_demo_20260909T060605-e9340f",
+  "controller_commit": "d1442c4b57eff38449a9f0ea88972136d5de9939",
+  "report_sha256": "0a9daad1323cfce54b396342fc3a85c2a1fb392059e85e7fddd65a9c2691917c",
+  "failure": "hand guidance lost hardware/feedback/gravity authority",
+  "gravity_blocker": "EMPIRICAL_J2_SYNC_WARNING",
+  "j2_sync_error_rad": -0.004374534273970637,
+  "j2_target_rad": -0.17332374720013174,
+  "j2_actual_rad": -0.1809580237156055,
+  "source_age_ms": 19.362433,
+  "all_seven_controller_faults_false": true,
+  "all_seven_modes": "hold",
+  "router_rejected_commands": 0,
+  "controller_terminal_confirmed": {"J1": true, "J2": true, "J345": true, "J6": true},
+  "repair_scope": "After the completed hand-guidance ladder only: qualification warnings retain gravity support and allow exact owned HOLD or signed monotonic single-axis return to the fixed session origin. New hand guiding is suspended. Hard faults, expiry, proof checks and original thresholds remain enforced.",
+  "gui_behavior": "Release freezes native-owned references, confirms HOLD, waits 0.5 seconds of stationary feedback, previews bounded return segments and retains HOLD after return. Pose-dependent torque residual is not used as a contact sensor.",
+  "qualification_limit": "This evidence establishes the software warning-to-stop cause. It does not establish self-weight compensation accuracy or a successful repaired hardware test."
+}

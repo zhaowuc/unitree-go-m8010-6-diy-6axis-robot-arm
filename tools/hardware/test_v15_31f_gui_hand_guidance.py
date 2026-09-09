@@ -159,8 +159,7 @@ def test_release_freezes_each_native_target_before_ack_and_return_before_brake(m
     demo.tick()
     assert demo.guidance_phase == "ready" and not actions
     monkeypatch.setattr(runtime, "matched_observation", lambda *_, **__: SimpleNamespace(residual_nm=(0.0,)*6))
-    demo.stop()
-    assert demo.ending and not actions
+    assert demo.return_requested and not demo.ending and not actions
     clock[0] += .02
     demo.tick()
     clock[0] += .51
@@ -174,4 +173,34 @@ def test_release_freezes_each_native_target_before_ack_and_return_before_brake(m
     sample.update(stationary_hold_ready=True, actual_rad=[0.0]*6)
     clock[0] += .02
     demo.tick()
-    assert demo.return_verified and actions == ["return", "brake"]
+    assert demo.return_verified and actions == ["return"]
+    assert demo.guidance_phase == "ready" and demo.terminal is None
+    # A later soft warning stops new hand guiding but retains a healthy HOLD;
+    # no force-model residual is used to invent a contact signal for return.
+    empirical = window.node.latest_gravity_status["empirical_validation"]
+    empirical.update(return_only=True, hand_guidance_authorized=False,
+                     motion_warnings=["EMPIRICAL_J2_SYNC_WARNING"])
+    clock[0] += .02
+    demo.tick()
+    clock[0] += .51
+    demo.tick()
+    assert demo.terminal is None and not demo.drag_button.enabled and actions == ["return"]
+    empirical.update(return_only=False, hand_guidance_authorized=True)
+    clock[0] += .02
+    demo.tick()
+    assert demo.drag_button.enabled
+    window.command_targets = [0.0]*6
+    demo.drag_button.down = True
+    demo.start_guidance()
+    assert demo.guidance_phase == "engaging_guidance"
+    empirical.update(return_only=True, hand_guidance_authorized=False)
+    clock[0] += .02
+    demo.tick()
+    assert demo.guidance_phase == "hold_barrier" and actions == ["return"]
+    assert window.command_targets == [0.0]*6 and demo.return_requested
+    # Hard authority loss still terminates even when a soft warning is present.
+    sample["authority"] = False
+    clock[0] += .02
+    demo.tick()
+    assert demo.failure == "hand guidance lost hardware/feedback/gravity authority"
+    assert actions == ["return", "brake"]

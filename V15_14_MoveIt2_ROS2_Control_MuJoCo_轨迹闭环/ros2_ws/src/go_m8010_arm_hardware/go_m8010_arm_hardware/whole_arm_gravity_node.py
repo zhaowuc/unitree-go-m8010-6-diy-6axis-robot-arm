@@ -651,6 +651,9 @@ class WholeArmGravityNode(Node):
             "phase": "UNAVAILABLE",
             "position_validation_authorized": False,
             "assisted_teach_authorized": False,
+            "hand_guidance_authorized": False,
+            "return_only": False,
+            "motion_warnings": [],
             "maximum_teach_excursion_deg": None,
             "maximum_teach_seconds": None,
             "maximum_teach_velocity_deg_s": None,
@@ -742,10 +745,15 @@ class WholeArmGravityNode(Node):
         )
         empirical_status["assisted_teach_authorized"] = bool(
             empirical_status.get("assisted_teach_authorized") is True
+            and empirical_status.get("return_only") is not True
             and hardware_authority_ready
             and selected_torque_authority == EMPIRICAL_AUTHORITY_CLASS
             and abs(self.current_gravity_scale - 1.0) <= 1.0e-6
             and gravity_scale_target == 1.0
+        )
+        empirical_status["hand_guidance_authorized"] = bool(
+            empirical_status.get("hand_guidance_authorized") is True
+            and empirical_status["assisted_teach_authorized"]
         )
         self.gravity_status_sequence += 1
         q_actual_sha256 = (

@@ -3701,6 +3701,14 @@ bool command_uses_empirical_gravity_authority(const GuiCommand& command) {
       !command.gravity_authority.official_continuous_authority;
 }
 
+bool hand_guidance_return_only(const GuiCommand& command) {
+  const auto& authority = command.gravity_authority;
+  return authority.present && authority.hand_guidance_profile &&
+      authority.empirical_stage_index == 4U && authority.gravity_scale == 1.0 &&
+      authority.gravity_scale_target == 1.0 && authority.empirical_position_validation_authorized &&
+      !authority.empirical_assisted_teach_authorized;
+}
+
 bool empirical_gravity_authority_is_current(const GuiCommand& command) {
   return !command_uses_empirical_gravity_authority(command) ||
       (empirical_expiry_is_future(
@@ -3958,7 +3966,8 @@ GravityCommandAuthority parse_gravity_command_authority(
                kEmpiricalLevels[result.empirical_stage_index]) > 1e-12)
     throw std::runtime_error("COMMAND_GRAVITY_EMPIRICAL_STAGE_INVALID");
   if (candidate.mode == "teach" && (!extended_teach ||
-      !result.empirical_assisted_teach_authorized ||
+      (!result.empirical_assisted_teach_authorized &&
+       !(result.hand_guidance_profile && candidate.hand_guidance.present)) ||
       !result.empirical_position_validation_authorized ||
       result.empirical_stage_index != 4U ||
       std::abs(result.gravity_scale - 1.0) > 1e-6 ||
@@ -4257,11 +4266,15 @@ void parse_command(
   if (candidate.hand_guidance.present &&
       (!candidate.gravity_authority.present || !candidate.gravity_authority.hand_guidance_profile ||
        !std::all_of(candidate.active_joint_mask.begin(), candidate.active_joint_mask.end(), [](bool active) { return active; }) ||
-       (mode == "teach" && (!candidate.gravity_authority.empirical_assisted_teach_authorized ||
-        !candidate.gravity_authority.empirical_position_validation_authorized || candidate.gravity_authority.empirical_stage_index != 4U ||
+       (mode == "teach" && (!candidate.gravity_authority.empirical_position_validation_authorized || candidate.gravity_authority.empirical_stage_index != 4U ||
         candidate.gravity_authority.gravity_scale != 1.0 || candidate.gravity_authority.gravity_scale_target != 1.0 ||
         std::none_of(candidate.moving_joint_mask.begin(), candidate.moving_joint_mask.end(), [](bool moving) { return moving; })))))
     throw std::runtime_error("COMMAND_GRAVITY_GUIDANCE_SCOPE_INVALID");
+  if (mode == "teach" && hand_guidance_return_only(candidate) &&
+      (!candidate.hand_guidance.freeze_reference || std::any_of(
+          candidate.hand_guidance.velocity_rad_s.begin(), candidate.hand_guidance.velocity_rad_s.end(),
+          [](double value) { return value != 0.0; })))
+    throw GuidanceReferenceRejected("COMMAND_GUIDANCE_RETURN_ONLY_REQUIRES_FREEZE");
   if (schema == "go-m8010-gui-command/1.3" && mode == "position" &&
       !candidate.gravity_authority.present)
     throw std::runtime_error("COMMAND_GRAVITY_AUTHORITY_MISSING");
@@ -4392,6 +4405,7 @@ struct CommandSafetyState {
   bool teach_active = false;
   AssistedTeachExitHold teach_exit_hold;
   bool guidance_bound = false;
+  bool guidance_origin_bound = false;
   bool guidance_active = false;
   bool guidance_paused = false;
   std::string guidance_paused_reason;
@@ -4853,6 +4867,48 @@ void validate_and_observe_position_authority(
   safety = std::move(candidate);
 }
 
+void validate_guidance_return_only(
+    const GuiCommand& command, const std::vector<MotorRuntime>& motors,
+    const CommandSafetyState& safety) {
+  if (!hand_guidance_return_only(command) || command_releases_owned_domain(command, motors)) return;
+  const auto& previous = safety.last_accepted_command;
+  const auto& a = command.gravity_authority;
+  const auto& b = previous.gravity_authority;
+  if (!previous.received || !b.present || command.source_instance_id != previous.source_instance_id ||
+      a.source_instance_id != b.source_instance_id || a.session_id != b.session_id ||
+      a.state_instance_id != b.state_instance_id || a.empirical_envelope_id != b.empirical_envelope_id ||
+      a.empirical_envelope_sha256 != b.empirical_envelope_sha256 || a.anchor_sha256 != b.anchor_sha256 ||
+      a.empirical_envelope_expires_at_utc != b.empirical_envelope_expires_at_utc ||
+      a.empirical_envelope_deadline_monotonic_ns > b.empirical_envelope_deadline_monotonic_ns)
+    throw std::runtime_error("COMMAND_GRAVITY_RETURN_ONLY_IDENTITY_CHANGED");
+  if (command.active_joint_mask != previous.active_joint_mask || command.kp != previous.kp || command.kd != previous.kd)
+    throw GuidanceReferenceRejected("COMMAND_GUIDANCE_RETURN_ONLY_PARAMETERS_CHANGED");
+  if (command.mode == "hold") {
+    for (const auto& motor : motors) {
+      const auto joint = static_cast<std::size_t>(motor.joint_index);
+      if (command.targets[joint] != previous.targets[joint])
+        throw GuidanceReferenceRejected("COMMAND_GUIDANCE_RETURN_ONLY_HOLD_TARGET_CHANGED");
+    }
+    return;
+  }
+  if (command.mode == "teach" && safety.guidance_active && command.hand_guidance.present &&
+      command.hand_guidance.freeze_reference && command.activation_epoch == safety.guidance_press.activation_epoch &&
+      std::all_of(command.hand_guidance.velocity_rad_s.begin(), command.hand_guidance.velocity_rad_s.end(),
+                  [](double value) { return value == 0.0; })) return;
+  const auto& press = safety.guidance_press;
+  if (command.mode != "position" || safety.guidance_active || !safety.guidance_origin_bound || !press.hand_guidance.present ||
+      press.gravity_authority.empirical_envelope_sha256 != a.empirical_envelope_sha256 ||
+      command.schema != "go-m8010-gui-command/1.3" || !command.quintic.present ||
+      std::count(command.moving_joint_mask.begin(), command.moving_joint_mask.end(), true) != 1)
+    throw GuidanceReferenceRejected("COMMAND_GUIDANCE_RETURN_ONLY_OPERATION_REJECTED");
+  const auto joint = static_cast<std::size_t>(std::distance(command.moving_joint_mask.begin(),
+      std::find(command.moving_joint_mask.begin(), command.moving_joint_mask.end(), true)));
+  const double start = command.quintic.start_rad[joint], target = command.quintic.target_rad[joint];
+  const double origin = press.hand_guidance.origin_rad[joint];
+  if (!std::isfinite(origin) || target < std::min(start, origin) - 1e-12 || target > std::max(start, origin) + 1e-12)
+    throw GuidanceReferenceRejected("COMMAND_GUIDANCE_RETURN_ONLY_MUST_APPROACH_ORIGIN");
+}
+
 void validate_command_for_owned_domain(
     const GuiCommand& command, const std::vector<MotorRuntime>& motors) {
   if (command.mode == "brake" || command.mode == "drag") return;
@@ -5061,6 +5117,7 @@ void validate_and_observe_hand_guidance(
     GuiCommand& command, const std::vector<MotorRuntime>& motors, CommandSafetyState& safety) {
   if (command_releases_owned_domain(command, motors)) {
     safety.guidance_bound = safety.guidance_active = safety.guidance_paused = false;
+    safety.guidance_origin_bound = false;
     safety.guidance_paused_reason.clear();
     return;
   }
@@ -5093,7 +5150,7 @@ void validate_and_observe_hand_guidance(
       throw GuidanceReferenceRejected("COMMAND_GUIDANCE_REF_ENTRY_REQUIRES_ZERO_VELOCITY");
     // The origin bounds the whole session, not the current press. Keep it
     // unchanged on re-entry, including after an ordinary fixed HOLD.
-    const bool session_origin_bound = safety.guidance_press.hand_guidance.present &&
+    const bool session_origin_bound = safety.guidance_origin_bound && safety.guidance_press.hand_guidance.present &&
         safety.guidance_press.gravity_authority.empirical_envelope_sha256 ==
             command.gravity_authority.empirical_envelope_sha256;
     if (session_origin_bound &&
@@ -5109,6 +5166,9 @@ void validate_and_observe_hand_guidance(
     safety.guidance_press = command;
     safety.guidance_reference = previous;
     safety.guidance_bound = true;
+    // A RETURN_ONLY cancellation may establish an exact-HOLD context for a
+    // domain which never admitted the press; it grants no new motion origin.
+    safety.guidance_origin_bound = session_origin_bound || !hand_guidance_return_only(command);
     safety.guidance_active = entering;
     safety.guidance_paused = false;
     safety.guidance_paused_reason.clear();
@@ -5124,7 +5184,8 @@ void validate_and_observe_hand_guidance(
         (command.activation_epoch != safety.guidance_press.activation_epoch ||
          command.moving_joint_mask != safety.guidance_press.moving_joint_mask))
       throw std::runtime_error("COMMAND_GUIDANCE_PRESS_CONTEXT_CHANGED");
-    if (command.mode == "hold" && command.activation_epoch <= safety.guidance_press.activation_epoch)
+    if (command.mode == "hold" && (command.activation_epoch < safety.guidance_press.activation_epoch ||
+        (command.activation_epoch == safety.guidance_press.activation_epoch && safety.guidance_press.mode != "hold")))
       throw std::runtime_error("COMMAND_GUIDANCE_HOLD_REQUIRES_HIGHER_EPOCH");
   }
   const auto& previous = safety.guidance_reference;
@@ -7718,6 +7779,7 @@ CommandReceiveResult receive_latest(
         validate_command_for_owned_domain(candidate, motors);
         validate_and_observe_gravity_policy(
             candidate, motors, candidate_safety);
+        validate_guidance_return_only(candidate, motors, candidate_safety);
         validate_and_observe_hand_guidance(candidate, motors, candidate_safety);
         if (!candidate.hand_guidance.present)
           validate_and_observe_assisted_teach(candidate, motors, candidate_safety);
@@ -8195,7 +8257,7 @@ void hand_guidance_self_test(const nlohmann::json& legacy_packet) {
     const auto initial_command = command;
     const auto initial_safety = safety;
     const auto initial_receive = receive_state;
-    for (bool admitted : {false, true}) {
+    for (bool return_only : {false, true}) for (bool admitted : {false, true}) {
       command = initial_command;
       command.received_at = Clock::now() - std::chrono::milliseconds(450);
       command.source_monotonic_ns = monotonic_ns_at(command.received_at);
@@ -8219,6 +8281,7 @@ void hand_guidance_self_test(const nlohmann::json& legacy_packet) {
       abort["sequence"] = 3U;
       abort["source_monotonic_ns"] = monotonic_ns_at(Clock::now());
       abort["moving_joint_mask"] = {false, false, false, false, false, false};
+      if (return_only) abort["gravity_authority"]["empirical_assisted_teach_authorized"] = false;
       if (!admitted) {
         auto changed = abort;
         changed["targets_rad"][motors.front().joint_index] = 0.001;
@@ -8244,8 +8307,15 @@ void hand_guidance_self_test(const nlohmann::json& legacy_packet) {
       send(abort);
       if (command.mode != "hold" || command.activation_epoch != 3U || safety.guidance_active ||
           !safety.guidance_bound || command.targets != old_hold.targets ||
+          safety.guidance_origin_bound != (admitted || !return_only) ||
           (!admitted && safety.guidance_started_ns != 0U))
         throw std::runtime_error("GUIDANCE_MIXED_ADMISSION_ABORT_HOLD_FAILED");
+      abort["sequence"] = 4U;
+      abort["source_monotonic_ns"] = monotonic_ns_at(Clock::now());
+      send(abort);
+      if (command.source_sequence != 4U || command.activation_epoch != 3U ||
+          safety.guidance_origin_bound != (admitted || !return_only))
+        throw std::runtime_error("GUIDANCE_MIXED_ADMISSION_ABORT_HOLD_RENEWAL_FAILED");
       const auto after_old_lease = command.received_at + std::chrono::milliseconds(100);
       auto fresh_safety = safety, expired_safety = initial_safety;
       observe_interarrival_lease(command, after_old_lease, motors, fresh_safety);
@@ -8476,6 +8546,77 @@ void hand_guidance_self_test(const nlohmann::json& legacy_packet) {
     if (command.mode != "teach" || command.activation_epoch != 6U || !safety.guidance_active ||
         command.hand_guidance.origin_rad != zero)
       throw std::runtime_error("GUIDANCE_REENTRY_FROM_OFFSET_HOLD_FAILED");
+    auto restricted = reentry;
+    restricted["gravity_authority"]["empirical_assisted_teach_authorized"] = false;
+    restricted["gravity_authority"]["empirical_envelope_deadline_monotonic_ns"] =
+        command.gravity_authority.empirical_envelope_deadline_monotonic_ns - 1U;
+    restricted["sequence"] = 19U;
+    stamp_packet(restricted);
+    const auto prior_receipt = command.received_at;
+    send(restricted);  // A now-ineligible moving heartbeat grants no lease.
+    if (command.source_sequence != 18U || command.received_at != prior_receipt ||
+        safety.highest_rejected_active_epoch != 0U)
+      throw std::runtime_error("GUIDANCE_RETURN_ONLY_MOVING_HEARTBEAT_CHANGED_STATE");
+    restricted["sequence"] = 20U;
+    restricted["hand_guidance"]["freeze_reference"] = true;
+    stamp_packet(restricted);
+    send(restricted);
+    if (!safety.guidance_paused || !hand_guidance_return_only(command))
+      throw std::runtime_error("GUIDANCE_RETURN_ONLY_FREEZE_REJECTED");
+    restricted["mode"] = "hold";
+    restricted["activation_epoch"] = 7U;
+    restricted["sequence"] = 21U;
+    restricted["moving_joint_mask"] = {false, false, false, false, false, false};
+    stamp_packet(restricted);
+    send(restricted);
+    if (command.mode != "hold" || safety.guidance_active || command.activation_epoch != 7U)
+      throw std::runtime_error("GUIDANCE_RETURN_ONLY_HOLD_ACK_REJECTED");
+    auto extended_deadline = command;
+    ++extended_deadline.gravity_authority.empirical_envelope_deadline_monotonic_ns;
+    bool deadline_extension_rejected = false;
+    try { validate_guidance_return_only(extended_deadline, motors, safety); }
+    catch (const std::runtime_error&) { deadline_extension_rejected = true; }
+    if (!deadline_extension_rejected)
+      throw std::runtime_error("GUIDANCE_RETURN_ONLY_DEADLINE_EXTENSION_ACCEPTED");
+    auto returning = restricted;
+    returning.erase("hand_guidance");
+    returning["schema"] = "go-m8010-gui-command/1.3";
+    returning["mode"] = "position";
+    returning["activation_epoch"] = 8U;
+    returning["sequence"] = 22U;
+    const auto moving_joint = static_cast<std::size_t>(motors.front().joint_index);
+    returning["moving_joint_mask"][moving_joint] = true;
+    returning["targets_rad"][moving_joint] = 0.0;
+    returning["plan_token_id"] = std::string(64U, 'c');
+    returning["trajectory"] = {{"schema", "go-m8010-quintic-command/1.0"},
+        {"trajectory_sha256", std::string(64U, 'd')}, {"profile", "quintic-rest-to-rest-v1"},
+        {"start_rad", restricted["targets_rad"]}, {"target_rad", returning["targets_rad"]},
+        {"duration_ns", 2000000000ULL}, {"interval_count", 200U},
+        {"execute_at_monotonic_ns", monotonic_ns_at(Clock::now()) + 1000000000ULL},
+        {"segment_index", 0}, {"segment_count", 1}};
+    stamp_packet(returning);
+    GuiCommand parsed_return;
+    parse_command(returning.dump(), parsed_return);
+    bool unbound_rejected = false;
+    try { validate_guidance_return_only(parsed_return, motors, initial_safety); }
+    catch (const GuidanceReferenceRejected&) { unbound_rejected = true; }
+    if (!unbound_rejected) throw std::runtime_error("GUIDANCE_RETURN_ONLY_UNBOUND_MOTION_ACCEPTED");
+    for (double rejected_target_deg : {4.0, -1.0}) {
+      auto wrong_direction = returning;
+      wrong_direction["targets_rad"][moving_joint] = rejected_target_deg * kPi / 180.0;
+      wrong_direction["trajectory"]["target_rad"] = wrong_direction["targets_rad"];
+      stamp_packet(wrong_direction);
+      const auto receipt = command.received_at;
+      send(wrong_direction);
+      if (command.mode != "hold" || command.activation_epoch != 7U || command.received_at != receipt ||
+          safety.highest_rejected_active_epoch != 0U)
+        throw std::runtime_error("GUIDANCE_RETURN_ONLY_WRONG_DIRECTION_CHANGED_HOLD");
+    }
+    stamp_packet(returning);
+    send(returning);
+    if (command.mode != "position" || command.activation_epoch != 8U ||
+        command.targets[moving_joint] != 0.0 || safety.guidance_press.hand_guidance.origin_rad != zero)
+      throw std::runtime_error("GUIDANCE_RETURN_ONLY_SIGNED_RETURN_REJECTED");
     packet = reentry;
     packet["mode"] = "brake"; packet["active_joint_mask"] = {false, false, false, false, false, false};
     packet["moving_joint_mask"] = {false, false, false, false, false, false};

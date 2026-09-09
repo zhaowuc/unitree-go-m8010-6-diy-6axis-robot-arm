@@ -48,6 +48,7 @@ from go_m8010_arm_gui.command_router import (
     CommandRouter,
     CommandReplayGuard,
     GravityAuthorityGate,
+    ReturnOnlyCommandRejected,
     PlanManifestGate,
     RejectionTracker,
     canonical_collision_hardware_state_sha256,
@@ -490,6 +491,69 @@ def test_whole_arm_guidance_requires_separate_scope_and_preserves_hold_ack():
     invalid["targets_rad"][1] = math.radians(10.01)
     with pytest.raises(ValueError):
         production_validate_command(json.dumps(invalid), now_ns=now)
+
+
+@pytest.mark.parametrize("direction", (-1, 1))
+def test_return_only_keeps_freeze_and_signed_single_axis_motion_toward_origin(direction):
+    now = time.monotonic_ns()
+    gate = GravityAuthorityGate()
+    gate._latest = _empirical_latest(now, deadline_ns=now + 60_000_000_000)
+    gate._latest.update(empirical_assisted_teach_authorized=True,
+        empirical_allowed_teach_joints=[f"J{i}" for i in range(1, 7)],
+        empirical_maximum_teach_excursion_deg=10.0, empirical_maximum_teach_seconds=600.0,
+        empirical_maximum_teach_velocity_deg_s=30.0)
+    held, _ = production_validate_command(command(mode="hold"), now_ns=now + 1_000_000)
+    gate.authorize(held, now_ns=now + 1_000_000)
+    first = deepcopy(held)
+    first.pop("gravity_authority"); first.pop("feedforward_nm")
+    first.update(schema="go-m8010-gui-command/1.5", mode="teach", activation_epoch=2,
+        moving_joint_mask=[True] * 6, hand_guidance={
+            "schema": "go-m8010-hand-guidance-reference/1.0", "origin_rad": [0.0] * 6,
+            "velocity_rad_s": [0.0] * 6, "freeze_reference": False,
+            "maximum_velocity_deg_s": 30.0, "maximum_excursion_deg": 10.0,
+            "maximum_reference_error_deg": 2.0})
+    first, _ = production_validate_command(json.dumps(first), now_ns=now + 1_000_000)
+    gate.authorize(first, now_ns=now + 1_000_000)
+    moved = deepcopy(first); moved["targets_rad"][1] = direction * .02
+    gate.authorize(moved, now_ns=now + 1_000_001)
+    gate._latest["empirical_assisted_teach_authorized"] = False
+    with pytest.raises(ReturnOnlyCommandRejected):
+        gate.authorize(deepcopy(moved), now_ns=now + 1_000_002)
+    freeze = deepcopy(moved); freeze["hand_guidance"]["freeze_reference"] = True
+    gate.authorize(freeze, now_ns=now + 1_000_003)
+    ack = deepcopy(freeze); ack.update(mode="hold", moving_joint_mask=[False] * 6, activation_epoch=3)
+    gate.authorize(ack, now_ns=now + 1_000_004)
+    def returning(target):
+        value = command_v13(moving_index=1, displacement=target, duration_ns=1_000_000_000,
+                            interval_count=100, now_ns=now + 1_000_005)
+        value["activation_epoch"] = 4
+        value["trajectory"]["start_rad"][1] = direction * .02
+        value["collision_guard_proof"] = collision_guard_result(value["targets_rad"],
+            now_ns=now + 1_000_005, moving_joint_mask=value["moving_joint_mask"],
+            start_relative_rad=value["trajectory"]["start_rad"])
+        return production_validate_command(json.dumps(value), now_ns=now + 1_000_005)[0]
+    for target in (direction * .01, 0.0, -direction * 5e-13):
+        request = returning(target)
+        gate.authorize(request, now_ns=now + 1_000_006)
+        for domain in ("J1", "J2", "J345", "J6"):
+            wire = json.loads(payload_for_domain(request, domain))
+            assert len(wire["gravity_authority"]) == 27
+            assert wire["gravity_authority"]["empirical_assisted_teach_authorized"] is False
+            assert wire["mode"] == ("position" if domain == "J2" else "hold")
+    for target in (direction * .03, -direction * .001):
+        with pytest.raises(ReturnOnlyCommandRejected):
+            gate.authorize(returning(target), now_ns=now + 1_000_006)
+    with pytest.raises(ValueError, match="过期"):
+        gate.authorize(returning(0.0), now_ns=now + 300_000_000)
+    unbound = GravityAuthorityGate(); unbound._latest = deepcopy(gate._latest)
+    unbound._latest["empirical_assisted_teach_authorized"] = True
+    unbound.authorize(deepcopy(held), now_ns=now + 1_000_001)
+    unbound._latest["empirical_assisted_teach_authorized"] = False
+    cancel = deepcopy(first); cancel.update(mode="hold", moving_joint_mask=[False] * 6)
+    unbound.authorize(cancel, now_ns=now + 1_000_002)
+    assert unbound._guidance_context is None
+    with pytest.raises(ReturnOnlyCommandRejected):
+        unbound.authorize(returning(0.0), now_ns=now + 1_000_006)
 
 
 def test_guidance_gui_has_one_reference_clock_and_brake_bypasses_owner_gate():

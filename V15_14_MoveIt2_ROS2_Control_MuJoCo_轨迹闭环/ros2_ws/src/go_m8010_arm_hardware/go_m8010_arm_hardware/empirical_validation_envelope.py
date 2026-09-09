@@ -732,6 +732,7 @@ def live_hardware_blocker(
     require_entry_temperature: bool = False,
     allow_assisted_teach: bool = False,
     allow_hand_guidance: bool = False,
+    allow_return_only_warnings: bool = False,
 ) -> tuple[str, Optional[dict[str, float]]]:
     if not isinstance(hardware_state, Mapping):
         return "EMPIRICAL_HARDWARE_STATE_MISSING", None
@@ -745,7 +746,11 @@ def live_hardware_blocker(
     if hardware_state.get("j2_sync_fault") is not False:
         return "EMPIRICAL_J2_SYNC_FAULT", None
     sync = hardware_state.get("j2_e_sync_rad")
-    if type(sync) not in {int, float} or not math.isfinite(float(sync)) or abs(math.degrees(float(sync))) > J2_SYNC_WARNING_DEG:
+    if type(sync) not in {int, float} or not math.isfinite(float(sync)):
+        return "EMPIRICAL_J2_SYNC_INVALID" if allow_return_only_warnings else "EMPIRICAL_J2_SYNC_WARNING", None
+    if allow_return_only_warnings and abs(math.degrees(float(sync))) > J2_SYNC_HARD_DEG:
+        return "EMPIRICAL_J2_SYNC_HARD_LIMIT", None
+    if not allow_return_only_warnings and abs(math.degrees(float(sync))) > J2_SYNC_WARNING_DEG:
         return "EMPIRICAL_J2_SYNC_WARNING", None
     velocities = hardware_state.get("velocity_rad_s")
     if hardware_state.get("assisted_teach_exit_hold_validated") is False:
@@ -777,7 +782,7 @@ def live_hardware_blocker(
             return f"EMPIRICAL_{name}_THERMAL_GUARD_INVALID", None
         if sample.get("no_progress_metadata_status") != "OBSERVED" or sample.get("load_limit_no_progress") is not False:
             return f"EMPIRICAL_{name}_NO_PROGRESS_GUARD_INVALID", None
-        if stage_start_temperature_c is not None and temperatures[name] - float(stage_start_temperature_c[name]) > MAXIMUM_STAGE_TEMPERATURE_RISE_C:
+        if not allow_return_only_warnings and stage_start_temperature_c is not None and temperatures[name] - float(stage_start_temperature_c[name]) > MAXIMUM_STAGE_TEMPERATURE_RISE_C:
             return f"EMPIRICAL_{name}_STAGE_TEMPERATURE_RISE", None
     if require_current_position_hold:
         modes = hardware_state.get("controller_mode_by_motor")
@@ -811,6 +816,7 @@ class EmpiricalStageGate:
         self.last_position_confirmation_ns: Optional[int] = None
         self.invalidated = False
         self.blocker = "EMPIRICAL_ZERO_HOLD_NOT_STARTED"
+        self.motion_warnings: list[str] = []
         self._confirmation: Optional[tuple[dict, tuple[str, int, int]]] = None
         self._last_confirmation_by_source: dict[str, tuple[int, int]] = {}
 
@@ -846,6 +852,7 @@ class EmpiricalStageGate:
         now_monotonic_ns: int,
         now_utc: Optional[datetime] = None,
     ) -> bool:
+        self.motion_warnings = []
         if self.invalidated:
             return False
         runtime_blocker = self.envelope.runtime_blocker(
@@ -896,6 +903,16 @@ class EmpiricalStageGate:
             if not (self.stage_index == len(LEVELS) - 1 and self.stage_complete):
                 self.invalidate("EMPIRICAL_MAXIMUM_ACTIVE_TIME_EXCEEDED")
                 return False
+        qualified_guidance = bool(
+            self.envelope.hand_guidance_enabled
+            and self.stage_index == len(LEVELS) - 1 and self.stage_complete
+            and self.phase == "POSITION_VALIDATION"
+            and self.position_started_ns is not None
+            and self.stage_start_temperature_c is not None
+            and self.last_position_confirmation_ns is not None
+            and 0 <= now_monotonic_ns - self.last_position_confirmation_ns
+            and requested_scale == 1.0 and abs(applied_scale - 1.0) <= 1.0e-6
+        )
         live_blocker, temperatures = live_hardware_blocker(
             hardware_state,
             session_id=session_id,
@@ -921,7 +938,23 @@ class EmpiricalStageGate:
                 and self.last_position_confirmation_ns is not None
                 and 0 <= now_monotonic_ns - self.last_position_confirmation_ns
             ),
+            allow_return_only_warnings=qualified_guidance,
         )
+        if not live_blocker and qualified_guidance:
+            # All hard checks above must finish before any qualification
+            # warning can retain authority. Keep the original stage baseline
+            # and thresholds; this is not a new successful qualification.
+            if abs(math.degrees(float(hardware_state["j2_e_sync_rad"]))) > J2_SYNC_WARNING_DEG:
+                self.motion_warnings.append("EMPIRICAL_J2_SYNC_WARNING")
+            self.motion_warnings.extend(
+                f"EMPIRICAL_{name}_STAGE_TEMPERATURE_RISE" for name in MOTOR_NAMES
+                if temperatures[name] - self.stage_start_temperature_c[name] > MAXIMUM_STAGE_TEMPERATURE_RISE_C
+            )
+            if self.motion_warnings:
+                for name in MOTOR_NAMES:
+                    if temperatures[name] >= ENTRY_TEMPERATURE_C:
+                        live_blocker = f"EMPIRICAL_{name}_RETURN_ONLY_TEMPERATURE_LIMIT"
+                        break
         if (not live_blocker and self.envelope.hand_guidance_enabled
                 and self.stage_index > 0 and self.phase != "POSITION_VALIDATION"
                 and any(mode != "hold" for mode in hardware_state["controller_mode_by_motor"].values())):
@@ -999,6 +1032,7 @@ class EmpiricalStageGate:
     def invalidate(self, blocker: str) -> None:
         self.invalidated = True
         self.stage_complete = False
+        self.motion_warnings = []
         self.blocker = blocker or "EMPIRICAL_ENVELOPE_INVALIDATED"
 
     def status(self) -> dict:
@@ -1006,7 +1040,7 @@ class EmpiricalStageGate:
         teach_enabled = self.envelope.assisted_teach_enabled or guidance
         teach_authorized = bool(teach_enabled and self.phase == "POSITION_VALIDATION"
             and self.stage_index == len(LEVELS) - 1 and self.stage_complete
-            and not self.invalidated and not self.blocker)
+            and not self.invalidated and not self.blocker and not self.motion_warnings)
         return {
             "authority_class": AUTHORITY_CLASS,
             "rating_classification": RATING_CLASSIFICATION,
@@ -1021,6 +1055,11 @@ class EmpiricalStageGate:
             "position_validation_authorized": (
                 self.phase == "POSITION_VALIDATION" and not self.invalidated
             ),
+            # Position authority in this combination is restricted by the
+            # Router/native consumers to signed return segments toward the
+            # already bound session origin. It does not grant arbitrary moves.
+            "return_only": bool(guidance and self.motion_warnings and not self.invalidated),
+            "motion_warnings": list(self.motion_warnings),
             "assisted_teach_authorized": teach_authorized,
             "hand_guidance_authorized": guidance and teach_authorized,
             "maximum_teach_excursion_deg": MAXIMUM_HAND_GUIDANCE_EXCURSION_DEG if guidance else MAXIMUM_TEACH_EXCURSION_DEG if teach_enabled else None,

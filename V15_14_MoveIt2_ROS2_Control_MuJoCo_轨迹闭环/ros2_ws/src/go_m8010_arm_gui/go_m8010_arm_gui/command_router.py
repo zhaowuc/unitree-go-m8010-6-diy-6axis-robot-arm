@@ -1333,6 +1333,18 @@ def _validated_planned_feasibility_proof(
         return None
 
 
+def _hand_guidance_authority_profile(authority):
+    return (isinstance(authority, dict)
+            and authority.get("empirical_allowed_teach_joints") == ["J1", "J2", "J3", "J4", "J5", "J6"]
+            and authority.get("empirical_maximum_teach_excursion_deg") == 10.0
+            and authority.get("empirical_maximum_teach_seconds") == 600.0
+            and authority.get("empirical_maximum_teach_velocity_deg_s") == 30.0)
+
+
+class ReturnOnlyCommandRejected(ValueError):
+    """A live return-only permit keeps HOLD while rejecting unrelated motion."""
+
+
 class GravityAuthorityGate:
     """Translate one fresh read-only gravity status into worker authority.
 
@@ -1358,6 +1370,8 @@ class GravityAuthorityGate:
         self.maximum_age_ns = maximum_age_ns
         self.maximum_bindings = maximum_bindings
         self._latest: Optional[dict] = None
+        self._guidance_context = None
+        self._guidance_previous = None
         self._last_by_source: OrderedDict[str, tuple[int, int]] = OrderedDict()
         self._session_bindings: OrderedDict[
             tuple[str, int],
@@ -1865,6 +1879,70 @@ class GravityAuthorityGate:
             self._latest = None
             return False
 
+    def _guidance_admission(self, command, latest):
+        if not _hand_guidance_authority_profile(latest):
+            return None, None
+        key = (command.get("source_instance_id"), latest["source_instance_id"], latest["session_id"],
+               latest["state_instance_id"], latest["empirical_envelope_sha256"], latest["anchor_sha256"])
+        context = deepcopy(self._guidance_context) if self._guidance_context and self._guidance_context["key"] == key else None
+        previous = self._guidance_previous["command"] if self._guidance_previous and self._guidance_previous["key"] == key else None
+        params = (tuple(command.get("kp", ())), tuple(command.get("kd", ())), tuple(command.get("active_joint_mask", ())))
+        previous_params = (tuple(previous.get("kp", ())), tuple(previous.get("kd", ())),
+                           tuple(previous.get("active_joint_mask", ()))) if previous else None
+        guided = command.get("schema") == GUI_COMMAND_SCHEMA_V15
+        reference = command.get("hand_guidance", {})
+        if guided and context and (tuple(reference["origin_rad"]) != context["origin"] or params != context["params"]):
+            raise ValueError("手导会话原点或参数发生变化")
+        return_only = (latest.get("empirical_position_validation_authorized") is True
+                       and latest.get("empirical_assisted_teach_authorized") is False)
+        if return_only:
+            allowed = False
+            if context and params != context["params"]:
+                raise ValueError("手导回位参数发生变化")
+            if command["mode"] == "teach":
+                allowed = bool(guided and context and context["active"]
+                    and command["activation_epoch"] == context["press_epoch"]
+                    and tuple(command["moving_joint_mask"]) == context["moving"]
+                    and reference.get("freeze_reference") is True and not any(reference["velocity_rad_s"]))
+            elif command["mode"] == "hold":
+                owned_ack = bool(guided and context and context["active"] and context["frozen"]
+                    and command["activation_epoch"] > context["press_epoch"]
+                    and not any(reference["velocity_rad_s"]))
+                # After freeze each worker owns its exact last accepted scalar;
+                # the GUI merges their echoes, which need not equal last sent.
+                held = bool(previous and previous["mode"] in {"hold", "position"}
+                    and command["targets_rad"] == previous["targets_rad"]
+                    and params == previous_params)
+                allowed = owned_ack or held
+            elif command["mode"] == "position" and command.get("schema") == GUI_COMMAND_SCHEMA_V13 and context:
+                trajectory = command.get("trajectory", {})
+                moving = [i for i, flag in enumerate(command.get("moving_joint_mask", ())) if flag]
+                if len(moving) == 1 and not context["active"]:
+                    j = moving[0]
+                    start = trajectory["start_rad"][j]
+                    target = trajectory["target_rad"][j]
+                    allowed = min(start, context["origin"][j]) - 1e-12 <= target <= max(start, context["origin"][j]) + 1e-12
+            if not allowed:
+                raise ReturnOnlyCommandRejected("手导受限：只允许冻结、保持既有目标或单轴朝会话原点回位")
+        if guided:
+            if not return_only and context is None and previous and previous["mode"] == "hold" and (
+                    tuple(reference["origin_rad"]) == tuple(previous["targets_rad"])
+                    and command["targets_rad"] == previous["targets_rad"] and not any(reference["velocity_rad_s"])
+                    and not reference.get("freeze_reference")
+                    and command["activation_epoch"] > previous["activation_epoch"] and params == previous_params):
+                context = {"key": key, "origin": tuple(reference["origin_rad"]), "params": params,
+                           "active": False, "frozen": False, "press_epoch": 0, "moving": ()}
+            if context:
+                if command["mode"] == "teach":
+                    if not context["active"]:
+                        context.update(active=True, frozen=False, press_epoch=command["activation_epoch"],
+                                       moving=tuple(command["moving_joint_mask"]))
+                    if reference.get("freeze_reference") is True:
+                        context["frozen"] = True
+                else:
+                    context.update(active=False, frozen=False)
+        return context, {"key": key, "command": deepcopy(command)}
+
     def authorize(
         self,
         command: dict,
@@ -1875,6 +1953,7 @@ class GravityAuthorityGate:
         checked_ns = time.monotonic_ns() if now_ns is None else now_ns
         if command.get("mode") in {"brake", "drag"}:
             self.spend_all_active_empirical()
+            self._guidance_context = self._guidance_previous = None
             command["feedforward_nm"] = [0.0] * 6
             command.pop("gravity_authority", None)
             return
@@ -1937,12 +2016,16 @@ class GravityAuthorityGate:
             )
         ):
             raise ValueError("重力authority不存在或已过期")
+        guidance_context, guidance_previous = self._guidance_admission(command, latest)
+        return_only = (_hand_guidance_authority_profile(latest)
+            and latest.get("empirical_position_validation_authorized") is True
+            and latest.get("empirical_assisted_teach_authorized") is False)
         if command.get("mode") == "teach" or command.get("schema") == GUI_COMMAND_SCHEMA_V15:
             guided = command.get("schema") == GUI_COMMAND_SCHEMA_V15
             allowed = ["J1", "J2", "J3", "J4", "J5", "J6"] if guided else ["J1", "J2", "J3", "J4", "J5"]
             excursion, duration, velocity = (10.0, 600.0, 30.0) if guided else (5.0, 30.0, 5.0)
             if (latest.get("authority_kind") != EMPIRICAL_AUTHORITY_CLASS
-                    or latest.get("empirical_assisted_teach_authorized") is not True
+                    or (latest.get("empirical_assisted_teach_authorized") is not True and not return_only)
                     or latest.get("empirical_position_validation_authorized") is not True
                     or latest.get("empirical_stage_index") != 4
                     or latest.get("gravity_scale") != 1.0 or latest.get("gravity_scale_target") != 1.0
@@ -2130,6 +2213,8 @@ class GravityAuthorityGate:
         }
         command["feedforward_nm"] = list(authority["feedforward_nm"])
         command["gravity_authority"] = authority
+        if guidance_previous is not None:
+            self._guidance_context, self._guidance_previous = guidance_context, guidance_previous
         if latest.get("authority_kind") == "EMPIRICAL_VALIDATION_ENVELOPE":
             self._remember_empirical_lifecycle(
                 self._empirical_active_by_sha256,
@@ -2670,7 +2755,9 @@ def payload_for_domain(normalized: dict, domain: str) -> bytes:
         domain_command.pop("plan_token_id", None)
         domain_command.pop("trajectory", None)
         domain_command.pop("plan_manifest", None)
-    if domain_command["mode"] != "teach" and domain_command["schema"] != GUI_COMMAND_SCHEMA_V15 and isinstance(domain_command.get("gravity_authority"), dict):
+    if (domain_command["mode"] != "teach" and domain_command["schema"] != GUI_COMMAND_SCHEMA_V15
+            and isinstance(domain_command.get("gravity_authority"), dict)
+            and not _hand_guidance_authority_profile(domain_command["gravity_authority"])):
         domain_command = dict(domain_command)
         domain_command["gravity_authority"] = {
             key: value for key, value in domain_command["gravity_authority"].items()
@@ -2918,6 +3005,8 @@ class CommandRouter(Node):
             self.last_command = normalized
             if normalized.get("mode") != "hold":
                 self.empirical_zero_hold_transition_started_ns = None
+        except ReturnOnlyCommandRejected:
+            self.return_only_blocked_commands = getattr(self, "return_only_blocked_commands", 0) + 1
         except ExpiredCommandTimestamp as exc:
             self.expired_commands = getattr(self, "expired_commands", 0) + 1
             CommandRouter._record_timestamp_rejection(self, exc)

@@ -1012,7 +1012,8 @@ def validate_empirical_command_authority(
         "empirical_maximum_abs_position_segment_deg",
     }
     guided = command.get("schema") == "go-m8010-gui-command/1.5"
-    if guided:
+    hand_profile = isinstance(authority, dict) and authority.get("empirical_allowed_teach_joints") == ["J1", "J2", "J3", "J4", "J5", "J6"]
+    if guided or hand_profile:
         required |= {"empirical_assisted_teach_authorized", "empirical_maximum_teach_excursion_deg",
                      "empirical_maximum_teach_seconds", "empirical_maximum_teach_velocity_deg_s",
                      "empirical_allowed_teach_joints"}
@@ -1020,16 +1021,18 @@ def validate_empirical_command_authority(
         raise GravityAuthorityStartupBindingError(
             "J6 empirical authority is missing or incomplete"
         )
-    if guided and (
-            authority.get("empirical_assisted_teach_authorized") is not True
+    if (guided or hand_profile) and (
+            type(authority.get("empirical_assisted_teach_authorized")) is not bool
             or authority.get("empirical_allowed_teach_joints") != ["J1", "J2", "J3", "J4", "J5", "J6"]
             or type(authority.get("empirical_maximum_teach_excursion_deg")) not in (int, float)
             or authority.get("empirical_maximum_teach_excursion_deg") != 10.0
             or type(authority.get("empirical_maximum_teach_seconds")) not in (int, float)
             or authority.get("empirical_maximum_teach_seconds") != 600.0
             or type(authority.get("empirical_maximum_teach_velocity_deg_s")) not in (int, float)
-            or authority.get("empirical_maximum_teach_velocity_deg_s") != 30.0
-            or authority.get("empirical_stage_index") != 4
+            or authority.get("empirical_maximum_teach_velocity_deg_s") != 30.0):
+        raise GravityAuthorityStartupBindingError("J6_GUIDANCE_AUTHORITY_SCOPE_INVALID")
+    if (guided or (hand_profile and authority.get("empirical_position_validation_authorized") is True)) and (
+            authority.get("empirical_stage_index") != 4
             or authority.get("gravity_scale") != 1.0
             or authority.get("gravity_scale_target") != 1.0
             or authority.get("empirical_position_validation_authorized") is not True):
@@ -2645,7 +2648,9 @@ def receive_latest(
                 source_replay_state,
             )
             pending_guidance_state = None
-            guidance_touched = candidate.get("schema") == "go-m8010-gui-command/1.5" or source_replay_state.get("hand_guidance_state") is not None
+            guidance_touched = (candidate.get("schema") == "go-m8010-gui-command/1.5"
+                or source_replay_state.get("hand_guidance_state") is not None
+                or (candidate.get("gravity_authority") or {}).get("empirical_allowed_teach_joints") == ["J1", "J2", "J3", "J4", "J5", "J6"])
             if guidance_touched:
                 candidate, pending_guidance_state = stage_guidance_candidate(
                     candidate, source_replay_state.get("hand_guidance_state"),

@@ -444,6 +444,15 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
     demo = None
 
     class Window(gui.MainWindow):
+        def _acceptance_preview_start(self, now):
+            if hand_guidance and demo is not None and demo.guidance_phase == "returning":
+                if self.hardware_mode != "hold" or not self._action_group_hold_ready(self.command_targets):
+                    raise gui.ContractViolation("回位预演需要已确认的静止HOLD")
+                # Keep untouched axes at native-owned targets; measured actual
+                # remains in the preview/proof snapshot and drift checks.
+                return tuple(self.command_targets)
+            return super()._acceptance_preview_start(now)
+
         def closeEvent(self, event):
             if demo is not None and not demo.done:
                 demo.stop(None if interactive_teach else "operator closed demo window")
@@ -567,7 +576,7 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
         return dialog
 
     def start_center(origin):
-        group = ActionGroup("J1 回固定中点", (ActionStep(tuple(
+        group = ActionGroup("回本次起始姿态", (ActionStep(tuple(
             math.degrees(a) + b for a,b in zip(origin, window.session_pose_deg)),
             speed_deg_s=demo.speed_deg_s, dwell_s=0.5),), window.workflow_contract.model_sha256)
         dialog = window.action_group_dialog

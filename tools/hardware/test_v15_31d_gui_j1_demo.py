@@ -493,6 +493,37 @@ def test_initial_recovery_uses_original_file_and_checks_all_axes_before_hold():
         raise AssertionError("recovery allowed an oversized J1 correction")
 
 
+def test_guidance_return_plans_from_owned_hold_with_real_measurement_unchanged():
+    from v15_31f_gui_hand_guidance import GuidanceDemo
+    from go_m8010_arm_gui.workflow_contract import ContractViolation, generate_segmented_quintic_recipe
+    source = Path(__file__).with_name("v15_31d_gui_j1_demo.py")
+    tree = ast.parse(source.read_text(encoding="utf-8"))
+    window_class = next(item for item in ast.walk(tree) if isinstance(item, ast.ClassDef) and item.name == "Window")
+    namespace = dict(gui=SimpleNamespace(MainWindow=object, ContractViolation=ContractViolation),
+                     demo=SimpleNamespace(guidance_phase="returning"), hand_guidance=True)
+    exec(compile(ast.Module(body=[window_class], type_ignores=[]), str(source), "exec"), namespace)
+    window = namespace["Window"]()
+    window.command_targets = [math.radians(value) for value in (10, -9.9, 1, 0, 0, 0)]
+    window.actual = [value + math.radians(.1) for value in window.command_targets]
+    measured = tuple(window.actual)
+    window.hardware_mode = "hold"
+    window._action_group_hold_ready = lambda target: target == window.command_targets
+    start = window._acceptance_preview_start(1.0)
+    assert start == tuple(window.command_targets) and tuple(window.actual) == measured
+    recipe = generate_segmented_quintic_recipe(start, (0.0,)*6, ((-math.pi, math.pi),)*6,
+        maximum_velocity_rad_s=math.radians(1), maximum_acceleration_rad_s2=math.radians(15),
+        maximum_segment_delta_rad=math.radians(5))
+    checked = GuidanceDemo.check_return_recipe(SimpleNamespace(guidance_phase="returning", origin=(0.0,)*6), recipe)
+    assert len(checked) == 5 and recipe.segments[0].target_rad[1:] == start[1:]
+    window._action_group_hold_ready = lambda _: False
+    try:
+        window._acceptance_preview_start(1.0)
+    except ContractViolation:
+        pass
+    else:
+        raise AssertionError("unconfirmed HOLD admitted to return planner")
+
+
 def test_recovery_wall_clock_allows_planning_and_six_segments_but_stops_at_sixty_seconds():
     for phase in ("recover_initial", "recovery_hold"):
         demo, commands, override, tick = harness(interactive_teach=True)

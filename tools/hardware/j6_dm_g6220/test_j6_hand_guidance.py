@@ -240,5 +240,79 @@ def test_real_j6_authority_accepts_guided_27_for_teach_and_hold_only_after_ladde
     with pytest.raises(Exception, match='SCOPE'):
         validate(wrong, 1_000_000_001, state)
     legacy = deepcopy(command); legacy['schema'] = 'go-m8010-gui-command/1.2'
-    with pytest.raises(Exception, match='incomplete'):
-        validate(legacy, 1_000_000_001, state)
+    assert validate(legacy, 1_000_000_001, state) == binding
+    for candidate in (command, legacy):
+        candidate['gravity_authority']['empirical_assisted_teach_authorized'] = False
+        assert validate(candidate, 1_000_000_001, state) == binding
+    stale = deepcopy(command)
+    stale['gravity_authority']['source_monotonic_ns'] = 749_999_999
+    with pytest.raises(ValueError, match='stale'):
+        validate(stale, 1_000_000_001, state)
+
+
+@pytest.mark.parametrize("direction", (-1, 1))
+def test_j6_return_only_freezes_and_preserves_origin_across_signed_position(direction):
+    from test_v15_30a_gui_profile import load_parse_command, quintic_command_document
+    parse = load_parse_command()
+    parse.__globals__["validate_guidance_shape"] = validate_guidance_shape
+    context = {"torque_qualified": True, "healthy_foc": True,
+               "actual_rad": 0.0, "actual_velocity_rad_s": 0.0}
+    authority = {"source_instance_id": "b" * 32, "session_id": "session", "state_instance_id": "c" * 32,
+        "empirical_envelope_id": "envelope", "empirical_envelope_sha256": "d" * 64, "anchor_sha256": "e" * 64,
+        "empirical_allowed_teach_joints": [f"J{i}" for i in range(1, 7)],
+        "empirical_maximum_teach_excursion_deg": 10.0, "empirical_maximum_teach_seconds": 600.0,
+        "empirical_maximum_teach_velocity_deg_s": 30.0,
+        "empirical_position_validation_authorized": True, "empirical_assisted_teach_authorized": True}
+    def guided(epoch, stamp, mode="teach"):
+        value = packet(epoch=epoch, source=stamp, mode=mode)
+        value["gravity_authority"] = deepcopy(authority)
+        return value
+    previous = guided(1, 990_000_000, "hold")
+    previous["schema"] = "go-m8010-gui-command/1.2"
+    previous.pop("hand_guidance")
+    first = guided(2, 1_000_000_000)
+    accepted, state = stage_guidance_candidate(first, None, context, previous, 1_000_000_001)
+    move = guided(2, 1_100_000_000)
+    move["targets_rad"][5] = direction * .02
+    accepted, state = stage_guidance_candidate(move, state, context, accepted, 1_100_000_001)
+    authority["empirical_assisted_teach_authorized"] = False
+    dynamic = guided(2, 1_200_000_000)
+    with pytest.raises(GuidanceReferenceRejected, match="RETURN_ONLY"):
+        stage_guidance_candidate(dynamic, state, context, accepted, 1_200_000_001)
+    dynamic["hand_guidance"]["freeze_reference"] = True
+    frozen, paused = stage_guidance_candidate(dynamic, state, context, accepted, 1_200_000_001)
+    assert paused.paused and paused.targets[5] == direction * .02
+    ack = guided(3, 1_210_000_000, "hold")
+    ack["targets_rad"] = list(paused.targets)
+    acknowledged, idle = stage_guidance_candidate(ack, paused, context, frozen, 1_210_000_001)
+    hold = deepcopy(ack); hold["schema"] = "go-m8010-gui-command/1.2"; hold.pop("hand_guidance")
+    _, retained = stage_guidance_candidate(hold, idle, None, acknowledged, 1_220_000_001)
+    assert retained.origin == (0.0,) * 6 and not retained.active
+    def returning(target):
+        value = quintic_command_document(received_monotonic_ns=1_300_000_000,
+            start_rad=direction * .02, target_rad=target, activation_epoch=4)
+        value.update(source_instance_id=first["source_instance_id"], active_joint_mask=[True] * 6,
+                     gravity_authority=deepcopy(authority))
+        return parse(json.dumps(value).encode(), 1_300_000_001)
+    for target in (direction * .01, 0.0, -direction * 5e-13):
+        _, returned = stage_guidance_candidate(returning(target), retained, None, hold, 1_300_000_001)
+        assert returned.origin == retained.origin and returned.targets[5] == target
+    for target in (direction * .03, -direction * .001):
+        with pytest.raises(GuidanceReferenceRejected, match="AWAY_OR_CROSSES"):
+            stage_guidance_candidate(returning(target), retained, None, hold, 1_300_000_001)
+    changed = returning(0.0); changed["gravity_authority"]["session_id"] = "other"
+    with pytest.raises(ValueError, match="IDENTITY"):
+        stage_guidance_candidate(changed, retained, None, hold, 1_300_000_001)
+    # Warning may precede the first 1.5 admission. Cancellation can retain the
+    # exact pre-existing HOLD without manufacturing a return origin.
+    cancel = guided(2, 1_010_000_000, "hold")
+    cancelled, unbound = stage_guidance_candidate(cancel, None, context, previous, 1_010_000_001)
+    assert not unbound.origin and not unbound.active
+    for velocity in (math.radians(30.1), math.nan):
+        with pytest.raises(ValueError, match="FEEDBACK_VELOCITY"):
+            stage_guidance_candidate(cancel, None, dict(context, actual_velocity_rad_s=velocity),
+                                     previous, 1_010_000_001)
+    _, refreshed = stage_guidance_candidate(cancel, unbound, context, cancelled, 1_010_000_002)
+    assert not refreshed.origin
+    with pytest.raises(GuidanceReferenceRejected, match="ORIGIN"):
+        stage_guidance_candidate(returning(0.0), unbound, None, cancelled, 1_300_000_001)

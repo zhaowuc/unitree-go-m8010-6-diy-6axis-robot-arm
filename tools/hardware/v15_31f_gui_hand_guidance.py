@@ -1,8 +1,8 @@
 """Whole-arm outer admittance inside the existing GUI/Router/worker chain.
 
-The existing bootstrap is reused. Normal end freezes the accepted references,
-waits for all-domain HOLD, then uses the existing previewed position recipe to
-return to the session's initial vertical pose before releasing drive authority.
+The existing bootstrap is reused. Release freezes accepted references, confirms
+all-domain HOLD and previews a return to the session's initial pose. The returned
+pose remains held; session deadlines and hard-fault protections still apply.
 """
 from collections import deque
 from dataclasses import replace
@@ -59,6 +59,8 @@ class GuidanceDemo(J1Demo):
         self.entry_targets = None
         self.entry_started_at = None
         self.return_quiet_since = None
+        self.return_requested = False
+        self.return_only = False
         self.shadow_started_at = None
         toolbar = self.window.teach_toolbar
         for action in toolbar.actions():
@@ -93,6 +95,7 @@ class GuidanceDemo(J1Demo):
             if (self.window.node.latest_gravity_status or {}).get("empirical_validation", {}).get("hand_guidance_authorized") is not True:
                 raise RuntimeError("当前会话尚未开放整臂柔顺")
             self.filtered_residual = [0.0] * 6
+            self.return_verified = False
             self.input_wait_since = None
             self.entry_targets = list(self.window.command_targets)
             self.entry_started_at = self.now()
@@ -128,11 +131,13 @@ class GuidanceDemo(J1Demo):
             return
         # Disabling a held Qt button can synchronously emit released again.
         self.guidance_phase = "freezing"
+        self.return_requested = True
+        self.return_quiet_since = None
         self.drag_button.setEnabled(False)
         self.freeze_reference = None
         self.freeze_sent_ns = int(self.now() * 1e9)
         self.window.hand_guidance_reference = self.reference([0.0] * 6, freeze=True)
-        self.status.setText("正在保持各轴最后接受的目标。")
+        self.status.setText("正在保持各轴最后接受的目标；请松手，静止后自动回到起始姿态。")
 
     def _request_hold(self, target):
         self.guidance_phase = "hold_barrier"
@@ -189,27 +194,33 @@ class GuidanceDemo(J1Demo):
     def _begin_return(self, sample):
         if (not sample["stationary_hold_ready"] or not sample["router_hold_fresh"]
                 or sample.get("j6_drive_state") != 1):
+            self.return_quiet_since = None
             return
-        if self.bias is not None:
-            observation = matched_observation(self.window.node.guidance_hardware_history,
-                self.window.node.latest_gravity_status, now_ns=time.monotonic_ns())
-            if observation is None or any(abs(value-bias) > threshold for value,bias,threshold in
-                    zip(observation.residual_nm, self.bias, self.profile.engage_torque_nm)):
-                self.return_quiet_since = None
-                self.status.setText("保持当前姿态，等待松手后回位。")
-                return
-            self.return_quiet_since = self.now() if self.return_quiet_since is None else self.return_quiet_since
-            if self.now() - self.return_quiet_since < 0.5:
-                return
+        # Return is explicitly requested on release. A pose-dependent model
+        # residual is not a contact sensor; require real stationary HOLD instead.
+        self.return_quiet_since = self.now() if self.return_quiet_since is None else self.return_quiet_since
+        if self.now() - self.return_quiet_since < 0.5:
+            return
         if max(abs(a-b) for a,b in zip(sample["actual_rad"], self.origin)) <= math.radians(0.25):
-            self.return_verified = True
-            super().stop(self.guidance_fault)
+            self._finish_return(sample)
             return
         self.window.hand_guidance_reference = None
         self.window._set_virtual_editable(True)
         self.stage, self.guidance_phase = "return_center", "returning"
         self.dialog = self.start_center(self.origin)
-        self.status.setText("正在按已预演轨迹回到起始竖直姿态，完成后才停止驱动。")
+        self.status.setText("正在按已预演轨迹回到起始姿态；完成后继续保持。")
+
+    def _finish_return(self, sample):
+        self.return_verified = True
+        self.return_requested = False
+        self.return_quiet_since = None
+        self.guidance_events.append({"event": "initial_vertical_return_verified", "actual_rad": sample["actual_rad"]})
+        if self.ending:
+            super().stop(self.guidance_fault)
+            return
+        self.stage, self.guidance_phase = "interactive_teach", "ready"
+        self.drag_button.setEnabled(not self.return_only)
+        self.status.setText("已回到起始姿态并保持。" + ("警告未清除，暂停新拖动。" if self.return_only else "可以再次拖动。"))
 
     def check_return_recipe(self, recipe):
         if (self.guidance_phase != "returning"
@@ -222,6 +233,9 @@ class GuidanceDemo(J1Demo):
                 raise RuntimeError("guidance return must use the existing bounded single-axis recipes")
             if any(abs(a-b) > math.radians(5.0) + 1e-12 for a,b in zip(segment.start_rad, segment.target_rad)):
                 raise RuntimeError("guidance return segment exceeds five degrees")
+            if any(not min(a, o)-1e-12 <= b <= max(a, o)+1e-12
+                   for a,b,o in zip(segment.start_rad, segment.target_rad, self.origin)):
+                raise RuntimeError("guidance return must move toward its fixed initial pose without overshoot")
             if any(abs(q-origin) > math.radians(10.25) for pose in (segment.start_rad, segment.target_rad)
                    for q,origin in zip(pose, self.origin)):
                 raise RuntimeError("guidance return left the demonstrated pose region")
@@ -270,6 +284,14 @@ class GuidanceDemo(J1Demo):
                 self.return_verified = False
                 super().stop("hand guidance lost hardware/feedback/gravity authority")
                 return
+            empirical = (self.window.node.latest_gravity_status or {}).get("empirical_validation", {})
+            return_only = empirical.get("return_only") is True
+            if return_only and not self.return_only:
+                self.return_requested = True
+                self.return_quiet_since = None
+                self.guidance_events.append({"event": "return_only", "warnings": empirical.get("motion_warnings", [])})
+                self.release_guidance()
+            self.return_only = return_only
             if now - self.started >= 550 and not self.ending:
                 self.stop()
             if self.shadow_started_at is not None and now - self.shadow_started_at >= 15.0 and not self.ending:
@@ -291,9 +313,7 @@ class GuidanceDemo(J1Demo):
                     return
                 if runner.state == "complete" and sample["stationary_hold_ready"] and sample["router_hold_fresh"]:
                     if max(abs(a-b) for a,b in zip(sample["actual_rad"], self.origin)) <= math.radians(0.25):
-                        self.return_verified = True
-                        self.guidance_events.append({"event": "initial_vertical_return_verified", "actual_rad": sample["actual_rad"]})
-                        super().stop(self.guidance_fault)
+                        self._finish_return(sample)
                 return
             if self.guidance_phase == "freezing":
                 self._freeze_and_hold()
@@ -304,8 +324,8 @@ class GuidanceDemo(J1Demo):
                 if accepted == self.hold_target and self.window._action_group_hold_ready(self.hold_target):
                     self.guidance_phase = "ready"
                     self.window.teach_record_target = tuple(self.hold_target)
-                    self.drag_button.setEnabled(not self.ending)
-                    self.status.setText("六轴保持已确认，可以再次施力拖动或记录姿态。")
+                    self.drag_button.setEnabled(not (self.ending or self.return_requested or self.return_only))
+                    self.status.setText("六轴保持已确认；请松手，准备回到起始姿态。" if self.return_requested else "六轴保持已确认。")
                 return
             if self.guidance_phase == "engaging_guidance":
                 accepted = accepted_guidance_targets(self.window.node.latest_hardware, self.guide_epoch, time.monotonic_ns())
@@ -317,8 +337,11 @@ class GuidanceDemo(J1Demo):
                 elif now - self.entry_started_at >= 0.15:
                     self._cancel_admission("ALL_DOMAIN_ACK_TIMEOUT")
                 return
-            if self.ending and self.guidance_phase in {"ready", "calibrating"}:
+            if (self.ending or self.return_requested) and self.guidance_phase in {"ready", "calibrating"}:
                 self._begin_return(sample)
+                return
+            if self.guidance_phase == "ready":
+                self.drag_button.setEnabled(not self.return_only and empirical.get("hand_guidance_authorized") is True)
                 return
             diagnostics = None
             reason = "MATCHING_SNAPSHOT_PENDING"
@@ -351,7 +374,7 @@ class GuidanceDemo(J1Demo):
                 self.guidance_phase = "ready"
                 self.drag_button.setEnabled(True)
                 self.guidance_events.append({"event": "stationary_bias", "bias_nm": self.bias, "noise_mad_nm": noise})
-                self.status.setText("已就绪：按住按钮后手推移动，撤去手力停住；松开按钮保持。")
+                self.status.setText("已就绪：按住按钮后手推移动，撤去手力停住；松开按钮并松手后自动回位。")
                 print(f"HAND_GUIDANCE_READY shadow_only={self.shadow_only} reference_speed_deg_s={self.profile.speed_deg_s:g}", flush=True)
                 if self.shadow_only:
                     self.shadow_started_at = now
