@@ -18,7 +18,7 @@ source "$ws/install/setup.bash"
 export PYTHONNOUSERSITE=1 PYTHONUNBUFFERED=1
 export XDG_RUNTIME_DIR=/run/user/$(id -u) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus
 export WAYLAND_DISPLAY=wayland-0 QT_QPA_PLATFORM=wayland MUJOCO_GL=glfw
-export ROS_DOMAIN_ID=30 ROS_LOCALHOST_ONLY=1 RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+export ROS_DOMAIN_ID=30 ROS_LOCALHOST_ONLY=0 RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export FASTRTPS_DEFAULT_PROFILES_FILE="$scripts/fastdds_udp_only.xml"
 export FASTDDS_DEFAULT_PROFILES_FILE="$scripts/fastdds_udp_only.xml"
 python3 - "$repo" "$session" <<'PY'

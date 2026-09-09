@@ -2326,8 +2326,21 @@ if [[ "$PREBUILD_ONLY" -eq 1 ]]; then
 fi
 
 export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-30}"
-export ROS_LOCALHOST_ONLY=1
-export RMW_IMPLEMENTATION="${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}"
+# Humble adds an SHM transport when ROS_LOCALHOST_ONLY=1 even after loading
+# XML. Restrict the custom UDP interface instead, and reject other profiles.
+LOCAL_DDS_PROFILE="$REPO_ROOT/tools/hardware/v15_31d_demo_templates/fastdds_udp_only.xml"
+[[ -r "$LOCAL_DDS_PROFILE" ]] || fail "缺少本机回环 DDS 配置：$LOCAL_DDS_PROFILE"
+for profile_variable in FASTRTPS_DEFAULT_PROFILES_FILE FASTDDS_DEFAULT_PROFILES_FILE; do
+  if [[ -n "${!profile_variable:-}" ]] && ! cmp -s "${!profile_variable}" "$LOCAL_DDS_PROFILE"; then
+    fail "$profile_variable 必须与仓库的仅回环 UDP 配置内容一致"
+  fi
+done
+[[ "${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}" == rmw_fastrtps_cpp ]] || \
+  fail "仅回环 UDP 启动需要 rmw_fastrtps_cpp"
+export FASTRTPS_DEFAULT_PROFILES_FILE="$LOCAL_DDS_PROFILE"
+export FASTDDS_DEFAULT_PROFILES_FILE="$LOCAL_DDS_PROFILE"
+export ROS_LOCALHOST_ONLY=0
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export MUJOCO_GL=glfw
 export PYTHONUNBUFFERED=1
 export PYTHONDONTWRITEBYTECODE=1

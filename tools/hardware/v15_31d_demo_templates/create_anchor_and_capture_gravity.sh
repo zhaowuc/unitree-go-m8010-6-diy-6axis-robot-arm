@@ -67,7 +67,7 @@ source /opt/ros/humble/setup.bash
 source "$ws/install/setup.bash"
 set -u
 export ROS_DOMAIN_ID=30
-export ROS_LOCALHOST_ONLY=1
+export ROS_LOCALHOST_ONLY=0
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export FASTRTPS_DEFAULT_PROFILES_FILE="$scripts/fastdds_udp_only.xml"
 export FASTDDS_DEFAULT_PROFILES_FILE="$scripts/fastdds_udp_only.xml"

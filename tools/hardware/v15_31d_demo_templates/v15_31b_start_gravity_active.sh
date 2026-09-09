@@ -12,7 +12,7 @@ set +u
 source /opt/ros/humble/setup.bash
 source "$ws/install/setup.bash"
 set -u
-export ROS_DOMAIN_ID=30 ROS_LOCALHOST_ONLY=1 RMW_IMPLEMENTATION=rmw_fastrtps_cpp PYTHONNOUSERSITE=1
+export ROS_DOMAIN_ID=30 ROS_LOCALHOST_ONLY=0 RMW_IMPLEMENTATION=rmw_fastrtps_cpp PYTHONNOUSERSITE=1
 export FASTRTPS_DEFAULT_PROFILES_FILE="$scripts/fastdds_udp_only.xml"
 export FASTDDS_DEFAULT_PROFILES_FILE="$scripts/fastdds_udp_only.xml"
 exec ros2 run go_m8010_arm_hardware whole_arm_gravity_node --ros-args \

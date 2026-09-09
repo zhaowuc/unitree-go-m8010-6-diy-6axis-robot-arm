@@ -188,7 +188,7 @@ set +u
 source /opt/ros/humble/setup.bash
 source "$ws/install/setup.bash"
 set -u
-export ROS_DOMAIN_ID=30 ROS_LOCALHOST_ONLY=1 RMW_IMPLEMENTATION=rmw_fastrtps_cpp PYTHONNOUSERSITE=1
+export ROS_DOMAIN_ID=30 ROS_LOCALHOST_ONLY=0 RMW_IMPLEMENTATION=rmw_fastrtps_cpp PYTHONNOUSERSITE=1
 export FASTRTPS_DEFAULT_PROFILES_FILE="$scripts/fastdds_udp_only.xml"
 export FASTDDS_DEFAULT_PROFILES_FILE="$scripts/fastdds_udp_only.xml"
 # Preserve the model-minus-logical offset; never map the measured drift to zero.

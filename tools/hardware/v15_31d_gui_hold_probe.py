@@ -269,6 +269,8 @@ def observe_gui(window, gui, raw_j6, binding):
     )
     return {
         "at_monotonic_s": now, "source_monotonic_ns": hardware.get("source_monotonic_ns"),
+        "hardware_sequence": hardware.get("sequence"),
+        "hardware_receipt_monotonic_ns": getattr(node, "active_hardware_source_received_ns", None),
         "identity": identity, "feedback_fresh": fresh, "healthy": bool(healthy),
         "zero_ff_authority": zero_authority,
         "stationary_hold_ready": gui.collision_motion_state_ready(

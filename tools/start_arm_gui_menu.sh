@@ -77,15 +77,16 @@ fi
 ws="$repo/V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws"
 python="$repo/.venv/arm-gui/bin/python"
 params="$repo/.runtime/v15_31b_ft/current/attended_gui_params.yaml"
-for path in /opt/ros/humble/setup.bash "$ws/install/setup.bash" "$python" "$params"; do
+dds_profile="$repo/tools/hardware/v15_31d_demo_templates/fastdds_udp_only.xml"
+for path in /opt/ros/humble/setup.bash "$ws/install/setup.bash" "$python" "$params" "$dds_profile"; do
   if [[ ! -f "$path" ]]; then notice "启动所需文件不存在：$path"; exit 1; fi
 done
 source /opt/ros/humble/setup.bash
 source "$ws/install/setup.bash"
 export PYTHONNOUSERSITE=1 PYTHONUNBUFFERED=1
 export PYTHONPATH="$ws/src/go_m8010_arm_gui:$ws/src/go_m8010_arm_hardware:${PYTHONPATH:-}"
-export ROS_DOMAIN_ID=30 ROS_LOCALHOST_ONLY=1 RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-export FASTRTPS_DEFAULT_PROFILES_FILE="$repo/tools/hardware/v15_31d_demo_templates/fastdds_udp_only.xml"
+export ROS_DOMAIN_ID=30 ROS_LOCALHOST_ONLY=0 RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+export FASTRTPS_DEFAULT_PROFILES_FILE="$dds_profile"
 export FASTDDS_DEFAULT_PROFILES_FILE="$FASTRTPS_DEFAULT_PROFILES_FILE"
 export MUJOCO_GL=glfw
 if [[ -z "${QT_QPA_PLATFORM:-}" ]]; then

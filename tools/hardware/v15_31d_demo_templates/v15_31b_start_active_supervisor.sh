@@ -42,7 +42,7 @@ export EMPIRICAL_VALIDATION_ENVELOPE_PATH="$session/empirical_validation_envelop
 export EMPIRICAL_VALIDATION_ENVELOPE_SHA256="$envelope_sha"
 export GRAVITY_ENABLED_FOR_HARDWARE=true
 export GRAVITY_SCALE_TARGET=0.0
-export ROS_DOMAIN_ID=30 ROS_LOCALHOST_ONLY=1 RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+export ROS_DOMAIN_ID=30 ROS_LOCALHOST_ONLY=0 RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export FASTRTPS_DEFAULT_PROFILES_FILE="$scripts/fastdds_udp_only.xml"
 export FASTDDS_DEFAULT_PROFILES_FILE="$scripts/fastdds_udp_only.xml"
 export PYTHONNOUSERSITE=1 XDG_RUNTIME_DIR=/run/user/$(id -u)
