@@ -1,0 +1,46 @@
+{
+  "session": "v15_31d_demo_20260909T125207-eac31a",
+  "report_sha256": "34a1921e1e01ef22dde4ab11555bba0137844cf84611b0971e2786c5d421b926",
+  "status": "PASS",
+  "failure": null,
+  "guidance_fault": null,
+  "last_guidance_duration_until_release_s": 2.156812312081456,
+  "maximum_abs_excursion_deg": [
+    0.03471203605807715,
+    7.218365200730046,
+    0.5137378639048321,
+    0.16835283537225457,
+    0.008675311467421207,
+    0.04371387770892052
+  ],
+  "release_to_return_start_s": 3.932215439155698,
+  "return_phase_duration_s": 42.83771396474913,
+  "post_return_hold_duration_s": 74.76334293093532,
+  "post_return_max_abs_error_deg": [
+    0.005206265899291953,
+    0.04686178818782377,
+    0.045125646875500296,
+    0.06421672719802311,
+    0.022564441966009003,
+    0.04371387770892052
+  ],
+  "healthy_through_drag_return_and_hold": true,
+  "gravity_authority_through_drag_return_and_hold": true,
+  "maximum_router_rejections": 0,
+  "hard_controller_faults_observed": false,
+  "event_counts": {
+    "stationary_bias": 1,
+    "guidance_started": 2,
+    "guidance_hardware_ack": 2,
+    "guidance_release": 2,
+    "initial_vertical_return_verified": 2,
+    "input_wait": 4,
+    "input_resumed": 4
+  },
+  "return_verified": true,
+  "elapsed_s": 550.2385617936961,
+  "terminal_confirmed": true,
+  "operator_report": "拖动后机械臂自主回正",
+  "pending_question": "Did the operator keep the GUI button continuously pressed during return?",
+  "qualification_limit": "Return after guidance_release passed. Force-withdrawal holding while guidance remains active is not established."
+}
