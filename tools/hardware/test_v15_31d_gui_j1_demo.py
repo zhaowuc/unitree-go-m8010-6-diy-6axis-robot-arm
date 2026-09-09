@@ -493,6 +493,32 @@ def test_initial_recovery_uses_original_file_and_checks_all_axes_before_hold():
         raise AssertionError("recovery allowed an oversized J1 correction")
 
 
+def test_recovery_wall_clock_allows_planning_and_six_segments_but_stops_at_sixty_seconds():
+    for phase in ("recover_initial", "recovery_hold"):
+        demo, commands, override, tick = harness(interactive_teach=True)
+        demo.origin = (0.0,) * 6
+        demo.identity = demo.observe()["identity"]
+        demo.rejected = 0
+        demo.recover_initial_first = True
+        demo.recovery_started = 0.0
+        demo.stage = phase
+        demo.recovery_result = {"status": "RUNNING"}
+        demo.last_confirmation = float("inf")
+        demo.window.hardware_mode = "hold" if phase == "recovery_hold" else "position"
+        demo.window.command_stream_suspended = False
+        demo.dialog = SimpleNamespace(runner=SimpleNamespace(state="moving", detail="J6 still running", events=[]))
+        if phase == "recovery_hold":
+            override["j6_drive_state"] = None  # Await the existing final HOLD proof.
+        tick(45.0)
+        assert demo.stage == phase and demo.terminal is None and "brake" not in commands
+        tick(14.9)
+        assert demo.stage == phase and demo.terminal is None
+        tick(.1)
+        assert demo.failure == "initial-pose recovery exceeded its 60-second deadline"
+        assert demo.terminal is not None and commands.count("brake") == 1
+        assert demo.recovery_result["status"] == "FAIL" and demo.maximum_seconds == 600.0
+
+
 if __name__ == "__main__":
     test_bounded_j1_action_group()
     test_engaging_waits_for_one_continuous_second_after_startup_transient()
@@ -500,6 +526,7 @@ if __name__ == "__main__":
     test_three_cycles_reuse_file_and_keep_completed_cycle_when_second_fails()
     test_ten_symmetric_cycles_keep_midpoint_file_and_return_center()
     test_initial_recovery_uses_original_file_and_checks_all_axes_before_hold()
+    test_recovery_wall_clock_allows_planning_and_six_segments_but_stops_at_sixty_seconds()
     print("GUI_J1_DEMO_OFFLINE=PASS")
 
 

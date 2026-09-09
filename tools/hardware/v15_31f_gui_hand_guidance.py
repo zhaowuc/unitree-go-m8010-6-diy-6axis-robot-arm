@@ -56,7 +56,8 @@ class GuidanceDemo(J1Demo):
         self.hold_requested = False
         self.guide_epoch = None
         self.guidance_fault = None
-        self.pending_release = False
+        self.entry_targets = None
+        self.entry_started_at = None
         self.return_quiet_since = None
         self.shadow_started_at = None
         toolbar = self.window.teach_toolbar
@@ -93,7 +94,8 @@ class GuidanceDemo(J1Demo):
                 raise RuntimeError("当前会话尚未开放整臂柔顺")
             self.filtered_residual = [0.0] * 6
             self.input_wait_since = None
-            self.pending_release = False
+            self.entry_targets = list(self.window.command_targets)
+            self.entry_started_at = self.now()
             self.guidance_phase, self.guidance_fault = "engaging_guidance", None
             if not self.shadow_only:
                 self.window.hand_guidance_reference = self.reference([0.0] * 6)
@@ -117,21 +119,43 @@ class GuidanceDemo(J1Demo):
         if self.guidance_phase not in {"guiding", "engaging_guidance"}:
             return
         if self.guidance_phase == "engaging_guidance":
-            # No admittance reference moves during admission. A quick click
-            # waits for the unchanged initial target ACK, then freezes it.
-            self.pending_release = True
+            self._cancel_admission("BUTTON_RELEASE_DURING_ADMISSION")
             return
         self.guidance_events.append({"event": "guidance_release", "at_monotonic_s": self.now()})
-        self.drag_button.setEnabled(False)
         if self.shadow_only:
             self.guidance_phase = "ready"
             self.drag_button.setEnabled(not self.ending)
             return
+        # Disabling a held Qt button can synchronously emit released again.
         self.guidance_phase = "freezing"
+        self.drag_button.setEnabled(False)
         self.freeze_reference = None
         self.freeze_sent_ns = int(self.now() * 1e9)
         self.window.hand_guidance_reference = self.reference([0.0] * 6, freeze=True)
         self.status.setText("正在保持各轴最后接受的目标。")
+
+    def _request_hold(self, target):
+        self.guidance_phase = "hold_barrier"
+        self.window.command_targets = list(target)
+        self.window.targets = self.window.candidate_targets = list(target)
+        self.window.hand_guidance_reference = self.reference([0.0] * 6)
+        self.window.hardware_mode = "hold"
+        self.window.machine.hold()
+        self.window.moving_joint_mask = [False] * 6
+        self.window._authorize_active_joints([True] * 6)
+        self.hold_target = list(target)
+        self.drag_button.setEnabled(False)
+
+    def _cancel_admission(self, reason):
+        # Before all-domain ACK no moving reference has been generated. Every
+        # domain still owns these exact pre-entry HOLD targets, so a newer 1.5
+        # HOLD is valid for both admitted and not-yet-admitted domains.
+        self._request_hold(self.entry_targets)
+        self.guidance_events.append({"event": "guidance_admission_cancelled", "reason": reason,
+            "at_monotonic_s": self.now(), "press_epoch": self.guide_epoch,
+            "hold_epoch": self.window.activation_epoch, "targets_rad": list(self.entry_targets)})
+        print("HAND_GUIDANCE_ADMISSION_CANCELLED=" + reason, flush=True)
+        self.status.setText("未进入拖动，正在确认原目标保持。")
 
     def record_pose(self):
         if self.guidance_phase != "ready" or not self.window._action_group_hold_ready(self.window.command_targets):
@@ -160,14 +184,7 @@ class GuidanceDemo(J1Demo):
                for names in MOTOR_GROUPS for name in names):
             return
         self.freeze_reference = target
-        self.window.command_targets = list(target)
-        self.window.targets = self.window.candidate_targets = list(target)
-        self.window.hardware_mode = "hold"
-        self.window.machine.hold()
-        self.window.moving_joint_mask = [False] * 6
-        self.window._authorize_active_joints([True] * 6)
-        self.hold_target = list(target)
-        self.guidance_phase = "hold_barrier"
+        self._request_hold(target)
 
     def _begin_return(self, sample):
         if (not sample["stationary_hold_ready"] or not sample["router_hold_fresh"]
@@ -297,8 +314,8 @@ class GuidanceDemo(J1Demo):
                     self.last_observation_at = now
                     self.guidance_phase = "guiding"
                     self.guidance_events.append({"event": "guidance_hardware_ack", "at_monotonic_s": now, "epoch": self.guide_epoch})
-                    if self.pending_release:
-                        self.release_guidance()
+                elif now - self.entry_started_at >= 0.15:
+                    self._cancel_admission("ALL_DOMAIN_ACK_TIMEOUT")
                 return
             if self.ending and self.guidance_phase in {"ready", "calibrating"}:
                 self._begin_return(sample)
@@ -347,8 +364,15 @@ class GuidanceDemo(J1Demo):
             if self.guidance_phase != "guiding":
                 return
             self.window._action_group_health(allowed_modes=("hold", "teach"))
-            raw_residual = [value-bias for value,bias in zip(observation.residual_nm, self.bias)]
             dt = now - getattr(self, "last_observation_at", now-0.02)
+            if dt > self.profile.max_dt_s:
+                # Never integrate over a delayed Qt tick or invent intermediate
+                # measurements. Keep q, zero v, and reset the clock on recovery.
+                if dt >= self.profile.max_feedback_age_s:
+                    self.input_wait_since = self.last_observation_at
+                self._pause_input(now, "CONTROL_TICK_DELAY", {"elapsed_s": dt})
+                return
+            raw_residual = [value-bias for value,bias in zip(observation.residual_nm, self.bias)]
             alpha = max(0.0, min(1.0, dt / (0.05 + dt)))
             self.filtered_residual = [old + alpha*(new-old) for old,new in zip(self.filtered_residual, raw_residual)]
             output = self.core.update(now, observation.q, observation.dq, self.filtered_residual,

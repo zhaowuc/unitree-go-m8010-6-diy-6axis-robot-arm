@@ -29,11 +29,58 @@ def test_j6_guidance_bounded_references_deadman_frozen_hold_and_exact_owned_ack(
     from test_v15_30a_gui_profile import load_parse_command, load_mode_functions
     parse = load_parse_command()
     parse.__globals__["validate_guidance_shape"] = validate_guidance_shape
-    context = {"torque_qualified": True, "healthy_foc": True, "actual_rad": 0.0}
+    context = {"torque_qualified": True, "healthy_foc": True, "actual_rad": 0.0,
+               "actual_velocity_rad_s": 0.0}
     previous = packet(epoch=1, source=990_000_000, mode="hold")
     first = parse(json.dumps(packet()).encode(), 1_000_000_001)
     assert first["maximum_velocity_rad_s"] == math.radians(30)
     accepted, state = stage_guidance_candidate(first, None, context, previous, 1_000_000_001)
+    # Admission cancellation is the same fixed-target HOLD whether this
+    # domain accepted the initial teach frame or is still on ordinary HOLD.
+    ordinary_hold = deepcopy(previous)
+    ordinary_hold["schema"] = "go-m8010-gui-command/1.2"
+    ordinary_hold.pop("hand_guidance")
+    abort = packet(epoch=3, source=1_005_000_000, mode="hold")
+    for admission_state, prior_command in ((None, ordinary_hold), (state, accepted)):
+        _, aborted = stage_guidance_candidate(abort, admission_state, context, prior_command, 1_005_000_001)
+        assert not aborted.active and aborted.targets == tuple(ordinary_hold["targets_rad"])
+        assert aborted.accepted_epoch == 3
+        bad_abort = deepcopy(abort)
+        bad_abort["targets_rad"][5] += .001  # Still within 2 deg, but never the held target.
+        with pytest.raises(ValueError, match="HOLD"):
+            stage_guidance_candidate(bad_abort, admission_state, context, prior_command, 1_005_000_001)
+    with pytest.raises(GuidanceReferenceRejected, match="PRIOR_EXACT_HOLD"):
+        stage_guidance_candidate(abort, None, context, None, 1_005_000_001)
+    displaced = dict(context, actual_rad=math.radians(2.1))
+    _, retained_abort = stage_guidance_candidate(abort, None, displaced, ordinary_hold, 1_005_000_001)
+    assert retained_abort.targets == tuple(ordinary_hold["targets_rad"]) and not retained_abort.active
+    # Cancel never moves H0 to the displaced actual position or shifts origin.
+    for field in ("targets_rad", "origin_rad"):
+        changed = deepcopy(abort)
+        (changed if field == "targets_rad" else changed["hand_guidance"])[field][5] = displaced["actual_rad"]
+        with pytest.raises(GuidanceReferenceRejected):
+            stage_guidance_candidate(changed, None, displaced, ordinary_hold, 1_005_000_001)
+    for invalid_context, reason in ((dict(displaced, healthy_foc=False), "HEALTHY"),
+            (dict(displaced, torque_qualified=False), "QUALIFIED"),
+            (dict(displaced, actual_velocity_rad_s=math.radians(30.1)), "FEEDBACK_VELOCITY"),
+            (dict(displaced, actual_velocity_rad_s=math.nan), "FEEDBACK_VELOCITY")):
+        with pytest.raises(ValueError, match=reason):
+            stage_guidance_candidate(abort, None, invalid_context, ordinary_hold, 1_005_000_001)
+    with pytest.raises(GuidanceReferenceRejected, match="ACTUAL_ERROR"):
+        stage_guidance_candidate(first, None, displaced, ordinary_hold, 1_005_000_001)
+    wrong_first_origin = deepcopy(first)
+    wrong_first_origin["hand_guidance"]["origin_rad"][5] = .001
+    with pytest.raises(GuidanceReferenceRejected, match="FIRST_ORIGIN"):
+        stage_guidance_candidate(wrong_first_origin, None, context, ordinary_hold, 1_005_000_001)
+    changed_origin = deepcopy(abort)
+    changed_origin["hand_guidance"]["origin_rad"][5] = .001
+    with pytest.raises(GuidanceReferenceRejected, match="SESSION_ORIGIN"):
+        stage_guidance_candidate(changed_origin, aborted, context, abort, 1_005_000_001)
+    changed_origin["mode"] = "teach"
+    changed_origin["moving_joint_mask"] = [True]*6
+    changed_origin["activation_epoch"] = 4
+    with pytest.raises(GuidanceReferenceRejected, match="SESSION_ORIGIN"):
+        stage_guidance_candidate(changed_origin, aborted, context, abort, 1_005_000_001)
     wrong_units = packet(); wrong_units["hand_guidance"]["maximum_velocity_deg_s"] = math.radians(30)
     with pytest.raises(ValueError, match="UNITS"):
         parse(json.dumps(wrong_units).encode(), 1_000_000_001)
@@ -116,8 +163,33 @@ def test_j6_guidance_bounded_references_deadman_frozen_hold_and_exact_owned_ack(
     assert not idle.active and not idle.paused and idle.accepted_epoch == 3
     assert idle.targets[5] == state.targets[5]
     restart = packet(epoch=4, source=deadline + 30_000_000)
+    restart["targets_rad"] = list(idle.targets)
     _, restarted = stage_guidance_candidate(restart, idle, context, ack, deadline + 30_000_001)
     assert restarted.active and restarted.started_ns == deadline + 30_000_001
+    # Repeat after a real previous HOLD has moved beyond two degrees from
+    # the unchanged session anchor. Only entry target-to-actual uses 2 deg.
+    offset_ack = deepcopy(ack)
+    offset_ack["targets_rad"][5] = math.radians(3.0)
+    offset_idle = replace(idle, targets=tuple(offset_ack["targets_rad"]))
+    offset_press = deepcopy(restart)
+    offset_press["targets_rad"] = list(offset_idle.targets)
+    offset_context = dict(context, actual_rad=math.radians(3.0))
+    _, repeated = stage_guidance_candidate(offset_press, offset_idle, offset_context, offset_ack, deadline + 30_000_001)
+    assert repeated.active and repeated.origin == state.origin
+    assert repeated.targets == offset_idle.targets and repeated.started_ns == deadline + 30_000_001
+    with pytest.raises(GuidanceReferenceRejected, match="FIRST_ORIGIN"):
+        stage_guidance_candidate(offset_press, None, offset_context, offset_ack, deadline + 30_000_001)
+    changed_entry = deepcopy(offset_press)
+    changed_entry["targets_rad"][5] += .001
+    with pytest.raises(GuidanceReferenceRejected, match="ENTRY_REQUIRES_EXACT_HOLD"):
+        stage_guidance_candidate(changed_entry, offset_idle, offset_context, offset_ack, deadline + 30_000_001)
+    moving_entry = deepcopy(offset_press)
+    moving_entry["hand_guidance"]["velocity_rad_s"][0] = .001
+    with pytest.raises(GuidanceReferenceRejected, match="ZERO_VELOCITY"):
+        stage_guidance_candidate(moving_entry, offset_idle, offset_context, offset_ack, deadline + 30_000_001)
+    with pytest.raises(GuidanceReferenceRejected, match="ACTUAL_ERROR"):
+        stage_guidance_candidate(offset_press, offset_idle, dict(context, actual_rad=0.0), offset_ack, deadline + 30_000_001)
+    assert not offset_idle.active and offset_idle.targets == tuple(offset_ack["targets_rad"])
     brake = packet(mode="brake"); brake["hand_guidance"] = "broken metadata cannot prevent brake"
     parsed_brake = parse(json.dumps(brake).encode(), 1_000_000_001)
     _, cleared = stage_guidance_candidate(parsed_brake, state, None, accepted, deadline)

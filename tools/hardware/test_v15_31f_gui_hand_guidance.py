@@ -56,10 +56,54 @@ def test_release_freezes_each_native_target_before_ack_and_return_before_brake(m
                 hardware["per_motor"][name] = {"accepted_guidance_metadata_status": "OBSERVED",
                     "accepted_guidance_target_rad": targets[index], "accepted_guidance_activation_epoch": accepted_epoch,
                     "feedback_source_monotonic_ns": int(clock[0]*1e9), "guidance_paused_reason": pause}
+    # A partial admission must be cancelled while the original 500ms lease is
+    # still alive. No moving reference has been sent, so the target is known.
+    feedback([0.0]*6, epoch-1)
+    for name in ("J1", "J6"):
+        hardware["controller_mode_by_motor"][name] = "teach"
+        hardware["per_motor"][name]["accepted_guidance_activation_epoch"] = epoch
+    clock[0] += .14
+    demo.tick()
+    assert demo.guidance_phase == "hold_barrier" and sent[-1][0] == "hold"
+    assert sent[-1][1] > epoch and sent[-1][2] == (0.0,)*6
+    assert sent[-1][3]["velocity_rad_s"] == [0.0]*6 and not actions
+    assert demo.guidance_events[-1]["reason"] == "ALL_DOMAIN_ACK_TIMEOUT"
+    clock[0] += .02
+    feedback([0.0]*6, window.activation_epoch)
+    demo.tick()
+    assert demo.guidance_phase == "ready"
+    # A quick release also cancels immediately instead of waiting forever for
+    # an entry ACK that a rejecting domain will never send.
+    demo.start_guidance()
+    quick_epoch = demo.guide_epoch
+    demo.release_guidance()
+    assert demo.guidance_phase == "hold_barrier" and window.activation_epoch > quick_epoch
+    clock[0] += .02
+    feedback([0.0]*6, window.activation_epoch)
+    demo.tick()
+    assert demo.guidance_phase == "ready" and not actions
+    demo.start_guidance()
+    epoch = demo.guide_epoch
     clock[0] += .02
     feedback([0.0]*6, epoch, mode="teach")
     demo.tick()
     assert demo.guidance_phase == "guiding"
+    # The observed 54.9568ms Qt delay holds q/v0 and resumes on a fresh tick,
+    # without relaxing the core's 50ms integration bound or clearing faults.
+    def observation():
+        return SimpleNamespace(source_monotonic_ns=int(clock[0]*1e9), q=(0.0,)*6,
+            dq=(0.0,)*6, residual_nm=(0.0,)*6)
+    monkeypatch.setattr(runtime, "matched_observation", lambda *_, **__: observation())
+    clock[0] += .0549568
+    demo.tick()
+    assert demo.guidance_phase == "guiding" and demo.guidance_fault is None
+    assert demo.guidance_events[-1]["reason"] == "CONTROL_TICK_DELAY"
+    assert sent[-1][2] == (0.0,)*6 and sent[-1][3]["velocity_rad_s"] == [0.0]*6
+    clock[0] += .02
+    demo.tick()
+    clock[0] += .02
+    demo.tick()
+    assert demo.input_wait_since is None and demo.guidance_fault is None
     # A missing measurement must never renew yesterday's moving reference.
     window.hand_guidance_reference = demo.reference([0.1]*6)
     monkeypatch.setattr(runtime, "matched_observation", lambda *_, **__: None)
@@ -92,7 +136,12 @@ def test_release_freezes_each_native_target_before_ack_and_return_before_brake(m
     window.command_targets = [0.02]*6
     clock[0] += .02
     demo.drag_button.down = False
+    # Qt can synchronously emit released when a held button is disabled.
+    before_release = sum(e["event"] == "guidance_release" for e in demo.guidance_events)
+    demo.drag_button.setEnabled = lambda enabled: (setattr(demo.drag_button, "enabled", enabled),
+        demo.release_guidance() if not enabled else None)
     demo.release_guidance()
+    assert sum(e["event"] == "guidance_release" for e in demo.guidance_events) == before_release + 1
     assert window.command_targets == [0.02]*6 and window.hand_guidance_reference["freeze_reference"] is True
     demo.tick()
     assert demo.guidance_phase == "freezing" and sent[-1][0] == "teach" and not actions

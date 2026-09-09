@@ -106,10 +106,20 @@ def stage_guidance_candidate(candidate, state, context, previous, now_ns):
         if state is not None and state.active:
             if epoch <= state.press_epoch or targets[5] != state.targets[5] or origin != state.origin:
                 raise ValueError("J6_GUIDANCE_HOLD_ACK_MISMATCH")
-        elif state is not None and state.targets and targets[5] != state.targets[5]:
-            raise ValueError("J6_GUIDANCE_HOLD_TARGET_CHANGED")
-        elif (state is None or not state.targets) and abs(targets[5] - actual) > REFERENCE_ERROR + 1e-12:
-            raise GuidanceReferenceRejected("J6_GUIDANCE_INITIAL_HOLD_CAPTURE_LIMIT")
+        elif state is not None and state.targets:
+            if targets[5] != state.targets[5] or origin != state.origin:
+                raise GuidanceReferenceRejected("J6_GUIDANCE_HOLD_TARGET_OR_SESSION_ORIGIN_CHANGED")
+        else:
+            if (not previous or previous.get("mode") != "hold"
+                    or epoch <= previous["activation_epoch"]
+                    or targets[5] != six(previous["targets_rad"], "PREVIOUS_HOLD_TARGET")[5]):
+                raise GuidanceReferenceRejected("J6_GUIDANCE_INITIAL_HOLD_REQUIRES_PRIOR_EXACT_HOLD")
+            if origin[5] != targets[5]:
+                raise GuidanceReferenceRejected("J6_GUIDANCE_FIRST_ORIGIN_REQUIRES_PRIOR_HOLD_TARGET")
+            # This abort retains an already owned target; it captures no new
+            # pose even if a hand has displaced the actual angle beyond 2 deg.
+            if not guidance_feedback_velocity_is_safe(context.get("actual_velocity_rad_s")):
+                raise ValueError("J6_GUIDANCE_FIXED_HOLD_FEEDBACK_VELOCITY_INVALID")
         return candidate, GuidanceState(origin=origin, targets=targets, velocity=velocity,
             source_ns=source, accepted_epoch=epoch)
     if state is not None and state.active:
@@ -129,6 +139,14 @@ def stage_guidance_candidate(candidate, state, context, previous, now_ns):
             raise ValueError("J6_GUIDANCE_FIRST_REFERENCE_CANNOT_FREEZE")
         if not previous or previous.get("mode") != "hold" or epoch <= previous["activation_epoch"]:
             raise ValueError("J6_GUIDANCE_PREVIOUS_HOLD_NEW_EPOCH_REQUIRED")
+        if state is not None and state.origin and origin != state.origin:
+            raise GuidanceReferenceRejected("J6_GUIDANCE_SESSION_ORIGIN_CHANGED")
+        if (state is None or not state.targets) and origin[5] != six(previous["targets_rad"], "PREVIOUS_HOLD_TARGET")[5]:
+            raise GuidanceReferenceRejected("J6_GUIDANCE_FIRST_ORIGIN_REQUIRES_PRIOR_HOLD_TARGET")
+        # origin remains the session range anchor. A new press starts from
+        # the last accepted HOLD target, including after earlier movement.
+        if targets[5] != six(previous["targets_rad"], "PREVIOUS_HOLD_TARGET")[5] or any(velocity):
+            raise GuidanceReferenceRejected("J6_GUIDANCE_ENTRY_REQUIRES_EXACT_HOLD_AND_ZERO_VELOCITY")
     if abs(targets[5] - origin[5]) > EXCURSION + 1e-12:
         raise GuidanceReferenceRejected("J6_GUIDANCE_REFERENCE_EXCURSION_LIMIT")
     if abs(targets[5] - actual) > REFERENCE_ERROR + 1e-12:

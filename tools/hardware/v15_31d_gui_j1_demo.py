@@ -186,8 +186,8 @@ class J1Demo:
                     self.stop()
                     return
                 raise RuntimeError(f"{self.maximum_seconds - 3:g}-second active deadline reached")
-            if self.stage in {"recover_initial", "recovery_hold"} and now - self.recovery_started >= 45:
-                raise RuntimeError("initial-pose recovery exceeded its 45-second deadline")
+            if self.stage in {"recover_initial", "recovery_hold"} and now - self.recovery_started >= 60:
+                raise RuntimeError("initial-pose recovery exceeded its 60-second deadline")
             if self.origin is None:
                 if now - self.started >= 20:
                     raise RuntimeError("current-pose HOLD readiness timed out")
