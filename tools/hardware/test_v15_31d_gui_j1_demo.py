@@ -418,7 +418,7 @@ def test_initial_recovery_uses_original_file_and_checks_all_axes_before_hold():
                     def _move_status(self):
                         return "running"
                 dialog_node = next(item for item in run_live.body if isinstance(item, ast.ClassDef) and item.name == "DemoDialog")
-                namespace.update(ActionGroupDialog=BaseDialog, hand_guidance=True, check_recipe=check_recipe)
+                namespace.update(ActionGroupDialog=BaseDialog, hand_guidance=True, manual_guidance=True, check_recipe=check_recipe)
                 exec(compile(ast.Module(body=[dialog_node], type_ignores=[]), str(source), "exec"), namespace)
                 dialog = namespace["DemoDialog"](**{key: value for key, value in vars(dialog).items() if key != "start"},
                                                   window=demo.window, submitted=False)
@@ -500,7 +500,7 @@ def test_guidance_return_plans_from_owned_hold_with_real_measurement_unchanged()
     tree = ast.parse(source.read_text(encoding="utf-8"))
     window_class = next(item for item in ast.walk(tree) if isinstance(item, ast.ClassDef) and item.name == "Window")
     namespace = dict(gui=SimpleNamespace(MainWindow=object, ContractViolation=ContractViolation),
-                     demo=SimpleNamespace(guidance_phase="returning"), hand_guidance=True)
+                     demo=SimpleNamespace(guidance_phase="returning"), hand_guidance=True, manual_guidance=True)
     exec(compile(ast.Module(body=[window_class], type_ignores=[]), str(source), "exec"), namespace)
     window = namespace["Window"]()
     window.command_targets = [math.radians(value) for value in (20, -19.9, 1, 0, 0, 0)]
@@ -522,6 +522,90 @@ def test_guidance_return_plans_from_owned_hold_with_real_measurement_unchanged()
         pass
     else:
         raise AssertionError("unconfirmed HOLD admitted to return planner")
+
+
+def test_j2_diagnostic_two_bounded_opposite_cycles_use_real_action_files():
+    source = Path(__file__).with_name("v15_31d_gui_j1_demo.py")
+    run_live = next(n for n in ast.parse(source.read_text(encoding="utf-8")).body if isinstance(n, ast.FunctionDef) and n.name == "run_live")
+    callback = next(n for n in run_live.body if isinstance(n, ast.FunctionDef) and n.name == "start_group")
+    with tempfile.TemporaryDirectory() as directory:
+        demo, commands, override, tick = harness(cycles=2, j2_hold_diagnostic=True)
+        override["motor_tracking"] = {name: {"tau_feedback_rotor_nm": 0.05} for name in ("J2A", "J2B")}
+        rows = []
+        dialog = SimpleNamespace(name=SimpleNamespace(setText=lambda _: None),
+            table=SimpleNamespace(setRowCount=lambda _: rows.clear()), append_step=rows.append)
+        def start():
+            dialog.log_path = Path(directory)/f"cycle-{demo.cycle_number}.jsonl"
+            dialog.runner = SimpleNamespace(state="moving", detail="waiting", events=[])
+        dialog.start = start
+        demo.window.action_group_dialog = dialog
+        demo.window.workflow_contract = SimpleNamespace(model_sha256="a"*64)
+        demo.window.absolute_limits = PRODUCTION_ABSOLUTE_JOINT_LIMITS_DEG
+        namespace = dict(window=demo.window, node=SimpleNamespace(log_directory=Path(directory)),
+            demo=demo, ActionGroup=ActionGroup, ActionStep=ActionStep, math=math, hashlib=hashlib)
+        exec(compile(ast.Module(body=[callback], type_ignores=[]), str(source), "exec"), namespace)
+        demo.start_group = namespace["start_group"]
+        for _ in range(120):
+            tick()
+            if demo.stage == "action_group": break
+        for direction in (1, -1):
+            assert rows[0].target_deg[1] == direction and rows[1].target_deg == (0.0,)*6
+            assert all(step.dwell_s == 2.0 and step.speed_deg_s == 1.0 for step in rows)
+            assert all(step.target_deg[i] == 0 for step in rows for i in (0, 2, 3, 4, 5))
+            dialog.runner.events = [dict(event="measured_arrival", actual_model_deg=list(step.target_deg)) for step in rows]
+            dialog.runner.state = "complete"
+            tick()
+        for _ in range(10): tick()
+        assert demo.result()["status"] == "PASS" and demo.maximum_seconds == 300
+        assert demo.result()["schema"] == "go-m8010-j2-hold-diagnostic/1.0"
+        assert [v["out_deg"] for v in demo.cycle_results] == [1.0, -1.0]
+        assert len(list(Path(directory).glob("j2_hold_diagnostic_*.json"))) == 2
+    from go_m8010_arm_gui.workflow_contract import generate_segmented_quintic_recipe
+    for target, allowed in (((0, math.radians(1), 0, 0, 0, 0), True),
+                            ((0, math.radians(1.26), 0, 0, 0, 0), False),
+                            ((math.radians(.26), 0, 0, 0, 0, 0), False)):
+        recipe = generate_segmented_quintic_recipe((0,)*6, target, ((-math.pi,math.pi),)*6,
+            maximum_velocity_rad_s=math.radians(1), maximum_acceleration_rad_s2=math.radians(15),
+            maximum_segment_delta_rad=math.radians(5))
+        try:
+            check_recipe(recipe, (0,)*6, j2_diagnostic=True)
+            assert allowed
+        except RuntimeError:
+            assert not allowed
+
+
+def test_j2_diagnostic_cli_requires_its_fixed_profile():
+    output = StringIO()
+    with redirect_stdout(output):
+        assert main(["--j2-hold-diagnostic", "--hand-guidance", "--cycles", "2"]) == 0
+    plan = json.loads(output.getvalue())
+    assert plan["hardware_accessed"] is False and plan["maximum_seconds"] == 300.0
+    assert plan["demo"].startswith("J2")
+    for extra in (["--excursion-deg", "3"], ["--speed-deg-s", "2"], ["--interactive-teach"]):
+        try:
+            main(["--j2-hold-diagnostic", "--hand-guidance", "--cycles", "2", *extra])
+        except SystemExit as error:
+            assert error.code == 2
+        else:
+            raise AssertionError("diagnostic profile silently widened")
+
+
+def test_j2_diagnostic_stops_early_on_unexpected_sustained_effort():
+    demo, commands, override, tick = harness(cycles=2, j2_hold_diagnostic=True)
+    override["motor_tracking"] = {name: {"tau_feedback_rotor_nm": 0.05} for name in ("J2A", "J2B")}
+    for _ in range(120):
+        tick()
+        if demo.stage == "action_group": break
+    override["motor_tracking"]["J2A"]["tau_feedback_rotor_nm"] = 1.0
+    tick(1.0)
+    assert demo.terminal is None
+    override["motor_tracking"]["J2A"]["tau_feedback_rotor_nm"] = 1.01
+    tick(.01)
+    tick(.19)
+    assert demo.terminal is None
+    tick(.02)
+    assert demo.terminal is not None and "exceeded 1.0 rotor Nm" in demo.failure
+    assert commands.count("brake") == 1
 
 
 def test_recovery_wall_clock_allows_planning_and_six_segments_but_stops_at_sixty_seconds():

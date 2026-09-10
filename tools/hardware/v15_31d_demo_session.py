@@ -290,6 +290,7 @@ def main(argv=None):
     parser.add_argument("--teach-observe", action="store_true", help="after bootstrap, enable J1 teaching for a bounded 20-second posture observation")
     parser.add_argument("--assisted-teach", action="store_true", help="open a bounded interactive single-axis teaching GUI after the normal HOLD ladder")
     parser.add_argument("--hand-guidance", action="store_true", help="whole-arm outer admittance; normal end returns to the initial vertical pose")
+    parser.add_argument("--j2-hold-diagnostic", action="store_true", help="fixed J2 +1/0/-1/0 degree automatic diagnostic; two-second endpoint records")
     parser.add_argument("--guidance-shadow", action="store_true")
     parser.add_argument("--guide-speed-deg-s", type=float, default=30.0)
     parser.add_argument("--base-fixed", action="store_true")
@@ -306,6 +307,10 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.failure_notice is not None:
         return show_failure_notice(args.failure_notice)
+    if args.j2_hold_diagnostic:
+        if args.assisted_teach or args.guidance_shadow or args.teach_observe or args.symmetric or args.return_center or args.excursion_deg != 1.0 or args.speed_deg_s != 1.0 or args.cycles not in (1, 2):
+            parser.error("J2 diagnostic is fixed at two one-degree out/back cycles, 1 deg/s, without manual teaching")
+        args.hand_guidance, args.cycles = True, 2
     if args.hand_guidance and args.assisted_teach:
         parser.error("hand guidance and legacy single-axis teaching use separate profiles")
     if args.guidance_shadow and not args.hand_guidance:
@@ -371,7 +376,8 @@ def main(argv=None):
     plan = {"mode": "EXECUTE" if args.execute else "DRY_RUN", "cycles": args.cycles,
             "excursion_deg": args.excursion_deg, "speed_deg_s": args.speed_deg_s,
             "symmetric": args.symmetric, "return_center": args.return_center,
-            "maximum_demo_seconds": 600.0 if args.assisted_teach or args.hand_guidance else maximum_demo_seconds(args.cycles, args.excursion_deg, args.symmetric),
+            "maximum_demo_seconds": 300.0 if args.j2_hold_diagnostic else 600.0 if args.assisted_teach or args.hand_guidance else maximum_demo_seconds(args.cycles, args.excursion_deg, args.symmetric),
+            "j2_hold_diagnostic": args.j2_hold_diagnostic,
             "assisted_teach": args.assisted_teach, "teach_observe": args.teach_observe,
             "hand_guidance": args.hand_guidance, "guidance_shadow": args.guidance_shadow,
             "j6_low_latency_library": str(args.j6_low_latency_library) if args.j6_low_latency_library else None,
@@ -423,6 +429,7 @@ def execute(args, bodies, plan, session, scripts, unit):
     guided = getattr(args, "hand_guidance", False)
     if guided:
         settings = {"speed_deg_s": args.guide_speed_deg_s, "shadow_only": args.guidance_shadow,
+                    "j2_hold_diagnostic": args.j2_hold_diagnostic,
                     "j6_torque_readback": str(args.j6_torque_readback.resolve()),
                     "j6_torque_readback_sha256": args.expected_j6_torque_readback_sha256,
                     "base_fixed": True, "external_arm_support": False}

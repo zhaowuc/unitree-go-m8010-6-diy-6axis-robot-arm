@@ -53,12 +53,15 @@ def initial_brake_ready(sample):
         and type(sample.get("j6_raw_sequence")) is int and sample["j6_raw_sequence"] > 0)
 
 
-def check_recipe(recipe, origin, *, recover_initial=False):
+def check_recipe(recipe, origin, *, recover_initial=False, j2_diagnostic=False):
     """Keep the five secondary corrections bounded without changing the recipe."""
     result = []
     for segment in recipe.segments:
         moving = [i for i, (a, b) in enumerate(zip(segment.start_rad, segment.target_rad)) if a != b]
-        for i in range(6) if recover_initial else range(1, 6):
+        primary = 1 if j2_diagnostic else 0
+        if j2_diagnostic and not recover_initial and max(abs(segment.start_rad[1]-origin[1]), abs(segment.target_rad[1]-origin[1]), abs(segment.target_rad[1]-segment.start_rad[1])) > math.radians(1.25)+1e-12:
+            raise RuntimeError("J2 diagnostic segment exceeds its one-degree target plus tracking tolerance")
+        for i in range(6) if recover_initial else (i for i in range(6) if i != primary):
             limit = 5.0 if recover_initial else 0.25
             if max(abs(segment.start_rad[i] - origin[i]), abs(segment.target_rad[i] - origin[i]),
                    abs(segment.target_rad[i] - segment.start_rad[i])) > math.radians(limit) + 1e-12:
@@ -75,13 +78,18 @@ class J1Demo:
     def __init__(self, window, observe, confirm, set_scale, start_group, *, cycles=1,
                  excursion_deg=1.0, symmetric=False, speed_deg_s=1.0, return_center=False, start_center=None,
                  recover_initial_first=False, start_recovery=None, validate_recovery_start=None,
-                 interactive_teach=False, teach_observe=False, now=time.monotonic):
+                 interactive_teach=False, teach_observe=False, j2_hold_diagnostic=False, now=time.monotonic):
+        self.j2_hold_diagnostic = j2_hold_diagnostic
+        if j2_hold_diagnostic and (cycles != 2 or excursion_deg != 1.0 or speed_deg_s != 1.0 or symmetric or return_center or interactive_teach):
+            raise ValueError("J2 diagnostic requires two one-degree out/back cycles at 1 deg/s")
+        self.primary_joint = 1 if j2_hold_diagnostic else 0
+        self.diagnostic_high_effort_since = None
         self.interactive_teach = interactive_teach
         self.interactive_ready = False
         self.teach_observe = teach_observe
         self.teach_observation_started = None
         self.teach_observation_finished = False
-        self.maximum_seconds = 600.0 if interactive_teach else maximum_demo_seconds(cycles, excursion_deg, symmetric)
+        self.maximum_seconds = 300.0 if j2_hold_diagnostic else 600.0 if interactive_teach else maximum_demo_seconds(cycles, excursion_deg, symmetric)
         if (type(speed_deg_s) not in {int, float} or not math.isfinite(speed_deg_s)
                 or not 0 < speed_deg_s <= 3):
             raise ValueError("speed_deg_s must be finite and greater than 0 through 3")
@@ -106,6 +114,10 @@ class J1Demo:
         self.cycle_results = []
         self.success = self.done = False
         self.samples, self.events = [], []
+
+    @property
+    def cycle_excursion_deg(self):
+        return self.excursion_deg * (-1 if self.j2_hold_diagnostic and self.cycle_number == 2 else 1)
 
     def stop(self, reason=None):
         if self.terminal is not None:
@@ -220,6 +232,18 @@ class J1Demo:
             if (not sample["healthy"] or not sample["thermal_ready"] or not sample["authority"] or sample["identity"] != self.identity
                     or sample["router_rejected_commands"] != self.rejected):
                 raise RuntimeError("feedback, authority, session or command-router health changed")
+            if self.j2_hold_diagnostic and self.stage == "action_group":
+                efforts = [sample.get("motor_tracking", {}).get(name, {}).get("tau_feedback_rotor_nm") for name in ("J2A", "J2B")]
+                if any(type(value) not in (int, float) or not math.isfinite(value) for value in efforts):
+                    raise RuntimeError("J2 diagnostic requires fresh finite paired torque feedback")
+                # Short-probe bound, not a continuous motor rating or a
+                # replacement for native work/thermal protections.
+                if max(abs(value) for value in efforts) > 1.0:
+                    self.diagnostic_high_effort_since = now if self.diagnostic_high_effort_since is None else self.diagnostic_high_effort_since
+                    if now - self.diagnostic_high_effort_since >= 0.2:
+                        raise RuntimeError("J2 diagnostic exceeded 1.0 rotor Nm for 0.2 seconds")
+                else:
+                    self.diagnostic_high_effort_since = None
             if self.stage == "interactive_teach":
                 # Manual contact is expected here: never refresh the calibration
                 # ladder's no_person_contact attestation during operator teaching.
@@ -320,7 +344,7 @@ class J1Demo:
             if runner.state == "complete":
                 target = list(self.recovery_target if self.stage == "recover_initial" else self.origin)
                 if self.stage == "action_group" and self.symmetric:
-                    target[0] -= math.radians(self.excursion_deg)
+                    target[self.primary_joint] -= math.radians(self.excursion_deg)
                 if (not sample["stationary_hold_ready"] or not sample["router_hold_fresh"]
                         or max(abs(math.degrees(a-b)) for a,b in zip(sample["actual_rad"], target)) > 0.25):
                     raise RuntimeError("final fresh HOLD pose no longer satisfies the return bound")
@@ -362,14 +386,15 @@ class J1Demo:
                     return
                 if len(arrivals) != 2:
                     raise RuntimeError("two measured endpoints are required")
-                initial = math.degrees(self.origin[0]) + self.window.session_pose_deg[0]
-                displacement = arrivals[0]["actual_model_deg"][0] - initial
-                returned = arrivals[1]["actual_model_deg"][0] - initial
-                out_error = displacement - self.excursion_deg
+                axis = self.primary_joint
+                initial = math.degrees(self.origin[axis]) + self.window.session_pose_deg[axis]
+                displacement = arrivals[0]["actual_model_deg"][axis] - initial
+                returned = arrivals[1]["actual_model_deg"][axis] - initial
+                out_error = displacement - self.cycle_excursion_deg
                 return_error = returned + self.excursion_deg if self.symmetric else returned
                 if abs(out_error) > 0.25 or abs(return_error) > 0.25:
-                    raise RuntimeError("measured J1 out/back displacement failed demo bounds")
-                self.events.append({"event": "measured_j1_out_and_back", "cycle": self.cycle_number,
+                    raise RuntimeError(f"measured J{self.primary_joint+1} out/back displacement failed demo bounds")
+                self.events.append({"event": f"measured_j{self.primary_joint+1}_out_and_back", "cycle": self.cycle_number,
                                     "out_deg": displacement, "return_deg": returned,
                                     "out_error_deg": out_error, "return_error_deg": return_error})
                 self._record_cycle("PASS", out_deg=displacement, return_deg=returned,
@@ -384,6 +409,8 @@ class J1Demo:
                         self.stop()
                 else:
                     self.cycle_number += 1
+                    if self.j2_hold_diagnostic:
+                        self.action_group_file = None
                     self.dialog = None
                     self.window._tick()
                     self.dialog = self.start_group(self.origin)
@@ -407,9 +434,10 @@ class J1Demo:
         completed = sum(result["status"] == "PASS" for result in self.cycle_results)
         recovery_ok = not self.recover_initial_first or (self.recovery_result or {}).get("status") == "PASS"
         center_ok = not self.return_center or (self.center_return or {}).get("status") == "PASS"
-        return {"schema": "go-m8010-j1-action-group-demo/1.0",
+        return {"schema": "go-m8010-j2-hold-diagnostic/1.0" if self.j2_hold_diagnostic else "go-m8010-j1-action-group-demo/1.0",
+                "j2_hold_diagnostic": self.j2_hold_diagnostic,
                 "status": "PASS" if self.success and completed == self.requested_cycles and terminal_ok and recovery_ok and center_ok and not failure else "FAIL",
-                "scope": "J1_SYMMETRIC_ENDPOINTS" if self.symmetric else "J1_OUT_AND_BACK",
+                "scope": "J2_ONE_DEGREE_POSITIVE_AND_NEGATIVE_OUT_BACK" if self.j2_hold_diagnostic else "J1_SYMMETRIC_ENDPOINTS" if self.symmetric else "J1_OUT_AND_BACK",
                 "strict_precision_qualification": "NOT_RUN_OR_MODIFIED", "failure": failure,
                 "terminal_brake_and_j6_disabled_confirmed": terminal_ok,
                 "elapsed_s": self.now() - self.started, "initial_hold_target_rad": self.initial_hold_target,
@@ -427,7 +455,7 @@ class J1Demo:
 
 def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
              excursion_deg=1.0, symmetric=False, speed_deg_s=1.0, return_center=False, interactive_teach=False, teach_observe=False,
-             hand_guidance=False, guidance_shadow=False, guide_speed_deg_s=30.0):
+             hand_guidance=False, guidance_shadow=False, guide_speed_deg_s=30.0, j2_hold_diagnostic=False):
     root = Path(__file__).resolve().parents[2]
     sys.path.insert(0, str(root / "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_gui"))
     from go_m8010_arm_gui import main_window as gui
@@ -437,6 +465,7 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
     from rcl_interfaces.msg import Parameter, ParameterType, ParameterValue
     from rcl_interfaces.srv import SetParameters
 
+    manual_guidance = hand_guidance and not j2_hold_diagnostic
     gui.rclpy.init(args=ros_args)
     app = gui.QApplication([sys.argv[0]])
     app.setQuitOnLastWindowClosed(False)
@@ -445,7 +474,7 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
 
     class Window(gui.MainWindow):
         def _acceptance_preview_start(self, now):
-            if hand_guidance and demo is not None and demo.guidance_phase == "returning":
+            if manual_guidance and demo is not None and demo.guidance_phase == "returning":
                 if self.hardware_mode != "hold" or not self._action_group_hold_ready(self.command_targets):
                     raise gui.ContractViolation("回位预演需要已确认的静止HOLD")
                 # Keep untouched axes at native-owned targets; measured actual
@@ -462,7 +491,7 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
 
     class DemoDialog(ActionGroupDialog):
         def start(self):
-            if (hand_guidance and demo is not None and demo.stage != "recover_initial"
+            if (manual_guidance and demo is not None and demo.stage != "recover_initial"
                     and demo.guidance_phase != "returning"):
                 window._notify("手导会话可记录姿态；请结束手导后在常规控制中执行动作组。", "info")
                 return
@@ -472,8 +501,8 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
             if not self.submitted and self.window._preview_approval_matches_candidate():
                 recipe = self.window.workflow_contract.q_plan_trajectory
                 recovering = demo.stage == "recover_initial"
-                segments = (demo.check_return_recipe(recipe) if hand_guidance and not recovering
-                            else check_recipe(recipe, demo.origin, recover_initial=recovering))
+                segments = (demo.check_return_recipe(recipe) if manual_guidance and not recovering
+                            else check_recipe(recipe, demo.origin, recover_initial=recovering, j2_diagnostic=demo.j2_hold_diagnostic))
                 center = demo.stage == "return_center"
                 demo.events.append({"event": "checked_recovery_recipe_before_submit" if recovering else "checked_center_recipe_before_submit" if center else "checked_recipe_before_submit",
                                     "cycle": None if center else 0 if recovering else demo.cycle_number, "step": self.runner.index,
@@ -499,7 +528,7 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
 
     def observe():
         sample = observe_gui(window, gui, raw, binding)
-        if interactive_teach:
+        if interactive_teach or j2_hold_diagnostic:
             sample.update(command_targets_rad=list(window.command_targets),
                           teach_joint=getattr(window, "teach_joint", None))
         gravity = node.latest_gravity_status or {}
@@ -547,16 +576,17 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
 
     def start_group(origin):
         dialog = window.action_group_dialog
-        path = node.log_directory / "j1_demo_action_group.json"
+        path = node.log_directory / (f"j2_hold_diagnostic_{demo.cycle_number}.json" if demo.j2_hold_diagnostic else "j1_demo_action_group.json")
         if demo.action_group_file is None:
             baseline = [math.degrees(a) + b for a, b in zip(origin, window.session_pose_deg)]
             target = baseline[:]
-            target[0] += demo.excursion_deg
+            target[demo.primary_joint] += demo.cycle_excursion_deg
             if demo.symmetric:
-                baseline[0] -= demo.excursion_deg
-            group = ActionGroup(f"J1 {'±' if demo.symmetric else ''}{demo.excursion_deg:g}°往返动作组示例", (
-                ActionStep(tuple(target), speed_deg_s=demo.speed_deg_s, dwell_s=0.5),
-                ActionStep(tuple(baseline), speed_deg_s=demo.speed_deg_s, dwell_s=0.5),
+                baseline[demo.primary_joint] -= demo.excursion_deg
+            dwell = 2.0 if demo.j2_hold_diagnostic else 0.5
+            group = ActionGroup(f"J{demo.primary_joint+1} {'±' if demo.symmetric else ''}{demo.cycle_excursion_deg:g}°往返动作组", (
+                ActionStep(tuple(target), speed_deg_s=demo.speed_deg_s, dwell_s=dwell),
+                ActionStep(tuple(baseline), speed_deg_s=demo.speed_deg_s, dwell_s=dwell),
             ), window.workflow_contract.model_sha256)
             if path.exists():
                 raise RuntimeError("action-group artifact already exists; use a fresh run directory")
@@ -625,7 +655,7 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
         return dialog
 
     demo_type, guidance_options = J1Demo, {}
-    if hand_guidance:
+    if manual_guidance:
         from v15_31f_gui_hand_guidance import GuidanceDemo
         demo_type = GuidanceDemo
         guidance_options = {"gui": gui, "shadow_only": guidance_shadow, "guide_speed_deg_s": guide_speed_deg_s}
@@ -634,6 +664,7 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
                   return_center=return_center, start_center=start_center,
                   recover_initial_first=recover_initial_first, start_recovery=start_recovery,
                   validate_recovery_start=read_initial_reference, interactive_teach=interactive_teach, teach_observe=teach_observe,
+                  j2_hold_diagnostic=j2_hold_diagnostic,
                   **guidance_options)
     timer = gui.QTimer(window)
     def tick():
@@ -664,7 +695,10 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
     if hand_guidance:
         window.setWindowTitle("整臂柔顺：点击切换拖动；再次点击结束并回位")
         stop.setText("回起始姿态并结束（Esc）")
-    if interactive_teach:
+    if j2_hold_diagnostic:
+        window.setWindowTitle("J2 ±1°短时保持诊断：自动两次往返，各到位点记录2秒")
+        stop.setText("停止诊断并制动（Esc）")
+    if interactive_teach or j2_hold_diagnostic:
         window.showMaximized()
     else:
         window.show()
@@ -716,6 +750,7 @@ def main(argv=None):
     parser.add_argument("--recover-initial-first", action="store_true")
     parser.add_argument("--interactive-teach", action="store_true")
     parser.add_argument("--hand-guidance", action="store_true")
+    parser.add_argument("--j2-hold-diagnostic", action="store_true")
     parser.add_argument("--guidance-shadow", action="store_true", help="observe proposed references while physical targets remain held")
     parser.add_argument("--guide-speed-deg-s", type=float, default=30.0)
     parser.add_argument("--teach-observe", action="store_true", help="enable J1 assisted teaching for 20 seconds without a position move, then release to HOLD")
@@ -724,7 +759,10 @@ def main(argv=None):
     parser.add_argument("--anchor-validation", type=Path)
     parser.add_argument("--expected-envelope-sha256")
     args = parser.parse_args(values[:split])
-    if args.hand_guidance:
+    if args.j2_hold_diagnostic:
+        if not args.hand_guidance or args.cycles != 2 or args.excursion_deg != 1.0 or args.speed_deg_s != 1.0 or args.symmetric or args.return_center or args.interactive_teach or args.guidance_shadow or args.teach_observe:
+            parser.error("J2 diagnostic requires hand-guidance support envelope and exactly two one-degree out/back cycles")
+    elif args.hand_guidance:
         args.interactive_teach = True
     if args.guidance_shadow and not args.hand_guidance:
         parser.error("--guidance-shadow requires --hand-guidance")
@@ -733,7 +771,7 @@ def main(argv=None):
     if args.teach_observe and not args.interactive_teach:
         parser.error("--teach-observe requires --interactive-teach")
     try:
-        maximum_seconds = 600.0 if args.interactive_teach else maximum_demo_seconds(args.cycles, args.excursion_deg, args.symmetric)
+        maximum_seconds = 300.0 if args.j2_hold_diagnostic else 600.0 if args.interactive_teach else maximum_demo_seconds(args.cycles, args.excursion_deg, args.symmetric)
         if not math.isfinite(args.speed_deg_s) or not 0 < args.speed_deg_s <= 3:
             raise ValueError("speed_deg_s must be finite and greater than 0 through 3")
     except ValueError as error:
@@ -744,7 +782,7 @@ def main(argv=None):
                           "excursion_deg": args.excursion_deg, "symmetric": args.symmetric,
                           "speed_deg_s": args.speed_deg_s, "return_center": args.return_center,
                           "maximum_seconds": maximum_seconds, "gravity_levels": LEVELS,
-                          "demo": "J1 fixed-origin endpoints; secondary corrections <=0.25 degrees"}))
+                          "demo": "J2 +1/0/-1/0 diagnostic" if args.j2_hold_diagnostic else "J1 fixed-origin endpoints; secondary corrections <=0.25 degrees"}))
         return 0
     if (not all((args.output, args.envelope, args.anchor_validation, args.expected_envelope_sha256))
             or args.output.exists() or split == len(values)):
@@ -759,7 +797,8 @@ def main(argv=None):
         result = run_live(values[split:], binding, args.cycles, args.recover_initial_first,
                           excursion_deg=args.excursion_deg, symmetric=args.symmetric,
                           speed_deg_s=args.speed_deg_s, return_center=args.return_center, interactive_teach=args.interactive_teach, teach_observe=args.teach_observe,
-                          hand_guidance=args.hand_guidance, guidance_shadow=args.guidance_shadow, guide_speed_deg_s=args.guide_speed_deg_s)
+                          hand_guidance=args.hand_guidance, guidance_shadow=args.guidance_shadow, guide_speed_deg_s=args.guide_speed_deg_s,
+                          j2_hold_diagnostic=args.j2_hold_diagnostic)
         stream.seek(0)
         json.dump(result, stream, ensure_ascii=False, allow_nan=False, indent=2)
         stream.write("\n")
