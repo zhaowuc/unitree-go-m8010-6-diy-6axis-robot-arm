@@ -1,0 +1,63 @@
+{
+  "schema": "go-m8010-j2-common-differential-review/1.0",
+  "session": "v15_31d_demo_20260910T052231-e8d598",
+  "definitions": {
+    "a": "-J2A feedback rotor torque",
+    "b": "+J2B feedback rotor torque",
+    "common": "(a+b)/2",
+    "differential": "(a-b)/2"
+  },
+  "all_post_release": {
+    "unique_samples": 1436,
+    "duration_s": 31.932673785835505,
+    "a_rotor_nm_median": 2.6484375,
+    "b_rotor_nm_median": 2.49609375,
+    "common_rotor_nm_median": 2.572265625,
+    "abs_differential_rotor_nm_median": 0.072265625,
+    "differential_to_common_median": 0.02900763358778626,
+    "opposing_samples": 0,
+    "max_cancel_fraction": 0.0,
+    "sync_deg_minmax": [
+      -0.44328713773371287,
+      -0.05972541108896334
+    ],
+    "command_a_b_max_difference_nm": 0.0
+  },
+  "settled_last_15_seconds": {
+    "unique_samples": 656,
+    "duration_s": 14.9686583946459,
+    "a_rotor_nm_median": 2.6484375,
+    "b_rotor_nm_median": 2.49609375,
+    "common_rotor_nm_median": 2.5703125,
+    "abs_differential_rotor_nm_median": 0.072265625,
+    "differential_to_common_median": 0.02826585179526356,
+    "opposing_samples": 0,
+    "max_cancel_fraction": 0.0,
+    "sync_deg_minmax": [
+      -0.432878787133133,
+      -0.38775367976705155
+    ],
+    "command_a_b_max_difference_nm": 0.0
+  },
+  "last_sample": {
+    "t": 31.971117722801864,
+    "a": 2.65234375,
+    "b": 2.51953125,
+    "common": 2.5859375,
+    "diff": 0.06640625,
+    "opposing": false,
+    "cancel_fraction": 0.0,
+    "sync_deg": -0.3946950079598314,
+    "error_deg": -1.9473818406387218,
+    "q_deg": -21.73224441109461,
+    "command_a": 1.9100000464144256,
+    "command_b": 1.9100000464144256
+  },
+  "interpretation": "At the sampled feedback times both motors supply torque in the same physical J2 direction. Common load dominates differential imbalance. This does not exclude high-frequency current oscillation between samples or unmeasured winding loss.",
+  "source_report_sha256": "62a52c681f67f4706d9022977ef18092c16e0276c76db90938521c102139415f",
+  "motor_rotor_to_joint_signs": {
+    "J2A": -1,
+    "J2B": 1
+  },
+  "limits_of_interpretation": "Differential/common torque ratio is not a measured heating-power fraction. Sampled same-direction torque argues against sustained opposing motor torques, but does not rule out inter-sample high-frequency oscillation, current spikes, thermal asymmetry, or control-induced excess common torque."
+}
