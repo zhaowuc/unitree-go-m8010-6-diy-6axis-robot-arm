@@ -503,7 +503,7 @@ def test_guidance_return_plans_from_owned_hold_with_real_measurement_unchanged()
                      demo=SimpleNamespace(guidance_phase="returning"), hand_guidance=True)
     exec(compile(ast.Module(body=[window_class], type_ignores=[]), str(source), "exec"), namespace)
     window = namespace["Window"]()
-    window.command_targets = [math.radians(value) for value in (10, -9.9, 1, 0, 0, 0)]
+    window.command_targets = [math.radians(value) for value in (20, -19.9, 1, 0, 0, 0)]
     window.actual = [value + math.radians(.1) for value in window.command_targets]
     measured = tuple(window.actual)
     window.hardware_mode = "hold"
@@ -513,8 +513,8 @@ def test_guidance_return_plans_from_owned_hold_with_real_measurement_unchanged()
     recipe = generate_segmented_quintic_recipe(start, (0.0,)*6, ((-math.pi, math.pi),)*6,
         maximum_velocity_rad_s=math.radians(1), maximum_acceleration_rad_s2=math.radians(15),
         maximum_segment_delta_rad=math.radians(5))
-    checked = GuidanceDemo.check_return_recipe(SimpleNamespace(guidance_phase="returning", origin=(0.0,)*6), recipe)
-    assert len(checked) == 5 and recipe.segments[0].target_rad[1:] == start[1:]
+    checked = GuidanceDemo.check_return_recipe(SimpleNamespace(guidance_phase="returning", origin=(0.0,)*6, maximum_excursion_deg=20.0), recipe)
+    assert len(checked) == 9 and recipe.segments[0].target_rad[1:] == start[1:]
     window._action_group_hold_ready = lambda _: False
     try:
         window._acceptance_preview_start(1.0)

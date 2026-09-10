@@ -38,10 +38,13 @@ def accepted_guidance_targets(hardware, epoch, now_ns):
 
 
 class GuidanceDemo(J1Demo):
-    def __init__(self, *args, gui, shadow_only=False, guide_speed_deg_s=30.0, **kwargs):
+    def __init__(self, *args, gui, shadow_only=False, guide_speed_deg_s=30.0, guide_excursion_deg=20.0, **kwargs):
         super().__init__(*args, **kwargs)
         self.gui, self.shadow_only = gui, shadow_only
         self.profile = GuidanceProfile(speed_deg_s=guide_speed_deg_s)
+        if type(guide_excursion_deg) not in (int, float) or guide_excursion_deg not in (10.0, 20.0):
+            raise ValueError("hand-guidance excursion must be 10 or 20 degrees")
+        self.maximum_excursion_deg = float(guide_excursion_deg)
         self.guidance_phase = "calibrating"
         self.guidance_trace, self.guidance_events = [], []
         self.baseline = deque(maxlen=150)
@@ -80,7 +83,7 @@ class GuidanceDemo(J1Demo):
     def reference(self, velocities, *, freeze=False):
         return {"schema": "go-m8010-hand-guidance-reference/1.0", "origin_rad": list(self.origin),
             "velocity_rad_s": list(velocities), "freeze_reference": freeze, "maximum_velocity_deg_s": 30.0,
-            "maximum_excursion_deg": 10.0, "maximum_reference_error_deg": 2.0}
+            "maximum_excursion_deg": self.maximum_excursion_deg, "maximum_reference_error_deg": 2.0}
 
     def _sync_drag_button(self):
         active = self.guidance_phase in {"guiding", "engaging_guidance"} and not self.ending and self.terminal is None
@@ -103,10 +106,12 @@ class GuidanceDemo(J1Demo):
             if not self.window._action_group_hold_ready(self.window.command_targets):
                 self.status.setText("等待六轴静止保持。")
                 return
-            if any(abs(q-origin) > math.radians(10.0) for q,origin in zip(self.window.command_targets, self.origin)):
+            if any(abs(q-origin) > math.radians(self.maximum_excursion_deg) for q,origin in zip(self.window.command_targets, self.origin)):
                 raise RuntimeError("当前姿态不在本轮手导范围内，请先回到起始姿态")
             if (self.window.node.latest_gravity_status or {}).get("empirical_validation", {}).get("hand_guidance_authorized") is not True:
                 raise RuntimeError("当前会话尚未开放整臂柔顺")
+            if (self.window.node.latest_gravity_status or {}).get("empirical_validation", {}).get("maximum_teach_excursion_deg") != self.maximum_excursion_deg:
+                raise RuntimeError("拖动范围与本次授权不一致，请重新准备会话")
             self.filtered_residual = [0.0] * 6
             self.return_verified = False
             self.input_wait_since = None
@@ -253,9 +258,9 @@ class GuidanceDemo(J1Demo):
             if any(not min(a, o)-1e-12 <= b <= max(a, o)+1e-12
                    for a,b,o in zip(segment.start_rad, segment.target_rad, self.origin)):
                 raise RuntimeError("guidance return must move toward its fixed initial pose without overshoot")
-            if any(abs(q-origin) > math.radians(10.25) for pose in (segment.start_rad, segment.target_rad)
+            if any(abs(q-origin) > math.radians(self.maximum_excursion_deg + 0.25) for pose in (segment.start_rad, segment.target_rad)
                    for q,origin in zip(pose, self.origin)):
-                raise RuntimeError("guidance return left the demonstrated pose region")
+                raise RuntimeError("guidance return left the authorized session range")
             result.append({"moving_joints": [f"J{i+1}" for i in moving], "trajectory_sha256": segment.sha256})
         return result
 
@@ -391,7 +396,7 @@ class GuidanceDemo(J1Demo):
                 self.guidance_phase = "ready"
                 self.drag_button.setEnabled(True)
                 self.guidance_events.append({"event": "stationary_bias", "bias_nm": self.bias, "noise_mad_nm": noise})
-                self.status.setText("已就绪：点击开启后手推移动；再次点击结束并松手，自动回位。")
+                self.status.setText(f"已就绪：每轴起点±{self.maximum_excursion_deg:g}°，偏差保护2°。点击开启；再点结束并松手，自动回位。")
                 print(f"HAND_GUIDANCE_READY shadow_only={self.shadow_only} reference_speed_deg_s={self.profile.speed_deg_s:g}", flush=True)
                 if self.shadow_only:
                     self.shadow_started_at = now
@@ -427,7 +432,7 @@ class GuidanceDemo(J1Demo):
                 if self.shadow_only:
                     self.stop(output.fault)
                 return
-            if any(abs(target-origin) > math.radians(10.0) for target,origin in zip(output.q_ref, self.origin)):
+            if any(abs(target-origin) > math.radians(self.maximum_excursion_deg) for target,origin in zip(output.q_ref, self.origin)):
                 self.release_guidance()
                 self.status.setText("达到本轮拖动范围，已请求保持。")
                 return

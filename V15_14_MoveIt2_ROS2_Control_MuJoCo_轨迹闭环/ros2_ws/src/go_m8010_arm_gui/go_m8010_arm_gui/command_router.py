@@ -1336,7 +1336,7 @@ def _validated_planned_feasibility_proof(
 def _hand_guidance_authority_profile(authority):
     return (isinstance(authority, dict)
             and authority.get("empirical_allowed_teach_joints") == ["J1", "J2", "J3", "J4", "J5", "J6"]
-            and authority.get("empirical_maximum_teach_excursion_deg") == 10.0
+            and authority.get("empirical_maximum_teach_excursion_deg") in (10.0, 20.0)
             and authority.get("empirical_maximum_teach_seconds") == 600.0
             and authority.get("empirical_maximum_teach_velocity_deg_s") == 30.0)
 
@@ -1891,6 +1891,8 @@ class GravityAuthorityGate:
                            tuple(previous.get("active_joint_mask", ()))) if previous else None
         guided = command.get("schema") == GUI_COMMAND_SCHEMA_V15
         reference = command.get("hand_guidance", {})
+        if context and context["excursion"] != latest["empirical_maximum_teach_excursion_deg"]:
+            raise ValueError("手导会话范围发生变化")
         if guided and context and (tuple(reference["origin_rad"]) != context["origin"] or params != context["params"]):
             raise ValueError("手导会话原点或参数发生变化")
         return_only = (latest.get("empirical_position_validation_authorized") is True
@@ -1931,6 +1933,7 @@ class GravityAuthorityGate:
                     and not reference.get("freeze_reference")
                     and command["activation_epoch"] > previous["activation_epoch"] and params == previous_params):
                 context = {"key": key, "origin": tuple(reference["origin_rad"]), "params": params,
+                           "excursion": latest["empirical_maximum_teach_excursion_deg"],
                            "active": False, "frozen": False, "press_epoch": 0, "moving": ()}
             if context:
                 if command["mode"] == "teach":
@@ -2023,7 +2026,7 @@ class GravityAuthorityGate:
         if command.get("mode") == "teach" or command.get("schema") == GUI_COMMAND_SCHEMA_V15:
             guided = command.get("schema") == GUI_COMMAND_SCHEMA_V15
             allowed = ["J1", "J2", "J3", "J4", "J5", "J6"] if guided else ["J1", "J2", "J3", "J4", "J5"]
-            excursion, duration, velocity = (10.0, 600.0, 30.0) if guided else (5.0, 30.0, 5.0)
+            excursion, duration, velocity = (command["hand_guidance"]["maximum_excursion_deg"], 600.0, 30.0) if guided else (5.0, 30.0, 5.0)
             if (latest.get("authority_kind") != EMPIRICAL_AUTHORITY_CLASS
                     or (latest.get("empirical_assisted_teach_authorized") is not True and not return_only)
                     or latest.get("empirical_position_validation_authorized") is not True
@@ -2448,10 +2451,12 @@ def _validated_hand_guidance(value, targets, moving, mode):
               "maximum_excursion_deg", "maximum_reference_error_deg"}
     if not isinstance(value, dict) or set(value) != fields or value.get("schema") != "go-m8010-hand-guidance-reference/1.0":
         raise ValueError("手导参考合同无效")
-    for field, expected in (("maximum_velocity_deg_s", 30.0), ("maximum_excursion_deg", 10.0),
+    for field, expected in (("maximum_velocity_deg_s", 30.0),
                             ("maximum_reference_error_deg", 2.0)):
         if type(value[field]) not in (int, float) or value[field] != expected:
             raise ValueError("手导参考范围无效")
+    if type(value["maximum_excursion_deg"]) not in (int, float) or value["maximum_excursion_deg"] not in (10.0, 20.0):
+        raise ValueError("手导参考范围无效")
     for field in ("origin_rad", "velocity_rad_s"):
         if (not isinstance(value[field], list) or len(value[field]) != 6
                 or any(type(x) not in (int, float) or not math.isfinite(x) for x in value[field])):
@@ -2460,7 +2465,7 @@ def _validated_hand_guidance(value, targets, moving, mode):
         raise ValueError("手导冻结标记或速度无效")
     for index, (origin, velocity, target) in enumerate(zip(value["origin_rad"], value["velocity_rad_s"], targets)):
         if (not MODEL_COMMAND_LOWER_RAD[index] <= origin <= MODEL_COMMAND_UPPER_RAD[index]
-                or abs(target - origin) > math.radians(10.0) + 1e-12
+                or abs(target - origin) > math.radians(value["maximum_excursion_deg"]) + 1e-12
                 or abs(velocity) > math.radians(30.0) + 1e-12
                 or (mode == "hold" and velocity != 0.0)
                 or (mode == "teach" and not moving[index] and (target != origin or velocity != 0.0))):

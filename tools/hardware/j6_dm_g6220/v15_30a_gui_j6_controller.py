@@ -1025,12 +1025,14 @@ def validate_empirical_command_authority(
             type(authority.get("empirical_assisted_teach_authorized")) is not bool
             or authority.get("empirical_allowed_teach_joints") != ["J1", "J2", "J3", "J4", "J5", "J6"]
             or type(authority.get("empirical_maximum_teach_excursion_deg")) not in (int, float)
-            or authority.get("empirical_maximum_teach_excursion_deg") != 10.0
+            or authority.get("empirical_maximum_teach_excursion_deg") not in (10.0, 20.0)
             or type(authority.get("empirical_maximum_teach_seconds")) not in (int, float)
             or authority.get("empirical_maximum_teach_seconds") != 600.0
             or type(authority.get("empirical_maximum_teach_velocity_deg_s")) not in (int, float)
             or authority.get("empirical_maximum_teach_velocity_deg_s") != 30.0):
         raise GravityAuthorityStartupBindingError("J6_GUIDANCE_AUTHORITY_SCOPE_INVALID")
+    if guided and command["hand_guidance"]["maximum_excursion_deg"] != authority["empirical_maximum_teach_excursion_deg"]:
+        raise GravityAuthorityStartupBindingError("J6_GUIDANCE_AUTHORITY_EXCURSION_MISMATCH")
     if (guided or (hand_profile and authority.get("empirical_position_validation_authorized") is True)) and (
             authority.get("empirical_stage_index") != 4
             or authority.get("gravity_scale") != 1.0

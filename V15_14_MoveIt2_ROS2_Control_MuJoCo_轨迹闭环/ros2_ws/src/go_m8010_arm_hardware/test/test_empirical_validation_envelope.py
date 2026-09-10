@@ -472,7 +472,7 @@ def test_hand_guidance_full_ladder_then_multiple_joints_and_position_hold(tmp_pa
     assert _step(gate, now, ns, 1.0, 1.0)
     status = gate.status()
     assert status["hand_guidance_authorized"] and status["assisted_teach_authorized"]
-    assert (status["maximum_teach_excursion_deg"], status["maximum_teach_velocity_deg_s"], status["maximum_teach_seconds"]) == (10.0, 30.0, 600.0)
+    assert (status["maximum_teach_excursion_deg"], status["maximum_teach_velocity_deg_s"], status["maximum_teach_seconds"]) == (20.0, 30.0, 600.0)
     assert status["allowed_teach_joints"] == ["J1", "J2", "J3", "J4", "J5", "J6"]
     hardware = _hardware(ns + 1, mode="teach")
     hardware["velocity_rad_s"] = [math.radians(30)] * 6

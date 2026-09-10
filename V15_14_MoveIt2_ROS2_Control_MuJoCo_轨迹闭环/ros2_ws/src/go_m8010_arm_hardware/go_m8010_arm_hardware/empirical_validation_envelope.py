@@ -59,7 +59,7 @@ MAXIMUM_TEACH_EXCURSION_DEG = 5.0
 MAXIMUM_TEACH_SECONDS = 30.0
 MAXIMUM_TEACH_VELOCITY_DEG_S = 5.0
 HAND_GUIDANCE_JOINTS = (*ASSISTED_TEACH_JOINTS, "J6")
-MAXIMUM_HAND_GUIDANCE_EXCURSION_DEG = 10.0
+MAXIMUM_HAND_GUIDANCE_EXCURSION_DEG = 20.0
 MAXIMUM_HAND_GUIDANCE_SECONDS = 600.0
 MAXIMUM_HAND_GUIDANCE_VELOCITY_DEG_S = 30.0
 TEACH_STOPPING_HOLD_NS = 1_000_000_000
@@ -187,6 +187,7 @@ class EmpiricalValidationEnvelope:
     monotonic_deadline_ns: int
     assisted_teach_enabled: bool = False
     hand_guidance_enabled: bool = False
+    hand_guidance_excursion_deg: float = 10.0
 
     @classmethod
     def from_path(
@@ -506,8 +507,8 @@ class EmpiricalValidationEnvelope:
                 and guidance["drive_release_requires"] == "VERIFIED_VERTICAL_POSE",
                 "HAND_GUIDANCE_SCOPE_INVALID",
             )
+            _require(_finite(guidance["maximum_excursion_from_press_deg"], "HAND_GUIDANCE_EXCURSION") in (10.0, MAXIMUM_HAND_GUIDANCE_EXCURSION_DEG), "HAND_GUIDANCE_BOUNDS_INVALID")
             for field, expected in (
-                ("maximum_excursion_from_press_deg", MAXIMUM_HAND_GUIDANCE_EXCURSION_DEG),
                 ("maximum_press_seconds", MAXIMUM_HAND_GUIDANCE_SECONDS),
                 ("maximum_velocity_deg_s", MAXIMUM_HAND_GUIDANCE_VELOCITY_DEG_S),
                 ("reference_lead_deg", 2.0), ("allowed_after_scale", 1.0),
@@ -584,6 +585,7 @@ class EmpiricalValidationEnvelope:
             monotonic_deadline_ns=loaded_monotonic_ns + remaining_ns,
             assisted_teach_enabled=assisted_teach_enabled,
             hand_guidance_enabled=hand_guidance_enabled,
+            hand_guidance_excursion_deg=guidance["maximum_excursion_from_press_deg"] if hand_guidance_enabled else 10.0,
         )
 
     def claim_single_use(self, claim_directory: Path) -> Path:
@@ -1062,7 +1064,7 @@ class EmpiricalStageGate:
             "motion_warnings": list(self.motion_warnings),
             "assisted_teach_authorized": teach_authorized,
             "hand_guidance_authorized": guidance and teach_authorized,
-            "maximum_teach_excursion_deg": MAXIMUM_HAND_GUIDANCE_EXCURSION_DEG if guidance else MAXIMUM_TEACH_EXCURSION_DEG if teach_enabled else None,
+            "maximum_teach_excursion_deg": self.envelope.hand_guidance_excursion_deg if guidance else MAXIMUM_TEACH_EXCURSION_DEG if teach_enabled else None,
             "maximum_teach_seconds": MAXIMUM_HAND_GUIDANCE_SECONDS if guidance else MAXIMUM_TEACH_SECONDS if teach_enabled else None,
             "maximum_teach_velocity_deg_s": MAXIMUM_HAND_GUIDANCE_VELOCITY_DEG_S if guidance else MAXIMUM_TEACH_VELOCITY_DEG_S if teach_enabled else None,
             "allowed_teach_joints": list(HAND_GUIDANCE_JOINTS if guidance else ASSISTED_TEACH_JOINTS) if teach_enabled else [],

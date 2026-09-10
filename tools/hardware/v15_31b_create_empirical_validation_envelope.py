@@ -937,7 +937,7 @@ def build_envelope(
             "enabled": True,
             "allowed_joints": ["J1", "J2", "J3", "J4", "J5", "J6"],
             "maximum_selected_joints": 6,
-            "maximum_excursion_from_press_deg": 10.0,
+            "maximum_excursion_from_press_deg": 20.0,
             "maximum_press_seconds": 600.0,
             "maximum_velocity_deg_s": 30.0,
             "reference_lead_deg": 2.0,

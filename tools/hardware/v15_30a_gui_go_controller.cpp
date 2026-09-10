@@ -3645,6 +3645,7 @@ bool empirical_expiry_is_future(const std::string& value) {
 struct HandGuidanceReference {
   bool present = false;
   bool freeze_reference = false;
+  double maximum_excursion_deg = 10.0;
   std::array<double, 6> origin_rad{};
   std::array<double, 6> velocity_rad_s{};
 };
@@ -3838,10 +3839,11 @@ GravityCommandAuthority parse_gravity_command_authority(
       const std::string name(field.first);
       const double hard = result.hand_guidance_profile
           ? name == "empirical_maximum_teach_seconds" ? 600.0
-            : name == "empirical_maximum_teach_excursion_deg" ? 10.0 : 30.0
+            : name == "empirical_maximum_teach_excursion_deg" ? 20.0 : 30.0
           : name == "empirical_maximum_teach_seconds" ? 30.0 : 5.0;
       if (!std::isfinite(*field.second) || *field.second <= 0.0 || *field.second > hard ||
-          (result.hand_guidance_profile && *field.second != hard))
+          (result.hand_guidance_profile && *field.second != hard &&
+           !(name == "empirical_maximum_teach_excursion_deg" && *field.second == 10.0)))
         throw std::runtime_error("COMMAND_GRAVITY_TEACH_BOUND_INVALID");
     }
   }
@@ -4194,10 +4196,14 @@ void parse_command(
     if (!reference.at("freeze_reference").is_boolean())
       throw std::runtime_error("COMMAND_GUIDANCE_FREEZE_INVALID");
     candidate.hand_guidance.freeze_reference = reference.at("freeze_reference").get<bool>();
-    for (const auto& bound : std::array<std::pair<const char*, double>, 3>{{
-        {"maximum_velocity_deg_s", 30.0}, {"maximum_excursion_deg", 10.0}, {"maximum_reference_error_deg", 2.0}}})
+    for (const auto& bound : std::array<std::pair<const char*, double>, 2>{{
+        {"maximum_velocity_deg_s", 30.0}, {"maximum_reference_error_deg", 2.0}}})
       if (!reference.at(bound.first).is_number() || reference.at(bound.first).get<double>() != bound.second)
         throw std::runtime_error("COMMAND_GUIDANCE_PROFILE_INVALID");
+    if (!reference.at("maximum_excursion_deg").is_number() ||
+        (reference.at("maximum_excursion_deg") != 10.0 && reference.at("maximum_excursion_deg") != 20.0))
+      throw std::runtime_error("COMMAND_GUIDANCE_PROFILE_INVALID");
+    candidate.hand_guidance.maximum_excursion_deg = reference.at("maximum_excursion_deg").get<double>();
     candidate.hand_guidance.origin_rad = strict_finite_six_vector(reference.at("origin_rad"), "COMMAND_GUIDANCE_ORIGIN_INVALID", "COMMAND_GUIDANCE_ORIGIN_INVALID");
     candidate.hand_guidance.velocity_rad_s = strict_finite_six_vector(reference.at("velocity_rad_s"), "COMMAND_GUIDANCE_VELOCITY_INVALID", "COMMAND_GUIDANCE_VELOCITY_INVALID");
     candidate.hand_guidance.present = true;
@@ -4265,6 +4271,7 @@ void parse_command(
     throw std::runtime_error("COMMAND_GRAVITY_TEACH_SCOPE_INVALID");
   if (candidate.hand_guidance.present &&
       (!candidate.gravity_authority.present || !candidate.gravity_authority.hand_guidance_profile ||
+       candidate.hand_guidance.maximum_excursion_deg != candidate.gravity_authority.empirical_maximum_teach_excursion_deg ||
        !std::all_of(candidate.active_joint_mask.begin(), candidate.active_joint_mask.end(), [](bool active) { return active; }) ||
        (mode == "teach" && (!candidate.gravity_authority.empirical_position_validation_authorized || candidate.gravity_authority.empirical_stage_index != 4U ||
         candidate.gravity_authority.gravity_scale != 1.0 || candidate.gravity_authority.gravity_scale_target != 1.0 ||
@@ -4878,6 +4885,7 @@ void validate_guidance_return_only(
       a.source_instance_id != b.source_instance_id || a.session_id != b.session_id ||
       a.state_instance_id != b.state_instance_id || a.empirical_envelope_id != b.empirical_envelope_id ||
       a.empirical_envelope_sha256 != b.empirical_envelope_sha256 || a.anchor_sha256 != b.anchor_sha256 ||
+      a.empirical_maximum_teach_excursion_deg != b.empirical_maximum_teach_excursion_deg ||
       a.empirical_envelope_expires_at_utc != b.empirical_envelope_expires_at_utc ||
       a.empirical_envelope_deadline_monotonic_ns > b.empirical_envelope_deadline_monotonic_ns)
     throw std::runtime_error("COMMAND_GRAVITY_RETURN_ONLY_IDENTITY_CHANGED");
@@ -5121,6 +5129,10 @@ void validate_and_observe_hand_guidance(
     safety.guidance_paused_reason.clear();
     return;
   }
+  if (safety.guidance_origin_bound &&
+      command.gravity_authority.empirical_envelope_sha256 == safety.guidance_press.gravity_authority.empirical_envelope_sha256 &&
+      command.gravity_authority.empirical_maximum_teach_excursion_deg != safety.guidance_press.gravity_authority.empirical_maximum_teach_excursion_deg)
+    throw GuidanceReferenceRejected("COMMAND_GUIDANCE_SESSION_EXCURSION_CHANGED");
   if (!command.hand_guidance.present) {
     if (safety.guidance_active)
       throw std::runtime_error("COMMAND_GUIDANCE_EXIT_REQUIRES_V15_HOLD");
@@ -5240,7 +5252,7 @@ void validate_and_observe_hand_guidance(
         (command.targets[joint] != safety.last_accepted_command.targets[joint] ||
          command.hand_guidance.velocity_rad_s[joint] != 0.0))
       throw std::runtime_error("COMMAND_GUIDANCE_UNSELECTED_HOLD_CHANGED");
-    if (std::abs(command.targets[joint] - command.hand_guidance.origin_rad[joint]) > 10.0 * kPi / 180.0 + 1e-12 ||
+    if (std::abs(command.targets[joint] - command.hand_guidance.origin_rad[joint]) > command.hand_guidance.maximum_excursion_deg * kPi / 180.0 + 1e-12 ||
         std::abs(command.hand_guidance.velocity_rad_s[joint]) > 30.0 * kPi / 180.0 + 1e-12)
       throw GuidanceReferenceRejected("COMMAND_GUIDANCE_REF_PROFILE_LIMIT");
     if (!frozen_owned_refresh && !safety.guidance_paused &&
@@ -8187,7 +8199,7 @@ std::string feedback_payload(const std::vector<MotorRuntime>& motors,
 }
 
 void hand_guidance_self_test(const nlohmann::json& legacy_packet) {
-  for (const std::string bus : {"j1", "j2", "j345"}) {
+  for (const double excursion : {10.0, 20.0}) for (const std::string bus : {"j1", "j2", "j345"}) {
     const auto now = Clock::now();
     const auto ns = monotonic_ns_at(now);
     auto packet = legacy_packet;
@@ -8198,13 +8210,13 @@ void hand_guidance_self_test(const nlohmann::json& legacy_packet) {
     packet["hand_guidance"] = {{"schema", "go-m8010-hand-guidance-reference/1.0"},
         {"origin_rad", {0.0, 0.0, 0.0, 0.0, 0.0, 0.0}},
         {"velocity_rad_s", {0.0, 0.0, 0.0, 0.0, 0.0, 0.0}},
-        {"maximum_velocity_deg_s", 30.0}, {"maximum_excursion_deg", 10.0}, {"maximum_reference_error_deg", 2.0},
+        {"maximum_velocity_deg_s", 30.0}, {"maximum_excursion_deg", excursion}, {"maximum_reference_error_deg", 2.0},
         {"freeze_reference", false}};
     auto& authority = packet["gravity_authority"];
     authority["source_monotonic_ns"] = ns;
     authority["empirical_envelope_deadline_monotonic_ns"] = ns + 1000000000000ULL;
     authority["empirical_allowed_teach_joints"] = {"J1", "J2", "J3", "J4", "J5", "J6"};
-    authority["empirical_maximum_teach_excursion_deg"] = 10.0;
+    authority["empirical_maximum_teach_excursion_deg"] = excursion;
     authority["empirical_maximum_teach_seconds"] = 600.0;
     authority["empirical_maximum_teach_velocity_deg_s"] = 30.0;
     auto motors = make_motors(bus);
@@ -8335,6 +8347,26 @@ void hand_guidance_self_test(const nlohmann::json& legacy_packet) {
     send(packet);
     if (!command.hand_guidance.present || !safety.guidance_active || command.activation_epoch != 2U)
       throw std::runtime_error("GUIDANCE_ENTRY_SELF_TEST_FAILED");
+    // Both endpoints are admissible while the independent two-degree
+    // tracking guard and the signed session excursion remain enforced.
+    for (double direction : {-1.0, 1.0}) for (int trial = 0; trial < 3; ++trial) {
+      auto candidate = command;
+      auto checked_safety = safety;
+      auto feedback = motors;
+      const double target = direction * (excursion + (trial == 1 ? 0.01 : 0.0)) * kPi / 180.0;
+      candidate.source_monotonic_ns += 20000000ULL;
+      for (auto& motor : feedback) {
+        const auto joint = static_cast<std::size_t>(motor.joint_index);
+        candidate.targets[joint] = target;
+        checked_safety.guidance_reference.targets[joint] = target - direction * 0.1 * kPi / 180.0;
+        motor.unwrapped = motor.reference + motor.sign * kGear *
+            (target - (trial == 2 ? direction * 2.01 * kPi / 180.0 : 0.0));
+      }
+      bool rejected = false;
+      try { validate_and_observe_hand_guidance(candidate, feedback, checked_safety); }
+      catch (const GuidanceReferenceRejected&) { rejected = true; }
+      if (rejected != (trial != 0)) throw std::runtime_error("GUIDANCE_EXCURSION_VERSUS_TRACKING_BOUND_FAILED");
+    }
     for (const auto& motor : motors)
       if (!freezes_assisted_teach_integral(command, "teach", motor.joint_index, safety, ns))
         throw std::runtime_error("GUIDANCE_ACTIVE_INTEGRAL_NOT_FROZEN");

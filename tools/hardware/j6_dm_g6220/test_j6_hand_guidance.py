@@ -199,7 +199,30 @@ def test_j6_guidance_bounded_references_deadman_frozen_hold_and_exact_owned_ack(
     assert not guidance_feedback_velocity_is_safe(math.nan)
 
 
-def test_real_j6_authority_accepts_guided_27_for_teach_and_hold_only_after_ladder():
+@pytest.mark.parametrize("direction", (-1, 1))
+def test_twenty_degree_excursion_keeps_two_degree_tracking_guard(direction):
+    first = packet()
+    first["hand_guidance"]["maximum_excursion_deg"] = 20.0
+    previous = packet(epoch=1, source=990_000_000, mode="hold")
+    context = dict(torque_qualified=True, healthy_foc=True, actual_rad=0.0, actual_velocity_rad_s=0.0)
+    accepted, state = stage_guidance_candidate(first, None, context, previous, 1_000_000_001)
+    near = [0.0]*6; near[5] = direction * math.radians(19.9)
+    state = replace(state, targets=tuple(near))
+    candidate = deepcopy(first)
+    candidate["source_monotonic_ns"] += 20_000_000
+    candidate["targets_rad"][5] = direction * math.radians(20.0)
+    context["actual_rad"] = candidate["targets_rad"][5]
+    valid, _ = stage_guidance_candidate(candidate, state, context, accepted, 1_020_000_001)
+    assert valid["targets_rad"][5] == direction * math.radians(20)
+    with pytest.raises(GuidanceReferenceRejected, match="ACTUAL_ERROR"):
+        stage_guidance_candidate(candidate, state, dict(context, actual_rad=direction*math.radians(17.99)), accepted, 1_020_000_001)
+    candidate["targets_rad"][5] = direction * math.radians(20.01)
+    with pytest.raises(GuidanceReferenceRejected, match="EXCURSION"):
+        stage_guidance_candidate(candidate, state, context, accepted, 1_020_000_001)
+
+
+@pytest.mark.parametrize("excursion", (10.0, 20.0))
+def test_real_j6_authority_accepts_guided_27_for_teach_and_hold_only_after_ladder(excursion):
     from test_v15_30a_gui_profile import load_command_channel_functions
     namespace = load_command_channel_functions()
     namespace.update(datetime=datetime, timezone=timezone,
@@ -211,6 +234,7 @@ def test_real_j6_authority_accepts_guided_27_for_teach_and_hold_only_after_ladde
     exec(compile(ast.fix_missing_locations(ast.Module(body=[node], type_ignores=[])), str(source), "exec"), namespace)
     validate = namespace["validate_empirical_command_authority"]
     command = packet()
+    command["hand_guidance"]["maximum_excursion_deg"] = excursion
     command["gravity_authority"] = {
         "schema": "go-m8010-gravity-command-authority/1.1", "source_instance_id": "b" * 32,
         "sequence": 1, "source_monotonic_ns": 1_000_000_000,
@@ -225,7 +249,7 @@ def test_real_j6_authority_accepts_guided_27_for_teach_and_hold_only_after_ladde
         "empirical_envelope_deadline_monotonic_ns": 601_000_000_000,
         "empirical_stage_index": 4, "empirical_position_validation_authorized": True,
         "empirical_maximum_position_segment_seconds": 15.0, "empirical_maximum_abs_position_segment_deg": 5.0,
-        "empirical_assisted_teach_authorized": True, "empirical_maximum_teach_excursion_deg": 10.0,
+        "empirical_assisted_teach_authorized": True, "empirical_maximum_teach_excursion_deg": excursion,
         "empirical_maximum_teach_seconds": 600.0, "empirical_maximum_teach_velocity_deg_s": 30.0,
         "empirical_allowed_teach_joints": [f'J{i}' for i in range(1,7)],
     }
@@ -251,7 +275,8 @@ def test_real_j6_authority_accepts_guided_27_for_teach_and_hold_only_after_ladde
 
 
 @pytest.mark.parametrize("direction", (-1, 1))
-def test_j6_return_only_freezes_and_preserves_origin_across_signed_position(direction):
+@pytest.mark.parametrize("excursion", (10.0, 20.0))
+def test_j6_return_only_freezes_and_preserves_origin_across_signed_position(direction, excursion):
     from test_v15_30a_gui_profile import load_parse_command, quintic_command_document
     parse = load_parse_command()
     parse.__globals__["validate_guidance_shape"] = validate_guidance_shape
@@ -260,11 +285,12 @@ def test_j6_return_only_freezes_and_preserves_origin_across_signed_position(dire
     authority = {"source_instance_id": "b" * 32, "session_id": "session", "state_instance_id": "c" * 32,
         "empirical_envelope_id": "envelope", "empirical_envelope_sha256": "d" * 64, "anchor_sha256": "e" * 64,
         "empirical_allowed_teach_joints": [f"J{i}" for i in range(1, 7)],
-        "empirical_maximum_teach_excursion_deg": 10.0, "empirical_maximum_teach_seconds": 600.0,
+        "empirical_maximum_teach_excursion_deg": excursion, "empirical_maximum_teach_seconds": 600.0,
         "empirical_maximum_teach_velocity_deg_s": 30.0,
         "empirical_position_validation_authorized": True, "empirical_assisted_teach_authorized": True}
     def guided(epoch, stamp, mode="teach"):
         value = packet(epoch=epoch, source=stamp, mode=mode)
+        value["hand_guidance"]["maximum_excursion_deg"] = excursion
         value["gravity_authority"] = deepcopy(authority)
         return value
     previous = guided(1, 990_000_000, "hold")

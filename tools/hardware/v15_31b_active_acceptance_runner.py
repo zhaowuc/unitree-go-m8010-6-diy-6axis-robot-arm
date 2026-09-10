@@ -780,6 +780,9 @@ class EvidenceBinding:
                      and set(guidance) == set(expected), "EMPIRICAL_HAND_GUIDANCE_FIELDS_INVALID")
             for field, wanted in expected.items():
                 actual = guidance[field]
+                if field == "maximum_excursion_from_press_deg":
+                    _require(_finite(actual, "EMPIRICAL_HAND_GUIDANCE_BOUND_INVALID") in (10.0, 20.0), "EMPIRICAL_HAND_GUIDANCE_PROFILE_INVALID")
+                    continue
                 _require(
                     (_finite(actual, "EMPIRICAL_HAND_GUIDANCE_BOUND_INVALID") == wanted
                      if type(wanted) is float else type(actual) is type(wanted) and actual == wanted),

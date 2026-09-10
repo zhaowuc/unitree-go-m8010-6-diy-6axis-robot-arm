@@ -259,7 +259,7 @@ def test_hand_guidance_cli_is_distinct_and_records_unsupported_arm_hold_policy(t
     assert guidance["schema"] == "go-m8010-hand-guidance-envelope/1.0"
     assert guidance["allowed_joints"] == ["J1", "J2", "J3", "J4", "J5", "J6"]
     assert guidance["maximum_selected_joints"] == 6
-    assert guidance["maximum_excursion_from_press_deg"] == 10.0
+    assert guidance["maximum_excursion_from_press_deg"] == 20.0
     assert guidance["maximum_press_seconds"] == 600.0
     assert guidance["maximum_velocity_deg_s"] == 30.0
     assert guidance["reference_lead_deg"] == 2.0

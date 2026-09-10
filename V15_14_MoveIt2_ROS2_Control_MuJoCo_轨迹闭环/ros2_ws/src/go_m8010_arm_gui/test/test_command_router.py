@@ -447,12 +447,13 @@ def test_assisted_teach_single_axis_authority_and_domain_hold_compatibility(join
         production_validate_command(json.dumps({**document, "schema": GUI_COMMAND_SCHEMA_V12}), now_ns=now_ns)
 
 
-def test_whole_arm_guidance_requires_separate_scope_and_preserves_hold_ack():
+@pytest.mark.parametrize("excursion", (10.0, 20.0))
+def test_whole_arm_guidance_requires_separate_scope_and_preserves_hold_ack(excursion):
     now = time.monotonic_ns()
     document = json.loads(command(mode="hold"))
     reference = {"schema": "go-m8010-hand-guidance-reference/1.0", "origin_rad": [0.0] * 6,
         "velocity_rad_s": [math.radians(3.0)] * 6, "freeze_reference": False, "maximum_velocity_deg_s": 30.0,
-        "maximum_excursion_deg": 10.0, "maximum_reference_error_deg": 2.0}
+        "maximum_excursion_deg": excursion, "maximum_reference_error_deg": 2.0}
     document.update(schema="go-m8010-gui-command/1.5", mode="teach", moving_joint_mask=[True] * 6,
         targets_rad=[0.001] * 6, maximum_velocity_rad_s=math.radians(30.0), hand_guidance=reference)
     normalized, _ = production_validate_command(json.dumps(document), now_ns=now)
@@ -466,7 +467,7 @@ def test_whole_arm_guidance_requires_separate_scope_and_preserves_hold_ack():
     with pytest.raises(ValueError, match="未授权"):
         gate.authorize(deepcopy(normalized), now_ns=now)
     gate._latest.update(empirical_allowed_teach_joints=["J1", "J2", "J3", "J4", "J5", "J6"],
-        empirical_maximum_teach_excursion_deg=10.0, empirical_maximum_teach_seconds=600.0,
+        empirical_maximum_teach_excursion_deg=excursion, empirical_maximum_teach_seconds=600.0,
         empirical_maximum_teach_velocity_deg_s=30.0)
     for mode in ("teach", "hold"):
         request = deepcopy(document)
@@ -488,19 +489,20 @@ def test_whole_arm_guidance_requires_separate_scope_and_preserves_hold_ack():
         with pytest.raises(ValueError):
             production_validate_command(json.dumps(invalid), now_ns=now)
     invalid = deepcopy(document)
-    invalid["targets_rad"][1] = math.radians(10.01)
+    invalid["targets_rad"][1] = math.radians(excursion + 0.01)
     with pytest.raises(ValueError):
         production_validate_command(json.dumps(invalid), now_ns=now)
 
 
 @pytest.mark.parametrize("direction", (-1, 1))
-def test_return_only_keeps_freeze_and_signed_single_axis_motion_toward_origin(direction):
+@pytest.mark.parametrize("excursion", (10.0, 20.0))
+def test_return_only_keeps_freeze_and_signed_single_axis_motion_toward_origin(direction, excursion):
     now = time.monotonic_ns()
     gate = GravityAuthorityGate()
     gate._latest = _empirical_latest(now, deadline_ns=now + 60_000_000_000)
     gate._latest.update(empirical_assisted_teach_authorized=True,
         empirical_allowed_teach_joints=[f"J{i}" for i in range(1, 7)],
-        empirical_maximum_teach_excursion_deg=10.0, empirical_maximum_teach_seconds=600.0,
+        empirical_maximum_teach_excursion_deg=excursion, empirical_maximum_teach_seconds=600.0,
         empirical_maximum_teach_velocity_deg_s=30.0)
     held, _ = production_validate_command(command(mode="hold"), now_ns=now + 1_000_000)
     gate.authorize(held, now_ns=now + 1_000_000)
@@ -510,7 +512,7 @@ def test_return_only_keeps_freeze_and_signed_single_axis_motion_toward_origin(di
         moving_joint_mask=[True] * 6, hand_guidance={
             "schema": "go-m8010-hand-guidance-reference/1.0", "origin_rad": [0.0] * 6,
             "velocity_rad_s": [0.0] * 6, "freeze_reference": False,
-            "maximum_velocity_deg_s": 30.0, "maximum_excursion_deg": 10.0,
+            "maximum_velocity_deg_s": 30.0, "maximum_excursion_deg": excursion,
             "maximum_reference_error_deg": 2.0})
     first, _ = production_validate_command(json.dumps(first), now_ns=now + 1_000_000)
     gate.authorize(first, now_ns=now + 1_000_000)

@@ -60,7 +60,7 @@ def test_release_freezes_each_native_target_before_ack_and_return_before_brake(m
     sample = dict(healthy=True, feedback_fresh=True, authority=True, modes=hardware["controller_mode_by_motor"],
         stationary_hold_ready=True, router_hold_fresh=True, j6_drive_state=1, actual_rad=[0.01]*6)
     window = SimpleNamespace(node=SimpleNamespace(latest_hardware=hardware,
-        latest_gravity_status={"empirical_validation": {"hand_guidance_authorized": True}}),
+        latest_gravity_status={"empirical_validation": {"hand_guidance_authorized": True, "maximum_teach_excursion_deg": 20.0}}),
         teach_toolbar=SimpleNamespace(actions=lambda: [], addWidget=lambda *_: None),
         command_targets=[0.0]*6, targets=[0.0]*6, candidate_targets=[0.0]*6, activation_epoch=5,
         hardware_mode="hold", action_group_manual_buttons=[], machine=SimpleNamespace(hold=lambda: None),

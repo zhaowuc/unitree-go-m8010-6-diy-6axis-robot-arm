@@ -5,7 +5,6 @@ import math
 COMMAND_SCHEMA = "go-m8010-gui-command/1.5"
 GUIDANCE_SCHEMA = "go-m8010-hand-guidance-reference/1.0"
 SPEED = math.radians(30.0)
-EXCURSION = math.radians(10.0)
 REFERENCE_ERROR = math.radians(2.0)
 DEADMAN_NS = 600_000_000_000
 
@@ -21,13 +20,13 @@ def is_guidance(command):
 def guidance_authority_identity(command):
     authority = command.get("gravity_authority", {})
     return tuple(authority.get(key) for key in ("source_instance_id", "session_id", "state_instance_id",
-        "empirical_envelope_id", "empirical_envelope_sha256", "anchor_sha256"))
+        "empirical_envelope_id", "empirical_envelope_sha256", "anchor_sha256", "empirical_maximum_teach_excursion_deg"))
 
 
 def return_only_authority(command):
     authority = command.get("gravity_authority", {})
     return (authority.get("empirical_allowed_teach_joints") == ["J1", "J2", "J3", "J4", "J5", "J6"]
-            and authority.get("empirical_maximum_teach_excursion_deg") == 10.0
+            and authority.get("empirical_maximum_teach_excursion_deg") in (10.0, 20.0)
             and authority.get("empirical_maximum_teach_seconds") == 600.0
             and authority.get("empirical_maximum_teach_velocity_deg_s") == 30.0
             and authority.get("empirical_position_validation_authorized") is True
@@ -54,9 +53,11 @@ def validate_guidance_shape(command):
     if not isinstance(g, dict) or set(g) != fields or g["schema"] != GUIDANCE_SCHEMA:
         raise ValueError("J6_GUIDANCE_PROFILE_INVALID")
     for name, expected in (("maximum_velocity_deg_s", 30.0),
-                           ("maximum_excursion_deg", 10.0), ("maximum_reference_error_deg", 2.0)):
+                           ("maximum_reference_error_deg", 2.0)):
         if type(g[name]) not in (int, float) or g[name] != expected:
             raise ValueError("J6_GUIDANCE_UNITS_OR_LIMIT_INVALID")
+    if type(g["maximum_excursion_deg"]) not in (int, float) or g["maximum_excursion_deg"] not in (10.0, 20.0):
+        raise ValueError("J6_GUIDANCE_UNITS_OR_LIMIT_INVALID")
     six(g["origin_rad"], "ORIGIN")
     velocity = six(g["velocity_rad_s"], "VELOCITY")
     if type(g["freeze_reference"]) is not bool:
@@ -217,7 +218,7 @@ def stage_guidance_candidate(candidate, state, context, previous, now_ns):
         # the last accepted HOLD target, including after earlier movement.
         if targets[5] != six(previous["targets_rad"], "PREVIOUS_HOLD_TARGET")[5] or any(velocity):
             raise GuidanceReferenceRejected("J6_GUIDANCE_ENTRY_REQUIRES_EXACT_HOLD_AND_ZERO_VELOCITY")
-    if abs(targets[5] - origin[5]) > EXCURSION + 1e-12:
+    if abs(targets[5] - origin[5]) > math.radians(g["maximum_excursion_deg"]) + 1e-12:
         raise GuidanceReferenceRejected("J6_GUIDANCE_REFERENCE_EXCURSION_LIMIT")
     if abs(targets[5] - actual) > REFERENCE_ERROR + 1e-12:
         retaining_fixed_target = (state is not None and state.active
