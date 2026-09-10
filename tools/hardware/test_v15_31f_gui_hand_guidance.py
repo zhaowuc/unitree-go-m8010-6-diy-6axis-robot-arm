@@ -1,16 +1,53 @@
 from types import SimpleNamespace
 import copy
+import pytest
 import v15_31f_gui_hand_guidance as runtime
 
 
 class Widget:
     def __init__(self, text=""):
-        self.text, self.enabled, self.down = text, True, False
+        self.text, self.enabled, self.down, self.checked = text, True, False, False
         self.pressed = self.released = self.clicked = SimpleNamespace(connect=lambda *_: None)
     def setEnabled(self, value): self.enabled = value
     def setWordWrap(self, value): pass
     def setText(self, value): self.text = value
     def isDown(self): return self.down
+    def setCheckable(self, value): self.checkable = value
+    def setChecked(self, value): self.checked = value
+    def isChecked(self): return self.checked
+
+
+def test_real_qt_click_latches_until_second_click(monkeypatch):
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+    qt = pytest.importorskip("PySide6.QtWidgets")
+    app = qt.QApplication.instance() or qt.QApplication([])
+    window = SimpleNamespace(node=SimpleNamespace(),
+        teach_toolbar=SimpleNamespace(actions=lambda: [], addWidget=lambda *_: None))
+    demo = runtime.GuidanceDemo(window, lambda: {}, lambda *_: None, lambda *_: None, lambda *_: None, gui=qt)
+    calls = []
+    def start():
+        calls.append("start")
+        demo.guidance_phase = "engaging_guidance"
+    def release():
+        calls.append("release")
+        demo.guidance_phase = "freezing"
+    demo.start_guidance, demo.release_guidance = start, release
+    demo.guidance_phase = "ready"
+    demo.drag_button.setEnabled(True)
+    demo.drag_button.click()  # Emits both pressed and released, as a short tap does.
+    app.processEvents()
+    assert calls == ["start"] and demo.drag_button.isChecked() and not demo.drag_button.isDown()
+    assert "再点结束" in demo.drag_button.text()
+    demo.drag_button.click()
+    assert calls == ["start", "release"] and not demo.drag_button.isChecked()
+    demo.guidance_phase = "ready"
+    demo.start_guidance = lambda: None  # Admission rejected: never leave the toggle checked.
+    demo.drag_button.click()
+    assert not demo.drag_button.isChecked()
+    demo.drag_button.deleteLater()
+    demo.record_button.deleteLater()
+    demo.status.deleteLater()
+    app.processEvents()
 
 
 def test_release_freezes_each_native_target_before_ack_and_return_before_brake(monkeypatch):
@@ -41,8 +78,8 @@ def test_release_freezes_each_native_target_before_ack_and_return_before_brake(m
         gui=SimpleNamespace(QPushButton=Widget, QLabel=Widget), interactive_teach=True,
         start_center=return_start, now=lambda: clock[0])
     demo.interactive_ready, demo.origin, demo.bias, demo.guidance_phase = True, (0.0,)*6, (0.0,)*6, "ready"
-    demo.drag_button.down = True
-    demo.start_guidance()
+    demo.toggle_guidance(True)
+    assert demo.drag_button.isChecked() and not demo.drag_button.isDown()
     assert demo.guidance_phase == "engaging_guidance" and not sent
     epoch = demo.guide_epoch
     clock[0] += .02
@@ -76,18 +113,20 @@ def test_release_freezes_each_native_target_before_ack_and_return_before_brake(m
     # an entry ACK that a rejecting domain will never send.
     demo.start_guidance()
     quick_epoch = demo.guide_epoch
-    demo.release_guidance()
+    demo.toggle_guidance(False)
     assert demo.guidance_phase == "hold_barrier" and window.activation_epoch > quick_epoch
     clock[0] += .02
     feedback([0.0]*6, window.activation_epoch)
     demo.tick()
     assert demo.guidance_phase == "ready" and not actions
+    assert not demo.drag_button.isChecked()
     demo.start_guidance()
     epoch = demo.guide_epoch
     clock[0] += .02
     feedback([0.0]*6, epoch, mode="teach")
     demo.tick()
     assert demo.guidance_phase == "guiding"
+    assert demo.drag_button.isChecked() and not demo.drag_button.isDown()
     # The observed 54.9568ms Qt delay holds q/v0 and resumes on a fresh tick,
     # without relaxing the core's 50ms integration bound or clearing faults.
     def observation():
@@ -129,6 +168,7 @@ def test_release_freezes_each_native_target_before_ack_and_return_before_brake(m
     clock[0] += .11
     demo.tick()
     assert demo.guidance_phase == "freezing" and sent[-1][3]["freeze_reference"] is True
+    assert not demo.drag_button.isChecked()
     assert demo.guidance_fault.startswith("GUIDANCE_INPUT_GAP:")
     demo.guidance_fault = None
     demo.guidance_phase = "guiding"  # Continue the existing native freeze/ACK check.
@@ -140,7 +180,7 @@ def test_release_freezes_each_native_target_before_ack_and_return_before_brake(m
     before_release = sum(e["event"] == "guidance_release" for e in demo.guidance_events)
     demo.drag_button.setEnabled = lambda enabled: (setattr(demo.drag_button, "enabled", enabled),
         demo.release_guidance() if not enabled else None)
-    demo.release_guidance()
+    demo.toggle_guidance(False)
     assert sum(e["event"] == "guidance_release" for e in demo.guidance_events) == before_release + 1
     assert window.command_targets == [0.02]*6 and window.hand_guidance_reference["freeze_reference"] is True
     demo.tick()

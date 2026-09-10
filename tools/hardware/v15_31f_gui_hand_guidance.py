@@ -65,10 +65,10 @@ class GuidanceDemo(J1Demo):
         toolbar = self.window.teach_toolbar
         for action in toolbar.actions():
             action.setVisible(False)
-        self.drag_button = gui.QPushButton("按住：整臂柔顺拖动" if not shadow_only else "按住：仅观察手力与拟输出")
+        self.drag_button = gui.QPushButton("点击开启整臂柔顺拖动" if not shadow_only else "点击开启手力观察")
+        self.drag_button.setCheckable(True)
         self.drag_button.setEnabled(False)
-        self.drag_button.pressed.connect(self.start_guidance)
-        self.drag_button.released.connect(self.release_guidance)
+        self.drag_button.clicked.connect(self.toggle_guidance)
         toolbar.addWidget(self.drag_button)
         self.record_button = gui.QPushButton("记录当前姿态")
         self.record_button.clicked.connect(self.record_pose)
@@ -81,6 +81,19 @@ class GuidanceDemo(J1Demo):
         return {"schema": "go-m8010-hand-guidance-reference/1.0", "origin_rad": list(self.origin),
             "velocity_rad_s": list(velocities), "freeze_reference": freeze, "maximum_velocity_deg_s": 30.0,
             "maximum_excursion_deg": 10.0, "maximum_reference_error_deg": 2.0}
+
+    def _sync_drag_button(self):
+        active = self.guidance_phase in {"guiding", "engaging_guidance"} and not self.ending and self.terminal is None
+        self.drag_button.setChecked(active)
+        self.drag_button.setText(("观察已开启 · 再点结束" if self.shadow_only else "拖动已开启 · 再点结束并回位") if active
+                                else ("点击开启手力观察" if self.shadow_only else "点击开启整臂柔顺拖动"))
+
+    def toggle_guidance(self, checked):
+        if checked:
+            self.start_guidance()
+        else:
+            self.release_guidance()
+        self._sync_drag_button()
 
     def start_guidance(self):
         if self.guidance_phase != "ready" or self.ending or self.bias is None:
@@ -117,12 +130,15 @@ class GuidanceDemo(J1Demo):
                 "shadow_only": self.shadow_only, "epoch": self.guide_epoch})
         except (ValueError, RuntimeError) as error:
             self.status.setText("未进入柔顺：" + str(error))
+        finally:
+            self._sync_drag_button()
 
     def release_guidance(self):
+        self.drag_button.setChecked(False)
         if self.guidance_phase not in {"guiding", "engaging_guidance"}:
             return
         if self.guidance_phase == "engaging_guidance":
-            self._cancel_admission("BUTTON_RELEASE_DURING_ADMISSION")
+            self._cancel_admission("TOGGLE_OFF_DURING_ADMISSION")
             return
         self.guidance_events.append({"event": "guidance_release", "at_monotonic_s": self.now()})
         if self.shadow_only:
@@ -141,6 +157,7 @@ class GuidanceDemo(J1Demo):
 
     def _request_hold(self, target):
         self.guidance_phase = "hold_barrier"
+        self._sync_drag_button()
         self.window.command_targets = list(target)
         self.window.targets = self.window.candidate_targets = list(target)
         self.window.hand_guidance_reference = self.reference([0.0] * 6)
@@ -164,7 +181,7 @@ class GuidanceDemo(J1Demo):
 
     def record_pose(self):
         if self.guidance_phase != "ready" or not self.window._action_group_hold_ready(self.window.command_targets):
-            self.status.setText("先松开按钮，等六轴停住后记录。")
+            self.status.setText("先点击结束拖动，等六轴停住后记录。")
             return
         self.window.teach_record_target = tuple(self.window.command_targets)
         self.window._record_teach_point()
@@ -302,7 +319,7 @@ class GuidanceDemo(J1Demo):
                     self.guidance_fault = "unforced shadow reference drift exceeded 0.25 degrees"
                 self.stop()
             if self.guidance_phase in {"guiding", "engaging_guidance"} and (
-                    self.shadow_started_at is None and (not self.drag_button.isDown() or not self.window.isActiveWindow())):
+                    self.shadow_started_at is None and (not self.drag_button.isChecked() or not self.window.isActiveWindow())):
                 self.release_guidance()
             if self.guidance_phase == "returning":
                 runner = self.dialog.runner
@@ -374,7 +391,7 @@ class GuidanceDemo(J1Demo):
                 self.guidance_phase = "ready"
                 self.drag_button.setEnabled(True)
                 self.guidance_events.append({"event": "stationary_bias", "bias_nm": self.bias, "noise_mad_nm": noise})
-                self.status.setText("已就绪：按住按钮后手推移动，撤去手力停住；松开按钮并松手后自动回位。")
+                self.status.setText("已就绪：点击开启后手推移动；再次点击结束并松手，自动回位。")
                 print(f"HAND_GUIDANCE_READY shadow_only={self.shadow_only} reference_speed_deg_s={self.profile.speed_deg_s:g}", flush=True)
                 if self.shadow_only:
                     self.shadow_started_at = now
@@ -440,6 +457,7 @@ class GuidanceDemo(J1Demo):
             if self.shadow_only and self.guidance_fault:
                 self.stop(self.guidance_fault)
         finally:
+            self._sync_drag_button()
             if getattr(self.window, "hand_guidance_reference", None) is not None and self.terminal is None:
                 # The generated reference and its source clock share the same
                 # update time; GUI rendering cannot shorten the accepted dt.

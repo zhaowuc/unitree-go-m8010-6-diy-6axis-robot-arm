@@ -662,7 +662,7 @@ def run_live(ros_args, binding, cycles=1, recover_initial_first=False, *,
         window.setWindowTitle("选轴辅助示教：J1–J5 单轴可拖动，其余保持；松键锁定；10分钟自动结束")
         stop.setText("结束示教并制动（Esc）")
     if hand_guidance:
-        window.setWindowTitle("整臂柔顺：施力移动，撤力停住；结束会话先回起始姿态")
+        window.setWindowTitle("整臂柔顺：点击切换拖动；再次点击结束并回位")
         stop.setText("回起始姿态并结束（Esc）")
     if interactive_teach:
         window.showMaximized()

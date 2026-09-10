@@ -47,7 +47,7 @@ python tools/hardware/j6_dm_g6220/j6_protocol_torque_readonly.py --execute-reado
 python3 tools/hardware/v15_31d_demo_session.py --execute --hand-guidance --guidance-shadow --guide-speed-deg-s 30 --base-fixed --vertical --hands-off --clearance --j6-torque-readback /tmp/j6_readback.json --expected-j6-torque-readback-sha256 <参数SHA> --j6-low-latency-library /tmp/j6-sdk-notification-1ms/libdm_device.so
 ```
 
-静置观察完成后正常回位/停机并保存报告。实际拖动入口去掉 `--guidance-shadow`；工具栏就绪后按住“整臂柔顺拖动”。设计目标是按钮按住期间撤去手力后停住，实机是否能独立托住重量仍须验证。松开按钮会冻结原生参考、确认全轴 HOLD，随后通过预演轨迹自动回到本次起始姿态并保持；结束按钮、窗口关闭或验证时限到期会结束会话。本会话仅记录姿态，动作组执行保留在常规控制入口。
+静置观察完成后正常回位/停机并保存报告。实际拖动入口去掉 `--guidance-shadow`；工具栏就绪后点击“开启整臂柔顺拖动”，按钮保持选中，触控抬手不会退出；再次点击结束拖动。设计目标是拖动开启期间撤去手力后停住，实机是否能独立托住重量仍须验证。结束拖动会冻结原生参考、确认全轴 HOLD，随后通过预演轨迹自动回到本次起始姿态并保持；窗口失去焦点仍会结束拖动，保护触发也会清除按钮选中状态。结束按钮、窗口关闭或验证时限到期会结束会话。本会话仅记录姿态，动作组执行保留在常规控制入口。
 
 2026-09-09 的 `125207-eac31a` 实机记录通过：收到拖动结束事件后约 3.93 秒开始回位，约 42.84 秒完成，随后保持约 74.76 秒，六轴最大回位保持误差 0.0643°；期间硬件健康、重力授权持续有效且路由拒绝为零。证据见 `hardware/v15_31f_guidance_20260909/manual_125207_review.json`。该结果验证自动回位与保持，不等于完整六轴零重力或全工况 ±0.1°验收通过。
 
