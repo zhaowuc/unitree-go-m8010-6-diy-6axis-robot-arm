@@ -65,7 +65,7 @@
     "J6": true
   },
   "operator_report": "拖动20°后J2发热且有声音，保持后卸力，GUI退出；当前竖直",
-  "inference": "With the operator confirming hands off and no extra payload, the existing self-weight hold was insufficient to reach its fixed target: bounded integral saturated and about 2 degrees of sag remained. Gravity model, rotor/output torque conversion and J2 dual-motor load distribution need verification. Error6 semantics remain undefined in the published SDK; temperatures do not support the configured 60C software thermal trip.",
+  "inference": "Manufacturer application identifies fault 6 as winding overtemperature. Hands-off/no-extra-payload holding failed with saturated integral and about 2 degrees of sag. Software model-to-wire conversion is consistent, but demand differs markedly from measured effort. Do not infer that a 37C ordinary temperature reading means the windings were cool.",
   "hardware_reenabled_during_review": false,
   "mode_description": {
     "J1_to_J5": "GO FOC hybrid position/velocity PD, fixed target HOLD, gravity feedforward plus bounded integral torque",
@@ -74,5 +74,11 @@
   },
   "release_to_return_gate_result": "Never reached 0.25-degree stationary HOLD readiness; automatic return did not start before motor fault",
   "operator_confirmed_hands_off_during_hold": true,
-  "operator_confirmed_no_extra_payload": true
+  "operator_confirmed_no_extra_payload": true,
+  "official_error6_resolution": {
+    "meaning": "绕组过热 / winding overtemperature",
+    "source_file": "official_go_error_codes.json",
+    "supersedes": "Old SDK header reserved-code interpretation; ordinary motor temperature does not exclude winding overheat."
+  },
+  "operator_confirmed_physical_j2_angle_about_20_deg": true
 }

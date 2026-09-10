@@ -1,0 +1,27 @@
+{
+  "schema": "go-m8010-j2-load-consistency-audit/1.0",
+  "session": "v15_31d_demo_20260910T052231-e8d598",
+  "source_report_sha256": "62a52c681f67f4706d9022977ef18092c16e0276c76db90938521c102139415f",
+  "software_model_joint_gravity_nm": 5.193524801070289,
+  "reevaluated_each_j2_rotor_feedforward_nm": 0.41023103188519566,
+  "feedback_derived_j2_joint_effort_nm": 32.73796875,
+  "ratio_effort_to_model": 6.3036126723132835,
+  "sdk_tau_serializer_and_decoder": "PASS; signed Q8 torque and error6 decoding; no SerialPort constructed/device I/O",
+  "sdk_library_sha256": "d51bc5f10cd757458ff4c34fa3bf6ecb0bb28c6c331de335aaaa527c68850c68",
+  "moving_body_ledger_mass_kg": 3.4515,
+  "historical_link1_placeholder_mass_kg": 1.0,
+  "j2_a_b_signs": [
+    -1,
+    1
+  ],
+  "j2_equal_share_mapping": "tau_rotor_i = sign_i * tau_joint_total / (2 * 6.329999923706055)",
+  "observed_rough_physical_angle_matches_gui": true,
+  "limits_not_changed": [
+    "2-degree tracking guard",
+    "20-degree session excursion",
+    "current/torque limits",
+    "thermal thresholds",
+    "gravity scale limits"
+  ],
+  "remaining_uncertainty": "Physical cause of the large effort/model gap requires independent load/mechanical verification; SDK feedback is not an independently calibrated joint torque sensor. Do not apply the ratio as an automatic gravity gain."
+}

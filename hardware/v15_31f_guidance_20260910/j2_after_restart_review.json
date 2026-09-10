@@ -1,0 +1,21 @@
+{
+  "schema": "go-m8010-j2-post-winding-fault-readonly/1.0",
+  "source": "/home/car/worktrees/go-m8010-v15-31b-ft-afda94da4c0d/.runtime/v15_31f_guidance_20260910/j2_post_winding_fault_071624/j2_raw.json",
+  "source_sha256": "ea77ac859137652547b2a3f75e7d235cbda38e824c4e95f4b932ddb0f4168f36",
+  "status": "PASS",
+  "packet_count": 500,
+  "duration_s": 4.990377818,
+  "temperature_min_c": {
+    "J2A": 32.0,
+    "J2B": 32.0
+  },
+  "temperature_max_c": {
+    "J2A": 32.0,
+    "J2B": 32.0
+  },
+  "communication_failure_packets": 0,
+  "merror_nonzero_packets": 0,
+  "foc_tx_attempt_count": 0,
+  "terminal": "PASS",
+  "scope": "J2A/J2B only. Post-power-cycle error clear and BRAKE feedback verified; not a powered load-holding or winding thermal qualification. User reported J2A/B power cycle only; do not infer J6 power cycle."
+}

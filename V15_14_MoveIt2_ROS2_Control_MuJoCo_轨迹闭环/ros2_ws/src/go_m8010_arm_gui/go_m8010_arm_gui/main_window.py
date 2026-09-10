@@ -287,6 +287,19 @@ def set_widget_value_if_changed(widget: object, value: int) -> bool:
     return True
 
 
+def motor_error_text(name: str, code: object) -> str:
+    if type(code) is not int or code < 0:
+        return "N/A"
+    if name not in ("J1", "J2A", "J2B", "J3", "J4", "J5"):
+        return str(code)  # J6 uses the DM protocol, not GO's error enumeration.
+    # Unitree's official debugging assistant app.asar, SHA256 fc274896903b13c5
+    # a3eaa67fd605dff88df9859a6f3b4b90a3e9d94ce97e1072, defines 5/6 beyond
+    # the old SDK header: undervoltage / winding overtemperature.
+    labels = {0: "正常", 1: "驱动过热", 2: "过流", 3: "过压",
+              4: "编码器故障", 5: "欠压", 6: "绕组过热"}
+    return f"{code}（{labels.get(code, '未定义错误')}）"
+
+
 def pump_ros_callbacks(node: object, spin_once: object) -> None:
     """Drain a bounded number of ready callbacks without blocking the Qt loop."""
 
@@ -3664,7 +3677,11 @@ class MainWindow(QMainWindow):
     ) -> None:
         """Keep virtual solving/approval/real execution state permanently visible."""
 
+        if (getattr(self, "collision_preview_state", None), getattr(self, "collision_preview_detail", None)) != (state, text):
+            print("WORKFLOW_STATUS=" + json.dumps({"state": state, "detail": text,
+                "at_monotonic_s": time.monotonic()}, ensure_ascii=False), flush=True)
         self.collision_preview_state = state
+        self.collision_preview_detail = text
         if (
             state in {"complete", "timeout", "blocked", "unsafe", "stale"}
             and getattr(self, "task_id", None) is not None
@@ -6490,7 +6507,7 @@ class MainWindow(QMainWindow):
                     f"{float(temperature):.0f}"
                     if type(temperature) in {int, float} else "N/A"
                 ),
-                str(sample.get("merror", "N/A")),
+                motor_error_text(name, sample.get("merror")),
                 THERMAL_STATE_CN.get(str(thermal_state), str(thermal_state)),
                 control_state,
                 (

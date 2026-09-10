@@ -42,6 +42,29 @@ PRODUCTION_MODEL = (
     / "go_m8010_arm_v15_14_kinematic.xml"
 )
 SESSION_POSE_DEG = [0.0, 90.0, -14.40, 13.49, 47.94, 0.0]
+
+
+def test_go_winding_error_label_does_not_reinterpret_dm_codes():
+    label = load_function("motor_error_text")
+    assert label("J2A", 6) == "6（绕组过热）"
+    assert label("J2B", 1) == "1（驱动过热）"
+    assert label("J3", 5) == "5（欠压）"
+    assert label("J6", 6) == "6"
+    assert label("J2A", 7) == "7（未定义错误）"
+    assert label("J2A", -1) == label("J2A", True) == "N/A"
+
+
+def test_workflow_log_records_changed_wait_reason_once(capsys):
+    method = load_main_window_method("_set_workflow_state", {"json": json, "time": time})
+    window = SimpleNamespace(_refresh_execute_target_enabled=lambda: None)
+    method(window, "waiting_checks", "planned_load_thermal_pass")
+    method(window, "waiting_checks", "planned_load_thermal_pass")
+    assert capsys.readouterr().out.count("WORKFLOW_STATUS=") == 1
+    method(window, "waiting_checks", "feedback_fresh")
+    assert window.collision_preview_detail == "feedback_fresh"
+    assert capsys.readouterr().out.count("WORKFLOW_STATUS=") == 1
+
+
 ABSOLUTE_MODEL_LIMITS_DEG = [
     (-180.0, 180.0),
     (-170.0, 170.0),
@@ -1152,6 +1175,11 @@ def test_control_panel_exposes_hold_and_the_four_v15_31a_workflow_actions():
             self.text = text
             self.enabled = True
             self.tooltip = ""
+            self.pressed = self.released = SimpleNamespace(connect=lambda *_: None)
+
+        def setAutoRepeat(self, _value): pass
+
+        def installEventFilter(self, _value): pass
 
         def setEnabled(self, enabled):
             self.enabled = enabled
@@ -1208,6 +1236,8 @@ def test_control_panel_exposes_hold_and_the_four_v15_31a_workflow_actions():
             "QGridLayout": FakeLayout,
             "QLabel": FakeLabel,
             "QProgressBar": FakeProgress,
+            "QComboBox": lambda: SimpleNamespace(addItems=lambda *_: None),
+            "QPushButton": FakeButton,
             "Qt": SimpleNamespace(AlignCenter=0),
         },
     )
@@ -1222,6 +1252,9 @@ def test_control_panel_exposes_hold_and_the_four_v15_31a_workflow_actions():
             self.buttons.append(button)
             return button
 
+        def addToolBar(self, _title):
+            return SimpleNamespace(setMovable=lambda *_: None, addWidget=lambda *_: None)
+
         def __getattr__(self, _name):
             return lambda *_args, **_kwargs: None
 
@@ -1233,6 +1266,7 @@ def test_control_panel_exposes_hold_and_the_four_v15_31a_workflow_actions():
         "3. 下发到现实",
         "恢复初始化姿态",
         "停止并制动",
+        "记录实姿到动作组",
         "载入当前验收目标",
     ]
     assert [button.shortcut for button in window.buttons[:5]] == [
@@ -3223,7 +3257,7 @@ def test_collision_timeout_clears_queue_and_late_safe_cannot_commit():
 
 def test_suspended_gui_still_publishes_status_and_virtual_preview_only():
     source = SOURCE.read_text(encoding="utf-8")
-    start = source.index("    def _publish_command(self) -> bool:")
+    start = source.index("    def _publish_command(")
     end = source.index("    def _refresh_safety_notice", start)
     publish = source[start:end]
     suspended = publish[
@@ -5168,7 +5202,7 @@ def test_hold_target_is_captured_once_and_never_follows_external_displacement():
 def test_new_or_restarted_gui_cannot_publish_default_brake_before_operator_action():
     source = SOURCE.read_text(encoding="utf-8")
     assert "self.command_stream_suspended = True" in source
-    publish_start = source.index("    def _publish_command(self) -> bool:")
+    publish_start = source.index("    def _publish_command(")
     publish_end = source.index("    def _refresh_safety_notice", publish_start)
     publish = source[publish_start:publish_end]
     assert publish.index("if self.command_stream_suspended:") < publish.index(

@@ -71,6 +71,27 @@ Result serialize_tau(double literal) {
   return {literal, count, static_cast<double>(count) / 256.0};
 }
 
+void feedback_decoder_self_test() {
+  for (const std::int16_t count : {-32768, -678, -64, 0, 64, 678, 32767}) {
+    MotorData data;
+    zero_object(data);
+    data.motorType = MotorType::GO_M8010_6;
+    auto* packet = data.get_motor_recv_data();
+    std::memset(packet, 0, 16);
+    packet[0] = 0xfd; packet[1] = 0xee; packet[2] = 0x10;
+    const auto encoded = static_cast<std::uint16_t>(count);
+    packet[3] = static_cast<std::uint8_t>(encoded);
+    packet[4] = static_cast<std::uint8_t>(encoded >> 8U);
+    packet[11] = 37; packet[12] = 6;  // Valid packet reporting winding overheat.
+    const auto crc = crc16_kermit(packet, 14);
+    packet[14] = static_cast<std::uint8_t>(crc);
+    packet[15] = static_cast<std::uint8_t>(crc >> 8U);
+    if (!data.extract_data(&data) || data.tau != static_cast<float>(count) / 256.0F ||
+        data.merror != 6 || data.temp != 37)
+      throw std::runtime_error("GO_FEEDBACK_Q8_OR_ERROR6_DECODE");
+  }
+}
+
 }  // namespace
 
 int main() {
@@ -105,7 +126,9 @@ int main() {
         positive.count != -negative.count) {
       throw std::runtime_error("ZERO_OR_SIGN_SYMMETRY");
     }
+    feedback_decoder_self_test();
     std::cout << "SELF_TEST=PASS\n"
+              << "FEEDBACK_Q8_AND_ERROR6_SELF_TEST=PASS\n"
               << "SERIAL_PORT_CONSTRUCTED=NO\n"
               << "DEVICE_IO=NO\n";
     return 0;

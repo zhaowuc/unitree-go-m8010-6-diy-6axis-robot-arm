@@ -57,6 +57,8 @@ class GuidanceDemo(J1Demo):
         self.hold_target = None
         self.freeze_reference = None
         self.hold_requested = False
+        self.hold_requested_at = None
+        self.hold_delay_reported = False
         self.guide_epoch = None
         self.guidance_fault = None
         self.entry_targets = None
@@ -162,6 +164,8 @@ class GuidanceDemo(J1Demo):
 
     def _request_hold(self, target):
         self.guidance_phase = "hold_barrier"
+        self.hold_requested_at = self.now()
+        self.hold_delay_reported = False
         self._sync_drag_button()
         self.window.command_targets = list(target)
         self.window.targets = self.window.candidate_targets = list(target)
@@ -304,7 +308,14 @@ class GuidanceDemo(J1Demo):
                 # A genuine loss of actuator/feedback authority cannot be
                 # repaired by inventing a held pose or extending an old lease.
                 self.return_verified = False
-                super().stop("hand guidance lost hardware/feedback/gravity authority")
+                motors = (self.window.node.latest_hardware or {}).get("per_motor", {})
+                errors = [f"{name}: {self.gui.motor_error_text(name, motors[name]['merror'])}"
+                    for group in MOTOR_GROUPS for name in group
+                    if type(motors.get(name, {}).get("merror")) is int and motors[name]["merror"] > 0]
+                detail = "hand guidance lost hardware/feedback/gravity authority"
+                if errors:
+                    detail += "; " + "，".join(errors)
+                super().stop(detail)
                 return
             empirical = (self.window.node.latest_gravity_status or {}).get("empirical_validation", {})
             return_only = empirical.get("return_only") is True
@@ -348,6 +359,15 @@ class GuidanceDemo(J1Demo):
                     self.window.teach_record_target = tuple(self.hold_target)
                     self.drag_button.setEnabled(not (self.ending or self.return_requested or self.return_only))
                     self.status.setText("六轴保持已确认；请松手，准备回到起始姿态。" if self.return_requested else "六轴保持已确认。")
+                elif not self.hold_delay_reported and now - self.hold_requested_at >= 5.0:
+                    errors = [math.degrees(actual-target) for actual,target in zip(sample["actual_rad"], self.hold_target)]
+                    detail = "，".join(f"J{i+1}偏差{error:+.2f}°" for i,error in enumerate(errors) if abs(error) > 0.25)
+                    detail = detail or "电机保持确认尚未完成"
+                    self.hold_delay_reported = True
+                    self.guidance_events.append({"event": "hold_confirmation_delayed", "at_monotonic_s": now,
+                        "elapsed_s": now-self.hold_requested_at, "error_deg": errors, "detail": detail})
+                    print("HAND_GUIDANCE_HOLD_NOT_READY=" + detail, flush=True)
+                    self.status.setText("保持未到位：" + detail + "；自动回位尚未开始，请托稳机械臂。")
                 return
             if self.guidance_phase == "engaging_guidance":
                 accepted = accepted_guidance_targets(self.window.node.latest_hardware, self.guide_epoch, time.monotonic_ns())

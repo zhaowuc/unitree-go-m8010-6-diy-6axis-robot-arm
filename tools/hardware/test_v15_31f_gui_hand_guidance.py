@@ -194,6 +194,21 @@ def test_release_freezes_each_native_target_before_ack_and_return_before_brake(m
     clock[0] += .02
     demo.tick()  # Paused HOLD is insufficient; the newer ACK must be echoed.
     assert demo.guidance_phase == "hold_barrier"
+    window._action_group_hold_ready = lambda *_: False
+    sample["actual_rad"][1] = targets[1] + runtime.math.radians(2.0)
+    clock[0] += 5.01
+    feedback(targets, window.activation_epoch, mode="hold")
+    demo.tick()
+    assert demo.guidance_events[-1]["event"] == "hold_confirmation_delayed"
+    assert "J2偏差+2.00°" in demo.status.text and not actions
+    assert sent[-1][0] == "hold" and sent[-1][2] == tuple(targets)
+    warning_count = len(demo.guidance_events)
+    clock[0] += .02
+    feedback(targets, window.activation_epoch, mode="hold")
+    demo.tick()
+    assert len(demo.guidance_events) == warning_count
+    sample["actual_rad"] = [.01]*6
+    window._action_group_hold_ready = lambda *_: True
     feedback(targets, window.activation_epoch, mode="hold")
     clock[0] += .02
     demo.tick()
@@ -244,3 +259,21 @@ def test_release_freezes_each_native_target_before_ack_and_return_before_brake(m
     demo.tick()
     assert demo.failure == "hand guidance lost hardware/feedback/gravity authority"
     assert actions == ["return", "brake"]
+
+
+def test_motor_fault_detail_is_preserved_in_terminal_reason(monkeypatch):
+    window = SimpleNamespace(node=SimpleNamespace(latest_hardware={"per_motor": {
+        "J2A": {"merror": 6}, "J2B": {"merror": 0}}}), hardware_mode="hold", hand_guidance_reference=None)
+    demo = runtime.GuidanceDemo.__new__(runtime.GuidanceDemo)
+    demo.window = window
+    demo.gui = SimpleNamespace(motor_error_text=lambda name, code: "6（绕组过热）")
+    demo.interactive_ready, demo.terminal = True, None
+    demo.guidance_phase, demo.ending = "ready", False
+    demo.drag_button, demo.shadow_only = Widget(), False
+    demo.samples = []
+    demo.now = lambda: 1.0
+    demo.observe = lambda: dict(healthy=False, feedback_fresh=True, authority=True)
+    reasons = []
+    monkeypatch.setattr(runtime.J1Demo, "stop", lambda self, reason: reasons.append(reason))
+    demo.tick()
+    assert reasons == ["hand guidance lost hardware/feedback/gravity authority; J2A: 6（绕组过热）"]
