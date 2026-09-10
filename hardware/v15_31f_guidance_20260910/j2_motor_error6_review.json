@@ -1,0 +1,78 @@
+{
+  "schema": "go-m8010-manual-fault-review/1.0",
+  "session": "v15_31d_demo_20260910T052231-e8d598",
+  "code_commit": "0043e44fffda9477eb901d8a7c6266e87be525be",
+  "report_sha256": "62a52c681f67f4706d9022977ef18092c16e0276c76db90938521c102139415f",
+  "direct_trigger": "J2A positive motor error 6 -> J2 domain BRAKE -> GUI detects unhealthy hardware -> global session stop",
+  "first_error_source_monotonic_ns": 3417775277936777,
+  "j2a_error_code": 6,
+  "j2a_error6_csv_rows": 683,
+  "temperature_at_fault_c": {
+    "J2A": 37.0,
+    "J2B": 38.0
+  },
+  "temperature_max_entire_record_c": {
+    "J2A": 40.0,
+    "J2B": 41.0
+  },
+  "software_thermal_stop_c": 60,
+  "official_sdk_error6_meaning": "reserved (not identified as overtemperature)",
+  "official_sdk_error_source": "https://github.com/unitreerobotics/unitree_actuator_sdk/blob/main/include/unitreeMotor/include/motor_msg_GO-M8010-6.h",
+  "gravity_scale_before_fault": 1.0,
+  "gravity_authority_before_fault": true,
+  "mode_before_fault": {
+    "J1": "hold",
+    "J2A": "hold",
+    "J2B": "hold",
+    "J3": "hold",
+    "J4": "hold",
+    "J5": "hold",
+    "J6": "hold"
+  },
+  "j2_target_deg": -19.784862570455886,
+  "j2_actual_deg": -21.73224441109461,
+  "j2_error_deg": -1.9473818406387218,
+  "seconds_from_last_release_to_motor_error": 31.98734359210357,
+  "post_release_hold_ready_frames": 0,
+  "post_release_samples": 1580,
+  "j2_before_fault_rotor_side_nm": {
+    "A": {
+      "tau_cmd_rotor_nm": -1.9100000464144256,
+      "tau_feedback_rotor_nm": -2.65234375,
+      "gravity_feedforward_rotor_nm": -0.4102204053153482,
+      "dq_joint_rad_s": 0.03877369760177272,
+      "feedback_source_monotonic_ns": 3417775236144478,
+      "trajectory_state": "INACTIVE",
+      "trajectory_sample_index": 0,
+      "trajectory_interval_count": 0
+    },
+    "B": {
+      "tau_cmd_rotor_nm": 1.9100000464144256,
+      "tau_feedback_rotor_nm": 2.51953125,
+      "gravity_feedforward_rotor_nm": 0.4102204053153482,
+      "dq_joint_rad_s": -0.03877369760177272,
+      "feedback_source_monotonic_ns": 3417775236144478,
+      "trajectory_state": "INACTIVE",
+      "trajectory_sample_index": 0,
+      "trajectory_interval_count": 0
+    }
+  },
+  "bounded_integral_limit_rotor_nm": 1.5,
+  "terminal_confirmation": {
+    "J1": false,
+    "J2": false,
+    "J345": false,
+    "J6": true
+  },
+  "operator_report": "拖动20°后J2发热且有声音，保持后卸力，GUI退出；当前竖直",
+  "inference": "With the operator confirming hands off and no extra payload, the existing self-weight hold was insufficient to reach its fixed target: bounded integral saturated and about 2 degrees of sag remained. Gravity model, rotor/output torque conversion and J2 dual-motor load distribution need verification. Error6 semantics remain undefined in the published SDK; temperatures do not support the configured 60C software thermal trip.",
+  "hardware_reenabled_during_review": false,
+  "mode_description": {
+    "J1_to_J5": "GO FOC hybrid position/velocity PD, fixed target HOLD, gravity feedforward plus bounded integral torque",
+    "J2": "dual motor common joint hold; integral correction limited to 1.5 Nm per rotor",
+    "J6": "DM-G6220 POS_VEL; no commanded torque feedforward in this mode"
+  },
+  "release_to_return_gate_result": "Never reached 0.25-degree stationary HOLD readiness; automatic return did not start before motor fault",
+  "operator_confirmed_hands_off_during_hold": true,
+  "operator_confirmed_no_extra_payload": true
+}
