@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>go_m8010_arm_v15_14_qa</name>
+  <version>15.14.0</version>
+  <description>Machine-readable MoveIt, ros2_control, MuJoCo, TF closed-loop regression.</description>
+  <maintainer email="maintainer@example.invalid">GO-M8010 project</maintainer>
+  <license>Proprietary</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>action_msgs</exec_depend>
+  <exec_depend>control_msgs</exec_depend>
+  <exec_depend>controller_manager_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>moveit_msgs</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>shape_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-scipy</exec_depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

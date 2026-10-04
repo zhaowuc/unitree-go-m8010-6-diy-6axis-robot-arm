@@ -1,0 +1,39 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 50
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+    arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+joint_state_broadcaster:
+  ros__parameters:
+    joints: [J1, J2, J3, J4, J5, J6]
+    interfaces: [position, velocity]
+
+arm_controller:
+  ros__parameters:
+    joints: [J1, J2, J3, J4, J5, J6]
+    command_interfaces: [position, velocity]
+    state_interfaces: [position, velocity]
+    interpolation_method: splines
+    allow_partial_joints_goal: false
+    open_loop_control: false
+    allow_integration_in_goal_trajectories: false
+    allow_nonzero_velocity_at_trajectory_end: false
+    state_publish_rate: 50.0
+    action_monitor_rate: 20.0
+    # J1 is the sole continuous joint in the frozen URDF.  The controller must
+    # compare equivalent q +/- 2*pi representations with angular wraparound;
+    # otherwise a valid MoveIt trajectory can be rejected at its first sample.
+    gains:
+      J1: {angle_wraparound: true}
+    constraints:
+      goal_time: 1.0
+      stopped_velocity_tolerance: 0.05
+      J1: {trajectory: 0.05, goal: 0.0001}
+      J2: {trajectory: 0.05, goal: 0.0001}
+      J3: {trajectory: 0.05, goal: 0.0001}
+      J4: {trajectory: 0.05, goal: 0.0001}
+      J5: {trajectory: 0.05, goal: 0.0001}
+      J6: {trajectory: 0.05, goal: 0.0001}

@@ -1,0 +1,284 @@
+{
+  "schema": "go-m8010-arm-v15.15-upperarm-a-mass-properties/1.0",
+  "revision": "V15.15-UPPERARM_A_MASS_PROPERTIES_ONLY",
+  "status": "PASS",
+  "scope": "MASS_PROPERTIES_VOLUME_AND_GEOMETRIC_CENTROID_ONLY",
+  "git_guard": {
+    "branch": "agent/v15-15-com-v1",
+    "task_base_commit": "494bb0c95f53cfd3fac7c9466736bcfb4bbbf50c",
+    "task_base_tree": "5378302411f30530225916771c99337b772589c9",
+    "pass": true
+  },
+  "source": {
+    "path": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+    "sha256": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0",
+    "object": "UpperArm_A_SleeveSide_PrintPart",
+    "object_type": "Mesh::Feature",
+    "shape_type": "SOURCE_STL_DERIVED_TRIANGLE_MESH",
+    "higher_authority_closed_source_found": false,
+    "opened_read_only": true,
+    "modified_or_saved": false,
+    "coordinate_frame": "UPPERARM_A_SOURCE_STL_LOCAL"
+  },
+  "repair_method": {
+    "name": "DETERMINISTIC_EXTERIOR_COMPONENT_SELECTION_AND_TWO_PLANAR_EAR_CLIPPED_CAPS",
+    "working_copy_only": true,
+    "manual_complex_surface_guess": false,
+    "retained_source_face_count": 1796,
+    "added_planar_cap_face_count": 38,
+    "moved_retained_vertex_count": 0,
+    "removed_non_material_face_count": 117,
+    "removed_face_policy": "incidence-two components other than the unique bbox-covering exterior components 1756+40",
+    "cap_policy": "two simple 21-edge loops, all vertices exactly z=46 mm, deterministic XY ear clipping",
+    "collision_proxy_used": false
+  },
+  "original_geometry_metrics": {
+    "vertices": 1036,
+    "facets": 1913,
+    "components_freecad": 63,
+    "open_edges": 235,
+    "non_manifold_edges": 54,
+    "orientation_conflicts": 196,
+    "self_intersection_pairs": 2,
+    "object_type": "Mesh::Feature",
+    "shape_type": "triangle_mesh",
+    "solid_count": 0,
+    "shell_count": 0,
+    "face_count": 0,
+    "edge_count": 2960,
+    "vertex_count": 1036,
+    "facet_count": 1913,
+    "is_closed": false,
+    "is_valid": false,
+    "is_manifold": false,
+    "volume_mm3": null,
+    "volume_authoritative": false,
+    "area_mm2": 67506.89984527961,
+    "edge_incidence_histogram": {
+      "1": 235,
+      "2": 2671,
+      "3": 54
+    },
+    "incidence_two_component_sizes": [
+      1756,
+      40,
+      28,
+      20,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "bbox_source_local": {
+      "min_mm": [
+        3340.716796875,
+        1222.453857421875,
+        -5.6399328803925005e-15
+      ],
+      "max_mm": [
+        3534.4267578125,
+        1346.6297607421875,
+        92.0
+      ],
+      "size_mm": [
+        193.7099609375,
+        124.1759033203125,
+        92.0
+      ]
+    }
+  },
+  "repaired_geometry_metrics": {
+    "object_type": "mass_properties_only_mesh",
+    "shape_type": "closed_triangle_shell_and_valid_brep_solid_on_reimport",
+    "solid_count": 1,
+    "shell_count": 1,
+    "face_count": 1834,
+    "edge_count": 2751,
+    "vertex_count": 899,
+    "facet_count": 1834,
+    "component_count": 1,
+    "open_edge_count": 0,
+    "non_manifold_edge_count": 0,
+    "orientation_conflict_count": 0,
+    "duplicate_face_count": 0,
+    "self_intersection_count": 0,
+    "is_closed": true,
+    "is_valid": true,
+    "is_manifold": true,
+    "volume_mm3": 308654.9785581227,
+    "area_mm2": 66311.50434282282,
+    "bbox_source_local": {
+      "min_mm": [
+        3340.716796875,
+        1222.453857421875,
+        -5.6399328803925005e-15
+      ],
+      "max_mm": [
+        3534.4267578125,
+        1346.6297607421875,
+        92.0
+      ],
+      "size_mm": [
+        193.7099609375,
+        124.1759033203125,
+        92.0
+      ]
+    }
+  },
+  "bounding_box_difference": {
+    "size_delta_mm": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "max_abs_size_delta_mm": 0.0,
+    "tolerance_mm": 0.1,
+    "pass": true
+  },
+  "surface_difference": {
+    "method": "EXACT_RETAINED_FACE_IDENTITY_PLUS_RECORDED_REMOVED_INTERNAL_OR_ZERO_THICKNESS_FACES",
+    "retained_surface_max_deviation_mm": 0.0,
+    "retained_surface_area_mm2": 66273.26197230676,
+    "raw_surface_area_mm2": 67506.89984527961,
+    "raw_surface_area_exactly_retained_fraction": 0.9817257513557837,
+    "repaired_surface_area_mm2": 66311.50434282282,
+    "repaired_surface_area_from_original_faces_fraction": 0.9994232920683211,
+    "added_planar_cap_area_mm2": 38.24237051606178,
+    "pymeshlab_deterministic_200k_diagnostic": {
+      "raw_to_repaired_mean_mm": 0.07884812355,
+      "raw_to_repaired_rms_mm": 0.6668114662,
+      "raw_to_repaired_max_mm": 9.515687943,
+      "repaired_to_raw_mean_mm": 0.000266580493,
+      "repaired_to_raw_rms_mm": 0.006436368451,
+      "repaired_to_raw_max_mm": 0.2682145834,
+      "large_raw_to_repaired_distance_explanation": "explicitly removed internal overlap/seam and zero-thickness void faces; no exterior retained surface moved"
+    },
+    "most_surface_under_0p1_mm_pass": true
+  },
+  "artifact": {
+    "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+    "format": "binary STL",
+    "coordinate_frame": "UPPERARM_A_SOURCE_STL_LOCAL",
+    "sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45",
+    "size_bytes": 91784
+  },
+  "volume_mm3": 308654.9785581227,
+  "centroid_mm_source_local": [
+    3414.702859327949,
+    1277.1059547527213,
+    34.687833260142654
+  ],
+  "centroid_mm_world": [
+    -0.7894327050307766,
+    53.98176991502851,
+    183.0347984497505
+  ],
+  "source_placement_matrix": [
+    [
+      0.19628414455729026,
+      -0.04638464318604624,
+      0.97944933481621,
+      -645.7783335564332
+    ],
+    [
+      0.9531956643126751,
+      -0.22525324638600508,
+      -0.20169035804441443,
+      -2906.2297267154954
+    ],
+    [
+      0.22997947762992033,
+      0.9731954787549464,
+      0.0,
+      -1845.150522456254
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "validation": {
+    "closed": true,
+    "manifold": true,
+    "valid": true,
+    "positive_volume": true,
+    "finite_centroid": true,
+    "source_cad_hash_unchanged": true,
+    "bbox_pass": true,
+    "surface_fidelity_pass": true,
+    "collision_proxy_used": false,
+    "pass": true
+  },
+  "forbidden_actions": {
+    "source_fcstd_modified": false,
+    "source_print_geometry_modified": false,
+    "visual_mesh_modified": false,
+    "collision_mesh_modified": false,
+    "collision_proxy_used": false,
+    "bbox_center_used_as_com": false,
+    "inertia_computed_or_written": false,
+    "gravity_or_dynamics_computed_or_written": false,
+    "kinematics_tf_control_modified": false
+  }
+}

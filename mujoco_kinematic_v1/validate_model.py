@@ -30,6 +30,16 @@ AXIS_TOLERANCE = 2.0e-9
 POSITIVE_SIGN_TOLERANCE_M = 2.0e-9
 LIMIT_TOLERANCE_RAD = 1.0e-12
 VISUAL_BOUNDS_TOLERANCE_M = 5.0e-5
+TCP_POSITION_TOLERANCE_M = 1.0e-9
+TCP_ROTATION_TOLERANCE = 1.0e-9
+TCP_LOCAL = np.array(
+    [
+        -0.001187726400,
+        0.000060729026,
+        0.092493513872,
+    ],
+    dtype=float,
+)
 
 
 def frame_matrix(frame: dict) -> np.ndarray:
@@ -163,6 +173,106 @@ def apply_pose(model: mujoco.MjModel, data: mujoco.MjData, pose: dict[str, float
         qadr = int(model.jnt_qposadr[joint_id])
         data.qpos[qadr] = math.radians(float(pose[f"j{index}_deg"]))
     mujoco.mj_forward(model, data)
+
+
+def validate_tcp_nominal(model: mujoco.MjModel, data: mujoco.MjData) -> dict:
+    tcp_site_id = mujoco.mj_name2id(
+        model,
+        mujoco.mjtObj.mjOBJ_SITE,
+        "tcp_nominal",
+    )
+    gripper_body_id = mujoco.mj_name2id(
+        model,
+        mujoco.mjtObj.mjOBJ_BODY,
+        "gripper",
+    )
+    site_exists = tcp_site_id >= 0
+    gripper_exists = gripper_body_id >= 0
+    if not site_exists or not gripper_exists:
+        return {
+            "site_exists": site_exists,
+            "parent_body": None,
+            "parent_is_gripper": False,
+            "local_position_m": TCP_LOCAL.tolist(),
+            "model_local_position_m": None,
+            "local_position_error_m": None,
+            "zero_pose_position_error_m": None,
+            "zero_pose_rotation_error": None,
+            "test_pose_count": 0,
+            "test_poses": [],
+            "max_position_error_m": None,
+            "max_rotation_error": None,
+            "position_tolerance_m": TCP_POSITION_TOLERANCE_M,
+            "rotation_tolerance": TCP_ROTATION_TOLERANCE,
+            "pass": False,
+        }
+
+    parent_body_id = int(model.site_bodyid[tcp_site_id])
+    parent_body = mujoco.mj_id2name(
+        model,
+        mujoco.mjtObj.mjOBJ_BODY,
+        parent_body_id,
+    )
+    parent_is_gripper = parent_body_id == gripper_body_id
+    model_local_position = model.site_pos[tcp_site_id].copy()
+    local_position_error = float(np.linalg.norm(model_local_position - TCP_LOCAL))
+
+    def evaluate_pose(name: str, pose: dict[str, float]) -> dict:
+        apply_pose(model, data, pose)
+        gripper_position = data.xpos[gripper_body_id].copy()
+        gripper_rotation = data.xmat[gripper_body_id].reshape(3, 3).copy()
+        expected_tcp_world = gripper_position + gripper_rotation @ TCP_LOCAL
+        actual_tcp_world = data.site_xpos[tcp_site_id].copy()
+        actual_tcp_rotation = data.site_xmat[tcp_site_id].reshape(3, 3).copy()
+        position_error = float(np.linalg.norm(actual_tcp_world - expected_tcp_world))
+        rotation_error = float(np.max(np.abs(actual_tcp_rotation - gripper_rotation)))
+        return {
+            "name": name,
+            "angles_deg": pose,
+            "position_error_m": position_error,
+            "rotation_error": rotation_error,
+            "pass": position_error <= TCP_POSITION_TOLERANCE_M
+            and rotation_error <= TCP_ROTATION_TOLERANCE,
+        }
+
+    zero_result = evaluate_pose("mechanical_zero", zero_pose())
+    test_specs = (
+        ("J1_plus_20_deg", 1, 20.0),
+        ("J2_plus_20_deg", 2, 20.0),
+        ("J3_minus_20_deg", 3, -20.0),
+        ("J4_plus_20_deg", 4, 20.0),
+        ("J5_minus_20_deg", 5, -20.0),
+        ("J6_plus_30_deg", 6, 30.0),
+    )
+    test_results = []
+    for name, joint_index, angle_deg in test_specs:
+        pose = zero_pose()
+        pose[f"j{joint_index}_deg"] = angle_deg
+        test_results.append(evaluate_pose(name, pose))
+
+    all_results = [zero_result, *test_results]
+    max_position_error = max(row["position_error_m"] for row in all_results)
+    max_rotation_error = max(row["rotation_error"] for row in all_results)
+    apply_pose(model, data, zero_pose())
+    return {
+        "site_exists": True,
+        "parent_body": parent_body,
+        "parent_is_gripper": parent_is_gripper,
+        "local_position_m": TCP_LOCAL.tolist(),
+        "model_local_position_m": model_local_position.tolist(),
+        "local_position_error_m": local_position_error,
+        "zero_pose_position_error_m": zero_result["position_error_m"],
+        "zero_pose_rotation_error": zero_result["rotation_error"],
+        "test_pose_count": len(test_results),
+        "test_poses": test_results,
+        "max_position_error_m": max_position_error,
+        "max_rotation_error": max_rotation_error,
+        "position_tolerance_m": TCP_POSITION_TOLERANCE_M,
+        "rotation_tolerance": TCP_ROTATION_TOLERANCE,
+        "pass": parent_is_gripper
+        and local_position_error <= TCP_POSITION_TOLERANCE_M
+        and all(row["pass"] for row in all_results),
+    }
 
 
 def validate_frames_axes_signs_limits(model, data, axes) -> dict:
@@ -359,6 +469,7 @@ def main() -> None:
     topology["pass"] = topology["nq"] == 6 and topology["joint_names"] == topology["expected_joint_names"]
     frames_axes_limits = validate_frames_axes_signs_limits(model, data, axes)
     visual_bounds = validate_visual_bounds(source_meshes, runtime_meshes)
+    tcp_nominal = validate_tcp_nominal(model, data)
     collision = validate_collision_regression(model, data, reference, pair_contract)
 
     passed = (
@@ -366,6 +477,7 @@ def main() -> None:
         and frames_axes_limits["all_links_pass"]
         and frames_axes_limits["all_joints_pass"]
         and visual_bounds["all_pass"]
+        and tcp_nominal["pass"]
         and collision["saved_zero_full_matrix_clear"]
         and collision["all_503_pose_collision_booleans_match"]
     )
@@ -378,6 +490,7 @@ def main() -> None:
         "topology": topology,
         "frame_axis_sign_limit_validation": frames_axes_limits,
         "visual_bounds_validation": visual_bounds,
+        "tcp_nominal_validation": tcp_nominal,
         "collision_regression": collision,
         "physics_scope": {
             "empty_load_kinematics_only": True,

@@ -1,0 +1,321 @@
+{
+  "schema": "go-m8010-arm-v15.13-rviz-visual-mesh-qa/1.0",
+  "purpose": "RViz-only visual LOD generated from audited FCStd/MuJoCo full meshes",
+  "does_not_modify": [
+    "J1-J6 origin/axis/limit",
+    "collision meshes",
+    "mass/inertia",
+    "frozen camera extrinsic"
+  ],
+  "bounds_tolerance_mm": 0.5,
+  "links": {
+    "base_link": {
+      "source": "meshes/visual_mm/base_link.stl",
+      "output": "meshes/ros_visual_mm/base_link.stl",
+      "source_sha256": "DFCD295074C24BAB23565BBF852C09EA4504623462B0C87D4382D3FF99C82F3B",
+      "output_sha256": "CB842671BB5138EFF40845C4C6C42E552D32BF0C0810D2AEC1831A8142DDB754",
+      "source_faces": 758275,
+      "output_faces": 147744,
+      "source_components": 31,
+      "preserved_small_components": 15,
+      "simplification_failures": [],
+      "source_bounds_mm": [
+        [
+          -88.47176361083984,
+          -88.49915313720703,
+          -90.0
+        ],
+        [
+          88.44879913330078,
+          88.36668395996094,
+          10.0
+        ]
+      ],
+      "output_bounds_mm": [
+        [
+          -88.47176361083984,
+          -88.49915313720703,
+          -90.0
+        ],
+        [
+          88.44879913330078,
+          88.36668395996094,
+          10.000104904174805
+        ]
+      ],
+      "max_bounds_delta_mm": 0.0001049041748046875,
+      "output_bytes": 7387284,
+      "pass": true
+    },
+    "link1": {
+      "source": "meshes/visual_mm/link1.stl",
+      "output": "meshes/ros_visual_mm/link1.stl",
+      "source_sha256": "5003FFF26BA14D042F10C3CCD4B218362134B594D06A17185588E4A28A52A51D",
+      "output_sha256": "AC3499867B772A867D09188FF34767EE5F696054DB54E21680D7F53DEEEE2BDB",
+      "source_faces": 1962634,
+      "output_faces": 289956,
+      "source_components": 100,
+      "preserved_small_components": 58,
+      "simplification_failures": [],
+      "source_bounds_mm": [
+        [
+          -48.25136184692383,
+          -68.79865264892578,
+          -8.300003051757812
+        ],
+        [
+          48.24897384643555,
+          68.80136108398438,
+          140.8896942138672
+        ]
+      ],
+      "output_bounds_mm": [
+        [
+          -48.28364181518555,
+          -68.79865264892578,
+          -8.300025939941406
+        ],
+        [
+          48.25397872924805,
+          68.80136108398438,
+          140.89376831054688
+        ]
+      ],
+      "max_bounds_delta_mm": 0.03227996826171875,
+      "output_bytes": 14497884,
+      "pass": true
+    },
+    "link2": {
+      "source": "meshes/visual_mm/link2.stl",
+      "output": "meshes/ros_visual_mm/link2.stl",
+      "source_sha256": "DAC38E8EFB049472A361C3D55062FA24DCC80E037BA47F695034B5159E154BB2",
+      "output_sha256": "50B21130AD2C40C9858ABDD769782BDC2504F4928302759F185D8E253DD63A0A",
+      "source_faces": 1258079,
+      "output_faces": 294915,
+      "source_components": 124,
+      "preserved_small_components": 93,
+      "simplification_failures": [],
+      "source_bounds_mm": [
+        [
+          -278.1002502441406,
+          -50.000003814697266,
+          -57.95048141479492
+        ],
+        [
+          28.996047973632812,
+          49.500003814697266,
+          57.95045852661133
+        ]
+      ],
+      "output_bounds_mm": [
+        [
+          -278.1002502441406,
+          -50.000003814697266,
+          -57.95048141479492
+        ],
+        [
+          29.30805778503418,
+          49.500003814697266,
+          57.95045852661133
+        ]
+      ],
+      "max_bounds_delta_mm": 0.3120098114013672,
+      "output_bytes": 14745834,
+      "pass": true
+    },
+    "link3": {
+      "source": "meshes/visual_mm/link3.stl",
+      "output": "meshes/ros_visual_mm/link3.stl",
+      "source_sha256": "08F1A4E334917764BB267612DD3B1469F74BB319560921C64B673C7F9EEB82FC",
+      "output_sha256": "14E415E076A41A81BC2ECA9D5B0C89E428DABF10D4BEB93E5A5F7FEAC5C1BB44",
+      "source_faces": 1538910,
+      "output_faces": 261270,
+      "source_components": 96,
+      "preserved_small_components": 65,
+      "simplification_failures": [],
+      "source_bounds_mm": [
+        [
+          -250.803466796875,
+          11.799997329711914,
+          -48.45738983154297
+        ],
+        [
+          48.4573974609375,
+          64.30000305175781,
+          100.41878509521484
+        ]
+      ],
+      "output_bounds_mm": [
+        [
+          -250.803466796875,
+          11.799944877624512,
+          -48.45738983154297
+        ],
+        [
+          48.404380798339844,
+          64.30000305175781,
+          100.41878509521484
+        ]
+      ],
+      "max_bounds_delta_mm": 0.05301666259765625,
+      "output_bytes": 13063584,
+      "pass": true
+    },
+    "link4": {
+      "source": "meshes/visual_mm/link4.stl",
+      "output": "meshes/ros_visual_mm/link4.stl",
+      "source_sha256": "DB2ADA6F74CF55A3745BD0FBC41C6EB2448D385951C120AD35C738E8BA94E369",
+      "output_sha256": "E9EAE973EABC3E15B1C9924081297436C50351661CC59B4D44FD056D191609D9",
+      "source_faces": 1196817,
+      "output_faces": 235942,
+      "source_components": 76,
+      "preserved_small_components": 50,
+      "simplification_failures": [],
+      "source_bounds_mm": [
+        [
+          -31.00000762939453,
+          -16.499984741210938,
+          -29.865629196166992
+        ],
+        [
+          29.827594757080078,
+          80.50007629394531,
+          146.3989715576172
+        ]
+      ],
+      "output_bounds_mm": [
+        [
+          -31.00000762939453,
+          -16.499984741210938,
+          -30.087261199951172
+        ],
+        [
+          29.827594757080078,
+          80.50007629394531,
+          146.15289306640625
+        ]
+      ],
+      "max_bounds_delta_mm": 0.2460784912109375,
+      "output_bytes": 11797184,
+      "pass": true
+    },
+    "link5": {
+      "source": "meshes/visual_mm/link5.stl",
+      "output": "meshes/ros_visual_mm/link5.stl",
+      "source_sha256": "B998E731CD0D0013CD6C003B292F0B7B8C29F2CD11B06C4F025DF284DAF7448C",
+      "output_sha256": "49EA0CA3C6DF1AC235C9D80704C847996A1D71F07564863FB47886B852A9BB15",
+      "source_faces": 613338,
+      "output_faces": 183024,
+      "source_components": 24,
+      "preserved_small_components": 9,
+      "simplification_failures": [],
+      "source_bounds_mm": [
+        [
+          -46.00000762939453,
+          -35.1472053527832,
+          -28.999624252319336
+        ],
+        [
+          24.000009536743164,
+          34.852813720703125,
+          98.52754974365234
+        ]
+      ],
+      "output_bounds_mm": [
+        [
+          -46.20880889892578,
+          -35.30110549926758,
+          -29.145509719848633
+        ],
+        [
+          24.153940200805664,
+          34.730743408203125,
+          98.52755737304688
+        ]
+      ],
+      "max_bounds_delta_mm": 0.20880126953125,
+      "output_bytes": 9151284,
+      "pass": true
+    },
+    "link6": {
+      "source": "meshes/visual_mm/link6.stl",
+      "output": "meshes/ros_visual_mm/link6.stl",
+      "source_sha256": "61A7CCBDF0CA0ABA70F447C323989AD4344B2627537429405F87B4F6C1FB91F7",
+      "output_sha256": "9587C3BECA7BEB23672A1BAAB6F36322D5F40D5C81454E7DBCEFCEC2632F8849",
+      "source_faces": 5064,
+      "output_faces": 5064,
+      "source_components": 1,
+      "preserved_small_components": 0,
+      "simplification_failures": [],
+      "source_bounds_mm": [
+        [
+          -17.495956420898438,
+          -17.500476837158203,
+          -1.0001217126846313
+        ],
+        [
+          17.49595832824707,
+          17.500450134277344,
+          2.1552621547016315e-05
+        ]
+      ],
+      "output_bounds_mm": [
+        [
+          -17.495956420898438,
+          -17.500476837158203,
+          -1.0001217126846313
+        ],
+        [
+          17.49595832824707,
+          17.500450134277344,
+          2.1552621547016315e-05
+        ]
+      ],
+      "max_bounds_delta_mm": 0.0,
+      "output_bytes": 253284,
+      "pass": true
+    },
+    "gripper": {
+      "source": "meshes/visual_mm/gripper.stl",
+      "output": "meshes/ros_visual_mm/gripper.stl",
+      "source_sha256": "420390DCC9020B011A598C2C32DB608A653B3864F55C2B9B7BFF267DA8529930",
+      "output_sha256": "8E70B714ED248877A87CBED8015C610E56A3E6831D438362BC35A9E6DC6EB748",
+      "source_faces": 238682,
+      "output_faces": 238682,
+      "source_components": 57,
+      "preserved_small_components": 25,
+      "simplification_failures": [],
+      "source_bounds_mm": [
+        [
+          -64.51705932617188,
+          -66.5068130493164,
+          -4.000020980834961
+        ],
+        [
+          42.612281799316406,
+          66.6286849975586,
+          119.40178680419922
+        ]
+      ],
+      "output_bounds_mm": [
+        [
+          -64.51705932617188,
+          -66.5068130493164,
+          -4.000020980834961
+        ],
+        [
+          42.612281799316406,
+          66.6286849975586,
+          119.40178680419922
+        ]
+      ],
+      "max_bounds_delta_mm": 0.0,
+      "output_bytes": 11934184,
+      "pass": true
+    }
+  },
+  "source_faces": 7571799,
+  "output_faces": 1656597,
+  "max_bounds_delta_mm": 0.3120098114013672,
+  "pass": true
+}

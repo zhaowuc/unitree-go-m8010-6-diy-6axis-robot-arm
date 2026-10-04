@@ -1,0 +1,82 @@
+{
+  "schema": "go_m8010_v15_13_regression_summary_v1",
+  "generated_at_utc": "2026-08-11T23:16:38Z",
+  "execution": {
+    "authoritative_source": "/home/codex/projects/mujoco_kinematic_v1",
+    "isolated_working_copy": "/home/codex/projects/v15_13_regression_work_20260811T231406Z_w0J3P6",
+    "evidence_directory": "/home/codex/projects/v15_14_evidence/v15_13_regression_20260811T231406Z",
+    "authoritative_source_written": false,
+    "source_hash_unchanged": true
+  },
+  "overall_status": "PASS",
+  "tests": [
+    {
+      "name": "build_model",
+      "script": "build_model.py",
+      "script_sha256": "268139eb0dd3386d22334f6b1f3e66533ae2cb2a7732c7a9df66ee0b3450c72c",
+      "exit_code": 0,
+      "status": "PASS",
+      "log": "logs/build_model.log",
+      "outputs": [
+        {
+          "path": "artifacts/go_m8010_arm_v15_13_kinematic.xml",
+          "sha256": "26f9e0efe10b7d208378d816540098625a34826069fdf7bbafc1db94cf073941"
+        },
+        {
+          "path": "artifacts/model_contract.json",
+          "sha256": "d68ffa00610362eca7591eb616a38a6f02e13cb048809cf799b50c03e4fb90af"
+        }
+      ]
+    },
+    {
+      "name": "validate_model",
+      "script": "validate_model.py",
+      "script_sha256": "9be9fab3e5c7850f001c2e46b83aebf033a02feff2a9e27dbc15347db4098ea4",
+      "exit_code": 0,
+      "status": "PASS",
+      "log": "logs/validate_model.log",
+      "outputs": [
+        {
+          "path": "artifacts/QA_MUJOCO_V15_13_空载运动学版.json",
+          "sha256": "f538372ce80a1c3e7ee63b85e9b8914d24282897574fd9dde4ec7cab9fd85e05"
+        }
+      ]
+    },
+    {
+      "name": "validate_joint_motion_semantics",
+      "script": "validate_joint_motion_semantics.py",
+      "script_sha256": "29734c8e5fd092ceade3ac2ce162001674874330c4b857a9270fd7e864aa1ece",
+      "exit_code": 0,
+      "status": "PASS",
+      "log": "logs/validate_joint_motion_semantics.log",
+      "outputs": [
+        {
+          "path": "artifacts/QA_MUJOCO_V15_13_逐轴运动语义与地面复核.json",
+          "sha256": "1e0afdc5fe1b7c07600c9290451a69658be0b443587b985453bce7ec156650b9"
+        }
+      ]
+    },
+    {
+      "name": "validate_virtual_camera",
+      "script": "validate_virtual_camera.py",
+      "script_sha256": "12159ef8f53c33e985f1bc210f0b4dabe7d9f97aaf91c8380575bec00bb9e975",
+      "exit_code": 0,
+      "status": "PASS",
+      "log": "logs/validate_virtual_camera.log",
+      "outputs": [
+        {
+          "path": "artifacts/QA_MUJOCO_V15_13_虚拟相机坐标闭环.json",
+          "sha256": "12194d35099a2daf58c00c38e019942a8a3dd9d67d839fb20d3c6b56c92d7b6a"
+        },
+        {
+          "path": "artifacts/virtual_camera_orientation_validation.png",
+          "sha256": "095eadafe3b628f251cbe0c8de77f0d72f9e60fedeb87a8a666a6b2a57214418"
+        }
+      ]
+    }
+  ],
+  "deterministic_rebuild": {
+    "xml_matches_authoritative": true,
+    "model_contract_matches_authoritative": true
+  }
+}

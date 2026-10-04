@@ -1,0 +1,1367 @@
+{
+  "schema": "go-m8010-arm-v15.15-measured-mass-mapping/1.0",
+  "revision": "V15.15-measured-mass-mapping-v1",
+  "scope": "MASS_LEDGER_ONLY_NO_COM_NO_INERTIA",
+  "measurement_authority": "USER_PHYSICAL_SCALE",
+  "units": {
+    "mass": "kg"
+  },
+  "source_authorities": {
+    "rigid_link_membership": {
+      "path": "rigid_links_v15_13/rigid_link_membership.csv",
+      "sha256": "9a93b5a4494a67584bfda6eb0067ef0e75928bfbae77fd6e411ba1e15e9d70f3",
+      "hash_mode": "UTF8_LF_CANONICAL_BYTES",
+      "geometry_role_used_for_mass": "visual",
+      "row_count": 165,
+      "visual_row_count": 135
+    },
+    "rigid_link_manifest": {
+      "path": "rigid_links_v15_13/rigid_link_manifest.json",
+      "sha256": "cacf017aaa73e18658869896aaa79cba40938bb18d2cb56d8759ab32c5bb3ef9",
+      "hash_mode": "UTF8_LF_CANONICAL_BYTES"
+    },
+    "source_freecad": {
+      "path": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+      "sha256": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0",
+      "hash_mode": "RAW_BYTES"
+    },
+    "rigid_link_freecad": {
+      "path": "机械臂完整装配_六轴_刚性Link拆分_v15_13.FCStd",
+      "sha256": "2ae05fab2a15c5c75bb05db8b456f149da20f79cedba2fc8d47f1624bcec34c7",
+      "hash_mode": "RAW_BYTES",
+      "object_count_in_document_xml": 431
+    }
+  },
+  "frozen_geometry_guard": {
+    "protected_inputs": [
+      {
+        "path": "rigid_links_v15_13/rigid_link_membership.csv",
+        "sha256_before": "9a93b5a4494a67584bfda6eb0067ef0e75928bfbae77fd6e411ba1e15e9d70f3",
+        "sha256_after": "9a93b5a4494a67584bfda6eb0067ef0e75928bfbae77fd6e411ba1e15e9d70f3",
+        "unchanged": true,
+        "matches_review_baseline": true,
+        "hash_mode": "UTF8_LF_CANONICAL_BYTES"
+      },
+      {
+        "path": "rigid_links_v15_13/rigid_link_manifest.json",
+        "sha256_before": "cacf017aaa73e18658869896aaa79cba40938bb18d2cb56d8759ab32c5bb3ef9",
+        "sha256_after": "cacf017aaa73e18658869896aaa79cba40938bb18d2cb56d8759ab32c5bb3ef9",
+        "unchanged": true,
+        "matches_review_baseline": true,
+        "hash_mode": "UTF8_LF_CANONICAL_BYTES"
+      },
+      {
+        "path": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+        "sha256_before": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0",
+        "sha256_after": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0",
+        "unchanged": true,
+        "matches_review_baseline": true,
+        "hash_mode": "RAW_BYTES"
+      },
+      {
+        "path": "机械臂完整装配_六轴_刚性Link拆分_v15_13.FCStd",
+        "sha256_before": "2ae05fab2a15c5c75bb05db8b456f149da20f79cedba2fc8d47f1624bcec34c7",
+        "sha256_after": "2ae05fab2a15c5c75bb05db8b456f149da20f79cedba2fc8d47f1624bcec34c7",
+        "unchanged": true,
+        "matches_review_baseline": true,
+        "hash_mode": "RAW_BYTES"
+      },
+      {
+        "path": "完整工程_V15_13_交付/ros2_ws/src/go_m8010_arm_description/urdf/go_m8010_arm_v15_13.urdf.xacro",
+        "sha256_before": "fec9863b45addbea15f66ff617e42d6c9a2c06170c240e8ce51361e2b3fe0fdf",
+        "sha256_after": "fec9863b45addbea15f66ff617e42d6c9a2c06170c240e8ce51361e2b3fe0fdf",
+        "unchanged": true,
+        "matches_review_baseline": true,
+        "hash_mode": "UTF8_LF_CANONICAL_BYTES"
+      },
+      {
+        "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/ros2_ws/src/go_m8010_arm_v15_14_description/urdf/go_m8010_arm_v15_14.urdf.xacro",
+        "sha256_before": "f9c15d366e27bef76eeafd44efcca0de96d2f4e944584fcc74c9764a198a914c",
+        "sha256_after": "f9c15d366e27bef76eeafd44efcca0de96d2f4e944584fcc74c9764a198a914c",
+        "unchanged": true,
+        "matches_review_baseline": true,
+        "hash_mode": "UTF8_LF_CANONICAL_BYTES"
+      },
+      {
+        "path": "mujoco_kinematic_v1/go_m8010_arm_v15_13_kinematic.xml",
+        "sha256_before": "26f9e0efe10b7d208378d816540098625a34826069fdf7bbafc1db94cf073941",
+        "sha256_after": "26f9e0efe10b7d208378d816540098625a34826069fdf7bbafc1db94cf073941",
+        "unchanged": true,
+        "matches_review_baseline": true,
+        "hash_mode": "UTF8_LF_CANONICAL_BYTES"
+      },
+      {
+        "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/mujoco_v15_14/go_m8010_arm_v15_14_kinematic.xml",
+        "sha256_before": "f086d27c61aa3be02234356af6fd8fcf269a3e3b65bdeb08cd04435ba679f0b0",
+        "sha256_after": "f086d27c61aa3be02234356af6fd8fcf269a3e3b65bdeb08cd04435ba679f0b0",
+        "unchanged": true,
+        "matches_review_baseline": true,
+        "hash_mode": "UTF8_LF_CANONICAL_BYTES"
+      },
+      {
+        "path": "V15_13_自碰撞对矩阵契约.json",
+        "sha256_before": "b95d95f89d8792080c2ff50c55a4054be44fffe4d2916b49e382bde6600ef1d0",
+        "sha256_after": "b95d95f89d8792080c2ff50c55a4054be44fffe4d2916b49e382bde6600ef1d0",
+        "unchanged": true,
+        "matches_review_baseline": true,
+        "hash_mode": "UTF8_LF_CANONICAL_BYTES"
+      },
+      {
+        "path": "V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环/config/accepted_frozen_contract_v15_13.json",
+        "sha256_before": "a6434ddb448f749eeaefeab3313fb2692fb5c7535270da0946f5ba317b48b496",
+        "sha256_after": "a6434ddb448f749eeaefeab3313fb2692fb5c7535270da0946f5ba317b48b496",
+        "unchanged": true,
+        "matches_review_baseline": true,
+        "hash_mode": "UTF8_LF_CANONICAL_BYTES"
+      }
+    ],
+    "all_protected_inputs_unchanged": true,
+    "all_protected_inputs_match_review_baseline": true,
+    "frozen_joint_canonical_sha256": {
+      "V15.13": {
+        "J1": "9f5139d5304b6440a2d382449cbf7f14554a5b4c3c95140da6f23c4648626eff",
+        "J2": "34220de19f3c2c7f2e5a8dac3bbec6edaf4caec688f4f1875b6e6f371f3f16fc",
+        "J3": "2ed43661b0257acf5980412cf967396cb7d8fec65998be902845e1a695c3e634",
+        "J4": "8fc2a20e9cfe6c06d8ca204c44d42e6b253a534eb9f608a0c15c2eace76457f7",
+        "J5": "79d1f4fc8462baa22f0ee9ca8ac56957e42010c529e52ab73ddaabdd3c5fe75c",
+        "J6": "df2d3cf1e80850a13c7d98331cb6fa006c11fbf938caa1eb966773d9f3f1c91e",
+        "J6_to_gripper": "feafb2a3f0db191b976faf680689663ad367d5652fbdc84215857068e6e6de3d",
+        "gripper_to_tcp_nominal": "878e384608d6be17824c5a34f12826338eabe2fa3170e01be0d20fa931e75f0c",
+        "gripper_to_camera_link": "de3c2a796e6806d029a2454f0f8cc93320daa83fb4ff150d3c76872ede46cbc1",
+        "camera_link_to_sim_camera_optical_frame": "e2dc445ba877b22281aff329beb61c4765e601c8abbecf5ced8e9474d37b1f27"
+      },
+      "V15.14": {
+        "J1": "9f5139d5304b6440a2d382449cbf7f14554a5b4c3c95140da6f23c4648626eff",
+        "J2": "34220de19f3c2c7f2e5a8dac3bbec6edaf4caec688f4f1875b6e6f371f3f16fc",
+        "J3": "2ed43661b0257acf5980412cf967396cb7d8fec65998be902845e1a695c3e634",
+        "J4": "8fc2a20e9cfe6c06d8ca204c44d42e6b253a534eb9f608a0c15c2eace76457f7",
+        "J5": "79d1f4fc8462baa22f0ee9ca8ac56957e42010c529e52ab73ddaabdd3c5fe75c",
+        "J6": "df2d3cf1e80850a13c7d98331cb6fa006c11fbf938caa1eb966773d9f3f1c91e",
+        "J6_to_gripper": "feafb2a3f0db191b976faf680689663ad367d5652fbdc84215857068e6e6de3d",
+        "gripper_to_tcp_nominal": "878e384608d6be17824c5a34f12826338eabe2fa3170e01be0d20fa931e75f0c",
+        "gripper_to_camera_link": "de3c2a796e6806d029a2454f0f8cc93320daa83fb4ff150d3c76872ede46cbc1",
+        "camera_link_to_sim_camera_optical_frame": "e2dc445ba877b22281aff329beb61c4765e601c8abbecf5ced8e9474d37b1f27"
+      }
+    },
+    "all_frozen_joint_elements_unchanged": true,
+    "j1_to_j6_geometry_modified": false,
+    "urdf_or_mujoco_inertial_written": false
+  },
+  "topology": {
+    "tree": "world -> base_link -> J1 -> link1 -> J2 -> link2 -> J3 -> link3 -> J4 -> link4 -> J5 -> link5 -> J6 -> link6 -> fixed -> gripper",
+    "mass_ledger_links": [
+      "base_link",
+      "link1",
+      "link2",
+      "link3",
+      "link4",
+      "link5",
+      "link6",
+      "gripper"
+    ],
+    "j2_dof_count": 1,
+    "j2_physical_actuators": [
+      "J2A",
+      "J2B"
+    ],
+    "link_partition_modified": false
+  },
+  "status_definitions": {
+    "mass_status": [
+      "MEASURED",
+      "DERIVED_FROM_MEASURED_TOTAL",
+      "ENGINEERING_ESTIMATE",
+      "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+      "UNRESOLVED"
+    ],
+    "measurement_boundary_status": [
+      "CONFIRMED",
+      "NEED_USER_CONFIRMATION"
+    ],
+    "inclusion_status": [
+      "CONFIRMED_INCLUDED",
+      "CONFIRMED_NOT_INCLUDED",
+      "UNKNOWN",
+      "UNCONFIRMED"
+    ],
+    "accounting_role": [
+      "ADDITIVE_LEDGER_COMPONENT",
+      "NON_ADDITIVE_MEASUREMENT_BASIS",
+      "NON_ADDITIVE_UNRESOLVED_OBSERVATION",
+      "INCLUDED_NO_SEPARATE_MASS"
+    ]
+  },
+  "motor_mass_model": {
+    "GO_M8010_6": {
+      "measured_total_kg": 0.54,
+      "measured_total_mass_status": "MEASURED",
+      "measured_sample_count": 1,
+      "output_equivalent_kg": 0.07,
+      "stator_core_equivalent_kg": 0.47,
+      "allocation_mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+      "allocation_identity_pass": true,
+      "neutral_bearing_policy": "accounted inside output equivalent; no additional V1 mass",
+      "wiring_policy": "accounted inside stator/core equivalent; no additional wire mass",
+      "robot_motor_count": 6,
+      "robot_modeled_total_kg": 3.24,
+      "robot_modeled_total_mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+      "robot_modeled_total_assertion_tolerance_kg": 1e-09
+    }
+  },
+  "motor_link_mapping": {
+    "J1": {
+      "joint": "J1",
+      "physical_actuator": "J1",
+      "allocation_group_id": "ALLOC_GO_M8010_J1",
+      "stator_core": {
+        "mass_kg": 0.47,
+        "owner_link": "base_link",
+        "cad_token": "derived:J1_GO_M8010_stator",
+        "cad_source_object": "Joint_Motor_GO_M8010_6",
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL"
+      },
+      "output_equivalent": {
+        "mass_kg": 0.07,
+        "owner_link": "link1",
+        "cad_tokens": [
+          "derived:J1_GO_M8010_output",
+          "derived:J1_GO_M8010_neutral"
+        ],
+        "neutral_bearing_additional_mass_kg": 0.0,
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL"
+      },
+      "allocation_total_kg": 0.54,
+      "cad_membership_validation": "PASS"
+    },
+    "J2A": {
+      "joint": "J2",
+      "physical_actuator": "J2A",
+      "allocation_group_id": "ALLOC_GO_M8010_J2A",
+      "stator_core": {
+        "mass_kg": 0.47,
+        "owner_link": "link1",
+        "cad_token": "derived:J2A_GO_M8010_stator",
+        "cad_source_object": "J2_Left_Joint_Motor_GO_M8010_6",
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL"
+      },
+      "output_equivalent": {
+        "mass_kg": 0.07,
+        "owner_link": "link2",
+        "cad_tokens": [
+          "derived:J2A_GO_M8010_output",
+          "derived:J2A_GO_M8010_neutral"
+        ],
+        "neutral_bearing_additional_mass_kg": 0.0,
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL"
+      },
+      "allocation_total_kg": 0.54,
+      "cad_membership_validation": "PASS"
+    },
+    "J2B": {
+      "joint": "J2",
+      "physical_actuator": "J2B",
+      "allocation_group_id": "ALLOC_GO_M8010_J2B",
+      "stator_core": {
+        "mass_kg": 0.47,
+        "owner_link": "link1",
+        "cad_token": "derived:J2B_GO_M8010_stator",
+        "cad_source_object": "J2_Right_Joint_Motor_GO_M8010_6",
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL"
+      },
+      "output_equivalent": {
+        "mass_kg": 0.07,
+        "owner_link": "link2",
+        "cad_tokens": [
+          "derived:J2B_GO_M8010_output",
+          "derived:J2B_GO_M8010_neutral"
+        ],
+        "neutral_bearing_additional_mass_kg": 0.0,
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL"
+      },
+      "allocation_total_kg": 0.54,
+      "cad_membership_validation": "PASS"
+    },
+    "J3": {
+      "joint": "J3",
+      "physical_actuator": "J3",
+      "allocation_group_id": "ALLOC_GO_M8010_J3",
+      "stator_core": {
+        "mass_kg": 0.47,
+        "owner_link": "link3",
+        "cad_token": "J3_Motor_Stator_STEP_Display",
+        "cad_source_object": "J3_Motor_Stator_STEP_Display",
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL"
+      },
+      "output_equivalent": {
+        "mass_kg": 0.07,
+        "owner_link": "link2",
+        "cad_tokens": [
+          "J3_Output_Rotor_STEP_Display",
+          "J3_B6808_Bearing_Neutral_STEP_Display"
+        ],
+        "neutral_bearing_additional_mass_kg": 0.0,
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL"
+      },
+      "allocation_total_kg": 0.54,
+      "cad_membership_validation": "PASS"
+    },
+    "J4": {
+      "joint": "J4",
+      "physical_actuator": "J4",
+      "allocation_group_id": "ALLOC_GO_M8010_J4",
+      "stator_core": {
+        "mass_kg": 0.47,
+        "owner_link": "link3",
+        "cad_token": "J4_Motor_Stator_STEP_Display",
+        "cad_source_object": "J4_Motor_Stator_STEP_Display",
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL"
+      },
+      "output_equivalent": {
+        "mass_kg": 0.07,
+        "owner_link": "link4",
+        "cad_tokens": [
+          "J4_Output_Rotor_STEP_Display",
+          "J4_B6808_Bearing_Neutral_STEP_Display"
+        ],
+        "neutral_bearing_additional_mass_kg": 0.0,
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL"
+      },
+      "allocation_total_kg": 0.54,
+      "cad_membership_validation": "PASS"
+    },
+    "J5": {
+      "joint": "J5",
+      "physical_actuator": "J5",
+      "allocation_group_id": "ALLOC_GO_M8010_J5",
+      "stator_core": {
+        "mass_kg": 0.47,
+        "owner_link": "link4",
+        "cad_token": "J5_Motor_Stator_STEP_Display",
+        "cad_source_object": "J5_Motor_Stator_STEP_Display",
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL"
+      },
+      "output_equivalent": {
+        "mass_kg": 0.07,
+        "owner_link": "link5",
+        "cad_tokens": [
+          "J5_Output_Rotor_STEP_Display",
+          "J5_B6808_Bearing_Neutral_STEP_Display"
+        ],
+        "neutral_bearing_additional_mass_kg": 0.0,
+        "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL"
+      },
+      "allocation_total_kg": 0.54,
+      "cad_membership_validation": "PASS"
+    }
+  },
+  "measurements": {
+    "go_m8010_single_with_wiring": {
+      "measurement_id": "M_GO_M8010_SINGLE_WITH_WIRING_001",
+      "name": "One GO-M8010-6 with current attached wiring",
+      "mass_kg": 0.54,
+      "mass_status": "MEASURED",
+      "measurement_boundary_status": "CONFIRMED",
+      "accounting_role": "NON_ADDITIVE_MEASUREMENT_BASIS",
+      "measured_sample_count": 1,
+      "robot_application_count": 6,
+      "notes": "The single physical measurement is the basis for six repeated V1 engineering allocations; it is not added again on top of those allocations."
+    },
+    "upper_arm_print": {
+      "measurement_id": "M_UPPER_ARM_PRINT_001",
+      "name": "Upper-arm 3D printed structure",
+      "mass_kg": 0.5515,
+      "mass_status": "MEASURED",
+      "measurement_boundary_status": "CONFIRMED",
+      "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+      "owner_link": "link2",
+      "cad_members": [
+        "UpperArm_A_SleeveSide_PrintPart",
+        "UpperArm_B_Distal_PrintPart"
+      ],
+      "excluded_cad_members": [
+        "UpperArm_M35_Bottom_01",
+        "UpperArm_M35_Bottom_02",
+        "UpperArm_M35_Bottom_03",
+        "UpperArm_M35_Top_01",
+        "UpperArm_M35_Top_02",
+        "UpperArm_M35_Top_03"
+      ],
+      "unique_cad_mapping": true,
+      "notes": "CAD metadata defines one upper arm split into exactly two complementary print parts. No motor, metal fastener, collision proxy or reference object is included."
+    },
+    "distal_assembly": {
+      "measurement_id": "M_DISTAL_ASSEMBLY_001",
+      "name": "Damiao motor + GO motor + arm distal end combination",
+      "mass_kg": 1.0875,
+      "mass_status": "MEASURED",
+      "measurement_boundary_status": "NEED_USER_CONFIRMATION",
+      "accounting_role": "NON_ADDITIVE_UNRESOLVED_OBSERVATION",
+      "ledger_allocation_status": "NOT_ALLOCATED",
+      "candidate_owner_links": [
+        "link4",
+        "link5",
+        "link6",
+        "gripper"
+      ],
+      "candidate_boundary_anchor_members": [
+        "Wrist_Prelink_v1_HighDetail_Display",
+        "J5_Motor_Stator_STEP_Display",
+        "J5_Output_Rotor_STEP_Display",
+        "J5_B6808_Bearing_Neutral_STEP_Display",
+        "J5_to_Damiao_J6_Adapter_STL_Display",
+        "Adapter_DM_G6220_M4x12_Screw_01",
+        "Adapter_DM_G6220_M4x12_Screw_02",
+        "Adapter_DM_G6220_M4x12_Screw_03",
+        "J6_DM_G6220_Stator_STEP_Display",
+        "J6_DM_G6220_Output_Rotor_STEP_Display",
+        "J6_Gripper_Connector_STEP_Display",
+        "DM_G6220_Connector_M4x14_Screw_01",
+        "DM_G6220_Connector_M4x14_Screw_02",
+        "DM_G6220_Connector_M4x14_Screw_03",
+        "DM_G6220_Connector_M4x14_Screw_04",
+        "DM_G6220_Connector_M4x14_Screw_05",
+        "DM_G6220_Connector_M4x14_Screw_06",
+        "Gemini_Pro_Camera_STEP_Display"
+      ],
+      "candidate_list_is_exhaustive": false,
+      "cad_attachment_relation": "CONFIRMED",
+      "measurement_inclusion": "UNCONFIRMED",
+      "mass_equation": "M_distal_assembly = 1.0875 kg; leaf boundaries unresolved",
+      "residual_arithmetic_enabled": false,
+      "notes": "CAD proves attachment topology but not which detachable items were on the scale. No DM-G6220, Gemini, adapter, fastener or gripper mass is guessed."
+    },
+    "forearm_assembly": {
+      "measurement_id": "M_FOREARM_ASSEMBLY_001",
+      "name": "Complete forearm-related assembly",
+      "mass_kg": 2.723,
+      "mass_status": "MEASURED",
+      "measurement_boundary_status": "NEED_USER_CONFIRMATION",
+      "accounting_role": "NON_ADDITIVE_UNRESOLVED_OBSERVATION",
+      "ledger_allocation_status": "NOT_ALLOCATED",
+      "candidate_owner_links": [
+        "link3",
+        "link4",
+        "link5",
+        "link6",
+        "gripper"
+      ],
+      "cad_attachment_relation": "CONFIRMED",
+      "measurement_inclusion": "UNCONFIRMED",
+      "mass_equation": "M_forearm_assembly = 2.723 kg; nested assembly boundaries unresolved",
+      "residual_arithmetic_enabled": false,
+      "notes": "The repository proves link3 contains J3 stator, forearm, J4 stator and fasteners, but does not prove the physical proximal/distal cuts used for weighing."
+    },
+    "gripper_connector": {
+      "measurement_id": "M_GRIPPER_CONNECTOR_001",
+      "name": "Gripper plus directly connected connector",
+      "mass_kg": 0.17,
+      "mass_status": "MEASURED",
+      "measurement_boundary_status": "NEED_USER_CONFIRMATION",
+      "accounting_role": "NON_ADDITIVE_UNRESOLVED_OBSERVATION",
+      "ledger_allocation_status": "NOT_ALLOCATED",
+      "candidate_owner_links": [
+        "link6",
+        "gripper"
+      ],
+      "candidate_cad_members_requiring_yes_no": [
+        "J6_DM_G6220_Output_Rotor_STEP_Display",
+        "DM_G6220_Connector_M4x14_Screw_01",
+        "DM_G6220_Connector_M4x14_Screw_02",
+        "DM_G6220_Connector_M4x14_Screw_03",
+        "DM_G6220_Connector_M4x14_Screw_04",
+        "DM_G6220_Connector_M4x14_Screw_05",
+        "DM_G6220_Connector_M4x14_Screw_06",
+        "Gemini_Pro_Camera_STEP_Display",
+        "Gripper_Clevis_3DPrinted_M3x25_Screw_01",
+        "Gripper_Clevis_3DPrinted_M3x25_Screw_02",
+        "Gripper_Fixed_Frame_STEP_Display",
+        "Gripper_Hardware_01",
+        "Gripper_Hardware_02",
+        "Gripper_Hardware_03",
+        "Gripper_Hardware_04",
+        "Gripper_Hardware_05",
+        "Gripper_Hardware_06",
+        "Gripper_Hardware_07",
+        "Gripper_Hardware_08",
+        "Gripper_Hardware_09",
+        "Gripper_Hardware_10",
+        "Gripper_Hardware_11",
+        "Gripper_Hardware_12",
+        "Gripper_Hardware_13",
+        "Gripper_Hardware_14",
+        "Gripper_Hardware_15",
+        "Gripper_Hardware_16",
+        "Gripper_Hardware_17",
+        "Gripper_Hardware_18",
+        "Gripper_Hardware_19",
+        "Gripper_Left_Drive_Link",
+        "Gripper_Left_Finger",
+        "Gripper_Left_Outer_Link",
+        "Gripper_Right_Drive_Link",
+        "Gripper_Right_Finger",
+        "Gripper_Right_Outer_Link",
+        "Gripper_Servo_STEP_Display",
+        "J6_Gripper_Connector_STEP_Display"
+      ],
+      "camera_inclusion": "UNKNOWN",
+      "gemini_cad_attachment": "CONFIRMED_TO_GRIPPER",
+      "mass_equation": "M_gripper_connector = 0.170 kg; Gemini and moving-gripper membership unresolved",
+      "residual_arithmetic_enabled": false,
+      "notes": "Gemini belongs to gripper in CAD, but CAD attachment does not prove it was present on the physical scale."
+    }
+  },
+  "measurement_hierarchy": {
+    "nodes": [
+      "M_GO_M8010_SINGLE_WITH_WIRING_001",
+      "M_UPPER_ARM_PRINT_001",
+      "M_DISTAL_ASSEMBLY_001",
+      "M_FOREARM_ASSEMBLY_001",
+      "M_GRIPPER_CONNECTOR_001"
+    ],
+    "edges": [
+      {
+        "parent_measurement_id": "M_FOREARM_ASSEMBLY_001",
+        "child_measurement_id": "M_DISTAL_ASSEMBLY_001",
+        "relation": "POSSIBLE_CONTAINS",
+        "status": "UNCONFIRMED",
+        "arithmetic_enabled": false,
+        "residual_mass_kg": null
+      },
+      {
+        "parent_measurement_id": "M_DISTAL_ASSEMBLY_001",
+        "child_measurement_id": "M_GRIPPER_CONNECTOR_001",
+        "relation": "POSSIBLE_CONTAINS",
+        "status": "UNCONFIRMED",
+        "arithmetic_enabled": false,
+        "residual_mass_kg": null
+      },
+      {
+        "parent_measurement_id": "M_FOREARM_ASSEMBLY_001",
+        "child_measurement_id": "M_GRIPPER_CONNECTOR_001",
+        "relation": "POSSIBLE_CONTAINS",
+        "status": "UNCONFIRMED",
+        "arithmetic_enabled": false,
+        "residual_mass_kg": null
+      }
+    ],
+    "is_dag": true,
+    "confirmed_containment_edge_count": 0,
+    "unconfirmed_containment_edge_count": 3,
+    "residual_arithmetic_globally_enabled": false,
+    "prohibited_unconfirmed_residuals": [
+      "2.723 - 1.0875",
+      "1.0875 - 0.170"
+    ]
+  },
+  "link_mass_ledger": {
+    "base_link": {
+      "confirmed_measured_mass_kg": 0.0,
+      "derived_mass_kg": 0.0,
+      "estimated_mass_kg": 0.47,
+      "known_accounted_subtotal_kg": 0.47,
+      "unresolved_mass_kg": null,
+      "unresolved_component_count": 1,
+      "unresolved_component_ids": [
+        "UNRESOLVED_BASE_LINK_REMAINING_VISUAL_MEMBERS"
+      ],
+      "is_final_link_mass": false,
+      "components": [
+        {
+          "component_id": "ALLOC_GO_M8010_J1_STATOR_CORE",
+          "name": "J1 GO-M8010 stator/core equivalent",
+          "source": "User physical scale measurement M_GO_M8010_SINGLE_WITH_WIRING_001 and frozen V1 allocation",
+          "mass_kg": 0.47,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "owner_link": "base_link",
+          "cad_owners": [
+            "base_link"
+          ],
+          "cad_members": [
+            "derived:J1_GO_M8010_stator"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": "M_GO_M8010_SINGLE_WITH_WIRING_001",
+          "included_in_other_measurement": [
+            "M_GO_M8010_SINGLE_WITH_WIRING_001"
+          ],
+          "allocation_group_id": "ALLOC_GO_M8010_J1",
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [
+            "current attached motor wiring"
+          ],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "Includes the cylindrical stator/core side, remaining internal equivalent mass and current attached motor wiring; no separate wiring mass is allowed."
+        },
+        {
+          "component_id": "UNRESOLVED_BASE_LINK_REMAINING_VISUAL_MEMBERS",
+          "name": "Remaining unweighed authoritative visual members for base_link",
+          "source": "rigid_links_v15_13/rigid_link_membership.csv; no user-confirmed leaf mass yet",
+          "mass_kg": null,
+          "mass_status": "UNRESOLVED",
+          "owner_link": "base_link",
+          "cad_owners": [
+            "base_link"
+          ],
+          "cad_members": [
+            "Support_Foot",
+            "Upper_Base"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": null,
+          "included_in_other_measurement": [],
+          "allocation_group_id": null,
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "No material-density, bounding-box, collision-proxy or guessed fastener/motor/camera mass is applied. Additional leaf-level weighing is required before final link mass."
+        }
+      ]
+    },
+    "link1": {
+      "confirmed_measured_mass_kg": 0.0,
+      "derived_mass_kg": 0.0,
+      "estimated_mass_kg": 1.01,
+      "known_accounted_subtotal_kg": 1.01,
+      "unresolved_mass_kg": null,
+      "unresolved_component_count": 1,
+      "unresolved_component_ids": [
+        "UNRESOLVED_LINK1_REMAINING_VISUAL_MEMBERS"
+      ],
+      "is_final_link_mass": false,
+      "components": [
+        {
+          "component_id": "ALLOC_GO_M8010_J1_OUTPUT_EQUIVALENT",
+          "name": "J1 GO-M8010 output equivalent",
+          "source": "User physical scale measurement M_GO_M8010_SINGLE_WITH_WIRING_001 and frozen V1 allocation",
+          "mass_kg": 0.07,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "owner_link": "link1",
+          "cad_owners": [
+            "link1"
+          ],
+          "cad_members": [
+            "derived:J1_GO_M8010_output",
+            "derived:J1_GO_M8010_neutral"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": "M_GO_M8010_SINGLE_WITH_WIRING_001",
+          "included_in_other_measurement": [
+            "M_GO_M8010_SINGLE_WITH_WIRING_001"
+          ],
+          "allocation_group_id": "ALLOC_GO_M8010_J1",
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "The neutral B6808 visual member is accounted inside this 0.070 kg output equivalent and has no separate V1 additive mass."
+        },
+        {
+          "component_id": "ALLOC_GO_M8010_J2A_STATOR_CORE",
+          "name": "J2A GO-M8010 stator/core equivalent",
+          "source": "User physical scale measurement M_GO_M8010_SINGLE_WITH_WIRING_001 and frozen V1 allocation",
+          "mass_kg": 0.47,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "owner_link": "link1",
+          "cad_owners": [
+            "link1"
+          ],
+          "cad_members": [
+            "derived:J2A_GO_M8010_stator"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": "M_GO_M8010_SINGLE_WITH_WIRING_001",
+          "included_in_other_measurement": [
+            "M_GO_M8010_SINGLE_WITH_WIRING_001"
+          ],
+          "allocation_group_id": "ALLOC_GO_M8010_J2A",
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [
+            "current attached motor wiring"
+          ],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "Includes the cylindrical stator/core side, remaining internal equivalent mass and current attached motor wiring; no separate wiring mass is allowed."
+        },
+        {
+          "component_id": "ALLOC_GO_M8010_J2B_STATOR_CORE",
+          "name": "J2B GO-M8010 stator/core equivalent",
+          "source": "User physical scale measurement M_GO_M8010_SINGLE_WITH_WIRING_001 and frozen V1 allocation",
+          "mass_kg": 0.47,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "owner_link": "link1",
+          "cad_owners": [
+            "link1"
+          ],
+          "cad_members": [
+            "derived:J2B_GO_M8010_stator"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": "M_GO_M8010_SINGLE_WITH_WIRING_001",
+          "included_in_other_measurement": [
+            "M_GO_M8010_SINGLE_WITH_WIRING_001"
+          ],
+          "allocation_group_id": "ALLOC_GO_M8010_J2B",
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [
+            "current attached motor wiring"
+          ],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "Includes the cylindrical stator/core side, remaining internal equivalent mass and current attached motor wiring; no separate wiring mass is allowed."
+        },
+        {
+          "component_id": "UNRESOLVED_LINK1_REMAINING_VISUAL_MEMBERS",
+          "name": "Remaining unweighed authoritative visual members for link1",
+          "source": "rigid_links_v15_13/rigid_link_membership.csv; no user-confirmed leaf mass yet",
+          "mass_kg": null,
+          "mass_status": "UNRESOLVED",
+          "owner_link": "link1",
+          "cad_owners": [
+            "link1"
+          ],
+          "cad_members": [
+            "J1_Axial_Compensation_Spacer",
+            "J2_Left_M4_Washer_01",
+            "J2_Left_M4_Washer_02",
+            "J2_Left_M4_Washer_03",
+            "J2_Left_M4_Washer_04",
+            "J2_Left_M4_Washer_05",
+            "J2_Left_M4_Washer_06",
+            "J2_Left_M4x30_Screw_01",
+            "J2_Left_M4x30_Screw_02",
+            "J2_Left_M4x30_Screw_03",
+            "J2_Left_M4x30_Screw_04",
+            "J2_Left_M4x30_Screw_05",
+            "J2_Left_M4x30_Screw_06",
+            "J2_Right_M4_Washer_01",
+            "J2_Right_M4_Washer_02",
+            "J2_Right_M4_Washer_03",
+            "J2_Right_M4_Washer_04",
+            "J2_Right_M4_Washer_05",
+            "J2_Right_M4_Washer_06",
+            "J2_Right_M4x30_Screw_01",
+            "J2_Right_M4x30_Screw_02",
+            "J2_Right_M4x30_Screw_03",
+            "J2_Right_M4x30_Screw_04",
+            "J2_Right_M4x30_Screw_05",
+            "J2_Right_M4x30_Screw_06",
+            "M4_Screw_01",
+            "M4_Screw_02",
+            "M4_Screw_03",
+            "M4_Screw_04",
+            "M4_Screw_05",
+            "M4_Screw_06",
+            "V6_Shoulder_Official_M4"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": null,
+          "included_in_other_measurement": [],
+          "allocation_group_id": null,
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "No material-density, bounding-box, collision-proxy or guessed fastener/motor/camera mass is applied. Additional leaf-level weighing is required before final link mass."
+        }
+      ]
+    },
+    "link2": {
+      "confirmed_measured_mass_kg": 0.5515,
+      "derived_mass_kg": 0.0,
+      "estimated_mass_kg": 0.21,
+      "known_accounted_subtotal_kg": 0.7615,
+      "unresolved_mass_kg": null,
+      "unresolved_component_count": 1,
+      "unresolved_component_ids": [
+        "UNRESOLVED_LINK2_REMAINING_VISUAL_MEMBERS"
+      ],
+      "is_final_link_mass": false,
+      "components": [
+        {
+          "component_id": "ALLOC_GO_M8010_J2A_OUTPUT_EQUIVALENT",
+          "name": "J2A GO-M8010 output equivalent",
+          "source": "User physical scale measurement M_GO_M8010_SINGLE_WITH_WIRING_001 and frozen V1 allocation",
+          "mass_kg": 0.07,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "owner_link": "link2",
+          "cad_owners": [
+            "link2"
+          ],
+          "cad_members": [
+            "derived:J2A_GO_M8010_output",
+            "derived:J2A_GO_M8010_neutral"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": "M_GO_M8010_SINGLE_WITH_WIRING_001",
+          "included_in_other_measurement": [
+            "M_GO_M8010_SINGLE_WITH_WIRING_001"
+          ],
+          "allocation_group_id": "ALLOC_GO_M8010_J2A",
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "The neutral B6808 visual member is accounted inside this 0.070 kg output equivalent and has no separate V1 additive mass."
+        },
+        {
+          "component_id": "ALLOC_GO_M8010_J2B_OUTPUT_EQUIVALENT",
+          "name": "J2B GO-M8010 output equivalent",
+          "source": "User physical scale measurement M_GO_M8010_SINGLE_WITH_WIRING_001 and frozen V1 allocation",
+          "mass_kg": 0.07,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "owner_link": "link2",
+          "cad_owners": [
+            "link2"
+          ],
+          "cad_members": [
+            "derived:J2B_GO_M8010_output",
+            "derived:J2B_GO_M8010_neutral"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": "M_GO_M8010_SINGLE_WITH_WIRING_001",
+          "included_in_other_measurement": [
+            "M_GO_M8010_SINGLE_WITH_WIRING_001"
+          ],
+          "allocation_group_id": "ALLOC_GO_M8010_J2B",
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "The neutral B6808 visual member is accounted inside this 0.070 kg output equivalent and has no separate V1 additive mass."
+        },
+        {
+          "component_id": "ALLOC_GO_M8010_J3_OUTPUT_EQUIVALENT",
+          "name": "J3 GO-M8010 output equivalent",
+          "source": "User physical scale measurement M_GO_M8010_SINGLE_WITH_WIRING_001 and frozen V1 allocation",
+          "mass_kg": 0.07,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "owner_link": "link2",
+          "cad_owners": [
+            "link2"
+          ],
+          "cad_members": [
+            "J3_Output_Rotor_STEP_Display",
+            "J3_B6808_Bearing_Neutral_STEP_Display"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": "M_GO_M8010_SINGLE_WITH_WIRING_001",
+          "included_in_other_measurement": [
+            "M_GO_M8010_SINGLE_WITH_WIRING_001"
+          ],
+          "allocation_group_id": "ALLOC_GO_M8010_J3",
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "The neutral B6808 visual member is accounted inside this 0.070 kg output equivalent and has no separate V1 additive mass."
+        },
+        {
+          "component_id": "UPPER_ARM_PRINT_A_PLUS_B",
+          "name": "Upper-arm 3D printed structure (A+B combined measurement)",
+          "source": "User physical scale measurement M_UPPER_ARM_PRINT_001, cross-checked against CAD PrintPart membership",
+          "mass_kg": 0.5515,
+          "mass_status": "MEASURED",
+          "owner_link": "link2",
+          "cad_owners": [
+            "link2"
+          ],
+          "cad_members": [
+            "UpperArm_A_SleeveSide_PrintPart",
+            "UpperArm_B_Distal_PrintPart"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": "M_UPPER_ARM_PRINT_001",
+          "included_in_other_measurement": [],
+          "allocation_group_id": null,
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "One measured group containing exactly the two complementary upper-arm print parts. The 0.5515 kg is not split between A and B. Six UpperArm_M35 metal fasteners and all proxies/axes are excluded."
+        },
+        {
+          "component_id": "UNRESOLVED_LINK2_REMAINING_VISUAL_MEMBERS",
+          "name": "Remaining unweighed authoritative visual members for link2",
+          "source": "rigid_links_v15_13/rigid_link_membership.csv; no user-confirmed leaf mass yet",
+          "mass_kg": null,
+          "mass_status": "UNRESOLVED",
+          "owner_link": "link2",
+          "cad_owners": [
+            "link2"
+          ],
+          "cad_members": [
+            "J3_Output_M4_Screw_01",
+            "J3_Output_M4_Screw_02",
+            "J3_Output_M4_Screw_03",
+            "J3_Output_M4_Screw_04",
+            "J3_Output_M4_Screw_05",
+            "J3_Output_M4_Screw_06",
+            "UpperArm_M35_Bottom_01",
+            "UpperArm_M35_Bottom_02",
+            "UpperArm_M35_Bottom_03",
+            "UpperArm_M35_Top_01",
+            "UpperArm_M35_Top_02",
+            "UpperArm_M35_Top_03"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": null,
+          "included_in_other_measurement": [],
+          "allocation_group_id": null,
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "No material-density, bounding-box, collision-proxy or guessed fastener/motor/camera mass is applied. Additional leaf-level weighing is required before final link mass."
+        }
+      ]
+    },
+    "link3": {
+      "confirmed_measured_mass_kg": 0.0,
+      "derived_mass_kg": 0.0,
+      "estimated_mass_kg": 0.94,
+      "known_accounted_subtotal_kg": 0.94,
+      "unresolved_mass_kg": null,
+      "unresolved_component_count": 1,
+      "unresolved_component_ids": [
+        "UNRESOLVED_LINK3_REMAINING_VISUAL_MEMBERS"
+      ],
+      "is_final_link_mass": false,
+      "components": [
+        {
+          "component_id": "ALLOC_GO_M8010_J3_STATOR_CORE",
+          "name": "J3 GO-M8010 stator/core equivalent",
+          "source": "User physical scale measurement M_GO_M8010_SINGLE_WITH_WIRING_001 and frozen V1 allocation",
+          "mass_kg": 0.47,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "owner_link": "link3",
+          "cad_owners": [
+            "link3"
+          ],
+          "cad_members": [
+            "J3_Motor_Stator_STEP_Display"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": "M_GO_M8010_SINGLE_WITH_WIRING_001",
+          "included_in_other_measurement": [
+            "M_GO_M8010_SINGLE_WITH_WIRING_001"
+          ],
+          "allocation_group_id": "ALLOC_GO_M8010_J3",
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [
+            "current attached motor wiring"
+          ],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "Includes the cylindrical stator/core side, remaining internal equivalent mass and current attached motor wiring; no separate wiring mass is allowed."
+        },
+        {
+          "component_id": "ALLOC_GO_M8010_J4_STATOR_CORE",
+          "name": "J4 GO-M8010 stator/core equivalent",
+          "source": "User physical scale measurement M_GO_M8010_SINGLE_WITH_WIRING_001 and frozen V1 allocation",
+          "mass_kg": 0.47,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "owner_link": "link3",
+          "cad_owners": [
+            "link3"
+          ],
+          "cad_members": [
+            "J4_Motor_Stator_STEP_Display"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": "M_GO_M8010_SINGLE_WITH_WIRING_001",
+          "included_in_other_measurement": [
+            "M_GO_M8010_SINGLE_WITH_WIRING_001"
+          ],
+          "allocation_group_id": "ALLOC_GO_M8010_J4",
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [
+            "current attached motor wiring"
+          ],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "Includes the cylindrical stator/core side, remaining internal equivalent mass and current attached motor wiring; no separate wiring mass is allowed."
+        },
+        {
+          "component_id": "UNRESOLVED_LINK3_REMAINING_VISUAL_MEMBERS",
+          "name": "Remaining unweighed authoritative visual members for link3",
+          "source": "rigid_links_v15_13/rigid_link_membership.csv; no user-confirmed leaf mass yet",
+          "mass_kg": null,
+          "mass_status": "UNRESOLVED",
+          "owner_link": "link3",
+          "cad_owners": [
+            "link3"
+          ],
+          "cad_members": [
+            "Forearm_J3_M35_Screw_01",
+            "Forearm_J3_M35_Screw_02",
+            "Forearm_J3_M35_Screw_03",
+            "Forearm_J3_M35_Screw_04",
+            "Forearm_J3_M35_Screw_05",
+            "Forearm_J3_M35_Screw_06",
+            "Forearm_J4_M35_Screw_01",
+            "Forearm_J4_M35_Screw_02",
+            "Forearm_J4_M35_Screw_03",
+            "Forearm_J4_M35_Screw_04",
+            "Forearm_J4_M35_Screw_05",
+            "Forearm_J4_M35_Screw_06",
+            "Forearm_v3_HighDetail_Display"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": null,
+          "included_in_other_measurement": [],
+          "allocation_group_id": null,
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "No material-density, bounding-box, collision-proxy or guessed fastener/motor/camera mass is applied. Additional leaf-level weighing is required before final link mass."
+        }
+      ]
+    },
+    "link4": {
+      "confirmed_measured_mass_kg": 0.0,
+      "derived_mass_kg": 0.0,
+      "estimated_mass_kg": 0.54,
+      "known_accounted_subtotal_kg": 0.54,
+      "unresolved_mass_kg": null,
+      "unresolved_component_count": 1,
+      "unresolved_component_ids": [
+        "UNRESOLVED_LINK4_REMAINING_VISUAL_MEMBERS"
+      ],
+      "is_final_link_mass": false,
+      "components": [
+        {
+          "component_id": "ALLOC_GO_M8010_J4_OUTPUT_EQUIVALENT",
+          "name": "J4 GO-M8010 output equivalent",
+          "source": "User physical scale measurement M_GO_M8010_SINGLE_WITH_WIRING_001 and frozen V1 allocation",
+          "mass_kg": 0.07,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "owner_link": "link4",
+          "cad_owners": [
+            "link4"
+          ],
+          "cad_members": [
+            "J4_Output_Rotor_STEP_Display",
+            "J4_B6808_Bearing_Neutral_STEP_Display"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": "M_GO_M8010_SINGLE_WITH_WIRING_001",
+          "included_in_other_measurement": [
+            "M_GO_M8010_SINGLE_WITH_WIRING_001"
+          ],
+          "allocation_group_id": "ALLOC_GO_M8010_J4",
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "The neutral B6808 visual member is accounted inside this 0.070 kg output equivalent and has no separate V1 additive mass."
+        },
+        {
+          "component_id": "ALLOC_GO_M8010_J5_STATOR_CORE",
+          "name": "J5 GO-M8010 stator/core equivalent",
+          "source": "User physical scale measurement M_GO_M8010_SINGLE_WITH_WIRING_001 and frozen V1 allocation",
+          "mass_kg": 0.47,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "owner_link": "link4",
+          "cad_owners": [
+            "link4"
+          ],
+          "cad_members": [
+            "J5_Motor_Stator_STEP_Display"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": "M_GO_M8010_SINGLE_WITH_WIRING_001",
+          "included_in_other_measurement": [
+            "M_GO_M8010_SINGLE_WITH_WIRING_001"
+          ],
+          "allocation_group_id": "ALLOC_GO_M8010_J5",
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [
+            "current attached motor wiring"
+          ],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "Includes the cylindrical stator/core side, remaining internal equivalent mass and current attached motor wiring; no separate wiring mass is allowed."
+        },
+        {
+          "component_id": "UNRESOLVED_LINK4_REMAINING_VISUAL_MEMBERS",
+          "name": "Remaining unweighed authoritative visual members for link4",
+          "source": "rigid_links_v15_13/rigid_link_membership.csv; no user-confirmed leaf mass yet",
+          "mass_kg": null,
+          "mass_status": "UNRESOLVED",
+          "owner_link": "link4",
+          "cad_owners": [
+            "link4"
+          ],
+          "cad_members": [
+            "J4_Output_M4_Screw_01",
+            "J4_Output_M4_Screw_02",
+            "J4_Output_M4_Screw_03",
+            "J4_Output_M4_Screw_04",
+            "J4_Output_M4_Screw_05",
+            "J4_Output_M4_Screw_06",
+            "Wrist_Prelink_J5_M35_Screw_01",
+            "Wrist_Prelink_J5_M35_Screw_02",
+            "Wrist_Prelink_J5_M35_Screw_03",
+            "Wrist_Prelink_J5_M35_Screw_04",
+            "Wrist_Prelink_J5_M35_Screw_05",
+            "Wrist_Prelink_J5_M35_Screw_06",
+            "Wrist_Prelink_v1_HighDetail_Display"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": null,
+          "included_in_other_measurement": [],
+          "allocation_group_id": null,
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "No material-density, bounding-box, collision-proxy or guessed fastener/motor/camera mass is applied. Additional leaf-level weighing is required before final link mass."
+        }
+      ]
+    },
+    "link5": {
+      "confirmed_measured_mass_kg": 0.0,
+      "derived_mass_kg": 0.0,
+      "estimated_mass_kg": 0.07,
+      "known_accounted_subtotal_kg": 0.07,
+      "unresolved_mass_kg": null,
+      "unresolved_component_count": 1,
+      "unresolved_component_ids": [
+        "UNRESOLVED_LINK5_REMAINING_VISUAL_MEMBERS"
+      ],
+      "is_final_link_mass": false,
+      "components": [
+        {
+          "component_id": "ALLOC_GO_M8010_J5_OUTPUT_EQUIVALENT",
+          "name": "J5 GO-M8010 output equivalent",
+          "source": "User physical scale measurement M_GO_M8010_SINGLE_WITH_WIRING_001 and frozen V1 allocation",
+          "mass_kg": 0.07,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "owner_link": "link5",
+          "cad_owners": [
+            "link5"
+          ],
+          "cad_members": [
+            "J5_Output_Rotor_STEP_Display",
+            "J5_B6808_Bearing_Neutral_STEP_Display"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": "M_GO_M8010_SINGLE_WITH_WIRING_001",
+          "included_in_other_measurement": [
+            "M_GO_M8010_SINGLE_WITH_WIRING_001"
+          ],
+          "allocation_group_id": "ALLOC_GO_M8010_J5",
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "The neutral B6808 visual member is accounted inside this 0.070 kg output equivalent and has no separate V1 additive mass."
+        },
+        {
+          "component_id": "UNRESOLVED_LINK5_REMAINING_VISUAL_MEMBERS",
+          "name": "Remaining unweighed authoritative visual members for link5",
+          "source": "rigid_links_v15_13/rigid_link_membership.csv; no user-confirmed leaf mass yet",
+          "mass_kg": null,
+          "mass_status": "UNRESOLVED",
+          "owner_link": "link5",
+          "cad_owners": [
+            "link5"
+          ],
+          "cad_members": [
+            "Adapter_DM_G6220_M4x12_Screw_01",
+            "Adapter_DM_G6220_M4x12_Screw_02",
+            "Adapter_DM_G6220_M4x12_Screw_03",
+            "J5_to_Damiao_J6_Adapter_STL_Display",
+            "J6_DM_G6220_Stator_STEP_Display"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": null,
+          "included_in_other_measurement": [],
+          "allocation_group_id": null,
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "No material-density, bounding-box, collision-proxy or guessed fastener/motor/camera mass is applied. Additional leaf-level weighing is required before final link mass."
+        }
+      ]
+    },
+    "link6": {
+      "confirmed_measured_mass_kg": 0.0,
+      "derived_mass_kg": 0.0,
+      "estimated_mass_kg": 0.0,
+      "known_accounted_subtotal_kg": 0.0,
+      "unresolved_mass_kg": null,
+      "unresolved_component_count": 1,
+      "unresolved_component_ids": [
+        "UNRESOLVED_LINK6_REMAINING_VISUAL_MEMBERS"
+      ],
+      "is_final_link_mass": false,
+      "components": [
+        {
+          "component_id": "UNRESOLVED_LINK6_REMAINING_VISUAL_MEMBERS",
+          "name": "Remaining unweighed authoritative visual members for link6",
+          "source": "rigid_links_v15_13/rigid_link_membership.csv; no user-confirmed leaf mass yet",
+          "mass_kg": null,
+          "mass_status": "UNRESOLVED",
+          "owner_link": "link6",
+          "cad_owners": [
+            "link6"
+          ],
+          "cad_members": [
+            "J6_DM_G6220_Output_Rotor_STEP_Display"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": null,
+          "included_in_other_measurement": [],
+          "allocation_group_id": null,
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [],
+          "owner_mapping_policy": "DIRECT_CAD_OWNER",
+          "notes": "No material-density, bounding-box, collision-proxy or guessed fastener/motor/camera mass is applied. Additional leaf-level weighing is required before final link mass."
+        }
+      ]
+    },
+    "gripper": {
+      "confirmed_measured_mass_kg": 0.0,
+      "derived_mass_kg": 0.0,
+      "estimated_mass_kg": 0.0,
+      "known_accounted_subtotal_kg": 0.0,
+      "unresolved_mass_kg": null,
+      "unresolved_component_count": 1,
+      "unresolved_component_ids": [
+        "UNRESOLVED_GRIPPER_REMAINING_VISUAL_MEMBERS"
+      ],
+      "is_final_link_mass": false,
+      "components": [
+        {
+          "component_id": "UNRESOLVED_GRIPPER_REMAINING_VISUAL_MEMBERS",
+          "name": "Remaining unweighed authoritative visual members for gripper",
+          "source": "rigid_links_v15_13/rigid_link_membership.csv; no user-confirmed leaf mass yet",
+          "mass_kg": null,
+          "mass_status": "UNRESOLVED",
+          "owner_link": "gripper",
+          "cad_owners": [
+            "gripper",
+            "gripper_internal:left_drive",
+            "gripper_internal:left_finger",
+            "gripper_internal:left_outer",
+            "gripper_internal:right_drive",
+            "gripper_internal:right_finger",
+            "gripper_internal:right_outer"
+          ],
+          "cad_members": [
+            "DM_G6220_Connector_M4x14_Screw_01",
+            "DM_G6220_Connector_M4x14_Screw_02",
+            "DM_G6220_Connector_M4x14_Screw_03",
+            "DM_G6220_Connector_M4x14_Screw_04",
+            "DM_G6220_Connector_M4x14_Screw_05",
+            "DM_G6220_Connector_M4x14_Screw_06",
+            "Gemini_Pro_Camera_STEP_Display",
+            "Gripper_Clevis_3DPrinted_M3x25_Screw_01",
+            "Gripper_Clevis_3DPrinted_M3x25_Screw_02",
+            "Gripper_Fixed_Frame_STEP_Display",
+            "Gripper_Hardware_03",
+            "Gripper_Hardware_04",
+            "Gripper_Hardware_07",
+            "Gripper_Hardware_08",
+            "Gripper_Hardware_09",
+            "Gripper_Hardware_10",
+            "Gripper_Hardware_15",
+            "Gripper_Hardware_16",
+            "Gripper_Servo_STEP_Display",
+            "J6_Gripper_Connector_STEP_Display",
+            "Gripper_Left_Drive_Link",
+            "Gripper_Hardware_02",
+            "Gripper_Hardware_05",
+            "Gripper_Hardware_11",
+            "Gripper_Hardware_13",
+            "Gripper_Hardware_14",
+            "Gripper_Left_Finger",
+            "Gripper_Left_Outer_Link",
+            "Gripper_Right_Drive_Link",
+            "Gripper_Hardware_01",
+            "Gripper_Hardware_06",
+            "Gripper_Hardware_12",
+            "Gripper_Hardware_17",
+            "Gripper_Hardware_18",
+            "Gripper_Hardware_19",
+            "Gripper_Right_Finger",
+            "Gripper_Right_Outer_Link"
+          ],
+          "geometry_role": "visual",
+          "measurement_id": null,
+          "included_in_other_measurement": [],
+          "allocation_group_id": null,
+          "accounting_role": "ADDITIVE_LEDGER_COMPONENT",
+          "non_cad_inclusions": [],
+          "owner_mapping_policy": "ACCOUNTING_ROLLUP_ONLY_NOT_CAD_REPARENTING",
+          "notes": "No material-density, bounding-box, collision-proxy or guessed fastener/motor/camera mass is applied. Additional leaf-level weighing is required before final link mass."
+        }
+      ]
+    }
+  },
+  "known_system_mass_subtotal_kg": 3.7915,
+  "known_system_mass_subtotal_is_final": false,
+  "unresolved_measurement_boundaries": [
+    {
+      "measurement_id": "M_DISTAL_ASSEMBLY_001",
+      "measurement_boundary_status": "NEED_USER_CONFIRMATION",
+      "required_information": [
+        "1087.5 g：请逐项确认 Wrist_Prelink、完整 J5 GO-M8010、J5-to-DM adapter 与 3 颗螺栓、完整 J6 DM-G6220、J6 夹爪连接件与 6 颗螺栓、完整夹爪、Gemini Pro 是否在秤盘上（YES/NO）；或提供带标注的秤盘照片。"
+      ]
+    },
+    {
+      "measurement_id": "M_FOREARM_ASSEMBLY_001",
+      "measurement_boundary_status": "NEED_USER_CONFIRMATION",
+      "required_information": [
+        "2723 g：请确认上述 1087.5 g 子装配是否原样完整包含在本次称重中。",
+        "2723 g：请确认近端切口是否从 J3 stator 开始，末端是否包含 gripper 与 Gemini Pro。"
+      ]
+    },
+    {
+      "measurement_id": "M_GRIPPER_CONNECTOR_001",
+      "measurement_boundary_status": "NEED_USER_CONFIRMATION",
+      "required_information": [
+        "170 g：请确认是否包含 Gemini Pro。",
+        "170 g：请确认是否包含舍机、固定框、六个夹爪内部活动刚体角色、全部夹爪紧固件，以及 link6 的 DM 输出法兰/六颗连接件螺栓。",
+        "170 g：如果包含 Gemini Pro，请另行确认 CAD 未建模的相机安装螺丝及相机随件线材是否在秤盘上。"
+      ]
+    }
+  ],
+  "double_count_checks": {
+    "component_ids_unique": true,
+    "authoritative_visual_token_count": 135,
+    "authoritative_visual_tokens_covered_exactly_once": true,
+    "collision_or_reference_geometry_used_as_mass": false,
+    "neutral_b6808_separate_additive_component_found": false,
+    "neutral_b6808_accounted_inside_output_equivalent": true,
+    "separate_go_wiring_component_found": false,
+    "go_measured_basis_directly_added_on_top_of_allocations": false,
+    "unconfirmed_composite_measurements_added_to_link_ledger": false,
+    "unconfirmed_hierarchy_arithmetic_enabled": false,
+    "parent_and_child_composite_measurements_both_additive": false,
+    "double_count_detected": false
+  },
+  "validation": {
+    "contract_build_status": "PASS",
+    "mass_model_completion_status": "INCOMPLETE_BOUNDARIES_REQUIRE_USER_CONFIRMATION",
+    "checks": {
+      "rigid_link_membership_read": "PASS",
+      "rigid_link_manifest_cross_check": "PASS",
+      "freecad_visual_source_object_cross_check": "PASS",
+      "J1_GO_parent_child_mass_mapping": "PASS",
+      "J2A_J2B_dual_motor_mapping": "PASS",
+      "J3_mass_mapping": "PASS",
+      "J4_mass_mapping": "PASS",
+      "J5_mass_mapping": "PASS",
+      "six_GO_total_equals_3_240_kg": "PASS",
+      "link2_known_minimum_subtotal_kg": 0.7615,
+      "upper_arm_551_5g_unique_CAD_mapping": "PASS",
+      "distal_1087_5g_boundary_proved": "NO",
+      "forearm_2723g_boundary_proved": "NO",
+      "gripper_170g_camera_inclusion": "UNKNOWN",
+      "double_count_found": "NO",
+      "J1_to_J6_geometry_modified": "NO",
+      "final_URDF_or_MuJoCo_inertial_written": "NO"
+    },
+    "all_automated_assertions_pass": true
+  },
+  "prohibited_outputs": {
+    "center_of_mass_computed": false,
+    "inertia_tensor_computed": false,
+    "urdf_inertial_written": false,
+    "mujoco_inertial_written": false,
+    "mujoco_actuator_modified": false,
+    "collision_or_visual_mesh_modified": false,
+    "joint_or_tf_geometry_modified": false,
+    "dm_g6220_mass_guessed": false,
+    "gemini_pro_mass_guessed": false,
+    "fastener_mass_guessed": false,
+    "cad_density_or_bounding_box_mass_inference_used": false
+  }
+}

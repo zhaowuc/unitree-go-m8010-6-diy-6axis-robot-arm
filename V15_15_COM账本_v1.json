@@ -1,0 +1,4420 @@
+{
+  "schema": "go-m8010-arm-v15.15-com-ledger-v1/1.0",
+  "revision": "V15.15-COM_LEDGER_V1",
+  "source_branch": "agent/v15-15-mass-ledger-v1",
+  "source_commit": "b3dfc6d6be8c81b177aa90a9b68a580d0f6af295",
+  "source_tree": "e3f5b14a26fd7582c2ed7b2a2fb12589670bda49",
+  "target_branch": "agent/v15-15-com-v1",
+  "scope": "LINK2_TO_GRIPPER_COM_ONLY_NO_INERTIA_NO_DYNAMICS",
+  "mass_ledger_path": "V15_15_实测质量账本_v1.json",
+  "mass_ledger_sha256": "658fa0b2aef1da4200d86fccf742e135215288e77f58fa5095a06f513eaba04a",
+  "mass_ledger_hash_mode": "RAW_BYTES",
+  "cad_source": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+  "cad_source_sha256": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0",
+  "cad_sources": [
+    {
+      "path": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+      "sha256": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0",
+      "opened_read_only": true
+    },
+    {
+      "path": "机械臂完整装配_六轴_刚性Link拆分_v15_13.FCStd",
+      "sha256": "2ae05fab2a15c5c75bb05db8b456f149da20f79cedba2fc8d47f1624bcec34c7",
+      "opened_read_only": true
+    }
+  ],
+  "git_scope_guard": {
+    "source_branch": "agent/v15-15-mass-ledger-v1",
+    "source_commit": "b3dfc6d6be8c81b177aa90a9b68a580d0f6af295",
+    "source_tree": "e3f5b14a26fd7582c2ed7b2a2fb12589670bda49",
+    "target_branch": "agent/v15-15-com-v1",
+    "current_branch": "agent/v15-15-com-v1",
+    "changed_paths": [
+      "V15_15_COM账本_v1.json",
+      "V15_15_COM账本_v1.md",
+      "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+      "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json",
+      "tools/build_com_ledger_v15_15.py",
+      "tools/build_upperarm_a_mass_properties_v15_15.py",
+      "tools/validate_com_ledger_v15_15.py",
+      "tools/validate_upperarm_a_mass_properties_v15_15.py"
+    ],
+    "allowed_changed_paths": [
+      "V15_15_COM账本_v1.json",
+      "V15_15_COM账本_v1.md",
+      "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+      "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json",
+      "tools/build_com_ledger_v15_15.py",
+      "tools/build_upperarm_a_mass_properties_v15_15.py",
+      "tools/validate_com_ledger_v15_15.py",
+      "tools/validate_upperarm_a_mass_properties_v15_15.py"
+    ],
+    "unexpected_changed_paths": [],
+    "source_commit_is_ancestor": true,
+    "pass": true
+  },
+  "protected_input_guard": {
+    "before": [
+      {
+        "path": "V15_15_实测质量映射契约.json",
+        "sha256": "40f86fa1a529dc86ba31e7e6a724f2fdf79022cf8962b7526f1dbdf0b4deac5d",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "V15_15_实测质量映射说明.md",
+        "sha256": "d4dde2f1c77eeb595818f3fb953ad967d605478da10ba1c30c9976085bd6eae1",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "tools/build_mass_mapping_v15_15.py",
+        "sha256": "e365d81c1233fcd7dedcde190cdf7d74cf13a19c1d1a8c0e6fcfb99b6a9ca329",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "V15_15_实测质量账本_v1.json",
+        "sha256": "658fa0b2aef1da4200d86fccf742e135215288e77f58fa5095a06f513eaba04a",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "V15_15_实测质量账本_v1.md",
+        "sha256": "fa52587a3309ea5665197283b62ac2e165e67663070408931611fa3b7b4e946d",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "tools/validate_mass_ledger_v15_15.py",
+        "sha256": "b12d8e40399b86a6f7c169d3e2506173f2fcd36eff53ad29319841a12e0b8804",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+        "sha256": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "机械臂完整装配_六轴_刚性Link拆分_v15_13.FCStd",
+        "sha256": "2ae05fab2a15c5c75bb05db8b456f149da20f79cedba2fc8d47f1624bcec34c7",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "rigid_links_v15_13/rigid_link_membership.csv",
+        "sha256": "3d2a4d52d679eb97917410c6e60bec22c0c269f91ed31b35fd53ff94167e1b8c",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "rigid_links_v15_13/rigid_link_manifest.json",
+        "sha256": "8db76f9228f7a60bd017276239e3669de3cfd443c8cd36d0dd555e184606384f",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "完整工程_V15_13_交付/tools/build_robot_arm_rigid_links_v15.py",
+        "sha256": "e9b66986377eb2a30d464c6b9ca9c1371bc2e83f4e7d180f23e0da08cf8fb944",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+        "sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json",
+        "sha256": "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      }
+    ],
+    "after": [
+      {
+        "path": "V15_15_实测质量映射契约.json",
+        "sha256": "40f86fa1a529dc86ba31e7e6a724f2fdf79022cf8962b7526f1dbdf0b4deac5d",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "V15_15_实测质量映射说明.md",
+        "sha256": "d4dde2f1c77eeb595818f3fb953ad967d605478da10ba1c30c9976085bd6eae1",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "tools/build_mass_mapping_v15_15.py",
+        "sha256": "e365d81c1233fcd7dedcde190cdf7d74cf13a19c1d1a8c0e6fcfb99b6a9ca329",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "V15_15_实测质量账本_v1.json",
+        "sha256": "658fa0b2aef1da4200d86fccf742e135215288e77f58fa5095a06f513eaba04a",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "V15_15_实测质量账本_v1.md",
+        "sha256": "fa52587a3309ea5665197283b62ac2e165e67663070408931611fa3b7b4e946d",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "tools/validate_mass_ledger_v15_15.py",
+        "sha256": "b12d8e40399b86a6f7c169d3e2506173f2fcd36eff53ad29319841a12e0b8804",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+        "sha256": "b4a02a97afaff88e246a46340dad4cacd3c645a7456fdd087a69552e14d3ddc0",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "机械臂完整装配_六轴_刚性Link拆分_v15_13.FCStd",
+        "sha256": "2ae05fab2a15c5c75bb05db8b456f149da20f79cedba2fc8d47f1624bcec34c7",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "rigid_links_v15_13/rigid_link_membership.csv",
+        "sha256": "3d2a4d52d679eb97917410c6e60bec22c0c269f91ed31b35fd53ff94167e1b8c",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "rigid_links_v15_13/rigid_link_manifest.json",
+        "sha256": "8db76f9228f7a60bd017276239e3669de3cfd443c8cd36d0dd555e184606384f",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "完整工程_V15_13_交付/tools/build_robot_arm_rigid_links_v15.py",
+        "sha256": "e9b66986377eb2a30d464c6b9ca9c1371bc2e83f4e7d180f23e0da08cf8fb944",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+        "sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      },
+      {
+        "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json",
+        "sha256": "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815",
+        "hash_mode": "RAW_BYTES",
+        "locked": true
+      }
+    ],
+    "all_locked": true,
+    "source_cad_saved_or_modified": false
+  },
+  "units": {
+    "mass": "kg",
+    "cad_length": "mm",
+    "authoritative_com_length": "m"
+  },
+  "mechanical_zero_condition": {
+    "joint_configuration": "accepted V15.13 mechanical zero",
+    "controller": "Gripper_Servo_Controller",
+    "closure_angle_deg": 0.0,
+    "pass": true
+  },
+  "frame_authority": {
+    "path": "rigid_links_v15_13/rigid_link_manifest.json",
+    "sha256": "8db76f9228f7a60bd017276239e3669de3cfd443c8cd36d0dd555e184606384f",
+    "final_com_frame": "owner ROS2/MuJoCo link frame",
+    "world_coordinates_role": "audit_cross_check_only",
+    "transform_equations": {
+      "world_mm_to_link_mm": "p_L = R_WL^T * (p_W - o_WL)",
+      "link_mm_to_world_mm": "p_W = o_WL + R_WL * p_L"
+    }
+  },
+  "geometry_policy": {
+    "whole_link_stl_center_used": false,
+    "collision_proxy_fallback_allowed": false,
+    "collision_proxy_used": false,
+    "upperarm_a_mass_properties_artifact": {
+      "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+      "sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45",
+      "report_path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json",
+      "report_sha256": "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815",
+      "usage": "volume_and_geometric_centroid_only",
+      "independently_reimported": true
+    },
+    "brep_volume_policy": "per-solid abs(Volume) weighting prevents negative orientation cancellation",
+    "printed_part_policy": "each retained positive-volume source high-detail visual-mesh component must be closed and manifold; zero-volume components may be excluded only with explicit component/facet evidence",
+    "go_output_policy": "0.070 kg output equivalent uses output solids plus neutral B6808 geometry; neutral has no separate mass",
+    "residual_policy": "ledger CAD candidate members define geometric centroid; unavailable cable geometry is not fabricated",
+    "gripper_policy": "complete 0.296 kg measured mass at ClosureAngle=0 assigned to exact 37-member geometric centroid; no internal mass guesses"
+  },
+  "com_status_definitions": {
+    "CAD_BREP_CENTER_OF_MASS": "FreeCAD BRep single-solid geometric center of volume.",
+    "CAD_COMPOUND_VOLUME_WEIGHTED_CENTER": "FreeCAD BRep multi-solid/member center weighted by absolute solid volume.",
+    "CAD_HIGH_DETAIL_VISUAL_MESH_VOLUME_CENTROID": "Volume centroid of retained positive-volume source high-detail visual-mesh components; each retained component is closed and manifold.",
+    "CAD_SOURCE_MESH_ZERO_VOLUME_ARTIFACT_EXCLUDED_VOLUME_CENTER": "Source mesh volume center after explicitly excluding recorded zero-volume artifact components; every retained positive-volume component is closed and manifold.",
+    "MEASURED_TOTAL_MASS_WITH_EQUAL_DENSITY_VOLUME_WEIGHTED_GEOMETRIC_COM": "Measured A+B print total placed at their equal-density volume-weighted geometric center; A uses the independently validated mass-properties-only artifact and B the accepted source mesh.",
+    "ENGINEERING_ESTIMATE_GEOMETRIC_CENTROID": "Residual mass placed at the traceable CAD member-set geometric centroid.",
+    "MEASURED_TOTAL_MASS_WITH_GEOMETRIC_COM_ESTIMATE": "Measured total mass placed at complete assembly geometric centroid without internal mass guesses.",
+    "UNRESOLVED": "No authoritative COM can be emitted; the build remains fail-closed."
+  },
+  "links": {
+    "link2": {
+      "mass_kg": 0.7615,
+      "component_mass_sum_kg": 0.7615,
+      "frame_world_at_zero": {
+        "origin_mm": [
+          -0.3412391307969642,
+          0.0714890908393357,
+          182.639782
+        ],
+        "rotation_matrix_row_major": [
+          [
+            -0.20169035804441449,
+            0.9794493348162099,
+            0.0
+          ],
+          [
+            -0.9794493348162099,
+            -0.20169035804441449,
+            0.0
+          ],
+          [
+            0.0,
+            -2.7755575615628914e-17,
+            1.0
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -2.7755575615628914e-17,
+          -0.0,
+          -1.7738797667774742
+        ]
+      },
+      "com_xyz_m_in_link_frame": [
+        -0.10671013093600745,
+        -0.016129992301934973,
+        0.00016170191924484812
+      ],
+      "com_xyz_mm_in_link_frame": [
+        -106.71013093600745,
+        -16.129992301934973,
+        0.1617019192448481
+      ],
+      "com_xyz_m_world_at_zero": [
+        0.005382655153931933,
+        0.10784191977689339,
+        0.18280148391924486
+      ],
+      "combined_mass_component_bbox_link_mm": {
+        "min_mm": [
+          -293.0638287737092,
+          -104.03773233860144,
+          -59.8137279396183
+        ],
+        "max_mm": [
+          48.10545576649879,
+          78.16065107923663,
+          65.0357831590147
+        ]
+      },
+      "components": [
+        {
+          "component_id": "J2A_OUTPUT_EQ",
+          "name": "J2A GO-M8010 output + neutral equivalent",
+          "owner_link": "link2",
+          "mass_kg": 0.07,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "source_mass_component_id": "J2A_OUTPUT_EQ",
+          "geometry_source": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+          "geometry_members": [
+            "derived:J2A_GO_M8010_output",
+            "derived:J2A_GO_M8010_neutral"
+          ],
+          "geometry_method": "GO_OUTPUT_PLUS_NEUTRAL_BREP_SOLID_ABS_VOLUME_WEIGHTED_CENTER",
+          "cad_com_world_mm": [
+            -37.73748671526587,
+            7.770220161078309,
+            182.64006371742508
+          ],
+          "cad_com_link_mm": [
+            0.0019455391546534528,
+            -38.18048964727452,
+            0.0002817174250822063
+          ],
+          "com_status": "CAD_COMPOUND_VOLUME_WEIGHTED_CENTER",
+          "cad_volume_mm3": 14893.024160595662,
+          "bbox_world_mm": {
+            "min_mm": [
+              -69.73522449077655,
+              -34.753546570159045,
+              139.0634076075219
+            ],
+            "max_mm": [
+              -14.298392140180233,
+              50.60815518131372,
+              226.21615631758254
+            ]
+          },
+          "bbox_link_mm": {
+            "min_mm": [
+              -46.68308079840086,
+              -78.1606510792366,
+              -43.5763743924781
+            ],
+            "max_mm": [
+              48.10545576649879,
+              -6.646450319592239,
+              43.57637431758255
+            ]
+          },
+          "reconstructed_world_com_m": [
+            -0.037737486715265875,
+            0.00777022016107831,
+            0.18264006371742508
+          ],
+          "round_trip_error_m": 7.160723346098896e-18,
+          "component_com_inside_bbox": true,
+          "collision_proxy_used": false,
+          "geometry_atoms": [
+            {
+              "member": "derived:J2A_GO_M8010_output",
+              "source_object": "J2_Left_Joint_Motor_GO_M8010_6",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": [
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                32,
+                34
+              ],
+              "solid_count": 9,
+              "negative_oriented_solid_count": 1,
+              "signed_volume_sum_mm3": -6996.471411023285,
+              "abs_volume_mm3": 9165.183829987167,
+              "center_world_mm": [
+                -38.123662947522234,
+                7.848501046554392,
+                182.6402398019373
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  -69.73522449077655,
+                  -34.753546570159045,
+                  139.0634076075219
+                ],
+                "max_mm": [
+                  -14.298392140180233,
+                  50.60815518131372,
+                  226.21615631758254
+                ]
+              }
+            },
+            {
+              "member": "derived:J2A_GO_M8010_neutral",
+              "source_object": "J2_Left_Joint_Motor_GO_M8010_6",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": [
+                31
+              ],
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 5727.840330608496,
+              "abs_volume_mm3": 5727.840330608496,
+              "center_world_mm": [
+                -37.11956164139681,
+                7.644962007157972,
+                182.63978196255223
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  -46.387286007055216,
+                  -21.419488697073803,
+                  153.68623281710495
+                ],
+                "max_mm": [
+                  -27.85183727573827,
+                  36.70941271139006,
+                  211.5933311079995
+                ]
+              }
+            }
+          ],
+          "positive_volume_component_count": null,
+          "all_positive_volume_components_closed_manifold": null,
+          "excluded_zero_volume_component_count": null,
+          "excluded_zero_volume_facets": null,
+          "excluded_zero_volume_components": [],
+          "cable_geometry_available": null,
+          "notes": "B6808 neutral is included; no separate mass.",
+          "independent_audit_reference_world_com_mm": [
+            -37.737486715,
+            7.770220161,
+            182.640063717
+          ],
+          "independent_audit_reference_error_mm": 5.074491720240102e-10,
+          "independent_audit_reference_pass": true,
+          "blocking": false
+        },
+        {
+          "component_id": "J2B_OUTPUT_EQ",
+          "name": "J2B GO-M8010 output + neutral equivalent",
+          "owner_link": "link2",
+          "mass_kg": 0.07,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "source_mass_component_id": "J2B_OUTPUT_EQ",
+          "geometry_source": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+          "geometry_members": [
+            "derived:J2B_GO_M8010_output",
+            "derived:J2B_GO_M8010_neutral"
+          ],
+          "geometry_method": "GO_OUTPUT_PLUS_NEUTRAL_BREP_SOLID_ABS_VOLUME_WEIGHTED_CENTER",
+          "cad_com_world_mm": [
+            37.05500845367196,
+            -7.627241979399553,
+            182.64006371742502
+          ],
+          "cad_com_link_mm": [
+            -0.0019455391547404943,
+            38.18048964727452,
+            0.0002817174250253629
+          ],
+          "com_status": "CAD_COMPOUND_VOLUME_WEIGHTED_CENTER",
+          "cad_volume_mm3": 14893.024160595673,
+          "bbox_world_mm": {
+            "min_mm": [
+              13.615913878586326,
+              -50.46517699963508,
+              139.0634076075218
+            ],
+            "max_mm": [
+              69.05274622918263,
+              34.89652475183769,
+              226.2161563175825
+            ]
+          },
+          "bbox_link_mm": {
+            "min_mm": [
+              -48.105455766498764,
+              6.6464503195922635,
+              -43.576374392478186
+            ],
+            "max_mm": [
+              46.68308079840088,
+              78.16065107923663,
+              43.57637431758249
+            ]
+          },
+          "reconstructed_world_com_m": [
+            0.03705500845367196,
+            -0.0076272419793995535,
+            0.18264006371742503
+          ],
+          "round_trip_error_m": 0.0,
+          "component_com_inside_bbox": true,
+          "collision_proxy_used": false,
+          "geometry_atoms": [
+            {
+              "member": "derived:J2B_GO_M8010_output",
+              "source_object": "J2_Right_Joint_Motor_GO_M8010_6",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": [
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                32,
+                34
+              ],
+              "solid_count": 9,
+              "negative_oriented_solid_count": 1,
+              "signed_volume_sum_mm3": -6996.471411023293,
+              "abs_volume_mm3": 9165.183829987174,
+              "center_world_mm": [
+                37.44118468592834,
+                -7.705522864875619,
+                182.64023980193727
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  13.615913878586326,
+                  -50.46517699963508,
+                  139.0634076075218
+                ],
+                "max_mm": [
+                  69.05274622918263,
+                  34.89652475183769,
+                  226.2161563175825
+                ]
+              }
+            },
+            {
+              "member": "derived:J2B_GO_M8010_neutral",
+              "source_object": "J2_Right_Joint_Motor_GO_M8010_6",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": [
+                31
+              ],
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 5727.840330608498,
+              "abs_volume_mm3": 5727.840330608498,
+              "center_world_mm": [
+                36.437083379802885,
+                -7.501983825479243,
+                182.63978196255215
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  27.169359014144362,
+                  -36.566434529711415,
+                  153.6862328171049
+                ],
+                "max_mm": [
+                  45.70480774546131,
+                  21.562466878752446,
+                  211.5933311079994
+                ]
+              }
+            }
+          ],
+          "positive_volume_component_count": null,
+          "all_positive_volume_components_closed_manifold": null,
+          "excluded_zero_volume_component_count": null,
+          "excluded_zero_volume_facets": null,
+          "excluded_zero_volume_components": [],
+          "cable_geometry_available": null,
+          "notes": "B6808 neutral is included; no separate mass.",
+          "independent_audit_reference_world_com_mm": [
+            37.055008454,
+            -7.627241979,
+            182.640063717
+          ],
+          "independent_audit_reference_error_mm": 6.692501643885229e-10,
+          "independent_audit_reference_pass": true,
+          "blocking": false
+        },
+        {
+          "component_id": "UPPER_ARM_PRINT_MEASURED",
+          "name": "J2-J3 upper-arm printed structure",
+          "owner_link": "link2",
+          "mass_kg": 0.5515,
+          "mass_status": "MEASURED",
+          "source_mass_component_id": "UPPER_ARM_PRINT_MEASURED",
+          "geometry_source": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl + 机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd:UpperArm_B_Distal_PrintPart",
+          "geometry_members": [
+            "UpperArm_A_SleeveSide_PrintPart",
+            "UpperArm_B_Distal_PrintPart"
+          ],
+          "geometry_method": "UPPERARM_A_MASS_PROPERTIES_ARTIFACT_PLUS_UPPERARM_B_SOURCE_MESH_VOLUME_WEIGHTED_CENTER",
+          "cad_com_world_mm": [
+            3.9119055018377793,
+            117.41391770185992,
+            182.86076510798924
+          ],
+          "cad_com_link_mm": [
+            -115.78878191255349,
+            -19.501096759046654,
+            0.22098310798924103
+          ],
+          "com_status": "MEASURED_TOTAL_MASS_WITH_EQUAL_DENSITY_VOLUME_WEIGHTED_GEOMETRIC_COM",
+          "cad_volume_mm3": 458087.6504331233,
+          "bbox_world_mm": {
+            "min_mm": [
+              -47.35342421727944,
+              -18.71236104720583,
+              122.8260540603817
+            ],
+            "max_mm": [
+              56.40148254290307,
+              287.599755140222,
+              247.6755651590147
+            ]
+          },
+          "bbox_link_mm": {
+            "min_mm": [
+              -293.0638287737092,
+              -104.03773233860144,
+              -59.8137279396183
+            ],
+            "max_mm": [
+              27.879733965538644,
+              59.36514245876179,
+              65.0357831590147
+            ]
+          },
+          "reconstructed_world_com_m": [
+            0.0039119055018377825,
+            0.11741391770185994,
+            0.18286076510798924
+          ],
+          "round_trip_error_m": 1.464821375527116e-17,
+          "component_com_inside_bbox": true,
+          "collision_proxy_used": false,
+          "geometry_atoms": [
+            {
+              "member": "UpperArm_A_SleeveSide_PrintPart",
+              "source_object": "UpperArm_A_SleeveSide_PrintPart",
+              "source_type": "MASS_PROPERTIES_ONLY_CLOSED_MESH_REIMPORTED_AS_VALID_BREP_SOLID",
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 308654.9785581233,
+              "abs_volume_mm3": 308654.9785581233,
+              "center_source_local_mm": [
+                3414.7028593279297,
+                1277.1059547526816,
+                34.687833260141105
+              ],
+              "center_world_mm": [
+                -0.7894327050343009,
+                53.98176991501941,
+                183.0347984497073
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  -47.35342421727944,
+                  -18.71236104720583,
+                  124.68929829103422
+                ],
+                "max_mm": [
+                  56.40148254290307,
+                  172.65569133963663,
+                  240.59023732922856
+                ]
+              },
+              "artifact_path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+              "artifact_sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45",
+              "report_path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json",
+              "report_sha256": "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815",
+              "coordinate_frame": "UPPERARM_A_SOURCE_STL_LOCAL",
+              "independently_reimported": true,
+              "closed": true,
+              "manifold": true,
+              "valid": true,
+              "collision_proxy_used": false
+            },
+            {
+              "member": "UpperArm_B_Distal_PrintPart",
+              "source_type": "CAD_HIGH_DETAIL_VISUAL_MESH_MINIMAL_NONMANIFOLD_FACET_REPAIR",
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 149432.671875,
+              "abs_volume_mm3": 149432.671875,
+              "center_world_mm": [
+                13.62257603478804,
+                248.43378082403203,
+                182.50129715039748
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  -24.597094294188196,
+                  106.31870384137164,
+                  122.8260540603817
+                ],
+                "max_mm": [
+                  31.491034176814196,
+                  287.599755140222,
+                  247.6755651590147
+                ]
+              },
+              "closed": true,
+              "manifold": true,
+              "valid": true,
+              "collision_proxy_used": false
+            }
+          ],
+          "positive_volume_component_count": 2,
+          "all_positive_volume_components_closed_manifold": true,
+          "excluded_zero_volume_component_count": null,
+          "excluded_zero_volume_facets": null,
+          "excluded_zero_volume_components": [],
+          "cable_geometry_available": null,
+          "notes": "Direct scale measurement; the two print parts remain one unsplit measured group.",
+          "mass_properties_artifact": {
+            "path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties.stl",
+            "sha256": "67aed62b304cfef3a338b0e59b035426b8e012619c333d032e8304c389352f45",
+            "report_path": "mass_properties_geometry_v15_15/UpperArm_A_SleeveSide_PrintPart_mass_properties_report.json",
+            "report_sha256": "a2b58c9892797b26c4511ff2581e7224d99cd27ca2261cc864252a6e38c21815",
+            "independently_reimported": true,
+            "report_crosscheck_pass": true
+          },
+          "equal_density_volume_allocation": {
+            "assumption": "SAME_PRINT_MATERIAL_UNIFORM_EFFECTIVE_DENSITY_V1",
+            "total_measured_mass_kg": 0.5515,
+            "total_volume_mm3": 458087.6504331233,
+            "parts": [
+              {
+                "member": "UpperArm_A_SleeveSide_PrintPart",
+                "volume_mm3": 308654.9785581233,
+                "volume_fraction": 0.6737902195492261,
+                "allocated_mass_kg": 0.3715953060813982,
+                "center_world_mm": [
+                  -0.7894327050343009,
+                  53.98176991501941,
+                  183.0347984497073
+                ]
+              },
+              {
+                "member": "UpperArm_B_Distal_PrintPart",
+                "volume_mm3": 149432.671875,
+                "volume_fraction": 0.32620978045077387,
+                "allocated_mass_kg": 0.17990469391860178,
+                "center_world_mm": [
+                  13.62257603478804,
+                  248.43378082403203,
+                  182.50129715039748
+                ]
+              }
+            ],
+            "volume_fraction_sum": 1.0,
+            "allocated_mass_sum_kg": 0.5515,
+            "fifty_fifty_used": false,
+            "allocation_is_explanatory_not_additive": true,
+            "pass": true
+          },
+          "independent_audit_reference_world_com_mm": [
+            3.9119055019,
+            117.4139177018,
+            182.8607651079
+          ],
+          "independent_audit_reference_error_mm": 1.2419953475331028e-10,
+          "independent_audit_reference_pass": true,
+          "blocking": false
+        },
+        {
+          "component_id": "J3_OUTPUT_EQ",
+          "name": "J3 GO-M8010 output + neutral equivalent",
+          "owner_link": "link2",
+          "mass_kg": 0.07,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "source_mass_component_id": "J3_OUTPUT_EQ",
+          "geometry_source": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+          "geometry_members": [
+            "J3_Output_Rotor_STEP_Display",
+            "J3_B6808_Bearing_Neutral_STEP_Display"
+          ],
+          "geometry_method": "GO_OUTPUT_PLUS_NEUTRAL_BREP_SOLID_ABS_VOLUME_WEIGHTED_CENTER",
+          "cad_com_world_mm": [
+            28.41784991096007,
+            247.96911178301514,
+            182.6572732429909
+          ],
+          "cad_com_link_mm": [
+            -248.60359261423454,
+            -21.83048964727503,
+            0.01749124299089999
+          ],
+          "com_status": "CAD_COMPOUND_VOLUME_WEIGHTED_CENTER",
+          "cad_volume_mm3": 14893.02416059569,
+          "bbox_world_mm": {
+            "min_mm": [
+              -3.5806500042400558,
+              211.5301211555475,
+              146.30540804321566
+            ],
+            "max_mm": [
+              51.85618234635626,
+              284.15018389245046,
+              219.0077191269784
+            ]
+          },
+          "bbox_link_mm": {
+            "min_mm": [
+              -288.76840528561735,
+              -60.468772492517125,
+              -36.33437395678433
+            ],
+            "max_mm": [
+              -206.45965857800638,
+              8.475562532205979,
+              36.367937126978404
+            ]
+          },
+          "reconstructed_world_com_m": [
+            0.028417849910960073,
+            0.24796911178301517,
+            0.18265727324299091
+          ],
+          "round_trip_error_m": 2.8642893384395583e-17,
+          "component_com_inside_bbox": true,
+          "collision_proxy_used": false,
+          "geometry_atoms": [
+            {
+              "member": "J3_Output_Rotor_STEP_Display",
+              "source_object": "J3_Output_Rotor_STEP_Display",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 9,
+              "negative_oriented_solid_count": 1,
+              "signed_volume_sum_mm3": -6996.471411023302,
+              "abs_volume_mm3": 9165.183829987185,
+              "center_world_mm": [
+                28.032149982783533,
+                248.04970569782358,
+                182.6577167482364
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  -3.5806500042400558,
+                  216.5535930748386,
+                  150.42528767790213
+                ],
+                "max_mm": [
+                  51.85618234635626,
+                  279.6913965699978,
+                  214.88783949229196
+                ]
+              }
+            },
+            {
+              "member": "J3_B6808_Bearing_Neutral_STEP_Display",
+              "source_object": "J3_B6808_Bearing_Neutral_STEP_Display",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 5727.8403306085065,
+              "abs_volume_mm3": 5727.8403306085065,
+              "center_world_mm": [
+                29.035012845139704,
+                247.84015252399908,
+                182.6565635850971
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  18.27526259671285,
+                  211.5301211555475,
+                  146.30540804321566
+                ],
+                "max_mm": [
+                  39.79476309356667,
+                  284.15018389245046,
+                  219.0077191269784
+                ]
+              }
+            }
+          ],
+          "positive_volume_component_count": null,
+          "all_positive_volume_components_closed_manifold": null,
+          "excluded_zero_volume_component_count": null,
+          "excluded_zero_volume_facets": null,
+          "excluded_zero_volume_components": [],
+          "cable_geometry_available": null,
+          "notes": "B6808 neutral is included; no separate mass.",
+          "independent_audit_reference_world_com_mm": [
+            28.417849911,
+            247.969111783,
+            182.657273243
+          ],
+          "independent_audit_reference_error_mm": 4.3667012994784934e-11,
+          "independent_audit_reference_pass": true,
+          "blocking": false
+        }
+      ],
+      "validation": {
+        "component_mass_sum_error_kg": 0.0,
+        "component_mass_sum_pass": true,
+        "all_components_resolved": true,
+        "com_finite": true,
+        "com_inside_combined_component_bbox": true,
+        "link_world_vs_local_round_trip_error_m": 8.881784197001253e-19,
+        "pass": true
+      }
+    },
+    "link3": {
+      "mass_kg": 1.09,
+      "component_mass_sum_kg": 1.09,
+      "frame_world_at_zero": {
+        "origin_mm": [
+          14.539162672271004,
+          250.825169822946,
+          182.65656354005273
+        ],
+        "rotation_matrix_row_major": [
+          [
+            -0.20169035804441449,
+            0.9794493348162099,
+            0.0
+          ],
+          [
+            -0.9794493348162099,
+            -0.20169035804441449,
+            0.0
+          ],
+          [
+            0.0,
+            -2.7755575615628914e-17,
+            1.0
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -2.7755575615628914e-17,
+          -0.0,
+          -1.7738797667774742
+        ]
+      },
+      "com_xyz_m_in_link_frame": [
+        -0.10132364023346041,
+        0.03367274784947154,
+        0.02598763031403098
+      ],
+      "com_xyz_mm_in_link_frame": [
+        -101.32364023346041,
+        33.672747849471534,
+        25.98763031403098
+      ],
+      "com_xyz_m_world_at_zero": [
+        0.06795591443191992,
+        0.3432750732806666,
+        0.20864419385408373
+      ],
+      "combined_mass_component_bbox_link_mm": {
+        "min_mm": [
+          -284.1192735884419,
+          -43.09320788280807,
+          -144.46699028364196
+        ],
+        "max_mm": [
+          84.57789335942601,
+          131.36021695652735,
+          196.42830033506812
+        ]
+      },
+      "components": [
+        {
+          "component_id": "J3_STATOR_EQ",
+          "name": "J3 GO-M8010 stator/core equivalent",
+          "owner_link": "link3",
+          "mass_kg": 0.47,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "source_mass_component_id": "J3_STATOR_EQ",
+          "geometry_source": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+          "geometry_members": [
+            "J3_Motor_Stator_STEP_Display"
+          ],
+          "geometry_method": "FREECAD_BREP_SOLID_ABS_VOLUME_WEIGHTED_CENTER",
+          "cad_com_world_mm": [
+            44.659931122008324,
+            244.75092560796224,
+            182.6616173018524
+          ],
+          "cad_com_link_mm": [
+            -0.1256541173233643,
+            30.726883112817585,
+            0.005053761799672429
+          ],
+          "com_status": "CAD_COMPOUND_VOLUME_WEIGHTED_CENTER",
+          "cad_volume_mm3": 178824.65892231755,
+          "bbox_world_mm": {
+            "min_mm": [
+              -15.97068408966416,
+              170.75532990943262,
+              108.34556789024035
+            ],
+            "max_mm": [
+              101.90609079258013,
+              316.32338646836985,
+              256.967912491917
+            ]
+          },
+          "bbox_link_mm": {
+            "min_mm": [
+              -81.77325173883415,
+              -43.09320788280806,
+              -74.31099564981238
+            ],
+            "max_mm": [
+              84.57789335942601,
+              101.72079431308786,
+              74.31134895186426
+            ]
+          },
+          "reconstructed_world_com_m": [
+            0.04465993112200833,
+            0.24475092560796224,
+            0.1826616173018524
+          ],
+          "round_trip_error_m": 0.0,
+          "component_com_inside_bbox": true,
+          "collision_proxy_used": false,
+          "geometry_atoms": [
+            {
+              "member": "J3_Motor_Stator_STEP_Display",
+              "source_object": "J3_Motor_Stator_STEP_Display",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 24,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 178824.65892231755,
+              "abs_volume_mm3": 178824.65892231755,
+              "center_world_mm": [
+                44.659931122008324,
+                244.75092560796224,
+                182.6616173018524
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  -15.97068408966416,
+                  170.75532990943262,
+                  108.34556789024035
+                ],
+                "max_mm": [
+                  101.90609079258013,
+                  316.32338646836985,
+                  256.967912491917
+                ]
+              }
+            }
+          ],
+          "positive_volume_component_count": null,
+          "all_positive_volume_components_closed_manifold": null,
+          "excluded_zero_volume_component_count": null,
+          "excluded_zero_volume_facets": null,
+          "excluded_zero_volume_components": [],
+          "cable_geometry_available": null,
+          "notes": "Includes the frozen complete-motor wiring boundary; no extra motor wire mass.",
+          "independent_audit_reference_world_com_mm": [
+            44.659931122,
+            244.750925608,
+            182.661617302
+          ],
+          "independent_audit_reference_error_mm": 1.5257067886414888e-10,
+          "independent_audit_reference_pass": true,
+          "blocking": false
+        },
+        {
+          "component_id": "FOREARM_PRINT_MEASURED",
+          "name": "J3-J4 forearm print",
+          "owner_link": "link3",
+          "mass_kg": 0.135,
+          "mass_status": "MEASURED",
+          "source_mass_component_id": "FOREARM_PRINT_MEASURED",
+          "geometry_source": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+          "geometry_members": [
+            "Forearm_v3_HighDetail_Display"
+          ],
+          "geometry_method": "POSITIVE_VOLUME_CLOSED_MANIFOLD_SOURCE_MESH_COMPONENT_VOLUME_CENTER",
+          "cad_com_world_mm": [
+            85.92866632289662,
+            339.7687225995585,
+            208.65794548095118
+          ],
+          "cad_com_link_mm": [
+            -101.51427815515126,
+            51.983344858207396,
+            26.001381940898455
+          ],
+          "com_status": "CAD_SOURCE_MESH_ZERO_VOLUME_ARTIFACT_EXCLUDED_VOLUME_CENTER",
+          "cad_volume_mm3": 1550533.0,
+          "bbox_world_mm": {
+            "min_mm": [
+              44.10076082599181,
+              170.70486790726795,
+              38.18957325641077
+            ],
+            "max_mm": [
+              132.1570122960544,
+              507.229616080597,
+              379.08486387512085
+            ]
+          },
+          "bbox_link_mm": {
+            "min_mm": [
+              -274.8575505340099,
+              -22.76021692211952,
+              -144.46699028364196
+            ],
+            "max_mm": [
+              72.51148710059573,
+              131.36021695652735,
+              196.42830033506812
+            ]
+          },
+          "reconstructed_world_com_m": [
+            0.08592866632289661,
+            0.3397687225995585,
+            0.20865794548095118
+          ],
+          "round_trip_error_m": 0.0,
+          "component_com_inside_bbox": true,
+          "collision_proxy_used": false,
+          "geometry_atoms": [
+            {
+              "member": "Forearm_v3_HighDetail_Display",
+              "component_index": 0,
+              "facets": 2978,
+              "is_solid": true,
+              "has_non_manifolds": false,
+              "abs_volume_mm3": 1550533.0,
+              "center_world_mm": [
+                85.92866632289662,
+                339.7687225995585,
+                208.65794548095118
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  44.10076082599181,
+                  170.70486790726795,
+                  38.18957325641077
+                ],
+                "max_mm": [
+                  132.1570122960544,
+                  507.229616080597,
+                  379.08486387512085
+                ]
+              }
+            }
+          ],
+          "positive_volume_component_count": 1,
+          "all_positive_volume_components_closed_manifold": true,
+          "excluded_zero_volume_component_count": 1,
+          "excluded_zero_volume_facets": 2,
+          "excluded_zero_volume_components": [
+            {
+              "member": "Forearm_v3_HighDetail_Display",
+              "component_index": 1,
+              "facets": 2,
+              "is_solid_reported_by_freecad": true,
+              "has_non_manifolds": false,
+              "abs_volume_mm3": 0.0,
+              "exclusion_reason": "ZERO_VOLUME_COMPONENT_NOT_MASS_GEOMETRY"
+            }
+          ],
+          "cable_geometry_available": null,
+          "notes": "Direct scale measurement without J3/J4 motors.",
+          "independent_audit_reference_world_com_mm": [
+            85.928666323,
+            339.7687226,
+            208.657945481
+          ],
+          "independent_audit_reference_error_mm": 4.560671218560577e-10,
+          "independent_audit_reference_pass": true,
+          "blocking": false
+        },
+        {
+          "component_id": "J4_STATOR_EQ",
+          "name": "J4 GO-M8010 stator/core equivalent",
+          "owner_link": "link3",
+          "mass_kg": 0.47,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "source_mass_component_id": "J4_STATOR_EQ",
+          "geometry_source": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+          "geometry_members": [
+            "J4_Motor_Stator_STEP_Display"
+          ],
+          "geometry_method": "FREECAD_BREP_SOLID_ABS_VOLUME_WEIGHTED_CENTER",
+          "cad_com_world_mm": [
+            85.4711727177186,
+            442.93860211126685,
+            234.6230412673082
+          ],
+          "cad_com_link_mm": [
+            -202.47167596693114,
+            30.726883112817553,
+            51.966477727255466
+          ],
+          "com_status": "CAD_COMPOUND_VOLUME_WEIGHTED_CENTER",
+          "cad_volume_mm3": 178824.65892231755,
+          "bbox_world_mm": {
+            "min_mm": [
+              24.84055750604611,
+              368.9430064127372,
+              160.30699185569605
+            ],
+            "max_mm": [
+              142.7173323882904,
+              514.5110629716744,
+              308.92933645737264
+            ]
+          },
+          "bbox_link_mm": {
+            "min_mm": [
+              -284.1192735884419,
+              -43.09320788280807,
+              -22.349571684356675
+            ],
+            "max_mm": [
+              -117.76812849018172,
+              101.72079431308782,
+              126.27277291731991
+            ]
+          },
+          "reconstructed_world_com_m": [
+            0.0854711727177186,
+            0.44293860211126684,
+            0.2346230412673082
+          ],
+          "round_trip_error_m": 0.0,
+          "component_com_inside_bbox": true,
+          "collision_proxy_used": false,
+          "geometry_atoms": [
+            {
+              "member": "J4_Motor_Stator_STEP_Display",
+              "source_object": "J4_Motor_Stator_STEP_Display",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 24,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 178824.65892231755,
+              "abs_volume_mm3": 178824.65892231755,
+              "center_world_mm": [
+                85.4711727177186,
+                442.93860211126685,
+                234.6230412673082
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  24.84055750604611,
+                  368.9430064127372,
+                  160.30699185569605
+                ],
+                "max_mm": [
+                  142.7173323882904,
+                  514.5110629716744,
+                  308.92933645737264
+                ]
+              }
+            }
+          ],
+          "positive_volume_component_count": null,
+          "all_positive_volume_components_closed_manifold": null,
+          "excluded_zero_volume_component_count": null,
+          "excluded_zero_volume_facets": null,
+          "excluded_zero_volume_components": [],
+          "cable_geometry_available": null,
+          "notes": "Includes the frozen complete-motor wiring boundary; no extra motor wire mass.",
+          "independent_audit_reference_world_com_mm": [
+            85.471172718,
+            442.938602111,
+            234.623041267
+          ],
+          "independent_audit_reference_error_mm": 4.953510803750854e-10,
+          "independent_audit_reference_pass": true,
+          "blocking": false
+        },
+        {
+          "component_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING",
+          "name": "Compound-C remainder: forearm fasteners and local unweighed assembly remainder",
+          "owner_link": "link3",
+          "mass_kg": 0.015,
+          "mass_status": "DERIVED_FROM_MEASURED_TOTAL",
+          "source_mass_component_id": "RESIDUAL_C_LINK3_FOREARM_HARDWARE_WIRING",
+          "geometry_source": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+          "geometry_members": [
+            "Forearm_J3_M35_Screw_01",
+            "Forearm_J3_M35_Screw_02",
+            "Forearm_J3_M35_Screw_03",
+            "Forearm_J3_M35_Screw_04",
+            "Forearm_J3_M35_Screw_05",
+            "Forearm_J3_M35_Screw_06",
+            "Forearm_J4_M35_Screw_01",
+            "Forearm_J4_M35_Screw_02",
+            "Forearm_J4_M35_Screw_03",
+            "Forearm_J4_M35_Screw_04",
+            "Forearm_J4_M35_Screw_05",
+            "Forearm_J4_M35_Screw_06"
+          ],
+          "geometry_method": "CAD_MEMBER_ABS_VOLUME_WEIGHTED_GEOMETRIC_CENTROID",
+          "cad_com_world_mm": [
+            87.33053150200051,
+            339.13161979657036,
+            208.6372755678252
+          ],
+          "cad_com_link_mm": [
+            -101.17301092845845,
+            53.48489826782849,
+            25.980712027772483
+          ],
+          "com_status": "ENGINEERING_ESTIMATE_GEOMETRIC_CENTROID",
+          "cad_volume_mm3": 3379.0467927186696,
+          "bbox_world_mm": {
+            "min_mm": [
+              47.259160531667355,
+              199.35863203722312,
+              137.4921630486574
+            ],
+            "max_mm": [
+              122.43490988025081,
+              478.22760151924246,
+              279.78238808699325
+            ]
+          },
+          "bbox_link_mm": {
+            "min_mm": [
+              -244.49069234637324,
+              -13.817297730422975,
+              -45.16440049139533
+            ],
+            "max_mm": [
+              43.80955811604549,
+              116.0587222656626,
+              97.12582454694052
+            ]
+          },
+          "reconstructed_world_com_m": [
+            0.08733053150200053,
+            0.33913161979657036,
+            0.20863727556782521
+          ],
+          "round_trip_error_m": 1.4210854715202004e-17,
+          "component_com_inside_bbox": true,
+          "collision_proxy_used": false,
+          "geometry_atoms": [
+            {
+              "member": "Forearm_J3_M35_Screw_01",
+              "source_object": "Forearm_J3_M35_Screw_01",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 281.58723272655607,
+              "abs_volume_mm3": 281.58723272655607,
+              "center_world_mm": [
+                64.79287925426833,
+                229.68420388440745,
+                223.8209641215377
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  52.50543064131289,
+                  224.8355850208996,
+                  219.8209641215385
+                ],
+                "max_mm": [
+                  72.11333527514074,
+                  233.85581671123902,
+                  227.8209641215385
+                ]
+              }
+            },
+            {
+              "member": "Forearm_J3_M35_Screw_02",
+              "source_object": "Forearm_J3_M35_Screw_02",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 281.5872327265517,
+              "abs_volume_mm3": 281.5872327265517,
+              "center_world_mm": [
+                71.28806447184589,
+                261.226142242529,
+                219.23888527395945
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  59.000615858890335,
+                  256.37752337902117,
+                  215.23888527396002
+                ],
+                "max_mm": [
+                  78.60852049271818,
+                  265.3977550693606,
+                  223.23888527396002
+                ]
+              }
+            },
+            {
+              "member": "Forearm_J3_M35_Screw_03",
+              "source_object": "Forearm_J3_M35_Screw_03",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 281.5872327265555,
+              "abs_volume_mm3": 281.5872327265555,
+              "center_world_mm": [
+                74.30321226366786,
+                275.8683121891079,
+                161.02363174836785
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  62.01576365071252,
+                  271.01969332560026,
+                  157.0236317483682
+                ],
+                "max_mm": [
+                  81.62366828454037,
+                  280.0399250159397,
+                  165.0236317483682
+                ]
+              }
+            },
+            {
+              "member": "Forearm_J3_M35_Screw_04",
+              "source_object": "Forearm_J3_M35_Screw_04",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 281.5872327265581,
+              "abs_volume_mm3": 281.5872327265581,
+              "center_world_mm": [
+                69.0569421540223,
+                250.39135920543094,
+                141.49216304865777
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  56.76949354106693,
+                  245.54274034192332,
+                  137.4921630486574
+                ],
+                "max_mm": [
+                  76.37739817489478,
+                  254.56297203226273,
+                  145.4921630486574
+                ]
+              }
+            },
+            {
+              "member": "Forearm_J3_M35_Screw_05",
+              "source_object": "Forearm_J3_M35_Screw_05",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 281.5872327265577,
+              "abs_volume_mm3": 281.5872327265577,
+              "center_world_mm": [
+                62.561756936444745,
+                218.84942084730986,
+                146.0742418962359
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  50.27430832348943,
+                  214.00080198380175,
+                  142.0742418962359
+                ],
+                "max_mm": [
+                  69.88221295731728,
+                  223.02103367414117,
+                  150.0742418962359
+                ]
+              }
+            },
+            {
+              "member": "Forearm_J3_M35_Screw_06",
+              "source_object": "Forearm_J3_M35_Screw_06",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 281.5872327265557,
+              "abs_volume_mm3": 281.5872327265557,
+              "center_world_mm": [
+                59.546609144622785,
+                204.20725090073097,
+                204.28949542182747
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  47.259160531667355,
+                  199.35863203722312,
+                  200.28949542182772
+                ],
+                "max_mm": [
+                  66.8670651654952,
+                  208.37886372756253,
+                  208.28949542182772
+                ]
+              }
+            },
+            {
+              "member": "Forearm_J4_M35_Screw_01",
+              "source_object": "Forearm_J4_M35_Screw_01",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 281.58723272655493,
+              "abs_volume_mm3": 281.58723272655493,
+              "center_world_mm": [
+                105.60412084997873,
+                427.87188038770995,
+                275.7823880869934
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  93.31667223702334,
+                  423.0232615242019,
+                  271.78238808699325
+                ],
+                "max_mm": [
+                  112.92457687085118,
+                  432.04349321454134,
+                  279.78238808699325
+                ]
+              }
+            },
+            {
+              "member": "Forearm_J4_M35_Screw_02",
+              "source_object": "Forearm_J4_M35_Screw_02",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 281.58723272655635,
+              "abs_volume_mm3": 281.58723272655635,
+              "center_world_mm": [
+                112.09930606755614,
+                459.4138187458311,
+                271.20030923941476
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  99.81185745460084,
+                  454.5651998823237,
+                  267.2003092394152
+                ],
+                "max_mm": [
+                  119.41976208842868,
+                  463.58543157266314,
+                  275.2003092394152
+                ]
+              }
+            },
+            {
+              "member": "Forearm_J4_M35_Screw_03",
+              "source_object": "Forearm_J4_M35_Screw_03",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 281.5872327265569,
+              "abs_volume_mm3": 281.5872327265569,
+              "center_world_mm": [
+                115.11445385937834,
+                474.0559886924104,
+                212.98505571382324
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  102.82700524642297,
+                  469.20736982890304,
+                  208.98505571382339
+                ],
+                "max_mm": [
+                  122.43490988025081,
+                  478.22760151924246,
+                  216.98505571382339
+                ]
+              }
+            },
+            {
+              "member": "Forearm_J4_M35_Screw_04",
+              "source_object": "Forearm_J4_M35_Screw_04",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 281.58723272655385,
+              "abs_volume_mm3": 281.58723272655385,
+              "center_world_mm": [
+                109.86818374973281,
+                448.5790357087335,
+                193.45358701411266
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  97.58073513677738,
+                  443.7304168452259,
+                  189.4535870141126
+                ],
+                "max_mm": [
+                  117.18863977060522,
+                  452.7506485355653,
+                  197.4535870141126
+                ]
+              }
+            },
+            {
+              "member": "Forearm_J4_M35_Screw_05",
+              "source_object": "Forearm_J4_M35_Screw_05",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 281.58723272655584,
+              "abs_volume_mm3": 281.58723272655584,
+              "center_world_mm": [
+                103.37299853215531,
+                417.0370973506121,
+                198.03566586169092
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  91.08554991919988,
+                  412.1884784871043,
+                  194.0356658616911
+                ],
+                "max_mm": [
+                  110.69345455302772,
+                  421.2087101774437,
+                  202.0356658616911
+                ]
+              }
+            },
+            {
+              "member": "Forearm_J4_M35_Screw_06",
+              "source_object": "Forearm_J4_M35_Screw_06",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 281.5872327265565,
+              "abs_volume_mm3": 281.5872327265565,
+              "center_world_mm": [
+                100.35785074033318,
+                402.39492740403296,
+                256.2509193872829
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  88.0704021273778,
+                  397.5463085405252,
+                  252.25091938728292
+                ],
+                "max_mm": [
+                  107.67830676120565,
+                  406.56654023086463,
+                  260.2509193872829
+                ]
+              }
+            }
+          ],
+          "positive_volume_component_count": null,
+          "all_positive_volume_components_closed_manifold": null,
+          "excluded_zero_volume_component_count": null,
+          "excluded_zero_volume_facets": null,
+          "excluded_zero_volume_components": [],
+          "cable_geometry_available": false,
+          "notes": "Nominal closure remainder 2.220-0.135-0.540-0.089-1.441. All named CAD members are link3.",
+          "independent_audit_reference_world_com_mm": [
+            87.330531502,
+            339.131619797,
+            208.637275568
+          ],
+          "independent_audit_reference_error_mm": 4.6381955301288654e-10,
+          "independent_audit_reference_pass": true,
+          "blocking": false
+        }
+      ],
+      "validation": {
+        "component_mass_sum_error_kg": 0.0,
+        "component_mass_sum_pass": true,
+        "all_components_resolved": true,
+        "com_finite": true,
+        "com_inside_combined_component_bbox": true,
+        "link_world_vs_local_round_trip_error_m": 1.4210854715202004e-17,
+        "pass": true
+      }
+    },
+    "link4": {
+      "mass_kg": 0.675,
+      "component_mass_sum_kg": 0.675,
+      "frame_world_at_zero": {
+        "origin_mm": [
+          55.350404267981276,
+          449.0128463262506,
+          234.61798750550838
+        ],
+        "rotation_matrix_row_major": [
+          [
+            -0.0035710719250043816,
+            0.9794493348162099,
+            0.20165874137608789
+          ],
+          [
+            -0.017341850427658345,
+            -0.20169035804441449,
+            0.9792957978545928
+          ],
+          [
+            0.9998432415479195,
+            -2.7755575615628914e-17,
+            0.01770571464100866
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -1.5676054979076366e-15,
+          -1.5530896869223991,
+          -1.773879766755972
+        ]
+      },
+      "com_xyz_m_in_link_frame": [
+        -0.003463735761717717,
+        0.027564154142324448,
+        0.07888352624993551
+      ],
+      "com_xyz_mm_in_link_frame": [
+        -3.463735761717717,
+        27.564154142324448,
+        78.88352624993551
+      ],
+      "com_xyz_m_world_at_zero": [
+        0.09826801857585764,
+        0.5207637955721086,
+        0.23255148391929448
+      ],
+      "combined_mass_component_bbox_link_mm": {
+        "min_mm": [
+          -61.416683445922764,
+          -103.2346523140605,
+          -53.09924143695325
+        ],
+        "max_mm": [
+          61.97061915963015,
+          125.06174344316896,
+          185.6764781555566
+        ]
+      },
+      "components": [
+        {
+          "component_id": "J4_OUTPUT_EQ",
+          "name": "J4 GO-M8010 output + neutral equivalent",
+          "owner_link": "link4",
+          "mass_kg": 0.07,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "source_mass_component_id": "J4_OUTPUT_EQ",
+          "geometry_source": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+          "geometry_members": [
+            "J4_Output_Rotor_STEP_Display",
+            "J4_B6808_Bearing_Neutral_STEP_Display"
+          ],
+          "geometry_method": "GO_OUTPUT_PLUS_NEUTRAL_BREP_SOLID_ABS_VOLUME_WEIGHTED_CENTER",
+          "cad_com_world_mm": [
+            69.2290915066704,
+            446.15678828631957,
+            234.6186972084465
+          ],
+          "cad_com_link_mm": [
+            0.0006771326733718872,
+            14.169510352725604,
+            0.0018455293708289613
+          ],
+          "com_status": "CAD_COMPOUND_VOLUME_WEIGHTED_CENTER",
+          "cad_volume_mm3": 14893.024160595683,
+          "bbox_world_mm": {
+            "min_mm": [
+              37.230591591470244,
+              409.7177976588521,
+              198.26683200867132
+            ],
+            "max_mm": [
+              92.66742394206656,
+              482.33786039575506,
+              270.9691430924341
+            ]
+          },
+          "bbox_link_mm": {
+            "min_mm": [
+              -37.056636316745966,
+              -24.46877249251656,
+              -42.77911784088873
+            ],
+            "max_mm": [
+              37.09161324691756,
+              44.47556253220656,
+              40.803972648786655
+            ]
+          },
+          "reconstructed_world_com_m": [
+            0.06922909150667039,
+            0.44615678828631944,
+            0.2346186972084519
+          ],
+          "round_trip_error_m": 5.401340057080732e-15,
+          "component_com_inside_bbox": true,
+          "collision_proxy_used": false,
+          "geometry_atoms": [
+            {
+              "member": "J4_Output_Rotor_STEP_Display",
+              "source_object": "J4_Output_Rotor_STEP_Display",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 9,
+              "negative_oriented_solid_count": 1,
+              "signed_volume_sum_mm3": -6996.471411023293,
+              "abs_volume_mm3": 9165.183829987176,
+              "center_world_mm": [
+                68.84339157849382,
+                446.23738220112784,
+                234.61914071369202
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  37.230591591470244,
+                  414.7412695781432,
+                  202.38671164335778
+                ],
+                "max_mm": [
+                  92.66742394206656,
+                  477.8790730733024,
+                  266.8492634577476
+                ]
+              }
+            },
+            {
+              "member": "J4_B6808_Bearing_Neutral_STEP_Display",
+              "source_object": "J4_B6808_Bearing_Neutral_STEP_Display",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 5727.840330608507,
+              "abs_volume_mm3": 5727.840330608507,
+              "center_world_mm": [
+                69.84625444085009,
+                446.02782902730365,
+                234.61798755055278
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  59.08650419242315,
+                  409.7177976588521,
+                  198.26683200867132
+                ],
+                "max_mm": [
+                  80.60600468927697,
+                  482.33786039575506,
+                  270.9691430924341
+                ]
+              }
+            }
+          ],
+          "positive_volume_component_count": null,
+          "all_positive_volume_components_closed_manifold": null,
+          "excluded_zero_volume_component_count": null,
+          "excluded_zero_volume_facets": null,
+          "excluded_zero_volume_components": [],
+          "cable_geometry_available": null,
+          "notes": "B6808 neutral is included; no separate mass.",
+          "independent_audit_reference_world_com_mm": [
+            69.229091507,
+            446.156788286,
+            234.618697208
+          ],
+          "independent_audit_reference_error_mm": 6.404175214247561e-10,
+          "independent_audit_reference_pass": true,
+          "blocking": false
+        },
+        {
+          "component_id": "WRIST_PRELINK_PRINT_MEASURED",
+          "name": "J4-J5 printed connector",
+          "owner_link": "link4",
+          "mass_kg": 0.089,
+          "mass_status": "MEASURED",
+          "source_mass_component_id": "WRIST_PRELINK_PRINT_MEASURED",
+          "geometry_source": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+          "geometry_members": [
+            "Wrist_Prelink_v1_HighDetail_Display"
+          ],
+          "geometry_method": "CLOSED_SOURCE_VISUAL_MESH_VOLUME_CENTROID",
+          "cad_com_world_mm": [
+            89.20738953387445,
+            506.9480535494089,
+            221.5289454907503
+          ],
+          "cad_com_link_mm": [
+            -14.212599624500363,
+            21.476229009345147,
+            63.331511174145234
+          ],
+          "com_status": "CAD_HIGH_DETAIL_VISUAL_MESH_VOLUME_CENTROID",
+          "cad_volume_mm3": 112761.0390625,
+          "bbox_world_mm": {
+            "min_mm": [
+              -17.421112835923395,
+              410.3275522733653,
+              204.12596863262405
+            ],
+            "max_mm": [
+              175.07001452897794,
+              607.4668180626535,
+              267.3544369966985
+            ]
+          },
+          "bbox_link_mm": {
+            "min_mm": [
+              -33.66265140780162,
+              -103.2346523140605,
+              -53.09924143695325
+            ],
+            "max_mm": [
+              33.662064680926115,
+              125.06174344316896,
+              179.8954368311489
+            ]
+          },
+          "reconstructed_world_com_m": [
+            0.08920738953386914,
+            0.5069480535494099,
+            0.22152894549075847
+          ],
+          "round_trip_error_m": 9.807301984885084e-15,
+          "component_com_inside_bbox": true,
+          "collision_proxy_used": false,
+          "geometry_atoms": [
+            {
+              "member": "Wrist_Prelink_v1_HighDetail_Display",
+              "component_index": 0,
+              "facets": 2314,
+              "is_solid": true,
+              "has_non_manifolds": false,
+              "abs_volume_mm3": 112761.0390625,
+              "center_world_mm": [
+                89.20738953387445,
+                506.9480535494089,
+                221.5289454907503
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  -17.421112835923395,
+                  410.3275522733653,
+                  204.12596863262405
+                ],
+                "max_mm": [
+                  175.07001452897794,
+                  607.4668180626535,
+                  267.3544369966985
+                ]
+              }
+            }
+          ],
+          "positive_volume_component_count": 1,
+          "all_positive_volume_components_closed_manifold": true,
+          "excluded_zero_volume_component_count": 0,
+          "excluded_zero_volume_facets": 0,
+          "excluded_zero_volume_components": [],
+          "cable_geometry_available": null,
+          "notes": "Direct scale measurement without J4/J5 motors.",
+          "independent_audit_reference_world_com_mm": [
+            89.207389534,
+            506.948053549,
+            221.528945491
+          ],
+          "independent_audit_reference_error_mm": 4.952764004800462e-10,
+          "independent_audit_reference_pass": true,
+          "blocking": false
+        },
+        {
+          "component_id": "J5_STATOR_EQ",
+          "name": "J5 GO-M8010 stator/core equivalent",
+          "owner_link": "link4",
+          "mass_kg": 0.47,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "source_mass_component_id": "J5_STATOR_EQ",
+          "geometry_source": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+          "geometry_members": [
+            "J5_Motor_Stator_STEP_Display"
+          ],
+          "geometry_method": "FREECAD_BREP_SOLID_ABS_VOLUME_WEIGHTED_CENTER",
+          "cad_com_world_mm": [
+            106.52971880350708,
+            538.3673337703788,
+            234.92348959933966
+          ],
+          "cad_com_link_mm": [
+            -1.4268829657789879,
+            32.10560701268899,
+            97.83063936010633
+          ],
+          "com_status": "CAD_COMPOUND_VOLUME_WEIGHTED_CENTER",
+          "cad_volume_mm3": 178824.65892231776,
+          "bbox_world_mm": {
+            "min_mm": [
+              32.89154008004374,
+              464.7973034510186,
+              176.46074349232097
+            ],
+            "max_mm": [
+              179.92575158225156,
+              611.8379472992702,
+              296.7918824238362
+            ]
+          },
+          "bbox_link_mm": {
+            "min_mm": [
+              -61.416683445922764,
+              -54.83757250346929,
+              9.89891068202029
+            ],
+            "max_mm": [
+              61.97061915963015,
+              118.8316682524292,
+              185.6764781555566
+            ]
+          },
+          "reconstructed_world_com_m": [
+            0.10652971880350653,
+            0.5383673337703787,
+            0.2349234895993519
+          ],
+          "round_trip_error_m": 1.2234423514382536e-14,
+          "component_com_inside_bbox": true,
+          "collision_proxy_used": false,
+          "geometry_atoms": [
+            {
+              "member": "J5_Motor_Stator_STEP_Display",
+              "source_object": "J5_Motor_Stator_STEP_Display",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 24,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 178824.65892231776,
+              "abs_volume_mm3": 178824.65892231776,
+              "center_world_mm": [
+                106.52971880350708,
+                538.3673337703788,
+                234.92348959933966
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  32.89154008004374,
+                  464.7973034510186,
+                  176.46074349232097
+                ],
+                "max_mm": [
+                  179.92575158225156,
+                  611.8379472992702,
+                  296.7918824238362
+                ]
+              }
+            }
+          ],
+          "positive_volume_component_count": null,
+          "all_positive_volume_components_closed_manifold": null,
+          "excluded_zero_volume_component_count": null,
+          "excluded_zero_volume_facets": null,
+          "excluded_zero_volume_components": [],
+          "cable_geometry_available": null,
+          "notes": "Includes the frozen complete-motor wiring boundary; no extra motor wire mass.",
+          "independent_audit_reference_world_com_mm": [
+            106.529718804,
+            538.36733377,
+            234.923489599
+          ],
+          "independent_audit_reference_error_mm": 7.084031306144954e-10,
+          "independent_audit_reference_pass": true,
+          "blocking": false
+        },
+        {
+          "component_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING",
+          "name": "Compound-B remainder: J5 interface fasteners and local unweighed assembly remainder",
+          "owner_link": "link4",
+          "mass_kg": 0.046,
+          "mass_status": "DERIVED_FROM_MEASURED_TOTAL",
+          "source_mass_component_id": "RESIDUAL_B_LINK4_J5_INTERFACE_HARDWARE_WIRING",
+          "geometry_source": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+          "geometry_members": [
+            "J4_Output_M4_Screw_01",
+            "J4_Output_M4_Screw_02",
+            "J4_Output_M4_Screw_03",
+            "J4_Output_M4_Screw_04",
+            "J4_Output_M4_Screw_05",
+            "J4_Output_M4_Screw_06",
+            "Wrist_Prelink_J5_M35_Screw_01",
+            "Wrist_Prelink_J5_M35_Screw_02",
+            "Wrist_Prelink_J5_M35_Screw_03",
+            "Wrist_Prelink_J5_M35_Screw_04",
+            "Wrist_Prelink_J5_M35_Screw_05",
+            "Wrist_Prelink_J5_M35_Screw_06"
+          ],
+          "geometry_method": "CAD_MEMBER_ABS_VOLUME_WEIGHTED_GEOMETRIC_CENTROID",
+          "cad_com_world_mm": [
+            75.57501363204,
+            481.1644172425118,
+            226.49623001230717
+          ],
+          "cad_com_link_mm": [
+            -8.75027560760663,
+            13.324318338753905,
+            35.42056604133953
+          ],
+          "com_status": "ENGINEERING_ESTIMATE_GEOMETRIC_CENTROID",
+          "cad_volume_mm3": 4669.675886666447,
+          "bbox_world_mm": {
+            "min_mm": [
+              37.224254504743136,
+              428.0418160301036,
+              204.76841728954926
+            ],
+            "max_mm": [
+              152.0900246013847,
+              578.357265353286,
+              255.8670483194583
+            ]
+          },
+          "bbox_link_mm": {
+            "min_mm": [
+              -32.43342675416421,
+              -43.84116751299215,
+              -24.720646365347744
+            ],
+            "max_mm": [
+              21.674136099306146,
+              98.98121139491484,
+              146.55106591391538
+            ]
+          },
+          "reconstructed_world_com_m": [
+            0.07557501363203671,
+            0.48116441724251235,
+            0.22649623001231223
+          ],
+          "round_trip_error_m": 6.05750913605264e-15,
+          "component_com_inside_bbox": true,
+          "collision_proxy_used": false,
+          "geometry_atoms": [
+            {
+              "member": "J4_Output_M4_Screw_01",
+              "source_object": "J4_Output_M4_Screw_01",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 496.6920817178522,
+              "abs_volume_mm3": 496.6920817178522,
+              "center_world_mm": [
+                61.06178739916965,
+                463.1801945781613,
+                243.0866230715232
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  43.28631263140799,
+                  457.48040128187955,
+                  239.08662307152002
+                ],
+                "max_mm": [
+                  72.79964031032215,
+                  468.71639300667545,
+                  247.08662307152034
+                ]
+              }
+            },
+            {
+              "member": "J4_Output_M4_Screw_02",
+              "source_object": "J4_Output_M4_Screw_02",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 496.69208171785147,
+              "abs_volume_mm3": 496.69208171785147,
+              "center_world_mm": [
+                61.025480732850106,
+                463.0038820339534,
+                225.83756235528452
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  43.25000596508901,
+                  457.30408873767175,
+                  221.8375623552814
+                ],
+                "max_mm": [
+                  72.76333364400317,
+                  468.54008046246787,
+                  229.8375623552817
+                ]
+              }
+            },
+            {
+              "member": "J4_Output_M4_Screw_03",
+              "source_object": "J4_Output_M4_Screw_03",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 496.692081717851,
+              "abs_volume_mm3": 496.692081717851,
+              "center_world_mm": [
+                57.99445167443896,
+                448.28458943196296,
+                217.36892687913584
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  40.218976906677405,
+                  442.58479613568085,
+                  213.36892687913272
+                ],
+                "max_mm": [
+                  69.73230458559156,
+                  453.820787860477,
+                  221.36892687913306
+                ]
+              }
+            },
+            {
+              "member": "J4_Output_M4_Screw_04",
+              "source_object": "J4_Output_M4_Screw_04",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 496.692081717853,
+              "abs_volume_mm3": 496.692081717853,
+              "center_world_mm": [
+                54.99972927250469,
+                433.7416093263855,
+                226.1493520504032
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  37.224254504743136,
+                  428.0418160301036,
+                  222.1493520504
+                ],
+                "max_mm": [
+                  66.73758218365684,
+                  439.27780775489975,
+                  230.14935205040032
+                ]
+              }
+            },
+            {
+              "member": "J4_Output_M4_Screw_05",
+              "source_object": "J4_Output_M4_Screw_05",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 496.6920817178525,
+              "abs_volume_mm3": 496.6920817178525,
+              "center_world_mm": [
+                55.03603592188121,
+                433.9179217883186,
+                243.39841277448977
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  37.2605611541205,
+                  428.2181284920369,
+                  239.39841277448662
+                ],
+                "max_mm": [
+                  66.77388883303466,
+                  439.4541202168328,
+                  247.39841277448693
+                ]
+              }
+            },
+            {
+              "member": "J4_Output_M4_Screw_06",
+              "source_object": "J4_Output_M4_Screw_06",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 496.69208171785203,
+              "abs_volume_mm3": 496.69208171785203,
+              "center_world_mm": [
+                58.067064990135016,
+                448.6372144381034,
+                251.86704831946113
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  40.291590222373806,
+                  442.9374211418215,
+                  247.86704831945798
+                ],
+                "max_mm": [
+                  69.80491790128791,
+                  454.17341286661787,
+                  255.8670483194583
+                ]
+              }
+            },
+            {
+              "member": "Wrist_Prelink_J5_M35_Screw_01",
+              "source_object": "Wrist_Prelink_J5_M35_Screw_01",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 281.5872327265573,
+              "abs_volume_mm3": 281.5872327265573,
+              "center_world_mm": [
+                64.96912696356884,
+                547.4067350202974,
+                212.17025176370944
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  60.98277647150757,
+                  543.4734974689829,
+                  205.29956005228408
+                ],
+                "max_mm": [
+                  68.98558231866618,
+                  551.4861678997622,
+                  224.38422492916754
+                ]
+              }
+            },
+            {
+              "member": "Wrist_Prelink_J5_M35_Screw_02",
+              "source_object": "Wrist_Prelink_J5_M35_Screw_02",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 281.58723272655436,
+              "abs_volume_mm3": 281.58723272655436,
+              "center_world_mm": [
+                71.09004815097192,
+                515.5233294997303,
+                211.63910950281627
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  67.10369765891141,
+                  511.5900919484155,
+                  204.76841779139087
+                ],
+                "max_mm": [
+                  75.10650350607001,
+                  519.6027623791947,
+                  223.85308266827434
+                ]
+              }
+            },
+            {
+              "member": "Wrist_Prelink_J5_M35_Screw_03",
+              "source_object": "Wrist_Prelink_J5_M35_Screw_03",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 281.58723272655914,
+              "abs_volume_mm3": 281.58723272655914,
+              "center_world_mm": [
+                129.85376283580786,
+                503.42254738548496,
+                211.63910900097468
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  125.86741234374654,
+                  499.48930983417023,
+                  204.76841728954926
+                ],
+                "max_mm": [
+                  133.87021819090512,
+                  507.5019802649494,
+                  223.85308216643273
+                ]
+              }
+            },
+            {
+              "member": "Wrist_Prelink_J5_M35_Screw_04",
+              "source_object": "Wrist_Prelink_J5_M35_Screw_04",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 281.5872327265522,
+              "abs_volume_mm3": 281.5872327265522,
+              "center_world_mm": [
+                148.07356924628627,
+                530.2936448390093,
+                212.1702510539983
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  144.08721875422611,
+                  526.3604072876947,
+                  205.29955934257288
+                ],
+                "max_mm": [
+                  152.0900246013847,
+                  534.373077718474,
+                  224.38422421945634
+                ]
+              }
+            },
+            {
+              "member": "Wrist_Prelink_J5_M35_Screw_05",
+              "source_object": "Wrist_Prelink_J5_M35_Screw_05",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 281.5872327265553,
+              "abs_volume_mm3": 281.5872327265553,
+              "center_world_mm": [
+                141.9526480588832,
+                562.1770503595764,
+                212.70139331489148
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  137.96629756682182,
+                  558.243812808262,
+                  205.83070160346605
+                ],
+                "max_mm": [
+                  145.9691034139804,
+                  566.2564832390412,
+                  224.91536648034955
+                ]
+              }
+            },
+            {
+              "member": "Wrist_Prelink_J5_M35_Screw_06",
+              "source_object": "Wrist_Prelink_J5_M35_Screw_06",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 281.58723272655635,
+              "abs_volume_mm3": 281.58723272655635,
+              "center_world_mm": [
+                83.18893337404721,
+                574.2778324738217,
+                212.7013938167331
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  79.2025828819867,
+                  570.3445949225068,
+                  205.83070210530767
+                ],
+                "max_mm": [
+                  87.2053887291453,
+                  578.357265353286,
+                  224.91536698219113
+                ]
+              }
+            }
+          ],
+          "positive_volume_component_count": null,
+          "all_positive_volume_components_closed_manifold": null,
+          "excluded_zero_volume_component_count": null,
+          "excluded_zero_volume_facets": null,
+          "excluded_zero_volume_components": [],
+          "cable_geometry_available": false,
+          "notes": "Nominal closure remainder 1.441-0.855-0.540. All named CAD members are link4.",
+          "independent_audit_reference_world_com_mm": [
+            75.575013632,
+            481.164417243,
+            226.496230012
+          ],
+          "independent_audit_reference_error_mm": 5.781956466096522e-10,
+          "independent_audit_reference_pass": true,
+          "blocking": false
+        }
+      ],
+      "validation": {
+        "component_mass_sum_error_kg": 0.0,
+        "component_mass_sum_pass": true,
+        "all_components_resolved": true,
+        "com_finite": true,
+        "com_inside_combined_component_bbox": true,
+        "link_world_vs_local_round_trip_error_m": 1.0571166265184658e-14,
+        "pass": true
+      }
+    },
+    "link5": {
+      "mass_kg": 0.504,
+      "component_mass_sum_kg": 0.504,
+      "frame_world_at_zero": {
+        "origin_mm": [
+          106.4017711248739,
+          538.269499832604,
+          245.64990061866112
+        ],
+        "rotation_matrix_row_major": [
+          [
+            -0.0035710719250043816,
+            0.5055278533035291,
+            0.8628028957876956
+          ],
+          [
+            -0.017341850427658345,
+            -0.8627099527291532,
+            0.505401620185185
+          ],
+          [
+            0.9998432415479195,
+            -0.013157773230605666,
+            0.01184758771045874
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          -0.8377464785157944,
+          -1.5530896869223991,
+          -1.773879766755972
+        ]
+      },
+      "com_xyz_m_in_link_frame": [
+        -0.007314793455186482,
+        -0.0001338266798615075,
+        0.06388991222545329
+      ],
+      "com_xyz_mm_in_link_frame": [
+        -7.314793455186482,
+        -0.1338266798615075,
+        63.88991222545328
+      ],
+      "com_xyz_m_world_at_zero": [
+        0.16148464094397555,
+        0.5708018706475029,
+        0.2390949560191945
+      ],
+      "combined_mass_component_bbox_link_mm": {
+        "min_mm": [
+          -46.670612828463476,
+          -66.65374283889679,
+          -61.90710484968528
+        ],
+        "max_mm": [
+          39.431712885345036,
+          61.93870174550498,
+          128.48423970684968
+        ]
+      },
+      "components": [
+        {
+          "component_id": "J5_OUTPUT_EQ",
+          "name": "J5 GO-M8010 output + neutral equivalent",
+          "owner_link": "link5",
+          "mass_kg": 0.07,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "source_mass_component_id": "J5_OUTPUT_EQ",
+          "geometry_source": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+          "geometry_members": [
+            "J5_Output_Rotor_STEP_Display",
+            "J5_B6808_Bearing_Neutral_STEP_Display"
+          ],
+          "geometry_method": "GO_OUTPUT_PLUS_NEUTRAL_BREP_SOLID_ABS_VOLUME_WEIGHTED_CENTER",
+          "cad_com_world_mm": [
+            106.38183043726168,
+            538.1666309285903,
+            251.47944896733915
+          ],
+          "cad_com_link_mm": [
+            5.830489664479323,
+            0.0019615791081910305,
+            -0.0001289083976910993
+          ],
+          "com_status": "CAD_COMPOUND_VOLUME_WEIGHTED_CENTER",
+          "cad_volume_mm3": 14893.024160595683,
+          "bbox_world_mm": {
+            "min_mm": [
+              61.342748454916375,
+              493.1259130782611,
+              227.55273794664492
+            ],
+            "max_mm": [
+              151.4136565024798,
+              583.1841783233463,
+              284.1438654182559
+            ]
+          },
+          "bbox_link_mm": {
+            "min_mm": [
+              -19.033970105364983,
+              -62.03342601947207,
+              -61.90710484968528
+            ],
+            "max_mm": [
+              39.431712885345036,
+              61.93870174550498,
+              61.992396952266546
+            ]
+          },
+          "reconstructed_world_com_m": [
+            0.10638183043726089,
+            0.5381666309285899,
+            0.25147944896733915
+          ],
+          "round_trip_error_m": 9.165725883006587e-16,
+          "component_com_inside_bbox": true,
+          "collision_proxy_used": false,
+          "geometry_atoms": [
+            {
+              "member": "J5_Output_Rotor_STEP_Display",
+              "source_object": "J5_Output_Rotor_STEP_Display",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 9,
+              "negative_oriented_solid_count": 1,
+              "signed_volume_sum_mm3": -6996.471411023293,
+              "abs_volume_mm3": 9165.183829987172,
+              "center_world_mm": [
+                106.38097355103463,
+                538.1586994307576,
+                251.87339866905813
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  61.342748454916375,
+                  493.1259130782611,
+                  227.55273794664492
+                ],
+                "max_mm": [
+                  151.4136565024798,
+                  583.1841783233463,
+                  284.1438654182559
+                ]
+              }
+            },
+            {
+              "member": "J5_B6808_Bearing_Neutral_STEP_Display",
+              "source_object": "J5_B6808_Bearing_Neutral_STEP_Display",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 5727.840330608511,
+              "abs_volume_mm3": 5727.840330608511,
+              "center_world_mm": [
+                106.38320155086453,
+                538.1793222103802,
+                250.84908547471025
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  75.73763904201506,
+                  507.4912328478961,
+                  246.74577851028852
+                ],
+                "max_mm": [
+                  137.02876405971386,
+                  568.8674115728645,
+                  254.952392439132
+                ]
+              }
+            }
+          ],
+          "positive_volume_component_count": null,
+          "all_positive_volume_components_closed_manifold": null,
+          "excluded_zero_volume_component_count": null,
+          "excluded_zero_volume_facets": null,
+          "excluded_zero_volume_components": [],
+          "cable_geometry_available": null,
+          "notes": "B6808 neutral is included; no separate mass.",
+          "independent_audit_reference_world_com_mm": [
+            106.381830437,
+            538.166630929,
+            251.479448967
+          ],
+          "independent_audit_reference_error_mm": 5.927724780911945e-10,
+          "independent_audit_reference_pass": true,
+          "blocking": false
+        },
+        {
+          "component_id": "J6_DM_STATOR_EQ",
+          "name": "DM-G6220 stator-side equivalent",
+          "owner_link": "link5",
+          "mass_kg": 0.375,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "source_mass_component_id": "J6_DM_STATOR_EQ",
+          "geometry_source": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+          "geometry_members": [
+            "J6_DM_G6220_Stator_STEP_Display"
+          ],
+          "geometry_method": "FREECAD_BREP_SHAPE_CENTER_OF_GRAVITY",
+          "cad_com_world_mm": [
+            176.0220201871249,
+            579.4043482794352,
+            235.5172400585977
+          ],
+          "cad_com_link_mm": [
+            -11.09304548584592,
+            -0.15914485431787734,
+            80.73812396274566
+          ],
+          "com_status": "CAD_BREP_CENTER_OF_MASS",
+          "cad_volume_mm3": 118757.6225646947,
+          "bbox_world_mm": {
+            "min_mm": [
+              139.32043630258295,
+              538.652145311202,
+              201.34601510480985
+            ],
+            "max_mm": [
+              208.48904314738246,
+              617.6454183951682,
+              269.81751554191425
+            ]
+          },
+          "bbox_link_mm": {
+            "min_mm": [
+              -46.03802680362681,
+              -52.155084806722805,
+              28.07081511609347
+            ],
+            "max_mm": [
+              24.039635743665876,
+              51.860787891224774,
+              128.48423970684968
+            ]
+          },
+          "reconstructed_world_com_m": [
+            0.17602202018712648,
+            0.5794043482794363,
+            0.23551724005858488
+          ],
+          "round_trip_error_m": 1.2994659181158156e-14,
+          "component_com_inside_bbox": true,
+          "collision_proxy_used": false,
+          "geometry_atoms": [
+            {
+              "member": "J6_DM_G6220_Stator_STEP_Display",
+              "source_object": "J6_DM_G6220_Stator_STEP_Display",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 118757.6225646947,
+              "abs_volume_mm3": 118757.6225646947,
+              "center_world_mm": [
+                176.0220201871249,
+                579.4043482794352,
+                235.5172400585977
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  139.32043630258295,
+                  538.652145311202,
+                  201.34601510480985
+                ],
+                "max_mm": [
+                  208.48904314738246,
+                  617.6454183951682,
+                  269.81751554191425
+                ]
+              }
+            }
+          ],
+          "positive_volume_component_count": null,
+          "all_positive_volume_components_closed_manifold": null,
+          "excluded_zero_volume_component_count": null,
+          "excluded_zero_volume_facets": null,
+          "excluded_zero_volume_components": [],
+          "cable_geometry_available": null,
+          "notes": "Engineering allocation from the measured 0.500 kg complete motor.",
+          "independent_audit_reference_world_com_mm": [
+            176.022020187,
+            579.404348279,
+            235.517240059
+          ],
+          "independent_audit_reference_error_mm": 6.056560887642573e-10,
+          "independent_audit_reference_pass": true,
+          "blocking": false
+        },
+        {
+          "component_id": "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING",
+          "name": "Compound-A remainder: J5-to-DM adapter, fasteners and local unweighed assembly remainder",
+          "owner_link": "link5",
+          "mass_kg": 0.059,
+          "mass_status": "DERIVED_FROM_MEASURED_TOTAL",
+          "source_mass_component_id": "RESIDUAL_A_LINK5_ADAPTER_HARDWARE_WIRING",
+          "geometry_source": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+          "geometry_members": [
+            "J5_to_Damiao_J6_Adapter_STL_Display",
+            "Adapter_DM_G6220_M4x12_Screw_01",
+            "Adapter_DM_G6220_M4x12_Screw_02",
+            "Adapter_DM_G6220_M4x12_Screw_03"
+          ],
+          "geometry_method": "CAD_MEMBER_ABS_VOLUME_WEIGHTED_GEOMETRIC_CENTROID",
+          "cad_com_world_mm": [
+            134.4622599149748,
+            554.8448819754553,
+            247.14120989807043
+          ],
+          "cad_com_link_mm": [
+            1.1034216824522571,
+            -0.13401079353467094,
+            32.60556439299411
+          ],
+          "com_status": "ENGINEERING_ESTIMATE_GEOMETRIC_CENTROID",
+          "cad_volume_mm3": 57137.4453748159,
+          "bbox_world_mm": {
+            "min_mm": [
+              77.31423995174504,
+              509.05772124509144,
+              200.25175351611603
+            ],
+            "max_mm": [
+              174.12644554803143,
+              598.1092839462892,
+              270.33556112615497
+            ]
+          },
+          "bbox_link_mm": {
+            "min_mm": [
+              -46.670612828463476,
+              -66.65374283889679,
+              -40.39834488379989
+            ],
+            "max_mm": [
+              25.292250782494676,
+              60.03533992585163,
+              88.96863457922056
+            ]
+          },
+          "reconstructed_world_com_m": [
+            0.13446225991497468,
+            0.5548448819754553,
+            0.24714120989806523
+          ],
+          "round_trip_error_m": 5.202415156495714e-15,
+          "component_com_inside_bbox": true,
+          "collision_proxy_used": false,
+          "geometry_atoms": [
+            {
+              "member": "J5_to_Damiao_J6_Adapter_STL_Display",
+              "source_object": "J5_to_Damiao_J6_Adapter_STL_Display",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 56137.45758362235,
+              "abs_volume_mm3": 56137.45758362235,
+              "center_world_mm": [
+                134.16685045702798,
+                554.668281916686,
+                247.35271190034715
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  77.31423995174504,
+                  509.05772124509144,
+                  200.25175351611603
+                ],
+                "max_mm": [
+                  174.12644554803143,
+                  598.1092839462892,
+                  270.33556112615497
+                ]
+              }
+            },
+            {
+              "member": "Adapter_DM_G6220_M4x12_Screw_01",
+              "source_object": "Adapter_DM_G6220_M4x12_Screw_01",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 333.3292637311847,
+              "abs_volume_mm3": 333.3292637311847,
+              "center_world_mm": [
+                137.3216483454143,
+                587.8765165853566,
+                248.58017375649536
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  130.58560472947067,
+                  581.9471200316366,
+                  244.5501671398633
+                ],
+                "max_mm": [
+                  147.1709236264711,
+                  594.7794092448771,
+                  252.55908372898963
+                ]
+              }
+            },
+            {
+              "member": "Adapter_DM_G6220_M4x12_Screw_02",
+              "source_object": "Adapter_DM_G6220_M4x12_Screw_02",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 333.3292637311844,
+              "abs_volume_mm3": 333.3292637311844,
+              "center_world_mm": [
+                152.31870113229775,
+                563.2879483265322,
+                205.33100360620728
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  145.58265751635412,
+                  557.3585517728121,
+                  201.30099698957525
+                ],
+                "max_mm": [
+                  162.16797641335455,
+                  570.1908409860528,
+                  209.30991357870158
+                ]
+              }
+            },
+            {
+              "member": "Adapter_DM_G6220_M4x12_Screw_03",
+              "source_object": "Adapter_DM_G6220_M4x12_Screw_03",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 333.3292637311846,
+              "abs_volume_mm3": 333.3292637311846,
+              "center_world_mm": [
+                163.49764541603332,
+                543.1121790540468,
+                251.89246340897301
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  156.76160180008966,
+                  537.1827825003267,
+                  247.862456792341
+                ],
+                "max_mm": [
+                  173.34692069709013,
+                  550.0150717135673,
+                  255.87137338146732
+                ]
+              }
+            }
+          ],
+          "positive_volume_component_count": null,
+          "all_positive_volume_components_closed_manifold": null,
+          "excluded_zero_volume_component_count": null,
+          "excluded_zero_volume_facets": null,
+          "excluded_zero_volume_components": [],
+          "cable_geometry_available": false,
+          "notes": "Nominal closure remainder 0.855-0.500-0.296. CAD named members are all link5; unmodeled local wiring/small hardware remains a lumped boundary.",
+          "independent_audit_reference_world_com_mm": [
+            134.462259915,
+            554.844881975,
+            247.141209898
+          ],
+          "independent_audit_reference_error_mm": 4.614198246158686e-10,
+          "independent_audit_reference_pass": true,
+          "blocking": false
+        }
+      ],
+      "validation": {
+        "component_mass_sum_error_kg": 0.0,
+        "component_mass_sum_pass": true,
+        "all_components_resolved": true,
+        "com_finite": true,
+        "com_inside_combined_component_bbox": true,
+        "link_world_vs_local_round_trip_error_m": 1.023189434383372e-14,
+        "pass": true
+      }
+    },
+    "link6": {
+      "mass_kg": 0.125,
+      "component_mass_sum_kg": 0.125,
+      "frame_world_at_zero": {
+        "origin_mm": [
+          192.2393012604722,
+          588.8885662821208,
+          235.8335265622101
+        ],
+        "rotation_matrix_row_major": [
+          [
+            0.0035710719250040546,
+            -0.5055278533035291,
+            0.8628028957876952
+          ],
+          [
+            0.017341850427658206,
+            0.8627099527291531,
+            0.5054016201851823
+          ],
+          [
+            -0.9998432415479197,
+            0.013157773230605602,
+            0.011847587710617558
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          0.8377464785091262,
+          1.5530896869223993,
+          1.3677128868338377
+        ]
+      },
+      "com_xyz_m_in_link_frame": [
+        -1.1047638498462576e-15,
+        1.360430323081585e-16,
+        -0.0005011957785718855
+      ],
+      "com_xyz_mm_in_link_frame": [
+        -1.1047638498462575e-12,
+        1.360430323081585e-13,
+        -0.5011957785718855
+      ],
+      "com_xyz_m_world_at_zero": [
+        0.19180686809136374,
+        0.5886352611236007,
+        0.23582758860126438
+      ],
+      "combined_mass_component_bbox_link_mm": {
+        "min_mm": [
+          -17.799570407238384,
+          -18.128216521583454,
+          -16.472845496400158
+        ],
+        "max_mm": [
+          17.800253280581455,
+          18.100874599783083,
+          15.368540489401939
+        ]
+      },
+      "components": [
+        {
+          "component_id": "J6_DM_OUTPUT_EQ",
+          "name": "DM-G6220 output/rotor-side equivalent",
+          "owner_link": "link6",
+          "mass_kg": 0.125,
+          "mass_status": "ENGINEERING_ESTIMATE_FROM_MEASURED_TOTAL",
+          "source_mass_component_id": "J6_DM_OUTPUT_EQ",
+          "geometry_source": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+          "geometry_members": [
+            "J6_DM_G6220_Output_Rotor_STEP_Display"
+          ],
+          "geometry_method": "FREECAD_BREP_SHAPE_CENTER_OF_GRAVITY",
+          "cad_com_world_mm": [
+            191.80686809136373,
+            588.6352611236007,
+            235.82758860126438
+          ],
+          "cad_com_link_mm": [
+            -1.1047638498462575e-12,
+            1.360430323081585e-13,
+            -0.5011957785718855
+          ],
+          "com_status": "CAD_BREP_CENTER_OF_MASS",
+          "cad_volume_mm3": 708.0013943395236,
+          "bbox_world_mm": {
+            "min_mm": [
+              182.52920115471585,
+              573.2822085742276,
+              218.32240606461284
+            ],
+            "max_mm": [
+              201.01042834998037,
+              603.9132301445219,
+              253.33052118427403
+            ]
+          },
+          "bbox_link_mm": {
+            "min_mm": [
+              -17.799570407238384,
+              -18.128216521583454,
+              -16.472845496400158
+            ],
+            "max_mm": [
+              17.800253280581455,
+              18.100874599783083,
+              15.368540489401939
+            ]
+          },
+          "reconstructed_world_com_m": [
+            0.19180686809136374,
+            0.5886352611236007,
+            0.23582758860126438
+          ],
+          "round_trip_error_m": 0.0,
+          "component_com_inside_bbox": true,
+          "collision_proxy_used": false,
+          "geometry_atoms": [
+            {
+              "member": "J6_DM_G6220_Output_Rotor_STEP_Display",
+              "source_object": "J6_DM_G6220_Output_Rotor_STEP_Display",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 708.0013943395236,
+              "abs_volume_mm3": 708.0013943395236,
+              "center_world_mm": [
+                191.80686809136373,
+                588.6352611236007,
+                235.82758860126438
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  182.52920115471585,
+                  573.2822085742276,
+                  218.32240606461284
+                ],
+                "max_mm": [
+                  201.01042834998037,
+                  603.9132301445219,
+                  253.33052118427403
+                ]
+              }
+            }
+          ],
+          "positive_volume_component_count": null,
+          "all_positive_volume_components_closed_manifold": null,
+          "excluded_zero_volume_component_count": null,
+          "excluded_zero_volume_facets": null,
+          "excluded_zero_volume_components": [],
+          "cable_geometry_available": null,
+          "notes": "Engineering allocation from the measured 0.500 kg complete motor.",
+          "independent_audit_reference_world_com_mm": [
+            191.806868091,
+            588.635261124,
+            235.827588601
+          ],
+          "independent_audit_reference_error_mm": 6.013302423141286e-10,
+          "independent_audit_reference_pass": true,
+          "blocking": false
+        }
+      ],
+      "validation": {
+        "component_mass_sum_error_kg": 0.0,
+        "component_mass_sum_pass": true,
+        "all_components_resolved": true,
+        "com_finite": true,
+        "com_inside_combined_component_bbox": true,
+        "link_world_vs_local_round_trip_error_m": 0.0,
+        "pass": true
+      }
+    },
+    "gripper": {
+      "mass_kg": 0.296,
+      "component_mass_sum_kg": 0.296,
+      "frame_world_at_zero": {
+        "origin_mm": [
+          192.2393012604722,
+          588.8885662821208,
+          235.8335265622101
+        ],
+        "rotation_matrix_row_major": [
+          [
+            0.0035710719250040546,
+            -0.5055278533035291,
+            0.8628028957876952
+          ],
+          [
+            0.017341850427658206,
+            0.8627099527291531,
+            0.5054016201851823
+          ],
+          [
+            -0.9998432415479197,
+            0.013157773230605602,
+            0.011847587710617558
+          ]
+        ],
+        "rpy_rad_urdf_fixed_axis": [
+          0.8377464785091262,
+          1.5530896869223993,
+          1.3677128868338377
+        ]
+      },
+      "com_xyz_m_in_link_frame": [
+        -0.0034049824167213328,
+        -0.0007997027279567292,
+        0.03493651236222264
+      ],
+      "com_xyz_mm_in_link_frame": [
+        -3.4049824167213325,
+        -0.7997027279567291,
+        34.936512362222636
+      ],
+      "com_xyz_m_world_at_zero": [
+        0.22277473786155194,
+        0.6057965760351952,
+        0.23964136630652658
+      ],
+      "combined_mass_component_bbox_link_mm": {
+        "min_mm": [
+          -66.84514917720979,
+          -97.45163596886712,
+          -38.0736181843569
+        ],
+        "max_mm": [
+          44.73364563263811,
+          95.1185420140479,
+          157.00501587600002
+        ]
+      },
+      "components": [
+        {
+          "component_id": "GRIPPER_CONNECTOR_CAMERA_MEASURED_ROLLUP",
+          "name": "Complete gripper + connector + Gemini Pro accounting roll-up",
+          "owner_link": "gripper",
+          "mass_kg": 0.296,
+          "mass_status": "MEASURED",
+          "source_mass_component_id": "GRIPPER_CONNECTOR_CAMERA_MEASURED_ROLLUP",
+          "geometry_source": "机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+          "geometry_members": [
+            "DM_G6220_Connector_M4x14_Screw_01",
+            "DM_G6220_Connector_M4x14_Screw_02",
+            "DM_G6220_Connector_M4x14_Screw_03",
+            "DM_G6220_Connector_M4x14_Screw_04",
+            "DM_G6220_Connector_M4x14_Screw_05",
+            "DM_G6220_Connector_M4x14_Screw_06",
+            "Gemini_Pro_Camera_STEP_Display",
+            "Gripper_Clevis_3DPrinted_M3x25_Screw_01",
+            "Gripper_Clevis_3DPrinted_M3x25_Screw_02",
+            "Gripper_Fixed_Frame_STEP_Display",
+            "Gripper_Hardware_01",
+            "Gripper_Hardware_02",
+            "Gripper_Hardware_03",
+            "Gripper_Hardware_04",
+            "Gripper_Hardware_05",
+            "Gripper_Hardware_06",
+            "Gripper_Hardware_07",
+            "Gripper_Hardware_08",
+            "Gripper_Hardware_09",
+            "Gripper_Hardware_10",
+            "Gripper_Hardware_11",
+            "Gripper_Hardware_12",
+            "Gripper_Hardware_13",
+            "Gripper_Hardware_14",
+            "Gripper_Hardware_15",
+            "Gripper_Hardware_16",
+            "Gripper_Hardware_17",
+            "Gripper_Hardware_18",
+            "Gripper_Hardware_19",
+            "Gripper_Left_Drive_Link",
+            "Gripper_Left_Finger",
+            "Gripper_Left_Outer_Link",
+            "Gripper_Right_Drive_Link",
+            "Gripper_Right_Finger",
+            "Gripper_Right_Outer_Link",
+            "Gripper_Servo_STEP_Display",
+            "J6_Gripper_Connector_STEP_Display"
+          ],
+          "geometry_method": "37_MEMBER_CAD_ABS_VOLUME_WEIGHTED_GEOMETRIC_CENTROID",
+          "cad_com_world_mm": [
+            222.77473786155196,
+            605.7965760351952,
+            239.6413663065266
+          ],
+          "cad_com_link_mm": [
+            -3.404982416721361,
+            -0.7997027279567429,
+            34.93651236222266
+          ],
+          "com_status": "MEASURED_TOTAL_MASS_WITH_GEOMETRIC_COM_ESTIMATE",
+          "cad_volume_mm3": 119816.32545861734,
+          "bbox_world_mm": {
+            "min_mm": [
+              171.90461525026433,
+              549.2686431356431,
+              193.22410493949707
+            ],
+            "max_mm": [
+              316.28882380811524,
+              686.2203727501678,
+              301.92933740894085
+            ]
+          },
+          "bbox_link_mm": {
+            "min_mm": [
+              -66.84514917720979,
+              -97.45163596886712,
+              -38.0736181843569
+            ],
+            "max_mm": [
+              44.73364563263811,
+              95.1185420140479,
+              157.00501587600002
+            ]
+          },
+          "reconstructed_world_com_m": [
+            0.22277473786155197,
+            0.6057965760351952,
+            0.2396413663065266
+          ],
+          "round_trip_error_m": 0.0,
+          "component_com_inside_bbox": true,
+          "collision_proxy_used": false,
+          "geometry_atoms": [
+            {
+              "member": "DM_G6220_Connector_M4x14_Screw_01",
+              "source_object": "DM_G6220_Connector_M4x14_Screw_01",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 319.9774949534285,
+              "abs_volume_mm3": 319.9774949534285,
+              "center_world_mm": [
+                198.09445056737803,
+                592.5318209872622,
+                221.9154348161129
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  187.82700378197296,
+                  585.3839771843872,
+                  217.95447789230306
+                ],
+                "max_mm": [
+                  205.27512557476112,
+                  598.721668017813,
+                  225.96339448142925
+                ]
+              }
+            },
+            {
+              "member": "DM_G6220_Connector_M4x14_Screw_02",
+              "source_object": "DM_G6220_Connector_M4x14_Screw_02",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 319.97749495342856,
+              "abs_volume_mm3": 319.97749495342856,
+              "center_world_mm": [
+                204.1986525372846,
+                581.9506257650629,
+                228.75480791621783
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  193.93120575187956,
+                  574.8027819621879,
+                  224.79385099240795
+                ],
+                "max_mm": [
+                  211.3793275446677,
+                  588.1404727956136,
+                  232.80276758153417
+                ]
+              }
+            },
+            {
+              "member": "DM_G6220_Connector_M4x14_Screw_03",
+              "source_object": "DM_G6220_Connector_M4x14_Screw_03",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 319.9774949534286,
+              "abs_volume_mm3": 319.9774949534286,
+              "center_world_mm": [
+                204.14865753083507,
+                581.7078398614898,
+                242.7526131588331
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  193.88121074543002,
+                  574.5599960586147,
+                  238.79165623502328
+                ],
+                "max_mm": [
+                  211.32933253821815,
+                  587.8976868920405,
+                  246.80057282414947
+                ]
+              }
+            },
+            {
+              "member": "DM_G6220_Connector_M4x14_Screw_04",
+              "source_object": "DM_G6220_Connector_M4x14_Screw_04",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 319.97749495342845,
+              "abs_volume_mm3": 319.97749495342845,
+              "center_world_mm": [
+                197.99446055373141,
+                592.046249176486,
+                249.91104551064018
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  187.72701376832634,
+                  584.8984053736108,
+                  245.95008858683025
+                ],
+                "max_mm": [
+                  205.17513556111447,
+                  598.2360962070367,
+                  253.95900517595646
+                ]
+              }
+            },
+            {
+              "member": "DM_G6220_Connector_M4x14_Screw_05",
+              "source_object": "DM_G6220_Connector_M4x14_Screw_05",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 319.97749495342845,
+              "abs_volume_mm3": 319.97749495342845,
+              "center_world_mm": [
+                191.89025853253352,
+                602.6274444910889,
+                243.0716722040191
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  181.62281174712848,
+                  595.4796006882138,
+                  239.11071528020923
+                ],
+                "max_mm": [
+                  199.0709335399166,
+                  608.8172915216397,
+                  247.11963186933545
+                ]
+              }
+            },
+            {
+              "member": "DM_G6220_Connector_M4x14_Screw_06",
+              "source_object": "DM_G6220_Connector_M4x14_Screw_06",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 319.9774949534287,
+              "abs_volume_mm3": 319.9774949534287,
+              "center_world_mm": [
+                191.94025353898311,
+                602.8702303946621,
+                229.07386696140384
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  181.67280675357802,
+                  595.722386591787,
+                  225.11291003759393
+                ],
+                "max_mm": [
+                  199.12092854636617,
+                  609.0600774252127,
+                  233.12182662672015
+                ]
+              }
+            },
+            {
+              "member": "Gemini_Pro_Camera_STEP_Display",
+              "source_object": "Gemini_Pro_Camera_STEP_Display",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 2,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 22546.571495608812,
+              "abs_volume_mm3": 22546.571495608812,
+              "center_world_mm": [
+                209.54910259848543,
+                598.1634989383213,
+                279.29845752096446
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  174.83579903444354,
+                  549.2686431356431,
+                  258.54416257310595
+                ],
+                "max_mm": [
+                  242.56841561895718,
+                  646.1647609472224,
+                  301.92933740894085
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Clevis_3DPrinted_M3x25_Screw_01",
+              "source_object": "Gripper_Clevis_3DPrinted_M3x25_Screw_01",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 2,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 238.91812130550446,
+              "abs_volume_mm3": 238.91812130550446,
+              "center_world_mm": [
+                206.80229489082515,
+                591.6399189123614,
+                239.58693598670857
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  203.76246381532263,
+                  588.4468493712067,
+                  223.5220635478109
+                ],
+                "max_mm": [
+                  209.77028191577097,
+                  594.4840991549748,
+                  250.797475433798
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Clevis_3DPrinted_M3x25_Screw_02",
+              "source_object": "Gripper_Clevis_3DPrinted_M3x25_Screw_02",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 2,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 238.91812130550449,
+              "abs_volume_mm3": 238.91812130550449,
+              "center_world_mm": [
+                201.74701635778982,
+                600.2670184396529,
+                239.71851371901462
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  198.70718528228733,
+                  597.0739488984982,
+                  223.65364128011694
+                ],
+                "max_mm": [
+                  204.71500338273566,
+                  603.1111986822664,
+                  250.92905316610407
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Fixed_Frame_STEP_Display",
+              "source_object": "Gripper_Fixed_Frame_STEP_Display",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 7254.373570756203,
+              "abs_volume_mm3": 7254.373570756203,
+              "center_world_mm": [
+                218.17412609039258,
+                604.9222899147319,
+                235.18000141620234
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  191.4204262172264,
+                  568.1135032783483,
+                  224.15446541331585
+                ],
+                "max_mm": [
+                  244.90683369572318,
+                  636.0081916501418,
+                  241.02042068692478
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_01",
+              "source_object": "Gripper_Hardware_01",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 237.7075302455442,
+              "abs_volume_mm3": 237.7075302455442,
+              "center_world_mm": [
+                261.27316532310846,
+                556.8539587442328,
+                237.98401487981977
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  258.33201449488416,
+                  553.7544682742049,
+                  221.89207749572694
+                ],
+                "max_mm": [
+                  264.1412622993619,
+                  559.5986848743834,
+                  249.75854246932238
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_02",
+              "source_object": "Gripper_Hardware_02",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 237.7075302455447,
+              "abs_volume_mm3": 237.7075302455447,
+              "center_world_mm": [
+                198.0141272558328,
+                664.8098615311943,
+                239.6305255283498
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  195.07297642760844,
+                  661.7103710611664,
+                  223.53858814425698
+                ],
+                "max_mm": [
+                  200.88222423208623,
+                  667.5545876613448,
+                  251.40505311785245
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_03",
+              "source_object": "Gripper_Hardware_03",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 188.22744595150536,
+              "abs_volume_mm3": 188.22744595150536,
+              "center_world_mm": [
+                197.3662411235733,
+                629.8333818170796,
+                238.3194544366094
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  194.43686770825994,
+                  626.7910848557319,
+                  225.92893177610972
+                ],
+                "max_mm": [
+                  200.24611551273773,
+                  632.6353014559104,
+                  246.7964940588697
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_04",
+              "source_object": "Gripper_Hardware_04",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 188.22744595150502,
+              "abs_volume_mm3": 188.22744595150502,
+              "center_world_mm": [
+                230.43119157025737,
+                573.4062994111504,
+                237.4588468221809
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  227.501818154944,
+                  570.3640024498028,
+                  225.06832416168123
+                ],
+                "max_mm": [
+                  233.3110659594218,
+                  576.2082190499813,
+                  245.93588644444122
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_05",
+              "source_object": "Gripper_Hardware_05",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 145.81594512804298,
+              "abs_volume_mm3": 145.81594512804298,
+              "center_world_mm": [
+                214.55058497105816,
+                650.9923073842373,
+                245.46662763570166
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  211.63091684135716,
+                  647.9971412606305,
+                  236.3578390859532
+                ],
+                "max_mm": [
+                  217.44016464583495,
+                  653.841357860809,
+                  251.22634191942566
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_06",
+              "source_object": "Gripper_Hardware_06",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 145.81594512804327,
+              "abs_volume_mm3": 145.81594512804327,
+              "center_world_mm": [
+                257.3830427076687,
+                577.8957699594595,
+                244.35178144264015
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  254.46337457796773,
+                  574.9006038358527,
+                  235.24299289289172
+                ],
+                "max_mm": [
+                  260.2726223824455,
+                  580.7448204360312,
+                  250.11149572636418
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_07",
+              "source_object": "Gripper_Hardware_07",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 103.40444430458078,
+              "abs_volume_mm3": 103.40444430458078,
+              "center_world_mm": [
+                213.74537844256608,
+                626.6880284160915,
+                222.37803855234293
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  210.84692029056367,
+                  623.795862251201,
+                  219.10415643228689
+                ],
+                "max_mm": [
+                  216.65616809504147,
+                  629.6400788513795,
+                  227.9735998164718
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_08",
+              "source_object": "Gripper_Hardware_08",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 103.40444430458071,
+              "abs_volume_mm3": 103.40444430458071,
+              "center_world_mm": [
+                205.11734948468913,
+                621.6340122142395,
+                222.25956267523995
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  202.21889133268672,
+                  618.7418460493491,
+                  218.9856805551839
+                ],
+                "max_mm": [
+                  208.02813913716452,
+                  624.5860626495275,
+                  227.8551239393688
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_09",
+              "source_object": "Gripper_Hardware_09",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 103.40444430458096,
+              "abs_volume_mm3": 103.40444430458096,
+              "center_world_mm": [
+                229.3826864432585,
+                580.2239344832401,
+                221.6279895601709
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  226.4842282912561,
+                  577.3317683183496,
+                  218.35410744011486
+                ],
+                "max_mm": [
+                  232.2934760957339,
+                  583.1759849185281,
+                  227.2235508242998
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_10",
+              "source_object": "Gripper_Hardware_10",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 103.40444430458098,
+              "abs_volume_mm3": 103.40444430458098,
+              "center_world_mm": [
+                237.66469569502644,
+                585.9347333865778,
+                221.75662119538947
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  234.76623754302403,
+                  583.0425672216874,
+                  218.48273907533343
+                ],
+                "max_mm": [
+                  240.57548534750183,
+                  588.8867838218658,
+                  227.35218245951836
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_11",
+              "source_object": "Gripper_Hardware_11",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 86.39379797371957,
+              "abs_volume_mm3": 86.39379797371957,
+              "center_world_mm": [
+                197.9929559391238,
+                664.7070493180939,
+                245.55815688734432
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  193.9894103723898,
+                  660.6903089924479,
+                  244.4874907872332
+                ],
+                "max_mm": [
+                  201.99650150585785,
+                  668.7237896437399,
+                  246.62882298745544
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_12",
+              "source_object": "Gripper_Hardware_12",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 86.39379797371923,
+              "abs_volume_mm3": 86.39379797371923,
+              "center_world_mm": [
+                261.2519940063994,
+                556.7511465311323,
+                243.91164623881426
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  257.24844843966537,
+                  552.7344062054863,
+                  242.84098013870315
+                ],
+                "max_mm": [
+                  265.25553957313343,
+                  560.7678868567783,
+                  244.98231233892537
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_13",
+              "source_object": "Gripper_Hardware_13",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 67.57115717297485,
+              "abs_volume_mm3": 67.57115717297485,
+              "center_world_mm": [
+                198.06186435717441,
+                665.0416825890604,
+                226.26489774110334
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  195.05925201829973,
+                  661.9831993451206,
+                  224.12064413017154
+                ],
+                "max_mm": [
+                  201.0598608427403,
+                  668.0777503120127,
+                  228.21068161081635
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_14",
+              "source_object": "Gripper_Hardware_14",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 67.57115717297475,
+              "abs_volume_mm3": 67.57115717297475,
+              "center_world_mm": [
+                214.5719524071317,
+                651.0960719927962,
+                239.4840859794183
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  211.79272996407255,
+                  647.9496277728667,
+                  237.3406561465366
+                ],
+                "max_mm": [
+                  217.34655899688207,
+                  654.220100691738,
+                  241.43353568365816
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_15",
+              "source_object": "Gripper_Hardware_15",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 67.57115717297475,
+              "abs_volume_mm3": 67.57115717297475,
+              "center_world_mm": [
+                197.4029007775073,
+                630.0114085408901,
+                228.05533542802684
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  194.4828634032808,
+                  626.9008255280706,
+                  225.9109153481803
+                ],
+                "max_mm": [
+                  200.31832229842504,
+                  633.099576032722,
+                  230.00293524690576
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_16",
+              "source_object": "Gripper_Hardware_16",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 67.57115717297474,
+              "abs_volume_mm3": 67.57115717297474,
+              "center_world_mm": [
+                230.4678512241916,
+                573.584326134961,
+                227.1947278135984
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  227.3824539210011,
+                  570.6398240363516,
+                  225.0524563066853
+                ],
+                "max_mm": [
+                  233.5486326740733,
+                  576.5064127125828,
+                  229.1451917289332
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_17",
+              "source_object": "Gripper_Hardware_17",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 67.57115717297471,
+              "abs_volume_mm3": 67.57115717297471,
+              "center_world_mm": [
+                261.32090242445014,
+                557.085779802099,
+                224.61838709257296
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  258.23550512125956,
+                  554.1412777034895,
+                  222.47611558565984
+                ],
+                "max_mm": [
+                  264.4016838743318,
+                  560.0078663797208,
+                  226.56885100790777
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_18",
+              "source_object": "Gripper_Hardware_18",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 67.57115717297474,
+              "abs_volume_mm3": 67.57115717297474,
+              "center_world_mm": [
+                252.89814752303553,
+                575.830826580278,
+                236.5864230542994
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  249.81275021984501,
+                  572.8863244816686,
+                  234.44415154738627
+                ],
+                "max_mm": [
+                  255.97892897291723,
+                  578.7529131578998,
+                  238.5368869696342
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Hardware_19",
+              "source_object": "Gripper_Hardware_19",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 67.57115717297472,
+              "abs_volume_mm3": 67.57115717297472,
+              "center_world_mm": [
+                257.40441014374204,
+                577.9995345680184,
+                238.36923978635667
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  254.3190128405515,
+                  575.055032469409,
+                  236.22696827944355
+                ],
+                "max_mm": [
+                  260.4851915936237,
+                  580.9216211456402,
+                  240.31970370169148
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Left_Drive_Link",
+              "source_object": "Gripper_Left_Drive_Link",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 2204.797311643811,
+              "abs_volume_mm3": 2204.797311643811,
+              "center_world_mm": [
+                214.2974095875123,
+                625.0426933757778,
+                242.52808019237796
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  201.9041509333196,
+                  602.3647190904,
+                  240.52743457317
+                ],
+                "max_mm": [
+                  227.57444599482758,
+                  655.0683984736636,
+                  246.45011178902865
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Left_Finger",
+              "source_object": "Gripper_Left_Finger",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 12618.375263495764,
+              "abs_volume_mm3": 12618.375263495764,
+              "center_world_mm": [
+                235.55322643497942,
+                668.0391019977056,
+                238.54897252494274
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  193.98226822854068,
+                  646.942395491058,
+                  227.9113504274211
+                ],
+                "max_mm": [
+                  276.76776289410867,
+                  686.2203727501678,
+                  248.8162396723827
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Left_Outer_Link",
+              "source_object": "Gripper_Left_Outer_Link",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 1288.896559993767,
+              "abs_volume_mm3": 1288.896559993767,
+              "center_world_mm": [
+                196.90315285792735,
+                650.0968994846738,
+                237.2996034909763
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  193.84615632104075,
+                  626.2362638955589,
+                  229.8893521700916
+                ],
+                "max_mm": [
+                  201.54649970095215,
+                  668.4666507403203,
+                  244.6202836470392
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Right_Drive_Link",
+              "source_object": "Gripper_Right_Drive_Link",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 3084.793070512109,
+              "abs_volume_mm3": 3084.793070512109,
+              "center_world_mm": [
+                232.309036883132,
+                591.6019502501995,
+                241.22473823063615
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  214.27317308489106,
+                  573.8805417671371,
+                  234.35435427667832
+                ],
+                "max_mm": [
+                  261.40342678842757,
+                  608.1683162896641,
+                  245.5979552775768
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Right_Finger",
+              "source_object": "Gripper_Right_Finger",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 3,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 12618.375263495762,
+              "abs_volume_mm3": 12618.375263495762,
+              "center_world_mm": [
+                282.42796542892336,
+                588.0441333639218,
+                237.3289135540889
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  253.37266637889826,
+                  552.6997225046307,
+                  226.4435509773177
+                ],
+                "max_mm": [
+                  316.28882380811524,
+                  617.8518946340906,
+                  247.48558030906477
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Right_Outer_Link",
+              "source_object": "Gripper_Right_Outer_Link",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 1288.896559993767,
+              "abs_volume_mm3": 1288.896559993767,
+              "center_world_mm": [
+                247.86576303868122,
+                563.1258557219493,
+                235.97314787181756
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  226.9109850379933,
+                  553.2690147157429,
+                  228.85202761435255
+                ],
+                "max_mm": [
+                  264.8055377682272,
+                  577.0509800040841,
+                  243.1504906372445
+                ]
+              }
+            },
+            {
+              "member": "Gripper_Servo_STEP_Display",
+              "source_object": "Gripper_Servo_STEP_Display",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 32044.394518981913,
+              "abs_volume_mm3": 32044.394518981913,
+              "center_world_mm": [
+                221.71324196514956,
+                603.402693036784,
+                213.41001154524392
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  200.07730016008293,
+                  575.6851314666895,
+                  193.22410493949707
+                ],
+                "max_mm": [
+                  243.04309822343612,
+                  631.1896013406455,
+                  238.49537295999622
+                ]
+              }
+            },
+            {
+              "member": "J6_Gripper_Connector_STEP_Display",
+              "source_object": "J6_Gripper_Connector_STEP_Display",
+              "source_type": "Part::Feature",
+              "selected_solid_indices": null,
+              "solid_count": 1,
+              "negative_oriented_solid_count": 0,
+              "signed_volume_sum_mm3": 20266.24531577709,
+              "abs_volume_mm3": 20266.24531577709,
+              "center_world_mm": [
+                197.62141831994717,
+                592.0310609885386,
+                241.3779484201387
+              ],
+              "bbox_world_mm": {
+                "min_mm": [
+                  171.90461525026433,
+                  554.031039970051,
+                  215.94972044637151
+                ],
+                "max_mm": [
+                  221.0036366473249,
+                  628.2415370645634,
+                  259.6425313837654
+                ]
+              }
+            }
+          ],
+          "positive_volume_component_count": null,
+          "all_positive_volume_components_closed_manifold": null,
+          "excluded_zero_volume_component_count": null,
+          "excluded_zero_volume_facets": null,
+          "excluded_zero_volume_components": [],
+          "cable_geometry_available": null,
+          "notes": "Direct complete-end measurement. Static gripper and six internal moving rigid roles retain their true CAD owners; this is main-chain bookkeeping only and is not a future internal-link inertial allocation. Internal member masses were not guessed; complete measured 0.296 kg is assigned to the 37-member geometric centroid.",
+          "closure_angle_deg": 0.0,
+          "independent_audit_reference_world_com_mm": [
+            222.774737862,
+            605.796576035,
+            239.641366307
+          ],
+          "independent_audit_reference_error_mm": 6.803990171972367e-10,
+          "independent_audit_reference_pass": true,
+          "blocking": false
+        }
+      ],
+      "validation": {
+        "component_mass_sum_error_kg": 0.0,
+        "component_mass_sum_pass": true,
+        "all_components_resolved": true,
+        "com_finite": true,
+        "com_inside_combined_component_bbox": true,
+        "link_world_vs_local_round_trip_error_m": 2.842170943040401e-17,
+        "pass": true
+      }
+    }
+  },
+  "total_link2_to_gripper_mass_kg": 3.4515,
+  "double_count_checks": {
+    "additive_component_count": 17,
+    "component_ids_unique": true,
+    "neutral_b6808_separate_mass_count": 0,
+    "parent_compound_totals_added": false,
+    "gripper_geometry_member_count": 37,
+    "pass": true
+  },
+  "validation": {
+    "mass_authority_locked": true,
+    "cad_authority_locked": true,
+    "all_component_mass_sums_pass": true,
+    "total_mass_expected_kg": 3.4515,
+    "total_mass_error_kg": 0.0,
+    "total_mass_pass": true,
+    "coordinate_round_trip_max_error_m": 1.2994659181158156e-14,
+    "coordinate_round_trip_tolerance_m": 1e-08,
+    "all_resolved_component_round_trips_pass": true,
+    "resolved_link_com_count": 6,
+    "all_links_resolved": true,
+    "collision_proxy_used": false,
+    "all_link_numeric_pass": true,
+    "all_assertions_pass": true
+  },
+  "unresolved_items": [],
+  "known_model_limitations": [
+    "Residual CAD centroids omit cable geometry because no authoritative cable CAD is available; cable_geometry_available=false.",
+    "The gripper COM is a static ClosureAngle=0 geometric estimate for a measured complete total, not an internal inertial allocation.",
+    "UpperArm A/B mass allocation is a V1 equal-effective-density assumption because only their combined 0.5515 kg was measured."
+  ],
+  "prohibited_outputs": {
+    "mass_modified": false,
+    "kinematics_tf_control_modified": false,
+    "urdf_inertial_written": false,
+    "mujoco_inertial_written": false,
+    "inertia_tensor_written": false,
+    "gravity_written": false,
+    "damping_friction_armature_written": false
+  },
+  "final_status": "V15.15 COM_LEDGER_V1 = PASS"
+}

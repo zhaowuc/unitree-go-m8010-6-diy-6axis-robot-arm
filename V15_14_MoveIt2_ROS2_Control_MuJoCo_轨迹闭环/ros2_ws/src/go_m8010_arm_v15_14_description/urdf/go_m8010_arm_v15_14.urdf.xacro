@@ -1,0 +1,557 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="go_m8010_arm_v15_14">
+  <xacro:arg name="mesh_prefix" default="package://go_m8010_arm_description/meshes" />
+  <xacro:arg name="j1_effort_nm" default="0.0" />
+  <xacro:arg name="j1_velocity_rad_s" default="0.0" />
+  <xacro:arg name="j2_effort_nm" default="0.0" />
+  <xacro:arg name="j2_velocity_rad_s" default="0.0" />
+  <xacro:arg name="j3_effort_nm" default="0.0" />
+  <xacro:arg name="j3_velocity_rad_s" default="0.0" />
+  <xacro:arg name="j4_effort_nm" default="0.0" />
+  <xacro:arg name="j4_velocity_rad_s" default="0.0" />
+  <xacro:arg name="j5_effort_nm" default="0.0" />
+  <xacro:arg name="j5_velocity_rad_s" default="0.0" />
+  <xacro:arg name="j6_effort_nm" default="0.0" />
+  <xacro:arg name="j6_velocity_rad_s" default="0.0" />
+  <xacro:arg name="mujoco_joint_commands_topic" default="/mujoco/joint_commands" />
+  <xacro:arg name="mujoco_joint_states_topic" default="/mujoco/joint_states_raw" />
+  <material name="base_visual">
+    <color rgba="0.28 0.30 0.34 1" />
+  </material>
+  <material name="arm_visual">
+    <color rgba="0.54 0.09 0.13 1" />
+  </material>
+  <material name="link6_visual">
+    <color rgba="0.20 0.22 0.25 1" />
+  </material>
+  <material name="gripper_visual">
+    <color rgba="0.05 0.50 0.58 1" />
+  </material>
+  <link name="world" />
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="$(arg mesh_prefix)/visual/base_link.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+      <material name="base_visual" />
+    </visual>
+  </link>
+  <link name="link1">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="$(arg mesh_prefix)/visual/link1.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+      <material name="arm_visual" />
+    </visual>
+  </link>
+  <link name="link2">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="$(arg mesh_prefix)/visual/link2.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+      <material name="arm_visual" />
+    </visual>
+  </link>
+  <link name="link3">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="$(arg mesh_prefix)/visual/link3.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+      <material name="arm_visual" />
+    </visual>
+  </link>
+  <link name="link4">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="$(arg mesh_prefix)/visual/link4.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+      <material name="arm_visual" />
+    </visual>
+  </link>
+  <link name="link5">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="$(arg mesh_prefix)/visual/link5.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+      <material name="arm_visual" />
+    </visual>
+  </link>
+  <link name="link6">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="$(arg mesh_prefix)/visual/link6.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+      <material name="link6_visual" />
+    </visual>
+  </link>
+  <link name="gripper">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="$(arg mesh_prefix)/visual/gripper.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+      <material name="gripper_visual" />
+    </visual>
+  </link>
+  <link name="tcp_nominal" />
+  <link name="camera_link" />
+  <link name="sim_camera_optical_frame" />
+  <joint name="world_to_base_link" type="fixed">
+    <parent link="world" />
+    <child link="base_link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <joint name="J1" type="continuous">
+    <parent link="base_link" />
+    <child link="link1" />
+    <origin xyz="0 0 0" rpy="-2.77555756156289e-17 -0 0" />
+    <axis xyz="0 -2.77555756156289e-17 1" />
+    <limit effort="$(arg j1_effort_nm)" velocity="$(arg j1_velocity_rad_s)" />
+  </joint>
+  <joint name="J2" type="revolute">
+    <parent link="link1" />
+    <child link="link2" />
+    <origin xyz="-1.19529999999846e-06 -0.000348645100000006 0.092639782" rpy="-2.77555756156289e-17 -0 0" />
+    <axis xyz="0 1 -2.77555756156289e-17" />
+    <limit lower="-2.96705972839036" upper="2.96705972839036" effort="$(arg j2_effort_nm)" velocity="$(arg j2_velocity_rad_s)" />
+  </joint>
+  <joint name="J3" type="revolute">
+    <parent link="link2" />
+    <child link="link3" />
+    <origin xyz="-0.248601759363284 -0.0360000000000005 1.67815400527331e-05" rpy="-2.77555756156289e-17 -0 0" />
+    <axis xyz="0 1 -2.77555756156289e-17" />
+    <limit lower="-2.96705972839036" upper="2.96705972839036" effort="$(arg j3_effort_nm)" velocity="$(arg j3_velocity_rad_s)" />
+  </joint>
+  <joint name="J4" type="revolute">
+    <parent link="link3" />
+    <child link="link4" />
+    <origin xyz="-0.202346021849608 -3.6969356019974e-17 0.0519614239654557" rpy="-1.56760549790764e-15 -1.5530896869224 2.15005669337953e-11" />
+    <axis xyz="3.80682902749686e-13 1 -4.91432301547264e-19" />
+    <limit lower="-2.02458193231342" upper="2.77507351067098" effort="$(arg j4_effort_nm)" velocity="$(arg j4_velocity_rad_s)" />
+  </joint>
+  <joint name="J5" type="revolute">
+    <parent link="link4" />
+    <child link="link5" />
+    <origin xyz="0.00930000012983338 0.0320000209058991 0.097898948000751" rpy="-0.837746478487614 -0 3.80682902749686e-13" />
+    <axis xyz="1 0 -1.59232002583387e-13" />
+    <limit lower="-1.232202451908" upper="2.63893782901543" effort="$(arg j5_effort_nm)" velocity="$(arg j5_velocity_rad_s)" />
+  </joint>
+  <joint name="J6" type="revolute">
+    <parent link="link5" />
+    <child link="link6" />
+    <origin xyz="-0.0109991955299831 -0.000147148457748934 0.0995275274114727" rpy="-1.11022302462516e-16 -6.16297582203915e-33 3.14159265358979" />
+    <axis xyz="-1.59232002583387e-13 6.09321620936853e-17 1" />
+    <limit lower="-3.14159265358979" upper="3.14159265358979" effort="$(arg j6_effort_nm)" velocity="$(arg j6_velocity_rad_s)" />
+  </joint>
+  <joint name="J6_to_gripper" type="fixed">
+    <parent link="link6" />
+    <child link="gripper" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <joint name="gripper_to_tcp_nominal" type="fixed">
+    <parent link="gripper" />
+    <child link="tcp_nominal" />
+    <origin xyz="-0.001187726400 0.000060729026 0.092493513872" rpy="0 0 0" />
+  </joint>
+  <joint name="gripper_to_camera_link" type="fixed">
+    <parent link="gripper" />
+    <child link="camera_link" />
+    <origin xyz="-0.038917046930682 0.000061006900000 0.019635428243040" rpy="-1.5707963267948966 0 -1.5707963267948966" />
+  </joint>
+  <joint name="camera_link_to_sim_camera_optical_frame" type="fixed">
+    <parent link="camera_link" />
+    <child link="sim_camera_optical_frame" />
+    <origin xyz="0 -0.00905 -0.0128" rpy="1.5707963267948966 0 0" />
+  </joint>
+  <!-- V15.14 MoveIt collision model: 25 accepted component proxies; no visual or inertial data are added. -->
+  <link name="collision_proxy__J1_Fixed_Collision_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/base_link/01_J1_Fixed_Collision_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="base_link_to_collision_proxy__J1_Fixed_Collision_Proxy" type="fixed">
+    <parent link="base_link" />
+    <child link="collision_proxy__J1_Fixed_Collision_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__J6_Gripper_Connector_Collision_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/gripper/01_J6_Gripper_Connector_Collision_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="gripper_to_collision_proxy__J6_Gripper_Connector_Collision_Proxy" type="fixed">
+    <parent link="gripper" />
+    <child link="collision_proxy__J6_Gripper_Connector_Collision_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__Gripper_Fixed_Frame_Collision_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/gripper/02_Gripper_Fixed_Frame_Collision_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="gripper_to_collision_proxy__Gripper_Fixed_Frame_Collision_Proxy" type="fixed">
+    <parent link="gripper" />
+    <child link="collision_proxy__Gripper_Fixed_Frame_Collision_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__Gripper_Servo_Collision_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/gripper/03_Gripper_Servo_Collision_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="gripper_to_collision_proxy__Gripper_Servo_Collision_Proxy" type="fixed">
+    <parent link="gripper" />
+    <child link="collision_proxy__Gripper_Servo_Collision_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__Gemini_Pro_Camera_Collision_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/gripper/04_Gemini_Pro_Camera_Collision_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="gripper_to_collision_proxy__Gemini_Pro_Camera_Collision_Proxy" type="fixed">
+    <parent link="gripper" />
+    <child link="collision_proxy__Gemini_Pro_Camera_Collision_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__Gripper_Left_Outer_Link">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/gripper/05_Gripper_Left_Outer_Link.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="gripper_to_collision_proxy__Gripper_Left_Outer_Link" type="fixed">
+    <parent link="gripper" />
+    <child link="collision_proxy__Gripper_Left_Outer_Link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__Gripper_Right_Outer_Link">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/gripper/06_Gripper_Right_Outer_Link.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="gripper_to_collision_proxy__Gripper_Right_Outer_Link" type="fixed">
+    <parent link="gripper" />
+    <child link="collision_proxy__Gripper_Right_Outer_Link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__Gripper_Left_Drive_Link">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/gripper/07_Gripper_Left_Drive_Link.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="gripper_to_collision_proxy__Gripper_Left_Drive_Link" type="fixed">
+    <parent link="gripper" />
+    <child link="collision_proxy__Gripper_Left_Drive_Link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__Gripper_Right_Drive_Link">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/gripper/08_Gripper_Right_Drive_Link.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="gripper_to_collision_proxy__Gripper_Right_Drive_Link" type="fixed">
+    <parent link="gripper" />
+    <child link="collision_proxy__Gripper_Right_Drive_Link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__Gripper_Left_Finger">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/gripper/09_Gripper_Left_Finger.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="gripper_to_collision_proxy__Gripper_Left_Finger" type="fixed">
+    <parent link="gripper" />
+    <child link="collision_proxy__Gripper_Left_Finger" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__Gripper_Right_Finger">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/gripper/10_Gripper_Right_Finger.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="gripper_to_collision_proxy__Gripper_Right_Finger" type="fixed">
+    <parent link="gripper" />
+    <child link="collision_proxy__Gripper_Right_Finger" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__J1_Moving_Collision_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/link1/01_J1_Moving_Collision_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="link1_to_collision_proxy__J1_Moving_Collision_Proxy" type="fixed">
+    <parent link="link1" />
+    <child link="collision_proxy__J1_Moving_Collision_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__UpperArm_Full_Collision_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/link2/01_UpperArm_Full_Collision_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="link2_to_collision_proxy__UpperArm_Full_Collision_Proxy" type="fixed">
+    <parent link="link2" />
+    <child link="collision_proxy__UpperArm_Full_Collision_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__J3_Output_Flange_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/link2/02_J3_Output_Flange_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="link2_to_collision_proxy__J3_Output_Flange_Proxy" type="fixed">
+    <parent link="link2" />
+    <child link="collision_proxy__J3_Output_Flange_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__UpperArm_Motion_Collision_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/link2/03_UpperArm_Motion_Collision_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="link2_to_collision_proxy__UpperArm_Motion_Collision_Proxy" type="fixed">
+    <parent link="link2" />
+    <child link="collision_proxy__UpperArm_Motion_Collision_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__J3_Motor_Stator_Collision_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/link3/01_J3_Motor_Stator_Collision_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="link3_to_collision_proxy__J3_Motor_Stator_Collision_Proxy" type="fixed">
+    <parent link="link3" />
+    <child link="collision_proxy__J3_Motor_Stator_Collision_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__Forearm_Collision_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/link3/02_Forearm_Collision_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="link3_to_collision_proxy__Forearm_Collision_Proxy" type="fixed">
+    <parent link="link3" />
+    <child link="collision_proxy__Forearm_Collision_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__J4_Motor_Stator_Collision_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/link3/03_J4_Motor_Stator_Collision_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="link3_to_collision_proxy__J4_Motor_Stator_Collision_Proxy" type="fixed">
+    <parent link="link3" />
+    <child link="collision_proxy__J4_Motor_Stator_Collision_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__J4_Output_Flange_Collision_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/link4/01_J4_Output_Flange_Collision_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="link4_to_collision_proxy__J4_Output_Flange_Collision_Proxy" type="fixed">
+    <parent link="link4" />
+    <child link="collision_proxy__J4_Output_Flange_Collision_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__Wrist_Prelink_Collision_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/link4/02_Wrist_Prelink_Collision_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="link4_to_collision_proxy__Wrist_Prelink_Collision_Proxy" type="fixed">
+    <parent link="link4" />
+    <child link="collision_proxy__Wrist_Prelink_Collision_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__J5_Motor_Stator_Collision_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/link4/03_J5_Motor_Stator_Collision_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="link4_to_collision_proxy__J5_Motor_Stator_Collision_Proxy" type="fixed">
+    <parent link="link4" />
+    <child link="collision_proxy__J5_Motor_Stator_Collision_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__J5_Output_Flange_Collision_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/link5/01_J5_Output_Flange_Collision_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="link5_to_collision_proxy__J5_Output_Flange_Collision_Proxy" type="fixed">
+    <parent link="link5" />
+    <child link="collision_proxy__J5_Output_Flange_Collision_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__J5_to_Damiao_J6_Adapter_Collision_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/link5/02_J5_to_Damiao_J6_Adapter_Collision_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="link5_to_collision_proxy__J5_to_Damiao_J6_Adapter_Collision_Proxy" type="fixed">
+    <parent link="link5" />
+    <child link="collision_proxy__J5_to_Damiao_J6_Adapter_Collision_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__J6_DM_G6220_Stator_Collision_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/link5/03_J6_DM_G6220_Stator_Collision_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="link5_to_collision_proxy__J6_DM_G6220_Stator_Collision_Proxy" type="fixed">
+    <parent link="link5" />
+    <child link="collision_proxy__J6_DM_G6220_Stator_Collision_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="collision_proxy__J6_DM_G6220_Output_Rotor_Collision_Proxy">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://go_m8010_arm_v15_14_description/meshes/collision_proxies/link6/01_J6_DM_G6220_Output_Rotor_Collision_Proxy.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="link6_to_collision_proxy__J6_DM_G6220_Output_Rotor_Collision_Proxy" type="fixed">
+    <parent link="link6" />
+    <child link="collision_proxy__J6_DM_G6220_Output_Rotor_Collision_Proxy" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <!-- Simulation-only command/state transport. FollowJointTrajectory is provided by joint_trajectory_controller, not by the MuJoCo bridge. -->
+  <ros2_control name="MujocoTopicSystem" type="system">
+    <hardware>
+      <plugin>topic_based_ros2_control/TopicBasedSystem</plugin>
+      <param name="joint_commands_topic">$(arg mujoco_joint_commands_topic)</param>
+      <param name="joint_states_topic">$(arg mujoco_joint_states_topic)</param>
+      <param name="trigger_joint_command_threshold">-1</param>
+      <param name="sum_wrapped_joint_states">false</param>
+    </hardware>
+    <joint name="J1">
+      <command_interface name="position" />
+      <command_interface name="velocity" />
+      <state_interface name="position">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="velocity" />
+    </joint>
+    <joint name="J2">
+      <command_interface name="position" />
+      <command_interface name="velocity" />
+      <state_interface name="position">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="velocity" />
+    </joint>
+    <joint name="J3">
+      <command_interface name="position" />
+      <command_interface name="velocity" />
+      <state_interface name="position">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="velocity" />
+    </joint>
+    <joint name="J4">
+      <command_interface name="position" />
+      <command_interface name="velocity" />
+      <state_interface name="position">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="velocity" />
+    </joint>
+    <joint name="J5">
+      <command_interface name="position" />
+      <command_interface name="velocity" />
+      <state_interface name="position">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="velocity" />
+    </joint>
+    <joint name="J6">
+      <command_interface name="position" />
+      <command_interface name="velocity" />
+      <state_interface name="position">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="velocity" />
+    </joint>
+  </ros2_control>
+</robot>

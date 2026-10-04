@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+<robot name="go_m8010_arm_v15_14">
+  <group name="arm">
+    <chain base_link="base_link" tip_link="tcp_nominal" />
+  </group>
+  <group name="tcp_nominal_tool">
+    <link name="tcp_nominal" />
+  </group>
+  <end_effector name="tcp_nominal" parent_link="gripper" group="tcp_nominal_tool" parent_group="arm" />
+  <group_state name="mechanical_zero" group="arm">
+    <joint name="J1" value="0" />
+    <joint name="J2" value="0" />
+    <joint name="J3" value="0" />
+    <joint name="J4" value="0" />
+    <joint name="J5" value="0" />
+    <joint name="J6" value="0" />
+  </group_state>
+  <disable_collisions link1="collision_proxy__Forearm_Collision_Proxy" link2="collision_proxy__J3_Motor_Stator_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Forearm_Collision_Proxy" link2="collision_proxy__J4_Motor_Stator_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Forearm_Collision_Proxy" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gemini_Pro_Camera_Collision_Proxy" link2="collision_proxy__Gripper_Fixed_Frame_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gemini_Pro_Camera_Collision_Proxy" link2="collision_proxy__Gripper_Servo_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gemini_Pro_Camera_Collision_Proxy" link2="collision_proxy__J6_DM_G6220_Output_Rotor_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gemini_Pro_Camera_Collision_Proxy" link2="collision_proxy__J6_Gripper_Connector_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gemini_Pro_Camera_Collision_Proxy" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Fixed_Frame_Collision_Proxy" link2="collision_proxy__Gripper_Left_Drive_Link" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Fixed_Frame_Collision_Proxy" link2="collision_proxy__Gripper_Left_Outer_Link" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Fixed_Frame_Collision_Proxy" link2="collision_proxy__Gripper_Right_Drive_Link" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Fixed_Frame_Collision_Proxy" link2="collision_proxy__Gripper_Right_Outer_Link" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Fixed_Frame_Collision_Proxy" link2="collision_proxy__Gripper_Servo_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Fixed_Frame_Collision_Proxy" link2="collision_proxy__J6_DM_G6220_Output_Rotor_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Fixed_Frame_Collision_Proxy" link2="collision_proxy__J6_Gripper_Connector_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Fixed_Frame_Collision_Proxy" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Left_Drive_Link" link2="collision_proxy__Gripper_Left_Finger" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Left_Drive_Link" link2="collision_proxy__Gripper_Right_Drive_Link" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Left_Drive_Link" link2="collision_proxy__Gripper_Servo_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Left_Drive_Link" link2="collision_proxy__J6_DM_G6220_Output_Rotor_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Left_Drive_Link" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Left_Finger" link2="collision_proxy__Gripper_Left_Outer_Link" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Left_Finger" link2="collision_proxy__J6_DM_G6220_Output_Rotor_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Left_Finger" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Left_Outer_Link" link2="collision_proxy__J6_DM_G6220_Output_Rotor_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Left_Outer_Link" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Right_Drive_Link" link2="collision_proxy__Gripper_Right_Finger" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Right_Drive_Link" link2="collision_proxy__Gripper_Servo_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Right_Drive_Link" link2="collision_proxy__J6_DM_G6220_Output_Rotor_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Right_Drive_Link" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Right_Finger" link2="collision_proxy__Gripper_Right_Outer_Link" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Right_Finger" link2="collision_proxy__J6_DM_G6220_Output_Rotor_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Right_Finger" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Right_Outer_Link" link2="collision_proxy__J6_DM_G6220_Output_Rotor_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Right_Outer_Link" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Servo_Collision_Proxy" link2="collision_proxy__J6_DM_G6220_Output_Rotor_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Servo_Collision_Proxy" link2="collision_proxy__J6_Gripper_Connector_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__Gripper_Servo_Collision_Proxy" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J1_Fixed_Collision_Proxy" link2="collision_proxy__J1_Moving_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J1_Fixed_Collision_Proxy" link2="collision_proxy__J3_Output_Flange_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J1_Fixed_Collision_Proxy" link2="collision_proxy__UpperArm_Full_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J1_Moving_Collision_Proxy" link2="collision_proxy__J3_Output_Flange_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J1_Moving_Collision_Proxy" link2="collision_proxy__UpperArm_Full_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J3_Motor_Stator_Collision_Proxy" link2="collision_proxy__J3_Output_Flange_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J3_Motor_Stator_Collision_Proxy" link2="collision_proxy__J4_Motor_Stator_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J3_Motor_Stator_Collision_Proxy" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J3_Output_Flange_Proxy" link2="collision_proxy__UpperArm_Full_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J3_Output_Flange_Proxy" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J4_Motor_Stator_Collision_Proxy" link2="collision_proxy__J4_Output_Flange_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J4_Motor_Stator_Collision_Proxy" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J4_Output_Flange_Collision_Proxy" link2="collision_proxy__J5_Motor_Stator_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J4_Output_Flange_Collision_Proxy" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J4_Output_Flange_Collision_Proxy" link2="collision_proxy__Wrist_Prelink_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J5_Motor_Stator_Collision_Proxy" link2="collision_proxy__J5_Output_Flange_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J5_Motor_Stator_Collision_Proxy" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J5_Motor_Stator_Collision_Proxy" link2="collision_proxy__Wrist_Prelink_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J5_Output_Flange_Collision_Proxy" link2="collision_proxy__J5_to_Damiao_J6_Adapter_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J5_Output_Flange_Collision_Proxy" link2="collision_proxy__J6_DM_G6220_Stator_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J5_Output_Flange_Collision_Proxy" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J5_to_Damiao_J6_Adapter_Collision_Proxy" link2="collision_proxy__J6_DM_G6220_Stator_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J5_to_Damiao_J6_Adapter_Collision_Proxy" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J6_DM_G6220_Output_Rotor_Collision_Proxy" link2="collision_proxy__J6_DM_G6220_Stator_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J6_DM_G6220_Output_Rotor_Collision_Proxy" link2="collision_proxy__J6_Gripper_Connector_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J6_DM_G6220_Output_Rotor_Collision_Proxy" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J6_DM_G6220_Stator_Collision_Proxy" link2="collision_proxy__J6_Gripper_Connector_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J6_DM_G6220_Stator_Collision_Proxy" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__J6_Gripper_Connector_Collision_Proxy" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__UpperArm_Full_Collision_Proxy" link2="collision_proxy__UpperArm_Motion_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+  <disable_collisions link1="collision_proxy__UpperArm_Motion_Collision_Proxy" link2="collision_proxy__Wrist_Prelink_Collision_Proxy" reason="V15.14_pair_scoped_collision_contract" />
+</robot>

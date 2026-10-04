@@ -1,0 +1,768 @@
+{
+  "status": "PASS",
+  "revision": "V15.13-MuJoCo-empty-load-kinematic-v1",
+  "generated_at_utc": "2026-08-11T23:14:50.411800+00:00",
+  "mujoco_version": "3.11.0",
+  "model": "/home/codex/projects/v15_13_regression_work_20260811T231406Z_w0J3P6/go_m8010_arm_v15_13_kinematic.xml",
+  "topology": {
+    "nq": 6,
+    "nv": 6,
+    "joint_names": [
+      "J1",
+      "J2",
+      "J3",
+      "J4",
+      "J5",
+      "J6"
+    ],
+    "expected_joint_names": [
+      "J1",
+      "J2",
+      "J3",
+      "J4",
+      "J5",
+      "J6"
+    ],
+    "pass": true
+  },
+  "frame_axis_sign_limit_validation": {
+    "links": {
+      "base_link": {
+        "position_error_m": 0.0,
+        "max_rotation_matrix_error": 2.220446049250313e-16,
+        "pass": true
+      },
+      "link1": {
+        "position_error_m": 0.0,
+        "max_rotation_matrix_error": 2.220446049250313e-16,
+        "pass": true
+      },
+      "link2": {
+        "position_error_m": 5.468612904428346e-20,
+        "max_rotation_matrix_error": 2.220446049250313e-16,
+        "pass": true
+      },
+      "link3": {
+        "position_error_m": 3.356589068483857e-16,
+        "max_rotation_matrix_error": 2.220446049250313e-16,
+        "pass": true
+      },
+      "link4": {
+        "position_error_m": 5.599906634890011e-16,
+        "max_rotation_matrix_error": 1.903309987486244e-13,
+        "pass": true
+      },
+      "link5": {
+        "position_error_m": 1.8821938234677843e-14,
+        "max_rotation_matrix_error": 1.3933298959045715e-13,
+        "pass": true
+      },
+      "link6": {
+        "position_error_m": 3.5446662896675394e-14,
+        "max_rotation_matrix_error": 1.396660564978447e-13,
+        "pass": true
+      },
+      "gripper": {
+        "position_error_m": 3.5446662896675394e-14,
+        "max_rotation_matrix_error": 1.396660564978447e-13,
+        "pass": true
+      }
+    },
+    "joints": {
+      "J1": {
+        "source_joint": "J1",
+        "anchor_error_m": 0.0,
+        "axis_vector_error": 1.232595164407831e-32,
+        "positive_direction_witness_error_m": 6.938893903907228e-18,
+        "expected_limited": false,
+        "actual_limited": false,
+        "expected_range_rad": null,
+        "actual_range_rad": null,
+        "limit_error_rad": 0.0,
+        "pass": true
+      },
+      "J2": {
+        "source_joint": "J2A",
+        "anchor_error_m": 5.468612904428346e-20,
+        "axis_vector_error": 1.232595164407831e-32,
+        "positive_direction_witness_error_m": 6.938893903907228e-18,
+        "expected_limited": true,
+        "actual_limited": true,
+        "expected_range_rad": [
+          -2.9670597283903604,
+          2.9670597283903604
+        ],
+        "actual_range_rad": [
+          -2.96705972839036,
+          2.96705972839036
+        ],
+        "limit_error_rad": 4.440892098500626e-16,
+        "pass": true
+      },
+      "J3": {
+        "source_joint": "J3",
+        "anchor_error_m": 3.356589068483857e-16,
+        "axis_vector_error": 1.232595164407831e-32,
+        "positive_direction_witness_error_m": 2.7755575615628914e-17,
+        "expected_limited": true,
+        "actual_limited": true,
+        "expected_range_rad": [
+          -2.9670597283903604,
+          2.9670597283903604
+        ],
+        "actual_range_rad": [
+          -2.96705972839036,
+          2.96705972839036
+        ],
+        "limit_error_rad": 4.440892098500626e-16,
+        "pass": true
+      },
+      "J4": {
+        "source_joint": "J4",
+        "anchor_error_m": 5.599906634890011e-16,
+        "axis_vector_error": 2.668322940884177e-13,
+        "positive_direction_witness_error_m": 6.245004513516506e-17,
+        "expected_limited": true,
+        "actual_limited": true,
+        "expected_range_rad": [
+          -2.0245819323134224,
+          2.775073510670984
+        ],
+        "actual_range_rad": [
+          -2.02458193231342,
+          2.77507351067098
+        ],
+        "limit_error_rad": 3.9968028886505635e-15,
+        "pass": true
+      },
+      "J5": {
+        "source_joint": "J5",
+        "anchor_error_m": 1.8821938234677843e-14,
+        "axis_vector_error": 1.3783861314455104e-13,
+        "positive_direction_witness_error_m": 2.38182018474016e-16,
+        "expected_limited": true,
+        "actual_limited": true,
+        "expected_range_rad": [
+          -1.2322024519079966,
+          2.638937829015426
+        ],
+        "actual_range_rad": [
+          -1.232202451908,
+          2.63893782901543
+        ],
+        "limit_error_rad": 3.9968028886505635e-15,
+        "pass": true
+      },
+      "J6": {
+        "source_joint": "J6",
+        "anchor_error_m": 3.5471755944401145e-14,
+        "axis_vector_error": 3.4815563991355895e-13,
+        "positive_direction_witness_error_m": 3.1309716410295113e-16,
+        "expected_limited": true,
+        "actual_limited": true,
+        "expected_range_rad": [
+          -3.141592653589793,
+          3.141592653589793
+        ],
+        "actual_range_rad": [
+          -3.14159265358979,
+          3.14159265358979
+        ],
+        "limit_error_rad": 3.1086244689504383e-15,
+        "pass": true
+      }
+    },
+    "all_links_pass": true,
+    "all_joints_pass": true
+  },
+  "visual_bounds_validation": {
+    "links": {
+      "base_link": {
+        "max_bounds_error_m": 0.0,
+        "source_size_m": [
+          0.17692056274414064,
+          0.17686583709716797,
+          0.09999999999999999
+        ],
+        "runtime_size_m": [
+          0.17692056274414064,
+          0.17686583709716797,
+          0.09999999999999999
+        ],
+        "pass": true
+      },
+      "link1": {
+        "max_bounds_error_m": 0.0,
+        "source_size_m": [
+          0.09650033569335938,
+          0.13760001373291014,
+          0.149189697265625
+        ],
+        "runtime_size_m": [
+          0.09650033569335938,
+          0.13760001373291014,
+          0.149189697265625
+        ],
+        "pass": true
+      },
+      "link2": {
+        "max_bounds_error_m": 0.0,
+        "source_size_m": [
+          0.30709629821777346,
+          0.09950000762939454,
+          0.11590093994140625
+        ],
+        "runtime_size_m": [
+          0.30709629821777346,
+          0.09950000762939454,
+          0.11590093994140625
+        ],
+        "pass": true
+      },
+      "link3": {
+        "max_bounds_error_m": 0.0,
+        "source_size_m": [
+          0.2992608642578125,
+          0.0525000057220459,
+          0.1488761749267578
+        ],
+        "runtime_size_m": [
+          0.2992608642578125,
+          0.0525000057220459,
+          0.1488761749267578
+        ],
+        "pass": true
+      },
+      "link4": {
+        "max_bounds_error_m": 0.0,
+        "source_size_m": [
+          0.06082760238647461,
+          0.09700006103515625,
+          0.1762646007537842
+        ],
+        "runtime_size_m": [
+          0.06082760238647461,
+          0.09700006103515625,
+          0.1762646007537842
+        ],
+        "pass": true
+      },
+      "link5": {
+        "max_bounds_error_m": 0.0,
+        "source_size_m": [
+          0.0700000171661377,
+          0.07000001907348632,
+          0.1275271739959717
+        ],
+        "runtime_size_m": [
+          0.0700000171661377,
+          0.07000001907348632,
+          0.1275271739959717
+        ],
+        "pass": true
+      },
+      "link6": {
+        "max_bounds_error_m": 0.0,
+        "source_size_m": [
+          0.03499191474914551,
+          0.035000926971435545,
+          0.0010001432653061785
+        ],
+        "runtime_size_m": [
+          0.03499191474914551,
+          0.035000926971435545,
+          0.0010001432653061785
+        ],
+        "pass": true
+      },
+      "gripper": {
+        "max_bounds_error_m": 0.0,
+        "source_size_m": [
+          0.10712934112548829,
+          0.13313549804687502,
+          0.12340180778503418
+        ],
+        "runtime_size_m": [
+          0.10712934112548829,
+          0.13313549804687502,
+          0.12340180778503418
+        ],
+        "pass": true
+      }
+    },
+    "all_pass": true
+  },
+  "tcp_nominal_validation": {
+    "site_exists": true,
+    "parent_body": "gripper",
+    "parent_is_gripper": true,
+    "local_position_m": [
+      -0.0011877264,
+      6.0729026e-05,
+      0.092493513872
+    ],
+    "model_local_position_m": [
+      -0.0011877264,
+      6.0729026e-05,
+      0.092493513872
+    ],
+    "local_position_error_m": 0.0,
+    "zero_pose_position_error_m": 2.7755575615628914e-17,
+    "zero_pose_rotation_error": 0.0,
+    "test_pose_count": 6,
+    "test_poses": [
+      {
+        "name": "J1_plus_20_deg",
+        "angles_deg": {
+          "j1_deg": 20.0,
+          "j2_deg": 0.0,
+          "j3_deg": 0.0,
+          "j4_deg": 0.0,
+          "j5_deg": 0.0,
+          "j6_deg": 0.0
+        },
+        "position_error_m": 0.0,
+        "rotation_error": 0.0,
+        "pass": true
+      },
+      {
+        "name": "J2_plus_20_deg",
+        "angles_deg": {
+          "j1_deg": 0.0,
+          "j2_deg": 20.0,
+          "j3_deg": 0.0,
+          "j4_deg": 0.0,
+          "j5_deg": 0.0,
+          "j6_deg": 0.0
+        },
+        "position_error_m": 0.0,
+        "rotation_error": 0.0,
+        "pass": true
+      },
+      {
+        "name": "J3_minus_20_deg",
+        "angles_deg": {
+          "j1_deg": 0.0,
+          "j2_deg": 0.0,
+          "j3_deg": -20.0,
+          "j4_deg": 0.0,
+          "j5_deg": 0.0,
+          "j6_deg": 0.0
+        },
+        "position_error_m": 0.0,
+        "rotation_error": 0.0,
+        "pass": true
+      },
+      {
+        "name": "J4_plus_20_deg",
+        "angles_deg": {
+          "j1_deg": 0.0,
+          "j2_deg": 0.0,
+          "j3_deg": 0.0,
+          "j4_deg": 20.0,
+          "j5_deg": 0.0,
+          "j6_deg": 0.0
+        },
+        "position_error_m": 0.0,
+        "rotation_error": 0.0,
+        "pass": true
+      },
+      {
+        "name": "J5_minus_20_deg",
+        "angles_deg": {
+          "j1_deg": 0.0,
+          "j2_deg": 0.0,
+          "j3_deg": 0.0,
+          "j4_deg": 0.0,
+          "j5_deg": -20.0,
+          "j6_deg": 0.0
+        },
+        "position_error_m": 0.0,
+        "rotation_error": 0.0,
+        "pass": true
+      },
+      {
+        "name": "J6_plus_30_deg",
+        "angles_deg": {
+          "j1_deg": 0.0,
+          "j2_deg": 0.0,
+          "j3_deg": 0.0,
+          "j4_deg": 0.0,
+          "j5_deg": 0.0,
+          "j6_deg": 30.0
+        },
+        "position_error_m": 0.0,
+        "rotation_error": 0.0,
+        "pass": true
+      }
+    ],
+    "max_position_error_m": 2.7755575615628914e-17,
+    "max_rotation_error": 0.0,
+    "position_tolerance_m": 1e-09,
+    "rotation_tolerance": 1e-09,
+    "pass": true
+  },
+  "collision_regression": {
+    "total_pose_count": 503,
+    "runtime_full_pair_count": 231,
+    "changed_terminal_pair_count": 169,
+    "saved_zero_full_matrix_active_pairs": [],
+    "saved_zero_full_matrix_clear": true,
+    "categories": {
+      "independent_J1_representative_full_turn": {
+        "pose_count": 37,
+        "expected_collision_indices": [],
+        "actual_collision_indices": [],
+        "false_positive_indices": [],
+        "false_negative_indices": [],
+        "exact_collision_boolean_match": true,
+        "collisions": []
+      },
+      "independent_J2": {
+        "pose_count": 35,
+        "expected_collision_indices": [],
+        "actual_collision_indices": [],
+        "false_positive_indices": [],
+        "false_negative_indices": [],
+        "exact_collision_boolean_match": true,
+        "collisions": []
+      },
+      "independent_J3": {
+        "pose_count": 35,
+        "expected_collision_indices": [],
+        "actual_collision_indices": [],
+        "false_positive_indices": [],
+        "false_negative_indices": [],
+        "exact_collision_boolean_match": true,
+        "collisions": []
+      },
+      "independent_J4": {
+        "pose_count": 56,
+        "expected_collision_indices": [],
+        "actual_collision_indices": [],
+        "false_positive_indices": [],
+        "false_negative_indices": [],
+        "exact_collision_boolean_match": true,
+        "collisions": []
+      },
+      "independent_J5": {
+        "pose_count": 46,
+        "expected_collision_indices": [],
+        "actual_collision_indices": [],
+        "false_positive_indices": [],
+        "false_negative_indices": [],
+        "exact_collision_boolean_match": true,
+        "collisions": []
+      },
+      "independent_J6": {
+        "pose_count": 73,
+        "expected_collision_indices": [],
+        "actual_collision_indices": [],
+        "false_positive_indices": [],
+        "false_negative_indices": [],
+        "exact_collision_boolean_match": true,
+        "collisions": []
+      },
+      "coupled_J5_J6_grid": {
+        "pose_count": 39,
+        "expected_collision_indices": [],
+        "actual_collision_indices": [],
+        "false_positive_indices": [],
+        "false_negative_indices": [],
+        "exact_collision_boolean_match": true,
+        "collisions": []
+      },
+      "coupled_limit_corners": {
+        "pose_count": 32,
+        "expected_collision_indices": [],
+        "actual_collision_indices": [],
+        "false_positive_indices": [],
+        "false_negative_indices": [],
+        "exact_collision_boolean_match": true,
+        "collisions": []
+      },
+      "coupled_random_seed_1513": {
+        "pose_count": 150,
+        "expected_collision_indices": [
+          43,
+          73,
+          75,
+          83,
+          87
+        ],
+        "actual_collision_indices": [
+          43,
+          73,
+          75,
+          83,
+          87
+        ],
+        "false_positive_indices": [],
+        "false_negative_indices": [],
+        "exact_collision_boolean_match": true,
+        "collisions": [
+          {
+            "pose_index": 43,
+            "angles_deg": {
+              "j1_deg": -154.94495639092506,
+              "j2_deg": 132.46266433747172,
+              "j3_deg": 113.92879039879477,
+              "j4_deg": 95.1733793699789,
+              "j5_deg": -10.827731077963897,
+              "j6_deg": -16.535034120250117
+            },
+            "active_pairs": [
+              [
+                "Gemini_Pro_Camera_Collision_Proxy",
+                "J1_Moving_Collision_Proxy"
+              ]
+            ]
+          },
+          {
+            "pose_index": 73,
+            "angles_deg": {
+              "j1_deg": -154.54515718096178,
+              "j2_deg": -82.25814258326899,
+              "j3_deg": 127.73451082575394,
+              "j4_deg": 125.16160940549906,
+              "j5_deg": 8.623633142297692,
+              "j6_deg": -29.49066882911191
+            },
+            "active_pairs": [
+              [
+                "J1_Moving_Collision_Proxy",
+                "J6_DM_G6220_Output_Rotor_Collision_Proxy"
+              ],
+              [
+                "J1_Moving_Collision_Proxy",
+                "J6_Gripper_Connector_Collision_Proxy"
+              ],
+              [
+                "J6_DM_G6220_Output_Rotor_Collision_Proxy",
+                "UpperArm_Full_Collision_Proxy"
+              ],
+              [
+                "J6_Gripper_Connector_Collision_Proxy",
+                "UpperArm_Full_Collision_Proxy"
+              ]
+            ]
+          },
+          {
+            "pose_index": 75,
+            "angles_deg": {
+              "j1_deg": -38.520944689677265,
+              "j2_deg": 68.29986453292875,
+              "j3_deg": 136.90173334237585,
+              "j4_deg": 109.15494777789286,
+              "j5_deg": 3.0517404147249607,
+              "j6_deg": -153.19305702627727
+            },
+            "active_pairs": [
+              [
+                "Gemini_Pro_Camera_Collision_Proxy",
+                "J1_Fixed_Collision_Proxy"
+              ],
+              [
+                "Gemini_Pro_Camera_Collision_Proxy",
+                "J1_Moving_Collision_Proxy"
+              ]
+            ]
+          },
+          {
+            "pose_index": 83,
+            "angles_deg": {
+              "j1_deg": 21.238583508438722,
+              "j2_deg": -23.522319394240554,
+              "j3_deg": -123.18386376748208,
+              "j4_deg": -102.77904461086868,
+              "j5_deg": 26.356774508928595,
+              "j6_deg": -166.02610339296712
+            },
+            "active_pairs": [
+              [
+                "Gemini_Pro_Camera_Collision_Proxy",
+                "J1_Moving_Collision_Proxy"
+              ],
+              [
+                "Gemini_Pro_Camera_Collision_Proxy",
+                "UpperArm_Full_Collision_Proxy"
+              ],
+              [
+                "Gripper_Fixed_Frame_Collision_Proxy",
+                "J1_Moving_Collision_Proxy"
+              ],
+              [
+                "Gripper_Fixed_Frame_Collision_Proxy",
+                "UpperArm_Full_Collision_Proxy"
+              ],
+              [
+                "Gripper_Left_Drive_Link",
+                "J1_Moving_Collision_Proxy"
+              ],
+              [
+                "Gripper_Left_Drive_Link",
+                "UpperArm_Full_Collision_Proxy"
+              ],
+              [
+                "Gripper_Right_Drive_Link",
+                "J1_Moving_Collision_Proxy"
+              ],
+              [
+                "Gripper_Right_Drive_Link",
+                "UpperArm_Full_Collision_Proxy"
+              ],
+              [
+                "Gripper_Right_Finger",
+                "J1_Moving_Collision_Proxy"
+              ],
+              [
+                "Gripper_Right_Outer_Link",
+                "J1_Moving_Collision_Proxy"
+              ],
+              [
+                "Gripper_Right_Outer_Link",
+                "UpperArm_Full_Collision_Proxy"
+              ],
+              [
+                "Gripper_Servo_Collision_Proxy",
+                "J1_Moving_Collision_Proxy"
+              ],
+              [
+                "Gripper_Servo_Collision_Proxy",
+                "UpperArm_Full_Collision_Proxy"
+              ],
+              [
+                "J1_Fixed_Collision_Proxy",
+                "J6_DM_G6220_Output_Rotor_Collision_Proxy"
+              ],
+              [
+                "J1_Fixed_Collision_Proxy",
+                "J6_Gripper_Connector_Collision_Proxy"
+              ],
+              [
+                "J1_Moving_Collision_Proxy",
+                "J6_DM_G6220_Output_Rotor_Collision_Proxy"
+              ],
+              [
+                "J1_Moving_Collision_Proxy",
+                "J6_Gripper_Connector_Collision_Proxy"
+              ],
+              [
+                "J6_Gripper_Connector_Collision_Proxy",
+                "UpperArm_Full_Collision_Proxy"
+              ]
+            ]
+          },
+          {
+            "pose_index": 87,
+            "angles_deg": {
+              "j1_deg": -51.14461674959139,
+              "j2_deg": 23.24680829234228,
+              "j3_deg": 124.74063875290119,
+              "j4_deg": 116.07705186386622,
+              "j5_deg": 39.876752474338616,
+              "j6_deg": -28.748586746622664
+            },
+            "active_pairs": [
+              [
+                "Gemini_Pro_Camera_Collision_Proxy",
+                "J1_Moving_Collision_Proxy"
+              ],
+              [
+                "Gemini_Pro_Camera_Collision_Proxy",
+                "UpperArm_Full_Collision_Proxy"
+              ],
+              [
+                "Gripper_Fixed_Frame_Collision_Proxy",
+                "J1_Moving_Collision_Proxy"
+              ],
+              [
+                "Gripper_Fixed_Frame_Collision_Proxy",
+                "UpperArm_Full_Collision_Proxy"
+              ],
+              [
+                "Gripper_Left_Drive_Link",
+                "J1_Moving_Collision_Proxy"
+              ],
+              [
+                "Gripper_Left_Drive_Link",
+                "UpperArm_Full_Collision_Proxy"
+              ],
+              [
+                "Gripper_Left_Finger",
+                "J1_Fixed_Collision_Proxy"
+              ],
+              [
+                "Gripper_Left_Finger",
+                "J1_Moving_Collision_Proxy"
+              ],
+              [
+                "Gripper_Left_Outer_Link",
+                "J1_Fixed_Collision_Proxy"
+              ],
+              [
+                "Gripper_Left_Outer_Link",
+                "J1_Moving_Collision_Proxy"
+              ],
+              [
+                "Gripper_Right_Drive_Link",
+                "J1_Fixed_Collision_Proxy"
+              ],
+              [
+                "Gripper_Right_Drive_Link",
+                "J1_Moving_Collision_Proxy"
+              ],
+              [
+                "Gripper_Right_Drive_Link",
+                "UpperArm_Full_Collision_Proxy"
+              ],
+              [
+                "Gripper_Right_Finger",
+                "J1_Fixed_Collision_Proxy"
+              ],
+              [
+                "Gripper_Right_Finger",
+                "J1_Moving_Collision_Proxy"
+              ],
+              [
+                "Gripper_Right_Outer_Link",
+                "J1_Moving_Collision_Proxy"
+              ],
+              [
+                "Gripper_Right_Outer_Link",
+                "UpperArm_Full_Collision_Proxy"
+              ],
+              [
+                "Gripper_Servo_Collision_Proxy",
+                "J1_Moving_Collision_Proxy"
+              ],
+              [
+                "Gripper_Servo_Collision_Proxy",
+                "UpperArm_Full_Collision_Proxy"
+              ],
+              [
+                "J1_Moving_Collision_Proxy",
+                "J6_DM_G6220_Output_Rotor_Collision_Proxy"
+              ],
+              [
+                "J1_Moving_Collision_Proxy",
+                "J6_Gripper_Connector_Collision_Proxy"
+              ],
+              [
+                "J6_Gripper_Connector_Collision_Proxy",
+                "UpperArm_Full_Collision_Proxy"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    "all_503_pose_collision_booleans_match": true
+  },
+  "physics_scope": {
+    "empty_load_kinematics_only": true,
+    "mass_com_inertia_verified": false,
+    "effort_velocity_damping_verified": false,
+    "dynamics_use_forbidden": true
+  }
+}
