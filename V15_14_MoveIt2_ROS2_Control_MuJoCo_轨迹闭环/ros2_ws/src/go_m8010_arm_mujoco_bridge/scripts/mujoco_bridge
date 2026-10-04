@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MUJOCO_PYTHON="${MUJOCO_PYTHON:-/home/codex/mujoco_arm_env/bin/python}"
+if [[ ! -x "${MUJOCO_PYTHON}" ]]; then
+  echo "MuJoCo Python runtime not executable: ${MUJOCO_PYTHON}" >&2
+  exit 2
+fi
+exec "${MUJOCO_PYTHON}" "$(dirname "$0")/mujoco_bridge.py" "$@"

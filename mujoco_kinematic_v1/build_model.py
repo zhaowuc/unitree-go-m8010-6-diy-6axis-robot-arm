@@ -17,6 +17,28 @@ MESH_MANIFEST = ROOT / "runtime_mesh_manifest.json"
 MODEL_XML = ROOT / "go_m8010_arm_v15_13_kinematic.xml"
 MODEL_CONTRACT = ROOT / "model_contract.json"
 GROUND_Z_M = -0.09
+TCP_NOMINAL_M = [
+    -0.001187726400,
+    0.000060729026,
+    0.092493513872,
+]
+GRIPPER_TO_CAMERA_LINK_M = [
+    -0.038917046930682,
+    0.000061006900000,
+    0.019635428243040,
+]
+# Frozen CAD camera_link attitude, converted from ROS xyzw
+# [-0.5, 0.5, -0.5, 0.5] to MuJoCo wxyz order.
+GRIPPER_TO_CAMERA_LINK_QUAT_WXYZ = [0.5, -0.5, 0.5, -0.5]
+CAMERA_LINK_TO_SIM_OPTICAL_M = [0.0, -0.00905, -0.0128]
+CAMERA_LINK_TO_SIM_OPTICAL_QUAT_WXYZ = [
+    math.sqrt(0.5),
+    math.sqrt(0.5),
+    0.0,
+    0.0,
+]
+SIM_OPTICAL_TO_MUJOCO_CAMERA_QUAT_WXYZ = [0.0, 1.0, 0.0, 0.0]
+SIM_CAMERA_FOVY_DEG = 60.0  # Synthetic renderer setting; not Gemini CameraInfo.
 
 LINKS = ["base_link", "link1", "link2", "link3", "link4", "link5", "link6", "gripper"]
 JOINT_SOURCE = {"J1": "J1", "J2": "J2A", "J3": "J3", "J4": "J4", "J5": "J5", "J6": "J6"}
@@ -302,6 +324,49 @@ def main() -> None:
     ET.SubElement(gripper, "inertial", pos="0 0 0", mass="1", diaginertia="0.001 0.001 0.001")
     add_link_geometries(gripper, "gripper", visual_assets, collision_assets)
     ET.SubElement(gripper, "site", name="tool_reference", pos="0 0 0", type="sphere", size="0.003", rgba="0.2 0.6 1 1", group="4")
+    ET.SubElement(
+        gripper,
+        "site",
+        name="tcp_nominal",
+        pos=" ".join(f"{float(value):.12f}" for value in TCP_NOMINAL_M),
+        type="sphere",
+        size="0.006",
+        rgba="1 0.05 0.95 1",
+        group="0",
+    )
+    camera_link = ET.SubElement(
+        gripper,
+        "body",
+        name="camera_link",
+        pos=" ".join(f"{float(value):.15f}" for value in GRIPPER_TO_CAMERA_LINK_M),
+        quat=fmt(GRIPPER_TO_CAMERA_LINK_QUAT_WXYZ),
+    )
+    sim_optical = ET.SubElement(
+        camera_link,
+        "body",
+        name="sim_camera_optical_frame",
+        pos=fmt(CAMERA_LINK_TO_SIM_OPTICAL_M),
+        quat=fmt(CAMERA_LINK_TO_SIM_OPTICAL_QUAT_WXYZ),
+    )
+    ET.SubElement(
+        sim_optical,
+        "site",
+        name="sim_camera_optical_origin",
+        pos="0 0 0",
+        type="sphere",
+        size="0.004",
+        rgba="0.05 0.85 1 1",
+        group="4",
+    )
+    ET.SubElement(
+        sim_optical,
+        "camera",
+        name="sim_gemini_pro_renderer",
+        pos="0 0 0",
+        quat=fmt(SIM_OPTICAL_TO_MUJOCO_CAMERA_QUAT_WXYZ),
+        mode="fixed",
+        fovy=fmt([SIM_CAMERA_FOVY_DEG]),
+    )
 
     ET.indent(root, space="  ")
     ET.ElementTree(root).write(MODEL_XML, encoding="utf-8", xml_declaration=True)
@@ -314,9 +379,54 @@ def main() -> None:
         "dummy_inertials": True,
         "dummy_inertial_warning": "Numerical compile placeholders only; never use for dynamics or torque control.",
         "base_frame_policy": "CAD base_link frame is mapped to MuJoCo world identity; all relative transforms are preserved.",
-        "topology": "world/base_link/J1/link1/J2/link2/J3/link3/J4/link4/J5/link5/J6/link6/fixed/gripper",
+        "topology": (
+            "world/base_link/J1/link1/J2/link2/J3/link3/J4/link4/J5/link5/J6/link6/fixed/gripper; "
+            "gripper/{tcp_nominal,camera_link/sim_camera_optical_frame/sim_gemini_pro_renderer}"
+        ),
         "joints": contract_joints,
         "gripper": "frozen at verified V15.13 zero pose and fixed to link6",
+        "tcp_nominal": {
+            "frame": "gripper",
+            "closure_angle_deg": 0.0,
+            "position_m": TCP_NOMINAL_M,
+            "rpy_deg": [0.0, 0.0, 0.0],
+            "definition": "midpoint of the area centroids of the left and right effective silicone gripping surfaces",
+        },
+        "virtual_camera": {
+            "scope": "simulation-only frames; not a real Gemini Pro driver optical frame",
+            "camera_link": {
+                "parent": "gripper",
+                "position_m": GRIPPER_TO_CAMERA_LINK_M,
+                "rpy_rad": [-math.pi / 2.0, 0.0, -math.pi / 2.0],
+                "quaternion_xyzw": [-0.5, 0.5, -0.5, 0.5],
+                "cad_axes": {
+                    "+X": "stereo baseline direction",
+                    "+Y": "camera housing rear",
+                    "+Z": "mounting contact direction",
+                    "view": "-Y",
+                },
+            },
+            "sim_camera_optical_frame": {
+                "parent": "camera_link",
+                "position_m": CAMERA_LINK_TO_SIM_OPTICAL_M,
+                "rpy_rad": [math.pi / 2.0, 0.0, 0.0],
+                "quaternion_xyzw": [math.sqrt(0.5), 0.0, 0.0, math.sqrt(0.5)],
+                "axes": {
+                    "+X": "image right",
+                    "+Y": "image down",
+                    "+Z": "forward",
+                },
+            },
+            "mujoco_renderer_camera": {
+                "name": "sim_gemini_pro_renderer",
+                "parent": "sim_camera_optical_frame",
+                "position_m": [0.0, 0.0, 0.0],
+                "quaternion_wxyz": SIM_OPTICAL_TO_MUJOCO_CAMERA_QUAT_WXYZ,
+                "mapping": "X_mj=+X_opt, Y_mj=-Y_opt, Z_mj=-Z_opt (Rx(pi))",
+                "synthetic_fovy_deg": SIM_CAMERA_FOVY_DEG,
+                "intrinsics_policy": "synthetic renderer only; no real CameraInfo is claimed",
+            },
+        },
         "mesh_units": "visual STL mm with scale 0.001; convex collision STL metres",
         "collision_filter": (
             "MuJoCo broad/narrow phase plus V15_13_self-collision-pair contract in kinematic_guard.py; "

@@ -1,0 +1,2421 @@
+{
+  "schema": "go-m8010-arm-v15.14-final-acceptance/1.0",
+  "revision": "V15.14-MoveIt2-ROS2-Control-MuJoCo-final-acceptance",
+  "generated_at_utc": "2026-08-12T02:19:36.061033+00:00",
+  "status": "PASS",
+  "pass": true,
+  "fail_closed": true,
+  "inputs": {
+    "main_qa": {
+      "path": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环\\evidence\\run_d230_20260812T015818Z\\QA_V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环.json",
+      "size_bytes": 270534,
+      "sha256": "101959a6d6ea1dc1095cf692155428bf1e2f48a6ddd9377ec749fa7d7c0227e0"
+    },
+    "collision_503": {
+      "path": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环\\evidence\\run_d230_20260812T015818Z\\collision_cross_regression_503.json",
+      "size_bytes": 2160316,
+      "sha256": "0518ba83e938a72abe46b6538d490ed2a91396c137ca4734eedc5c546fda9108"
+    },
+    "collision_static": {
+      "path": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环\\evidence\\collision_layer_validation_v15_14.json",
+      "size_bytes": 7441,
+      "sha256": "e60648559cb1d24d40ed6295196c343e7bc87fd4239e5b355e0557628cda0494"
+    },
+    "collision_runtime": {
+      "path": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环\\evidence\\run_d230_20260812T015818Z\\collision_layer_runtime_validation_v15_14.json",
+      "size_bytes": 2109,
+      "sha256": "e635c8c9e7ae0713febf8ec738c06cf49d30f0f36ff015f3c4cbff27c12e31c6"
+    },
+    "v15_13_summary": {
+      "path": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环\\evidence\\v15_13_regression_20260811T231406Z\\summary.json",
+      "size_bytes": 2924,
+      "sha256": "670b96ba3f11dfaf4ad5425d0c1c4ac3a2f71312acc1bb4f5259e123bbc34b0e"
+    },
+    "frozen_baseline": {
+      "path": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环\\config\\frozen_geometry_baseline.json",
+      "size_bytes": 10588,
+      "sha256": "9311eefea02477cc70b494dce7237e4497569a5d4f46ffa9dc79b78e9d588e76"
+    },
+    "j1_branch": {
+      "path": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\V15_14_MoveIt2_ROS2_Control_MuJoCo_轨迹闭环\\evidence\\run_d230_20260812T015818Z\\j1_continuous_branch_regression_v15_14.json",
+      "size_bytes": 2114070,
+      "sha256": "3840853756e857a610400e78a5b3b05259ad26ae545d85e3f96eece041d6761b"
+    }
+  },
+  "gate_summary": {
+    "total": 255,
+    "passed": 255,
+    "failed": 0
+  },
+  "gates": [
+    {
+      "id": "input.main_qa.loaded",
+      "pass": true,
+      "expected": "readable UTF-8 JSON object",
+      "actual": "loaded",
+      "detail": ""
+    },
+    {
+      "id": "input.collision_503.loaded",
+      "pass": true,
+      "expected": "readable UTF-8 JSON object",
+      "actual": "loaded",
+      "detail": ""
+    },
+    {
+      "id": "input.collision_static.loaded",
+      "pass": true,
+      "expected": "readable UTF-8 JSON object",
+      "actual": "loaded",
+      "detail": ""
+    },
+    {
+      "id": "input.collision_runtime.loaded",
+      "pass": true,
+      "expected": "readable UTF-8 JSON object",
+      "actual": "loaded",
+      "detail": ""
+    },
+    {
+      "id": "input.v15_13_summary.loaded",
+      "pass": true,
+      "expected": "readable UTF-8 JSON object",
+      "actual": "loaded",
+      "detail": ""
+    },
+    {
+      "id": "input.frozen_baseline.loaded",
+      "pass": true,
+      "expected": "readable UTF-8 JSON object",
+      "actual": "loaded",
+      "detail": ""
+    },
+    {
+      "id": "input.j1_branch.loaded",
+      "pass": true,
+      "expected": "readable UTF-8 JSON object",
+      "actual": "loaded",
+      "detail": ""
+    },
+    {
+      "id": "main_qa.schema",
+      "pass": true,
+      "expected": "go-m8010-arm-v15.14-trajectory-closed-loop-qa/1.0",
+      "actual": "go-m8010-arm-v15.14-trajectory-closed-loop-qa/1.0",
+      "detail": ""
+    },
+    {
+      "id": "main_qa.revision",
+      "pass": true,
+      "expected": "V15.14-MoveIt2-ros2_control-MuJoCo",
+      "actual": "V15.14-MoveIt2-ros2_control-MuJoCo",
+      "detail": ""
+    },
+    {
+      "id": "main_qa.status",
+      "pass": true,
+      "expected": "PASS",
+      "actual": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "main_qa.scope.execution_mode",
+      "pass": true,
+      "expected": "kinematic_position_tracking",
+      "actual": "kinematic_position_tracking",
+      "detail": ""
+    },
+    {
+      "id": "main_qa.scope.dynamics_invalid",
+      "pass": true,
+      "expected": false,
+      "actual": false,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.scope.simulation_only",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.scope.tcp_frame",
+      "pass": true,
+      "expected": "tcp_nominal",
+      "actual": "tcp_nominal",
+      "detail": ""
+    },
+    {
+      "id": "main_qa.target_manifest_hash",
+      "pass": true,
+      "expected": "f2b230e2cb61c251c81228f5f3b89ced0163b05cf82f0b93db8fd0bb85572d57",
+      "actual": "f2b230e2cb61c251c81228f5f3b89ced0163b05cf82f0b93db8fd0bb85572d57",
+      "detail": ""
+    },
+    {
+      "id": "main_qa.mujoco_model_hash",
+      "pass": true,
+      "expected": "ce6ec828d32f445ff25fb4b3ba3167f7f0bec61cdfca5962ee4072df4b022844",
+      "actual": "ce6ec828d32f445ff25fb4b3ba3167f7f0bec61cdfca5962ee4072df4b022844",
+      "detail": ""
+    },
+    {
+      "id": "main_qa.ros_graph.pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.ros_graph.follow_joint_trajectory_provider_pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.ros_graph.controller_types_and_states_pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.ros_graph.single_joint_state_source",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.ros_graph.standard_topic_based_ros2_control_path",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.ros_graph.no_private_moveit_mujoco_edge",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.ground_scene",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.startup.contract",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.startup.controller_parameters",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.startup.state_streams_fresh",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.startup.fault_clear",
+      "pass": true,
+      "expected": false,
+      "actual": false,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.startup.watchdog_clear",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.startup.j1_normalization_enabled",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.startup.j1_normalization_joint",
+      "pass": true,
+      "expected": "J1",
+      "actual": "J1",
+      "detail": ""
+    },
+    {
+      "id": "main_qa.startup.j1_normalization_method",
+      "pass": true,
+      "expected": "nearest_equivalent_to_current",
+      "actual": "nearest_equivalent_to_current",
+      "detail": ""
+    },
+    {
+      "id": "main_qa.post_run.contract",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.post_run.controller_parameters",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.post_run.state_streams_fresh",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.post_run.fault_clear",
+      "pass": true,
+      "expected": false,
+      "actual": false,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.post_run.watchdog_clear",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.post_run.j1_normalization_enabled",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.post_run.j1_normalization_joint",
+      "pass": true,
+      "expected": "J1",
+      "actual": "J1",
+      "detail": ""
+    },
+    {
+      "id": "main_qa.post_run.j1_normalization_method",
+      "pass": true,
+      "expected": "nearest_equivalent_to_current",
+      "actual": "nearest_equivalent_to_current",
+      "detail": ""
+    },
+    {
+      "id": "main_qa.aggregate.positive_count",
+      "pass": true,
+      "expected": 10,
+      "actual": 10,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.aggregate.rejection_count",
+      "pass": true,
+      "expected": 2,
+      "actual": 2,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.aggregate.all_expectations_met",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.aggregate.ros_graph_pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.aggregate.ground_scene_pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.aggregate.startup_bridge_runtime_contract_pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.aggregate.post_run_bridge_runtime_contract_pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.aggregate.pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.tests.count",
+      "pass": true,
+      "expected": 12,
+      "actual": 12,
+      "detail": ""
+    },
+    {
+      "id": "main_qa.tests.unique_required_ids",
+      "pass": true,
+      "expected": [
+        "back",
+        "central",
+        "front",
+        "high",
+        "left",
+        "low",
+        "near_joint_limit_clear",
+        "near_self_collision_clear",
+        "outside_joint_limit_reject",
+        "random_valid_seed_1514",
+        "right",
+        "self_collision_reject"
+      ],
+      "actual": [
+        "back",
+        "central",
+        "front",
+        "high",
+        "left",
+        "low",
+        "near_joint_limit_clear",
+        "near_self_collision_clear",
+        "outside_joint_limit_reject",
+        "random_valid_seed_1514",
+        "right",
+        "self_collision_reject"
+      ],
+      "detail": ""
+    },
+    {
+      "id": "main_qa.tests.expectations_and_verdicts",
+      "pass": true,
+      "expected": "10 execute_success=>PASS and 2 accepted rejections=>EXPECTED_REJECTION_PASS",
+      "actual": {
+        "central": {
+          "expected_outcome": "execute_success",
+          "verdict": "PASS"
+        },
+        "high": {
+          "expected_outcome": "execute_success",
+          "verdict": "PASS"
+        },
+        "left": {
+          "expected_outcome": "execute_success",
+          "verdict": "PASS"
+        },
+        "front": {
+          "expected_outcome": "execute_success",
+          "verdict": "PASS"
+        },
+        "low": {
+          "expected_outcome": "execute_success",
+          "verdict": "PASS"
+        },
+        "right": {
+          "expected_outcome": "execute_success",
+          "verdict": "PASS"
+        },
+        "back": {
+          "expected_outcome": "execute_success",
+          "verdict": "PASS"
+        },
+        "random_valid_seed_1514": {
+          "expected_outcome": "execute_success",
+          "verdict": "PASS"
+        },
+        "near_joint_limit_clear": {
+          "expected_outcome": "execute_success",
+          "verdict": "PASS"
+        },
+        "near_self_collision_clear": {
+          "expected_outcome": "execute_success",
+          "verdict": "PASS"
+        },
+        "outside_joint_limit_reject": {
+          "expected_outcome": "bounds_rejection",
+          "verdict": "EXPECTED_REJECTION_PASS"
+        },
+        "self_collision_reject": {
+          "expected_outcome": "collision_rejection",
+          "verdict": "EXPECTED_REJECTION_PASS"
+        }
+      },
+      "detail": ""
+    },
+    {
+      "id": "collision_503.status",
+      "pass": true,
+      "expected": "PASS",
+      "actual": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "collision_503.revision",
+      "pass": true,
+      "expected": "V15.14-MoveIt-MuJoCo-503-pose-collision-cross-regression",
+      "actual": "V15.14-MoveIt-MuJoCo-503-pose-collision-cross-regression",
+      "detail": ""
+    },
+    {
+      "id": "collision_503.model_not_modified",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.expected_pose_count",
+      "pass": true,
+      "expected": 503,
+      "actual": 503,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.pose_count",
+      "pass": true,
+      "expected": 503,
+      "actual": 503,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.pose_count_gate",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.frozen_pose_set_gate",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.frozen_pose_set.expected_sha256",
+      "pass": true,
+      "expected": "4d9cfaf15cc20fe16393d1aa3bccddc5273e77e2de08cf9d0045976c301799aa",
+      "actual": "4d9cfaf15cc20fe16393d1aa3bccddc5273e77e2de08cf9d0045976c301799aa",
+      "detail": ""
+    },
+    {
+      "id": "collision_503.frozen_pose_set.actual_sha256",
+      "pass": true,
+      "expected": "4d9cfaf15cc20fe16393d1aa3bccddc5273e77e2de08cf9d0045976c301799aa",
+      "actual": "4d9cfaf15cc20fe16393d1aa3bccddc5273e77e2de08cf9d0045976c301799aa",
+      "detail": ""
+    },
+    {
+      "id": "collision_503.input_hash_gate",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.match_count",
+      "pass": true,
+      "expected": 503,
+      "actual": 503,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.mismatch_count",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.boolean_mismatch_count",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.overall_boolean_mismatch_count",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.self_boolean_mismatch_count",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.ground_boolean_mismatch_count",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.pair_set_mismatch_count",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.self_pair_set_mismatch_count",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.booleans_match",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.overall_booleans_match",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.self_booleans_match",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.ground_booleans_match",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.pair_sets_match",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.self_pair_sets_match",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.frozen_collision_counts",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.expected_frozen_collision_counts",
+      "pass": true,
+      "expected": {
+        "overall": 182,
+        "self": 126,
+        "ground": 118
+      },
+      "actual": {
+        "overall": 182,
+        "self": 126,
+        "ground": 118
+      },
+      "detail": ""
+    },
+    {
+      "id": "collision_503.count.moveit.overall",
+      "pass": true,
+      "expected": 182,
+      "actual": 182,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.count_gate.overall.moveit",
+      "pass": true,
+      "expected": 182,
+      "actual": 182,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.count.moveit.self",
+      "pass": true,
+      "expected": 126,
+      "actual": 126,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.count_gate.self.moveit",
+      "pass": true,
+      "expected": 126,
+      "actual": 126,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.count.moveit.ground",
+      "pass": true,
+      "expected": 118,
+      "actual": 118,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.count_gate.ground.moveit",
+      "pass": true,
+      "expected": 118,
+      "actual": 118,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.count.mujoco.overall",
+      "pass": true,
+      "expected": 182,
+      "actual": 182,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.count_gate.overall.mujoco",
+      "pass": true,
+      "expected": 182,
+      "actual": 182,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.count.mujoco.self",
+      "pass": true,
+      "expected": 126,
+      "actual": 126,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.count_gate.self.mujoco",
+      "pass": true,
+      "expected": 126,
+      "actual": 126,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.count.mujoco.ground",
+      "pass": true,
+      "expected": 118,
+      "actual": 118,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.count_gate.ground.mujoco",
+      "pass": true,
+      "expected": 118,
+      "actual": 118,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.count_gate.overall.pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.count_gate.self.pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.count_gate.ground.pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.negative_control_count",
+      "pass": true,
+      "expected": 5,
+      "actual": 5,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.negative_controls",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.accepted_model_unmodified",
+      "pass": true,
+      "expected": false,
+      "actual": false,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.parent_filter_enabled_by_guard",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_503.model_hash",
+      "pass": true,
+      "expected": "ce6ec828d32f445ff25fb4b3ba3167f7f0bec61cdfca5962ee4072df4b022844",
+      "actual": "ce6ec828d32f445ff25fb4b3ba3167f7f0bec61cdfca5962ee4072df4b022844",
+      "detail": ""
+    },
+    {
+      "id": "collision_503.guard_hash",
+      "pass": true,
+      "expected": "648b9de953a84be46cd5f95e24daf9f683f3025e73048dc068ef7bd8e5670c6a",
+      "actual": "648b9de953a84be46cd5f95e24daf9f683f3025e73048dc068ef7bd8e5670c6a",
+      "detail": ""
+    },
+    {
+      "id": "collision_503.validator_hash",
+      "pass": true,
+      "expected": "9be9fab3e5c7850f001c2e46b83aebf033a02feff2a9e27dbc15347db4098ea4",
+      "actual": "9be9fab3e5c7850f001c2e46b83aebf033a02feff2a9e27dbc15347db4098ea4",
+      "detail": ""
+    },
+    {
+      "id": "collision_503.negative_controls_exact_all_pass",
+      "pass": true,
+      "expected": "five accepted self-collision controls at indices 43,73,75,83,87",
+      "actual": [
+        {
+          "category": "coupled_random_seed_1513",
+          "pose_index": 43,
+          "moveit_collision": true,
+          "mujoco_collision": true,
+          "moveit_self_collision": true,
+          "mujoco_self_collision": true,
+          "pass": true
+        },
+        {
+          "category": "coupled_random_seed_1513",
+          "pose_index": 73,
+          "moveit_collision": true,
+          "mujoco_collision": true,
+          "moveit_self_collision": true,
+          "mujoco_self_collision": true,
+          "pass": true
+        },
+        {
+          "category": "coupled_random_seed_1513",
+          "pose_index": 75,
+          "moveit_collision": true,
+          "mujoco_collision": true,
+          "moveit_self_collision": true,
+          "mujoco_self_collision": true,
+          "pass": true
+        },
+        {
+          "category": "coupled_random_seed_1513",
+          "pose_index": 83,
+          "moveit_collision": true,
+          "mujoco_collision": true,
+          "moveit_self_collision": true,
+          "mujoco_self_collision": true,
+          "pass": true
+        },
+        {
+          "category": "coupled_random_seed_1513",
+          "pose_index": 87,
+          "moveit_collision": true,
+          "mujoco_collision": true,
+          "moveit_self_collision": true,
+          "mujoco_self_collision": true,
+          "pass": true
+        }
+      ],
+      "detail": ""
+    },
+    {
+      "id": "collision_static.pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_static.pair_partition.proxy_count",
+      "pass": true,
+      "expected": 25,
+      "actual": 25,
+      "detail": ""
+    },
+    {
+      "id": "collision_static.pair_partition.all_unordered_pair_count",
+      "pass": true,
+      "expected": 300,
+      "actual": 300,
+      "detail": ""
+    },
+    {
+      "id": "collision_static.pair_partition.runtime_full_pair_count",
+      "pass": true,
+      "expected": 231,
+      "actual": 231,
+      "detail": ""
+    },
+    {
+      "id": "collision_static.pair_partition.runtime_excluded_pair_count",
+      "pass": true,
+      "expected": 69,
+      "actual": 69,
+      "detail": ""
+    },
+    {
+      "id": "collision_static.pair_partition.motion_enabled_pair_count",
+      "pass": true,
+      "expected": 2,
+      "actual": 2,
+      "detail": ""
+    },
+    {
+      "id": "collision_static.pair_partition.motion_excluded_pair_count",
+      "pass": true,
+      "expected": 22,
+      "actual": 22,
+      "detail": ""
+    },
+    {
+      "id": "collision_static.runtime_token_coverage",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_static.inherited_meshes",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_static.explicit_geom_pairs",
+      "pass": true,
+      "expected": 82,
+      "actual": 82,
+      "detail": ""
+    },
+    {
+      "id": "collision_static.generated_hash.contract",
+      "pass": true,
+      "expected": "6d802909e44f238816f007ef33b57e1b57099c5522a473cd2dcc2705397af9c9",
+      "actual": "6D802909E44F238816F007EF33B57E1B57099C5522A473CD2DCC2705397AF9C9",
+      "detail": ""
+    },
+    {
+      "id": "collision_static.generated_hash.mjcf",
+      "pass": true,
+      "expected": "ce6ec828d32f445ff25fb4b3ba3167f7f0bec61cdfca5962ee4072df4b022844",
+      "actual": "CE6EC828D32F445FF25FB4B3BA3167F7F0BEC61CDFCA5962EE4072DF4B022844",
+      "detail": ""
+    },
+    {
+      "id": "collision_static.generated_hash.guard",
+      "pass": true,
+      "expected": "648b9de953a84be46cd5f95e24daf9f683f3025e73048dc068ef7bd8e5670c6a",
+      "actual": "648B9DE953A84BE46CD5F95E24DAF9F683F3025E73048DC068EF7BD8E5670C6A",
+      "detail": ""
+    },
+    {
+      "id": "collision_runtime.top_pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_runtime.pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_runtime.nq",
+      "pass": true,
+      "expected": 6,
+      "actual": 6,
+      "detail": ""
+    },
+    {
+      "id": "collision_runtime.npair",
+      "pass": true,
+      "expected": 82,
+      "actual": 82,
+      "detail": ""
+    },
+    {
+      "id": "collision_runtime.expected_pairs",
+      "pass": true,
+      "expected": 82,
+      "actual": 82,
+      "detail": ""
+    },
+    {
+      "id": "collision_runtime.frozen_pose_gate",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "collision_runtime.frozen_pose_count",
+      "pass": true,
+      "expected": 503,
+      "actual": 503,
+      "detail": ""
+    },
+    {
+      "id": "collision_runtime.cases",
+      "pass": true,
+      "expected": "at least 3 runtime cases, every pass=true",
+      "actual": [
+        {
+          "name": "zero",
+          "pose_deg": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "safe": true,
+          "reason": "clear",
+          "motion_contact_count": 0,
+          "motion_token_pairs": [],
+          "minimum_motion_contact_distance_m": null,
+          "pass": true
+        },
+        {
+          "name": "motion_vs_j1_moving",
+          "pose_deg": [
+            0.0,
+            -120.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "safe": false,
+          "reason": "ground_collision",
+          "motion_contact_count": 8,
+          "motion_token_pairs": [
+            [
+              "J1_Fixed_Collision_Proxy",
+              "UpperArm_Motion_Collision_Proxy"
+            ],
+            [
+              "J1_Moving_Collision_Proxy",
+              "UpperArm_Motion_Collision_Proxy"
+            ]
+          ],
+          "minimum_motion_contact_distance_m": -0.02705110262961133,
+          "pass": true
+        },
+        {
+          "name": "motion_vs_j1_fixed",
+          "pose_deg": [
+            0.0,
+            -140.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "safe": false,
+          "reason": "ground_collision",
+          "motion_contact_count": 1,
+          "motion_token_pairs": [
+            [
+              "J1_Fixed_Collision_Proxy",
+              "UpperArm_Motion_Collision_Proxy"
+            ]
+          ],
+          "minimum_motion_contact_distance_m": -0.0012004230606530405,
+          "pass": true
+        }
+      ],
+      "detail": ""
+    },
+    {
+      "id": "v15_13_regression.schema",
+      "pass": true,
+      "expected": "go_m8010_v15_13_regression_summary_v1",
+      "actual": "go_m8010_v15_13_regression_summary_v1",
+      "detail": ""
+    },
+    {
+      "id": "v15_13_regression.overall_status",
+      "pass": true,
+      "expected": "PASS",
+      "actual": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "v15_13_regression.source_not_written",
+      "pass": true,
+      "expected": false,
+      "actual": false,
+      "detail": ""
+    },
+    {
+      "id": "v15_13_regression.source_hash_unchanged",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "v15_13_regression.xml_deterministic",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "v15_13_regression.contract_deterministic",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "v15_13_regression.required_test_set",
+      "pass": true,
+      "expected": [
+        "build_model",
+        "validate_joint_motion_semantics",
+        "validate_model",
+        "validate_virtual_camera"
+      ],
+      "actual": [
+        "build_model",
+        "validate_joint_motion_semantics",
+        "validate_model",
+        "validate_virtual_camera"
+      ],
+      "detail": ""
+    },
+    {
+      "id": "v15_13_regression.all_tests_pass",
+      "pass": true,
+      "expected": "all four tests status=PASS and exit_code=0",
+      "actual": {
+        "build_model": {
+          "status": "PASS",
+          "exit_code": 0
+        },
+        "validate_model": {
+          "status": "PASS",
+          "exit_code": 0
+        },
+        "validate_joint_motion_semantics": {
+          "status": "PASS",
+          "exit_code": 0
+        },
+        "validate_virtual_camera": {
+          "status": "PASS",
+          "exit_code": 0
+        }
+      },
+      "detail": ""
+    },
+    {
+      "id": "frozen_baseline.schema",
+      "pass": true,
+      "expected": "go-m8010-arm-v15.14-frozen-geometry-baseline/2.0",
+      "actual": "go-m8010-arm-v15.14-frozen-geometry-baseline/2.0",
+      "detail": ""
+    },
+    {
+      "id": "frozen_baseline.accepted_contract",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "frozen_baseline.all_frozen_joints",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "frozen_baseline.all_frozen_elements",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "frozen_baseline.runtime_token_coverage",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "frozen_baseline.inherited_meshes",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "frozen_baseline.generated_hash.collision_contract_sha256",
+      "pass": true,
+      "expected": "6d802909e44f238816f007ef33b57e1b57099c5522a473cd2dcc2705397af9c9",
+      "actual": "6D802909E44F238816F007EF33B57E1B57099C5522A473CD2DCC2705397AF9C9",
+      "detail": ""
+    },
+    {
+      "id": "frozen_baseline.generated_hash.mjcf_sha256",
+      "pass": true,
+      "expected": "ce6ec828d32f445ff25fb4b3ba3167f7f0bec61cdfca5962ee4072df4b022844",
+      "actual": "CE6EC828D32F445FF25FB4B3BA3167F7F0BEC61CDFCA5962EE4072DF4B022844",
+      "detail": ""
+    },
+    {
+      "id": "frozen_baseline.generated_hash.guard_sha256",
+      "pass": true,
+      "expected": "648b9de953a84be46cd5f95e24daf9f683f3025e73048dc068ef7bd8e5670c6a",
+      "actual": "648B9DE953A84BE46CD5F95E24DAF9F683F3025E73048DC068EF7BD8E5670C6A",
+      "detail": ""
+    },
+    {
+      "id": "frozen_baseline.position_limits_inherited",
+      "pass": true,
+      "expected": "inherited unchanged from V15.13",
+      "actual": "inherited unchanged from V15.13",
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.schema",
+      "pass": true,
+      "expected": "go-m8010-arm-v15.14-j1-continuous-branch-regression/1.0",
+      "actual": "go-m8010-arm-v15.14-j1-continuous-branch-regression/1.0",
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.exception",
+      "pass": true,
+      "expected": null,
+      "actual": null,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.contract.scope",
+      "pass": true,
+      "expected": "J1 continuous representation through standard FollowJointTrajectory",
+      "actual": "J1 continuous representation through standard FollowJointTrajectory",
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.contract.action",
+      "pass": true,
+      "expected": "/arm_controller/follow_joint_trajectory",
+      "actual": "/arm_controller/follow_joint_trajectory",
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.contract.joints",
+      "pass": true,
+      "expected": [
+        "J1",
+        "J2",
+        "J3",
+        "J4",
+        "J5",
+        "J6"
+      ],
+      "actual": [
+        "J1",
+        "J2",
+        "J3",
+        "J4",
+        "J5",
+        "J6"
+      ],
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.contract.segment_duration",
+      "pass": true,
+      "expected": "finite and >= 3.0 s",
+      "actual": 4.0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.contract.positive_branch_goal_rad",
+      "pass": true,
+      "expected": [
+        6.283185307179586,
+        6.403185307179586
+      ],
+      "actual": [
+        6.283185307179586,
+        6.403185307179586
+      ],
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.contract.negative_branch_goal_rad",
+      "pass": true,
+      "expected": [
+        -6.163185307179586,
+        -6.283185307179586
+      ],
+      "actual": [
+        -6.163185307179586,
+        -6.283185307179586
+      ],
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.contract.expected_physical_motion_rad",
+      "pass": true,
+      "expected": [
+        0.0,
+        0.12,
+        0.0
+      ],
+      "actual": [
+        0.0,
+        0.12,
+        0.0
+      ],
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.contract.threshold.branch_offset_tolerance_rad",
+      "pass": true,
+      "expected": 0.02,
+      "actual": 0.02,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.contract.threshold.branch_max_adjustment_tolerance_rad",
+      "pass": true,
+      "expected": 1e-09,
+      "actual": 1e-09,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.contract.threshold.raw_j1_jump_limit_rad",
+      "pass": true,
+      "expected": 0.05,
+      "actual": 0.05,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.contract.threshold.raw_velocity_limit_rad_s",
+      "pass": true,
+      "expected": 0.52,
+      "actual": 0.52,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.contract.threshold.bridge_acceleration_limit_rad_s2",
+      "pass": true,
+      "expected": 1.02,
+      "actual": 1.02,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.contract.threshold.other_joint_limit_rad",
+      "pass": true,
+      "expected": 1e-05,
+      "actual": 1e-05,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.contract.threshold.final_position_tolerance_rad",
+      "pass": true,
+      "expected": 0.001,
+      "actual": 0.001,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.contract.threshold.controller_wrapped_tracking_limit_rad",
+      "pass": true,
+      "expected": 0.03,
+      "actual": 0.03,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.contract.threshold.minimum_dynamic_sample_count",
+      "pass": true,
+      "expected": 20,
+      "actual": 20,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.initial.pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.initial.all_exact_gates",
+      "pass": true,
+      "expected": [
+        "bridge_fault_not_latched",
+        "bridge_no_rejections",
+        "bridge_no_watchdog_timeout",
+        "bridge_primed",
+        "bridge_schema",
+        "fresh_adjustment_counter",
+        "j1_normalization_enabled",
+        "j1_normalization_joint",
+        "j1_normalization_method",
+        "mechanical_zero_position",
+        "publisher_message_types",
+        "raw_state_present",
+        "single_bridge_status_publisher",
+        "single_command_publisher",
+        "single_controller_state_publisher",
+        "single_raw_state_publisher",
+        "stationary_velocity"
+      ],
+      "actual": {
+        "bridge_fault_not_latched": true,
+        "bridge_no_rejections": true,
+        "bridge_no_watchdog_timeout": true,
+        "bridge_primed": true,
+        "bridge_schema": true,
+        "fresh_adjustment_counter": true,
+        "j1_normalization_enabled": true,
+        "j1_normalization_joint": true,
+        "j1_normalization_method": true,
+        "mechanical_zero_position": true,
+        "publisher_message_types": true,
+        "raw_state_present": true,
+        "single_bridge_status_publisher": true,
+        "single_command_publisher": true,
+        "single_controller_state_publisher": true,
+        "single_raw_state_publisher": true,
+        "stationary_velocity": true
+      },
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.initial.zero_position",
+      "pass": true,
+      "expected": "six finite joints within 1e-3 rad of zero",
+      "actual": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.initial.stationary_velocity",
+      "pass": true,
+      "expected": "six finite joints within 1e-5 rad/s of zero",
+      "actual": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.initial.bridge.schema",
+      "pass": true,
+      "expected": "go-m8010-arm-v15.14-mujoco-bridge-status/1.0",
+      "actual": "go-m8010-arm-v15.14-mujoco-bridge-status/1.0",
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.initial.bridge.fault_latched",
+      "pass": true,
+      "expected": false,
+      "actual": false,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.initial.bridge.command_stream_primed",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.initial.bridge.rejected_command_count",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.initial.bridge.moving_watchdog_timeout_count",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.initial.normalization.enabled",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.initial.normalization.joint_name",
+      "pass": true,
+      "expected": "J1",
+      "actual": "J1",
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.initial.normalization.method",
+      "pass": true,
+      "expected": "nearest_equivalent_to_current",
+      "actual": "nearest_equivalent_to_current",
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.initial.normalization.accepted_adjustment_count",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.segments.count",
+      "pass": true,
+      "expected": 2,
+      "actual": 2,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.id",
+      "pass": true,
+      "expected": "positive_2pi_branch",
+      "actual": "positive_2pi_branch",
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.action",
+      "pass": true,
+      "expected": "/arm_controller/follow_joint_trajectory",
+      "actual": "/arm_controller/follow_joint_trajectory",
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.joints",
+      "pass": true,
+      "expected": [
+        "J1",
+        "J2",
+        "J3",
+        "J4",
+        "J5",
+        "J6"
+      ],
+      "actual": [
+        "J1",
+        "J2",
+        "J3",
+        "J4",
+        "J5",
+        "J6"
+      ],
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.two_point_goal",
+      "pass": true,
+      "expected": {
+        "start_j1_rad": 6.283185307179586,
+        "finish_j1_rad": 6.403185307179586
+      },
+      "actual": [
+        {
+          "position_rad": [
+            6.283185307179586,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "time_from_start_s": 0.0,
+          "velocity_rad_s": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "position_rad": [
+            6.403185307179586,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "time_from_start_s": 4.0,
+          "velocity_rad_s": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.all_exact_gates",
+      "pass": true,
+      "expected": [
+        "action_status_succeeded",
+        "bridge_accepted_moving_commands",
+        "bridge_adjusted_accepted_commands",
+        "bridge_fault_not_latched",
+        "bridge_guard_safe",
+        "bridge_max_adjustment_is_two_pi",
+        "bridge_observed_acceleration_within_envelope",
+        "bridge_observed_velocity_within_envelope",
+        "bridge_rejected_no_commands",
+        "bridge_watchdog_no_timeout",
+        "command_minus_raw_branch_offset",
+        "controller_result_successful",
+        "controller_wrapped_tracking_error_within_limit",
+        "final_physical_position_matches",
+        "minimum_command_samples",
+        "minimum_controller_state_samples",
+        "minimum_raw_state_samples",
+        "other_joints_remain_zero",
+        "paired_branch_samples_present",
+        "raw_j1_has_no_branch_jump",
+        "raw_velocity_within_envelope",
+        "standard_follow_joint_trajectory_goal_accepted"
+      ],
+      "actual": {
+        "action_status_succeeded": true,
+        "bridge_accepted_moving_commands": true,
+        "bridge_adjusted_accepted_commands": true,
+        "bridge_fault_not_latched": true,
+        "bridge_guard_safe": true,
+        "bridge_max_adjustment_is_two_pi": true,
+        "bridge_observed_acceleration_within_envelope": true,
+        "bridge_observed_velocity_within_envelope": true,
+        "bridge_rejected_no_commands": true,
+        "bridge_watchdog_no_timeout": true,
+        "command_minus_raw_branch_offset": true,
+        "controller_result_successful": true,
+        "controller_wrapped_tracking_error_within_limit": true,
+        "final_physical_position_matches": true,
+        "minimum_command_samples": true,
+        "minimum_controller_state_samples": true,
+        "minimum_raw_state_samples": true,
+        "other_joints_remain_zero": true,
+        "paired_branch_samples_present": true,
+        "raw_j1_has_no_branch_jump": true,
+        "raw_velocity_within_envelope": true,
+        "standard_follow_joint_trajectory_goal_accepted": true
+      },
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.goal_accepted",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.action_status",
+      "pass": true,
+      "expected": 4,
+      "actual": 4,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.controller_result",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.samples.command",
+      "pass": true,
+      "expected": ">= 20",
+      "actual": 223,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.samples.raw_state",
+      "pass": true,
+      "expected": ">= 20",
+      "actual": 445,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.samples.controller_state",
+      "pass": true,
+      "expected": ">= 20",
+      "actual": 122,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.pairing.expected_offset",
+      "pass": true,
+      "expected": 6.283185307179586,
+      "actual": 6.283185307179586,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.pairing.sample_count",
+      "pass": true,
+      "expected": ">= 20",
+      "actual": 223,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.pairing.median",
+      "pass": true,
+      "expected": "within 0.02 rad of 6.283185307179586",
+      "actual": 6.28380808557738,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.pairing.inliers",
+      "pass": true,
+      "expected": ">= 0.95",
+      "actual": 1.0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.metric.max_consecutive_raw_j1_jump_rad",
+      "pass": true,
+      "expected": "finite and <= 0.05",
+      "actual": 0.0009030511401533006,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.metric.max_abs_raw_velocity_rad_s",
+      "pass": true,
+      "expected": "finite and <= 0.52",
+      "actual": 0.04499999999541572,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.metric.max_abs_other_joint_position_rad",
+      "pass": true,
+      "expected": "finite and <= 1e-05",
+      "actual": 0.0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.metric.max_abs_other_joint_velocity_rad_s",
+      "pass": true,
+      "expected": "finite and <= 1e-05",
+      "actual": 0.0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.metric.max_controller_wrapped_tracking_error_rad",
+      "pass": true,
+      "expected": "finite and <= 0.03",
+      "actual": 0.0027007662012212604,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.metric.max_final_physical_position_error_rad",
+      "pass": true,
+      "expected": "finite and <= 0.001",
+      "actual": 2.7755575615628914e-16,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.metric.bridge_max_observed_command_velocity_rad_s",
+      "pass": true,
+      "expected": "finite and <= 0.52",
+      "actual": 0.04516268418008571,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.metric.bridge_max_observed_command_acceleration_rad_s2",
+      "pass": true,
+      "expected": "finite and <= 1.02",
+      "actual": 0.04468977117717338,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.metric.expected_final",
+      "pass": true,
+      "expected": [
+        0.12,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "actual": [
+        0.12,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.metric.actual_final",
+      "pass": true,
+      "expected": "within 1e-3 rad of physical J1=0.12, others zero",
+      "actual": [
+        0.12000000000000027,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.counter.j1_accepted_adjustment_count",
+      "pass": true,
+      "expected": "> 0",
+      "actual": 222,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.counter.accepted_moving_command_count",
+      "pass": true,
+      "expected": "> 0",
+      "actual": 200,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.counter.rejected_command_count",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.counter.moving_watchdog_timeout_count",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.bridge.max_adjustment",
+      "pass": true,
+      "expected": "2*pi +/- 1e-9 (6.283185307179586)",
+      "actual": 6.283185307179587,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.bridge.fault_clear",
+      "pass": true,
+      "expected": false,
+      "actual": false,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.bridge.rejections",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.bridge.watchdog",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.bridge.normalization.enabled",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.bridge.normalization.joint",
+      "pass": true,
+      "expected": "J1",
+      "actual": "J1",
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.positive_2pi_branch.bridge.normalization.method",
+      "pass": true,
+      "expected": "nearest_equivalent_to_current",
+      "actual": "nearest_equivalent_to_current",
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.id",
+      "pass": true,
+      "expected": "negative_2pi_branch",
+      "actual": "negative_2pi_branch",
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.action",
+      "pass": true,
+      "expected": "/arm_controller/follow_joint_trajectory",
+      "actual": "/arm_controller/follow_joint_trajectory",
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.joints",
+      "pass": true,
+      "expected": [
+        "J1",
+        "J2",
+        "J3",
+        "J4",
+        "J5",
+        "J6"
+      ],
+      "actual": [
+        "J1",
+        "J2",
+        "J3",
+        "J4",
+        "J5",
+        "J6"
+      ],
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.two_point_goal",
+      "pass": true,
+      "expected": {
+        "start_j1_rad": -6.163185307179586,
+        "finish_j1_rad": -6.283185307179586
+      },
+      "actual": [
+        {
+          "position_rad": [
+            -6.163185307179586,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "time_from_start_s": 0.0,
+          "velocity_rad_s": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "position_rad": [
+            -6.283185307179586,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "time_from_start_s": 4.0,
+          "velocity_rad_s": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.all_exact_gates",
+      "pass": true,
+      "expected": [
+        "action_status_succeeded",
+        "bridge_accepted_moving_commands",
+        "bridge_adjusted_accepted_commands",
+        "bridge_fault_not_latched",
+        "bridge_guard_safe",
+        "bridge_max_adjustment_is_two_pi",
+        "bridge_observed_acceleration_within_envelope",
+        "bridge_observed_velocity_within_envelope",
+        "bridge_rejected_no_commands",
+        "bridge_watchdog_no_timeout",
+        "command_minus_raw_branch_offset",
+        "controller_result_successful",
+        "controller_wrapped_tracking_error_within_limit",
+        "final_physical_position_matches",
+        "minimum_command_samples",
+        "minimum_controller_state_samples",
+        "minimum_raw_state_samples",
+        "other_joints_remain_zero",
+        "paired_branch_samples_present",
+        "raw_j1_has_no_branch_jump",
+        "raw_velocity_within_envelope",
+        "standard_follow_joint_trajectory_goal_accepted"
+      ],
+      "actual": {
+        "action_status_succeeded": true,
+        "bridge_accepted_moving_commands": true,
+        "bridge_adjusted_accepted_commands": true,
+        "bridge_fault_not_latched": true,
+        "bridge_guard_safe": true,
+        "bridge_max_adjustment_is_two_pi": true,
+        "bridge_observed_acceleration_within_envelope": true,
+        "bridge_observed_velocity_within_envelope": true,
+        "bridge_rejected_no_commands": true,
+        "bridge_watchdog_no_timeout": true,
+        "command_minus_raw_branch_offset": true,
+        "controller_result_successful": true,
+        "controller_wrapped_tracking_error_within_limit": true,
+        "final_physical_position_matches": true,
+        "minimum_command_samples": true,
+        "minimum_controller_state_samples": true,
+        "minimum_raw_state_samples": true,
+        "other_joints_remain_zero": true,
+        "paired_branch_samples_present": true,
+        "raw_j1_has_no_branch_jump": true,
+        "raw_velocity_within_envelope": true,
+        "standard_follow_joint_trajectory_goal_accepted": true
+      },
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.goal_accepted",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.action_status",
+      "pass": true,
+      "expected": 4,
+      "actual": 4,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.controller_result",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.samples.command",
+      "pass": true,
+      "expected": ">= 20",
+      "actual": 223,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.samples.raw_state",
+      "pass": true,
+      "expected": ">= 20",
+      "actual": 446,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.samples.controller_state",
+      "pass": true,
+      "expected": ">= 20",
+      "actual": 121,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.pairing.expected_offset",
+      "pass": true,
+      "expected": -6.283185307179586,
+      "actual": -6.283185307179586,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.pairing.sample_count",
+      "pass": true,
+      "expected": ">= 20",
+      "actual": 223,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.pairing.median",
+      "pass": true,
+      "expected": "within 0.02 rad of -6.283185307179586",
+      "actual": -6.283798301393358,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.pairing.inliers",
+      "pass": true,
+      "expected": ">= 0.95",
+      "actual": 1.0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.metric.max_consecutive_raw_j1_jump_rad",
+      "pass": true,
+      "expected": "finite and <= 0.05",
+      "actual": 0.0009039185540504549,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.metric.max_abs_raw_velocity_rad_s",
+      "pass": true,
+      "expected": "finite and <= 0.52",
+      "actual": 0.044999999987595136,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.metric.max_abs_other_joint_position_rad",
+      "pass": true,
+      "expected": "finite and <= 1e-05",
+      "actual": 0.0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.metric.max_abs_other_joint_velocity_rad_s",
+      "pass": true,
+      "expected": "finite and <= 1e-05",
+      "actual": 0.0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.metric.max_controller_wrapped_tracking_error_rad",
+      "pass": true,
+      "expected": "finite and <= 0.03",
+      "actual": 0.0027004053734891223,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.metric.max_final_physical_position_error_rad",
+      "pass": true,
+      "expected": "finite and <= 0.001",
+      "actual": 5.375258780371325e-16,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.metric.bridge_max_observed_command_velocity_rad_s",
+      "pass": true,
+      "expected": "finite and <= 0.52",
+      "actual": 0.045266678609173494,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.metric.bridge_max_observed_command_acceleration_rad_s2",
+      "pass": true,
+      "expected": "finite and <= 1.02",
+      "actual": 0.044753585580157886,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.metric.expected_final",
+      "pass": true,
+      "expected": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "actual": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.metric.actual_final",
+      "pass": true,
+      "expected": "within 1e-3 rad of physical J1=0.0, others zero",
+      "actual": [
+        5.375258780371325e-16,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.counter.j1_accepted_adjustment_count",
+      "pass": true,
+      "expected": "> 0",
+      "actual": 223,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.counter.accepted_moving_command_count",
+      "pass": true,
+      "expected": "> 0",
+      "actual": 200,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.counter.rejected_command_count",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.counter.moving_watchdog_timeout_count",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.bridge.max_adjustment",
+      "pass": true,
+      "expected": "2*pi +/- 1e-9 (6.283185307179586)",
+      "actual": 6.283185307179587,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.bridge.fault_clear",
+      "pass": true,
+      "expected": false,
+      "actual": false,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.bridge.rejections",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.bridge.watchdog",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.bridge.normalization.enabled",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.bridge.normalization.joint",
+      "pass": true,
+      "expected": "J1",
+      "actual": "J1",
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.negative_2pi_branch.bridge.normalization.method",
+      "pass": true,
+      "expected": "nearest_equivalent_to_current",
+      "actual": "nearest_equivalent_to_current",
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.final.pass",
+      "pass": true,
+      "expected": true,
+      "actual": true,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.final.all_exact_gates",
+      "pass": true,
+      "expected": [
+        "bridge_adjustments_observed",
+        "bridge_fault_not_latched",
+        "bridge_max_adjustment_is_two_pi",
+        "bridge_no_rejections",
+        "bridge_no_watchdog_timeout",
+        "raw_state_present",
+        "returned_to_mechanical_zero",
+        "stationary_velocity"
+      ],
+      "actual": {
+        "bridge_adjustments_observed": true,
+        "bridge_fault_not_latched": true,
+        "bridge_max_adjustment_is_two_pi": true,
+        "bridge_no_rejections": true,
+        "bridge_no_watchdog_timeout": true,
+        "raw_state_present": true,
+        "returned_to_mechanical_zero": true,
+        "stationary_velocity": true
+      },
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.final.zero_position",
+      "pass": true,
+      "expected": "six finite joints within 1e-3 rad of zero",
+      "actual": [
+        1.5503536808036467e-17,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.final.stationary_velocity",
+      "pass": true,
+      "expected": "six finite joints within 1e-5 rad/s of zero",
+      "actual": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.final.bridge.schema",
+      "pass": true,
+      "expected": "go-m8010-arm-v15.14-mujoco-bridge-status/1.0",
+      "actual": "go-m8010-arm-v15.14-mujoco-bridge-status/1.0",
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.final.bridge.fault_latched",
+      "pass": true,
+      "expected": false,
+      "actual": false,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.final.bridge.rejected_command_count",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.final.bridge.moving_watchdog_timeout_count",
+      "pass": true,
+      "expected": 0,
+      "actual": 0,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.final.normalization.adjustments",
+      "pass": true,
+      "expected": "> 0",
+      "actual": 460,
+      "detail": ""
+    },
+    {
+      "id": "j1_branch.final.normalization.max_adjustment",
+      "pass": true,
+      "expected": "2*pi +/- 1e-9 (6.283185307179586)",
+      "actual": 6.283185307179587,
+      "detail": ""
+    }
+  ]
+}

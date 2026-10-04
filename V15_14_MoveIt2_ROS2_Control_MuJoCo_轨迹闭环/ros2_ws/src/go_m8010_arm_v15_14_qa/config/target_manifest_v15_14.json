@@ -1,0 +1,95 @@
+{
+  "schema": "go-m8010-arm-v15.14-target-manifest/1.0",
+  "seed": 1514,
+  "workspace_axes": {
+    "left_vector_world": [0.0, 1.0, 0.0],
+    "front_vector_world": [-1.0, 0.0, 0.0],
+    "up_vector_world": [0.0, 0.0, 1.0]
+  },
+  "targets": [
+    {
+      "id": "central",
+      "category": "central",
+      "planning_mode": "pose",
+      "expected_outcome": "execute_success",
+      "joint_position_rad": [1.124121149582856, -0.27901094068588544, 1.7565919627280027, 1.1165032676237892, 0.9011428927012853, 0.5252871937184611]
+    },
+    {
+      "id": "high",
+      "category": "high",
+      "planning_mode": "pose",
+      "expected_outcome": "execute_success",
+      "joint_position_rad": [-0.34094636400790945, 1.58228721003635, -0.1686966745511792, 0.026627377339456488, 0.759366400968913, 0.17435292586742182]
+    },
+    {
+      "id": "left",
+      "category": "left",
+      "planning_mode": "pose",
+      "expected_outcome": "execute_success",
+      "joint_position_rad": [-1.4783010181095602, 0.35237864266218066, -0.4265956357277459, 0.19292803774310918, 0.37639183376666635, -2.4796993507691245]
+    },
+    {
+      "id": "front",
+      "category": "front",
+      "planning_mode": "pose",
+      "expected_outcome": "execute_success",
+      "joint_position_rad": [-0.05353998600635883, 0.15708546608580579, -0.42788875674525434, -0.28793439189965697, 1.017666324976852, 0.26282911606293063]
+    },
+    {
+      "id": "low",
+      "category": "low",
+      "planning_mode": "pose",
+      "expected_outcome": "execute_success",
+      "joint_position_rad": [0.647355004033147, -0.2238790578945304, 0.23271043675750633, -0.7746909349826216, -0.0808963214359411, 0.5352755560492551]
+    },
+    {
+      "id": "right",
+      "category": "right",
+      "planning_mode": "pose",
+      "expected_outcome": "execute_success",
+      "joint_position_rad": [1.5903492817949778, 0.17174029634468418, -0.37973740041925375, 0.270558885106669, 0.8698449214243629, 0.15870890572493626]
+    },
+    {
+      "id": "back",
+      "category": "back",
+      "planning_mode": "pose",
+      "expected_outcome": "execute_success",
+      "joint_position_rad": [2.7676427230749376, -0.03757577250136388, -0.08001836749733134, 0.36176168051985763, 1.5923127703406244, 0.4705476831182573]
+    },
+    {
+      "id": "random_valid_seed_1514",
+      "category": "random_valid",
+      "planning_mode": "joint",
+      "expected_outcome": "execute_success",
+      "joint_position_rad": [0.174532925199, 0.174532925199, -0.174532925199, 0.174532925199, -0.174532925199, 0.261799387799]
+    },
+    {
+      "id": "near_joint_limit_clear",
+      "category": "near_joint_limit_clear",
+      "planning_mode": "joint",
+      "expected_outcome": "execute_success",
+      "joint_position_rad": [-1.9254844075708681, 2.720689226650929, -2.4748659323064457, 2.1687773667733246, -0.6314494041137378, -3.0539159132170277]
+    },
+    {
+      "id": "near_self_collision_clear",
+      "category": "near_self_collision_clear",
+      "planning_mode": "joint",
+      "expected_outcome": "execute_success",
+      "joint_position_rad": [-2.4798427713084505, 2.120021124073636, 1.8233926009531958, 1.5232184514231588, -0.17329425328322673, -0.2646377500551838]
+    },
+    {
+      "id": "outside_joint_limit_reject",
+      "category": "outside_joint_limit_reject",
+      "planning_mode": "joint",
+      "expected_outcome": "bounds_rejection",
+      "joint_position_rad": [0.0, 2.9688050576423546, 0.0, 0.0, 0.0, 0.0]
+    },
+    {
+      "id": "self_collision_reject",
+      "category": "self_collision_reject",
+      "planning_mode": "joint",
+      "expected_outcome": "collision_rejection",
+      "joint_position_rad": [-2.7042996415577427, 2.311909622762962, 1.9884324983131907, 1.6610888237984283, -0.18897955647025813, -0.28859078522920806]
+    }
+  ]
+}

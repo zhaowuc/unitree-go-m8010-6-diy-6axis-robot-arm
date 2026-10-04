@@ -3,8 +3,8 @@
   "revision": "V15.13-camera-up-mechanical-zero-deep-audited",
   "main_fcstd": "cad/机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
   "main_fcstd_sha256": "B4A02A97AFAFF88E246A46340DAD4CACD3C645A7456FDD087A69552E14D3DDC0",
-  "file_count_excluding_manifest": 100,
-  "total_bytes_excluding_manifest": 312499560,
+  "file_count_excluding_manifest": 117,
+  "total_bytes_excluding_manifest": 277232895,
   "files": [
     {
       "path": "cad/J6末端_相机上置机械零位_v15_13.step",
@@ -20,11 +20,6 @@
       "path": "cad/机械臂完整装配_六轴_刚性Link拆分_v15_13.FCStd",
       "bytes": 58620691,
       "sha256": "2AE05FAB2A15C5C75BB05DB8B456F149DA20F79CEDBA2FC8D47F1624BCEC34C7"
-    },
-    {
-      "path": "cad/机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.20260810-223408.FCBak",
-      "bytes": 28041503,
-      "sha256": "6CF00B0EDD1895BF74466018311589F59F51320895788E22314E8965FE2771BE"
     },
     {
       "path": "cad/机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
@@ -107,14 +102,59 @@
       "sha256": "EC5D546163932AD135AF24584842CB04164F520DD098F2EF4DE3A8D5C0A45831"
     },
     {
+      "path": "evidence/virtual_camera/mujoco_virtual_camera_orientation_validation.png",
+      "bytes": 48474,
+      "sha256": "095EADAFE3B628F251CBE0C8DE77F0D72F9E60FEDEB87A8A666A6B2A57214418"
+    },
+    {
+      "path": "evidence/virtual_camera/QA_MUJOCO_V15_13_空载运动学版.json",
+      "bytes": 21879,
+      "sha256": "625D4B47C0F2036D43AA233B5F85B892081C1AC926CA36A7B8C0A10DF728A4FD"
+    },
+    {
+      "path": "evidence/virtual_camera/QA_MUJOCO_V15_13_虚拟相机坐标闭环.json",
+      "bytes": 7250,
+      "sha256": "07762436081E23091DA4913C81CA5427D257C2FDFF64F49506832FD557A64283"
+    },
+    {
+      "path": "evidence/virtual_camera/QA_ROS2_V15_13_RVIZ可视网格.json",
+      "bytes": 9018,
+      "sha256": "FADC3DFF50F5CAD77E5A087A0D320E97CA555D0CB9D673773D59CFDF05F48663"
+    },
+    {
+      "path": "evidence/virtual_camera/QA_ROS2_V15_13_virtual_camera_final_runtime.json",
+      "bytes": 2347,
+      "sha256": "2277BE249D0E116392FEF45F87CE00F027B5B311DEE35C91B980F7CB28E0A066"
+    },
+    {
+      "path": "evidence/virtual_camera/rviz_virtual_camera_final_axes_closeup.png",
+      "bytes": 264875,
+      "sha256": "2041D9AE7AE8930AB96AB3D348FDD25681B96592EAFDF93A9660CAE42F6AA463"
+    },
+    {
+      "path": "evidence/virtual_camera/rviz_virtual_camera_final_closeup.png",
+      "bytes": 208468,
+      "sha256": "5FD0F60CA97CC1BD6DBC99F6EADE18DE99E71E431CC585EEEFD69FA2B80BCE75"
+    },
+    {
+      "path": "evidence/virtual_camera/rviz_virtual_camera_final_overview_v2.png",
+      "bytes": 154057,
+      "sha256": "E1BF3CE908366760E71DCE8D34B23DE758EBEEB4FF92C418025A92661768E8AF"
+    },
+    {
+      "path": "evidence/virtual_camera/V15_13_虚拟Gemini_Pro_ROS2_MuJoCo坐标闭环验收报告.md",
+      "bytes": 6576,
+      "sha256": "253EB950AB586782B04C41C230D2D88515DF3E5902D157BEF30388C5E9997DB7"
+    },
+    {
       "path": "mujoco/go_m8010_arm_v15_13.template.xml",
-      "bytes": 7488,
-      "sha256": "0C7513587AC8BC0F1A3039C24096B51EB4697BB72FD47078C9D451009933D64C"
+      "bytes": 8344,
+      "sha256": "2BE7B4CB080D1658C2BF0EBA48D3F4DF8C0FEF9AC88BAA6ED7AB4DA7CDC97181"
     },
     {
       "path": "mujoco/README.md",
-      "bytes": 527,
-      "sha256": "91407CE71556321901467F27EC20E5BF755B6E7CEBBF9A4BEC9144418B39878B"
+      "bytes": 750,
+      "sha256": "88F425B952A8E4D5EEBE6D72FA2D0CA32E4C5B32E77CFC46B4696759AA46F3B7"
     },
     {
       "path": "previews/README_装配预览.md",
@@ -138,8 +178,8 @@
     },
     {
       "path": "README_完整工程_V15_13.md",
-      "bytes": 1499,
-      "sha256": "A10B3AFE22201BA79ED6228498F6E8BDB537C3BAB64D26EB1A0EB2342C33A362"
+      "bytes": 1572,
+      "sha256": "B12E88B8965362C81251D15E3C7F9FE148975F5D21C8A890BD1B8652FEC07779"
     },
     {
       "path": "references/gripper_internal_zero_reference/gripper_complete_zero_reference.stl",
@@ -248,8 +288,18 @@
     },
     {
       "path": "ros2_ws/src/go_m8010_arm_description/CMakeLists.txt",
-      "bytes": 191,
-      "sha256": "F51918825058184DF8B024FA3EFC1036063A55E1A4216A3BC2B34B38F345219C"
+      "bytes": 200,
+      "sha256": "B79A487C6F363E3BD6AA16EA8FA2E69A65C6A4BCC9066B7C152798B2FA28692A"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/launch/display_tf.launch.py",
+      "bytes": 1795,
+      "sha256": "067AA675CD0A2CD2E7326DB4B7B4DD8F84C10EED6A1B3DA5B36FB777236E6FC6"
+    },
+    {
+      "path": "ros2_ws/src/go_m8010_arm_description/launch/display_virtual_camera_tf.launch.py",
+      "bytes": 971,
+      "sha256": "71EE366C6DA7B141CDC439480C34F311DC0DC86ABA21F8177DD9CDCD67473651"
     },
     {
       "path": "ros2_ws/src/go_m8010_arm_description/meshes/collision/base_link.step",
@@ -333,48 +383,48 @@
     },
     {
       "path": "ros2_ws/src/go_m8010_arm_description/meshes/visual/base_link.stl",
-      "bytes": 9323984,
-      "sha256": "39B7E73E1E0FC4A7DC12147B15B525F8B5999581B474BC057BAE3C1D119BF3AF"
+      "bytes": 7387284,
+      "sha256": "CB842671BB5138EFF40845C4C6C42E552D32BF0C0810D2AEC1831A8142DDB754"
     },
     {
       "path": "ros2_ws/src/go_m8010_arm_description/meshes/visual/gripper.stl",
-      "bytes": 2943184,
-      "sha256": "DA5152BCAD9C22F497FC070A5289BE19F9767F70F6F448AA6D45285F024BFDC6"
+      "bytes": 11934184,
+      "sha256": "8E70B714ED248877A87CBED8015C610E56A3E6831D438362BC35A9E6DC6EB748"
     },
     {
       "path": "ros2_ws/src/go_m8010_arm_description/meshes/visual/link1.stl",
-      "bytes": 23631184,
-      "sha256": "AB2015EEB370988D253BA62415B5D4AE30DE0215024051F5CAFD2279CCDD5AF5"
+      "bytes": 14497884,
+      "sha256": "AC3499867B772A867D09188FF34767EE5F696054DB54E21680D7F53DEEEE2BDB"
     },
     {
       "path": "ros2_ws/src/go_m8010_arm_description/meshes/visual/link2.stl",
-      "bytes": 13173234,
-      "sha256": "5D71AF866E541AA9AC373F7DFF23EE2579AB17F4656C4C1CC4A23938D3E55B26"
+      "bytes": 14745834,
+      "sha256": "50B21130AD2C40C9858ABDD769782BDC2504F4928302759F185D8E253DD63A0A"
     },
     {
       "path": "ros2_ws/src/go_m8010_arm_description/meshes/visual/link3.stl",
-      "bytes": 19159584,
-      "sha256": "91AB8967764815E826C45715A095EB699CA4A927A371E68EA81E9D49C57A916F"
+      "bytes": 13063584,
+      "sha256": "14E415E076A41A81BC2ECA9D5B0C89E428DABF10D4BEB93E5A5F7FEAC5C1BB44"
     },
     {
       "path": "ros2_ws/src/go_m8010_arm_description/meshes/visual/link4.stl",
-      "bytes": 14169484,
-      "sha256": "29CFB06BC2A4FEFE950CFF4EF1245E576D560D94C5EBEFA920B542E33650F958"
+      "bytes": 11797184,
+      "sha256": "E9EAE973EABC3E15B1C9924081297436C50351661CC59B4D44FD056D191609D9"
     },
     {
       "path": "ros2_ws/src/go_m8010_arm_description/meshes/visual/link5.stl",
-      "bytes": 8434584,
-      "sha256": "484451EA55F1DE4C65C9C02E77CCD22D78D4F2C49E95694491D5128828801200"
+      "bytes": 9151284,
+      "sha256": "49EA0CA3C6DF1AC235C9D80704C847996A1D71F07564863FB47886B852A9BB15"
     },
     {
       "path": "ros2_ws/src/go_m8010_arm_description/meshes/visual/link6.stl",
-      "bytes": 125334,
-      "sha256": "BD41B94B015362E97142D4C3BE41241A4017421D3C5DD42909632E742583FE3C"
+      "bytes": 253284,
+      "sha256": "9587C3BECA7BEB23672A1BAAB6F36322D5F40D5C81454E7DBCEFCEC2632F8849"
     },
     {
       "path": "ros2_ws/src/go_m8010_arm_description/package.xml",
-      "bytes": 498,
-      "sha256": "B5AFCE1044CBB4E003BCD1EEF869F542F4D49F6A1D991399BAB7EDA0DB768343"
+      "bytes": 775,
+      "sha256": "808ABB1BC99E8F2A68CFFD5D5F43A00CD837FFC61E14D7F7CA84EA39F29790A1"
     },
     {
       "path": "ros2_ws/src/go_m8010_arm_description/README.md",
@@ -382,9 +432,14 @@
       "sha256": "0C83A84F5B611AD5B8E69B5812936F30077F09AAFA12B0634DC2F89362D3C450"
     },
     {
+      "path": "ros2_ws/src/go_m8010_arm_description/rviz/virtual_camera_tf.rviz",
+      "bytes": 1502,
+      "sha256": "B2CC2F8476296C17B0006483AAE62BD164E857BA0AF48DA572F0B5DFA2B46C7F"
+    },
+    {
       "path": "ros2_ws/src/go_m8010_arm_description/urdf/go_m8010_arm_v15_13.urdf.xacro",
-      "bytes": 7773,
-      "sha256": "9CCA587A153E63AF0EBBCFFD205770CE158386E5D3E4FF2DD8BAFDD844B88127"
+      "bytes": 9112,
+      "sha256": "66E14959C9BF65ABDCC9028D4F8008A803050865AE965FBF168B1CD08229E84B"
     },
     {
       "path": "ros2_ws/src/go_m8010_arm_moveit_config/CMakeLists.txt",
@@ -427,6 +482,21 @@
       "sha256": "FB9FBBD85C3E75DB47BA4763555D9CC0021EE71F34E2166339071CF742240310"
     },
     {
+      "path": "tools/build_robot_arm_axis_roll_camera_ear_direct_v15.py",
+      "bytes": 34470,
+      "sha256": "E367754C74242D6FAE7BCFF08505C8A3A2D14A253F887993991C9DB3261C49CE"
+    },
+    {
+      "path": "tools/build_robot_arm_gripper_connector_revision_v15.py",
+      "bytes": 36083,
+      "sha256": "14CC460AEFD82CE7B1EFD163290AB21E1426FEFFD89F55B12091BDF4077D8B37"
+    },
+    {
+      "path": "tools/build_robot_arm_joint_axes_v15.py",
+      "bytes": 63820,
+      "sha256": "10B6DBA45C4411A29C77DFA53FA756D02834A68F937B9C8F7644DD80DF7B9E71"
+    },
+    {
       "path": "tools/build_robot_arm_rigid_links_v15.py",
       "bytes": 42703,
       "sha256": "E9B66986377EB2A30D464C6B9CA9C1371BC2E83F4E7D180F23E0DA08CF8FB944"
@@ -445,6 +515,11 @@
       "path": "tools/export_v15_13_world_preview_assets.py",
       "bytes": 3163,
       "sha256": "8E362626AF22B1BD96CEE698BAAE716D1A03C6941254663A0DBA0A37486BB448"
+    },
+    {
+      "path": "tools/inspect_v15_13_visual_member_bounds.py",
+      "bytes": 1899,
+      "sha256": "60F3B6A571BDADA1A578465B0779E2DA5B5117F87D3ABFAF0EA1A64B3532C2EA"
     },
     {
       "path": "tools/j123456_camera_physical_collision_guard_v15_13.py",
@@ -493,8 +568,8 @@
     },
     {
       "path": "tools/package_robot_arm_v15_13_delivery.py",
-      "bytes": 23083,
-      "sha256": "C17A8D1A616CDD5746547893BFD3B3E8F7E25E24287D75B6731C212FDCDC12BC"
+      "bytes": 33214,
+      "sha256": "0E6EEC9D89F4ABD2B9171C9E5341C2B31890615F7859664ADE9E8F200F7C47A4"
     },
     {
       "path": "tools/regression_v15_13_collision_guard.py",
@@ -502,9 +577,19 @@
       "sha256": "F4D46C32DB7C8391769D9E71083A864D86CED5FE8F2F8C9729C4C7A9E62B0133"
     },
     {
+      "path": "tools/render_robot_arm_v15_13_previews.py",
+      "bytes": 7401,
+      "sha256": "B08B381C40036D4EC5D7CA94E4860331711B3EAB958972568D9AC8537C7176BA"
+    },
+    {
       "path": "tools/render_v15_13_verified_world_previews.py",
       "bytes": 7692,
       "sha256": "19233D174EA78120BF17FC94FA0CBEAAA68EC3F479019584F28121984B5CECF4"
+    },
+    {
+      "path": "tools/validate_robot_arm_joint_axes_v15.py",
+      "bytes": 21095,
+      "sha256": "EF87F42B084BBCB74B0F9FE4CAC67208AB9050007E12C7AEC886D63CF5F1DB46"
     }
   ]
 }

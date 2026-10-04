@@ -1,0 +1,129 @@
+{
+  "schema": "go-m8010-arm-v15.14-upperarm-motion-proxy-export/1.0",
+  "source_policy": "read-only frozen V15.13 FCStd; document is never saved",
+  "source_fcstd": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\机械臂完整装配_六轴_相机上置机械零位_深度复核_v15_13.FCStd",
+  "source_fcstd_sha256": "B4A02A97AFAFF88E246A46340DAD4CACD3C645A7456FDD087A69552E14D3DDC0",
+  "axis_contract": "D:\\AI_JIXIEBI\\模型\\机械臂完整装配_真实关节轴_v15\\V15_13_整机深度复核_相机上置机械零位\\V15_13_真实关节轴与相机上置零位.json",
+  "axis_contract_sha256": "9B46C1FD816530235E80C453587E58E62A1DCCF1828C72C3867CC8DF720EE5A9",
+  "object": "UpperArm_Motion_Collision_Proxy",
+  "owner": "link2",
+  "source_group": "J2_Driven_Reference_Rigid",
+  "brep_sha256": "2E7C0D1F1A61B612261EE537498A24FE5410886BE96FD07A9404D6604A274F7D",
+  "source_shape": {
+    "valid": true,
+    "closed": true,
+    "solid_count": 2,
+    "face_count": 9,
+    "volume_mm3": 309250.04267525265,
+    "area_mm2": 44953.716329882904,
+    "global_placement": {
+      "base_mm": [
+        -645.7783335564332,
+        -2906.2297267154954,
+        -1845.150522456254
+      ],
+      "quaternion_xyzw": [
+        0.5961412145925024,
+        0.38028364711643353,
+        0.5071905711438046,
+        0.49270450022586687
+      ]
+    }
+  },
+  "transform": "FreeCAD world mesh, then inverse frozen link2 frame baked into vertices",
+  "world_bounds_mm": {
+    "min_mm": [
+      -30.87419891357422,
+      75.83580780029297,
+      138.0410614013672
+    ],
+    "max_mm": [
+      33.327911376953125,
+      296.52001953125,
+      227.23849487304688
+    ],
+    "size_mm": [
+      64.20211029052734,
+      220.68421173095703,
+      89.19743347167969
+    ]
+  },
+  "urdf_mesh": {
+    "path": "ros2_ws/src/go_m8010_arm_v15_14_description/meshes/collision_proxies/link2/03_UpperArm_Motion_Collision_Proxy.stl",
+    "units": "mm",
+    "scale_to_m": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "facets": 512,
+    "bounds_local_mm": {
+      "min_mm": [
+        -293.1961364746094,
+        -46.000003814697266,
+        -44.59872055053711
+      ],
+      "max_mm": [
+        -72.00001525878906,
+        -25.999996185302734,
+        44.59871292114258
+      ],
+      "size_mm": [
+        221.1961212158203,
+        20.00000762939453,
+        89.19743347167969
+      ]
+    },
+    "sha256": "F67DACE5D0D6327BE1D2091E93B0F538823AC526DB9750E604969BFDF2F75C20"
+  },
+  "mjcf_components": [
+    {
+      "index": 1,
+      "path": "mujoco_v15_14/meshes/collision_motion_proxy_mm/link2/UpperArm_Motion_Collision_Proxy__component_001.stl",
+      "units": "mm",
+      "facets": 500,
+      "bounds_local_mm": {
+        "min_mm": [
+          -293.1961364746094,
+          -46.000003814697266,
+          -44.59872055053711
+        ],
+        "max_mm": [
+          -204.00949096679688,
+          -25.999996185302734,
+          44.59871292114258
+        ],
+        "size_mm": [
+          89.1866455078125,
+          20.00000762939453,
+          89.19743347167969
+        ]
+      },
+      "sha256": "1F3B3C3878B93C450C9C90590542174E18259902B22EB81DC8A427563EE3F555"
+    },
+    {
+      "index": 2,
+      "path": "mujoco_v15_14/meshes/collision_motion_proxy_mm/link2/UpperArm_Motion_Collision_Proxy__component_002.stl",
+      "units": "mm",
+      "facets": 12,
+      "bounds_local_mm": {
+        "min_mm": [
+          -220.6028594970703,
+          -46.0,
+          -31.000041961669922
+        ],
+        "max_mm": [
+          -72.00001525878906,
+          -25.999998092651367,
+          31.000003814697266
+        ],
+        "size_mm": [
+          148.60284423828125,
+          20.000001907348633,
+          62.00004577636719
+        ]
+      },
+      "sha256": "11FB6C54F4D972E7C13B86167EA7CB1987354FA59DEFCE43A0D9D4FF9F0CCF2A"
+    }
+  ]
+}

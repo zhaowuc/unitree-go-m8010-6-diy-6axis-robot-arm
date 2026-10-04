@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>go_m8010_arm_mujoco_bridge</name>
+  <version>15.14.0</version>
+  <description>Fail-closed MuJoCo kinematic state bridge behind ros2_control topics.</description>
+  <maintainer email="maintainer@example.invalid">GO-M8010 project</maintainer>
+  <license>Proprietary</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

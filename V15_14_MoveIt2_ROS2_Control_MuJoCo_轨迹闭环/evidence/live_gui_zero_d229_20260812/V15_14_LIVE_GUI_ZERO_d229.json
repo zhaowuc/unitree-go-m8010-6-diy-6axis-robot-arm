@@ -1,0 +1,172 @@
+{
+  "schema": "go-m8010-arm-v15.14-live-authoritative-gui-zero/1.0",
+  "ros_domain_id": 229,
+  "interface": "/arm_controller/follow_joint_trajectory",
+  "duration_s": 14.0,
+  "gui_zero_semantics": "calibrated GUI startup posture and slider-relative zero; CAD/MJCF/URDF/encoder zeros unchanged",
+  "target_deg": [
+    -135.0,
+    150.0,
+    -74.40207091282407,
+    -90.0,
+    45.0,
+    0.7134917101830321
+  ],
+  "target_rad": [
+    -2.356194490192345,
+    2.6179938779914944,
+    -1.298561107731083,
+    -1.5707963267948966,
+    0.7853981633974483,
+    0.012452779528379065
+  ],
+  "start_rad": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "final_raw_rad": [
+    -2.356194490192345,
+    2.6179938779914944,
+    -1.298561107731083,
+    -1.5707963267948966,
+    0.7853981633974483,
+    0.012452779528379065
+  ],
+  "final_public_rad": [
+    -2.356194490192345,
+    2.6179938779914944,
+    -1.298561107731083,
+    -1.5707963267948966,
+    0.7853981633974483,
+    0.012452779528379065
+  ],
+  "max_raw_target_error_rad": 0.0,
+  "max_public_target_error_rad": 0.0,
+  "max_public_raw_error_rad": 0.0,
+  "action_status": 4,
+  "result_error_code": 0,
+  "sample_counts": {
+    "raw": 1569,
+    "public": 781,
+    "status": 1568
+  },
+  "bridge_status": {
+    "schema": "go-m8010-arm-v15.14-mujoco-bridge-status/1.0",
+    "execution_mode": "kinematic_position_tracking",
+    "dynamics_valid": false,
+    "parent_collision_filter_disabled": true,
+    "model": {
+      "path": "/home/codex/projects/v15_14_runtime/mujoco_v15_14/go_m8010_arm_v15_14_kinematic.xml",
+      "sha256": "ce6ec828d32f445ff25fb4b3ba3167f7f0bec61cdfca5962ee4072df4b022844"
+    },
+    "collision_contract": {
+      "path": "/home/codex/projects/v15_14_runtime/mujoco_v15_14/collision_pair_contract_v15_14.json",
+      "sha256": "6d802909e44f238816f007ef33b57e1b57099c5522a473cd2dcc2705397af9c9",
+      "schema": "go-m8010-arm-v15.14-self-collision-pair-contract/2.0",
+      "revision": "V15.14-pair-scoped-upperarm-motion-proxy",
+      "proxy_count": 25,
+      "all_unordered_pair_count": 300,
+      "runtime_full_pair_count": 231,
+      "runtime_excluded_pair_count": 69
+    },
+    "kinematic_guard": {
+      "path": "/home/codex/projects/v15_14_runtime/mujoco_v15_14/kinematic_guard.py",
+      "sha256": "648b9de953a84be46cd5f95e24daf9f683f3025e73048dc068ef7bd8e5670c6a"
+    },
+    "runtime_mesh_integrity": {
+      "pass": true,
+      "runtime_manifest_path": "/home/codex/projects/mujoco_kinematic_v1/runtime_mesh_manifest.json",
+      "runtime_manifest_sha256": "1174abcfef3b87ee77d4ce50af5afc1aa62d45759f1560ace361997e8c60b19d",
+      "mesh_count": 1008,
+      "visual_chunk_count": 45,
+      "collision_piece_count": 961,
+      "motion_proxy_piece_count": 2,
+      "total_bytes": 383827772,
+      "asset_set_sha256": "fe517900413488414f9a606d7fd8f05ea8a7f2be08043672e75c57ae669f0425",
+      "source_manifest_path": "/home/codex/projects/mujoco_kinematic_v1/mesh_export_manifest.json",
+      "source_manifest_sha256": "22cfb9a194495b442731405a023cec8f83fb03d17b2e814cf13febc924d1ce3a",
+      "explicit_geom_pair_count": 82,
+      "explicit_geom_pair_set_pass": true
+    },
+    "simulation_execution_envelope": {
+      "max_velocity_rad_s": 0.5,
+      "max_acceleration_rad_s2": 1.0,
+      "publish_rate_hz": 50.0,
+      "absolute_calculation_tolerance": 0.02,
+      "velocity_consistency_tolerance_rad_s": 0.04,
+      "command_timeout_s": 0.1,
+      "prime_position_tolerance_rad": 1e-06,
+      "prime_velocity_tolerance_rad_s": 1e-06,
+      "guard_max_step_deg": 0.25,
+      "max_observed_command_velocity_rad_s": 0.33475772035262946,
+      "max_observed_command_acceleration_rad_s2": 0.1654470104586419,
+      "stationary_command_gap_count": 2,
+      "max_source_receipt_dt_difference_s": 0.024726826000000035,
+      "max_velocity_consistency_error_rad_s": 0.009068224781286105,
+      "max_command_source_age_s": 0.031300932000000004,
+      "dropped_stale_stationary_command_count": 0,
+      "stationary_guard_reuse_count": 60573
+    },
+    "fault_latched": false,
+    "latch_fault_enabled": true,
+    "command_stream_primed": true,
+    "command_subscription_history": "keep_last",
+    "command_subscription_depth": 1,
+    "j1_continuous_branch_normalization": {
+      "enabled": true,
+      "joint_name": "J1",
+      "method": "nearest_equivalent_to_current",
+      "pi_tie_break": "match_joint_trajectory_controller",
+      "accepted_adjustment_count": 0,
+      "max_abs_adjustment_rad": 0.0
+    },
+    "last_command_receipt_age_s": 0.013473089,
+    "moving_command_watchdog_active": true,
+    "command_motion_active": false,
+    "stationary_confirmation_count": 52,
+    "moving_watchdog_timeout_count": 0,
+    "accepted_command_count": 62175,
+    "accepted_moving_command_count": 1599,
+    "rejected_command_count": 0,
+    "last_guard_result": {
+      "safe": true,
+      "reason": "accepted_stationary_heartbeat",
+      "steps": 0
+    },
+    "joint_position_rad": [
+      -2.356194490192345,
+      2.6179938779914944,
+      -1.298561107731083,
+      -1.5707963267948966,
+      0.7853981633974483,
+      0.012452779528379065
+    ],
+    "joint_velocity_rad_s": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "gates": {
+    "server_ready": true,
+    "streams_ready": true,
+    "start_is_cad_mechanical_zero": true,
+    "goal_accepted": true,
+    "action_succeeded": true,
+    "controller_success": true,
+    "raw_at_gui_zero": true,
+    "public_at_gui_zero": true,
+    "public_raw_match": true,
+    "bridge_fault_false": true,
+    "bridge_reject_unchanged": true,
+    "watchdog_unchanged": true
+  },
+  "pass": true
+}

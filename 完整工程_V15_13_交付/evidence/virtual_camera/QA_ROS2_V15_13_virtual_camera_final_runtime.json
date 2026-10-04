@@ -1,0 +1,125 @@
+{
+  "ros_domain_id": 169,
+  "process_group": 28363,
+  "tf_edges": [
+    [
+      "base_link",
+      "link1"
+    ],
+    [
+      "camera_link",
+      "sim_camera_optical_frame"
+    ],
+    [
+      "gripper",
+      "camera_link"
+    ],
+    [
+      "gripper",
+      "tcp_nominal"
+    ],
+    [
+      "link1",
+      "link2"
+    ],
+    [
+      "link2",
+      "link3"
+    ],
+    [
+      "link3",
+      "link4"
+    ],
+    [
+      "link4",
+      "link5"
+    ],
+    [
+      "link5",
+      "link6"
+    ],
+    [
+      "link6",
+      "gripper"
+    ],
+    [
+      "world",
+      "base_link"
+    ]
+  ],
+  "expected_edges_present": true,
+  "roots": [
+    "world"
+  ],
+  "unique_root_world": true,
+  "parent_conflicts": {},
+  "tf_static_message_count_observed": 1,
+  "tf_static_edge_count": 5,
+  "tf_static_unique_edge_count": 5,
+  "duplicate_edges_within_static_payloads": false,
+  "tf_static_publishers": [
+    {
+      "node_name": "robot_state_publisher",
+      "node_namespace": "/"
+    }
+  ],
+  "tf_publishers": [
+    {
+      "node_name": "robot_state_publisher",
+      "node_namespace": "/"
+    }
+  ],
+  "gripper_to_camera_link": {
+    "translation_m": [
+      -0.038917046930682,
+      6.10069e-05,
+      0.01963542824304
+    ],
+    "quaternion_xyzw": [
+      -0.5,
+      0.4999999999999999,
+      -0.5,
+      0.5000000000000001
+    ],
+    "position_max_error_m": 0.0,
+    "quaternion_sign_invariant_max_error": 1.1102230246251565e-16
+  },
+  "camera_link_to_sim_camera_optical_frame": {
+    "translation_m": [
+      0.0,
+      -0.00905,
+      -0.0128
+    ],
+    "quaternion_xyzw": [
+      0.7071067811865475,
+      0.0,
+      0.0,
+      0.7071067811865476
+    ],
+    "position_max_error_m": 0.0,
+    "quaternion_sign_invariant_max_error": 1.1102230246251565e-16
+  },
+  "world_to_sim_camera_optical_frame_query": {
+    "pass": true,
+    "translation_m": [
+      0.01350497015142219,
+      0.009526154148510584,
+      0.4220317065213319
+    ],
+    "quaternion_xyzw": [
+      -0.7168961314733835,
+      0.31968221499814037,
+      -0.25270208734023825,
+      0.5656897322263034
+    ]
+  },
+  "runtime_nodes": [
+    "_ros2cli_daemon_169_75d5877f04724e00801165e047203990/",
+    "joint_state_publisher_gui/",
+    "qa_virtual_camera_final/",
+    "robot_state_publisher/",
+    "transform_listener_impl_5651725eebd0/",
+    "virtual_camera_tf_rviz/"
+  ],
+  "pass": true
+}

@@ -51,6 +51,8 @@ def main() -> None:
             "QA_MUJOCO_V15_13_空载运动学版.json",
             "QA_MUJOCO_V15_13_逐轴运动语义与地面复核.json",
             "QA_MUJOCO_V15_13_GUI零位几何校准.json",
+            "QA_MUJOCO_V15_13_虚拟相机坐标闭环.json",
+            "QA_ROS2_V15_13_RVIZ可视网格.json",
         ],
         "mujoco_version_verified": "3.11.0",
         "main_model": "go_m8010_arm_v15_13_kinematic.xml",
